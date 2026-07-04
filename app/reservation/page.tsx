@@ -4,7 +4,7 @@ import TopNav from "@/components/site/TopNav";
 import FormulaireReservation from "@/components/site/FormulaireReservation";
 import { capitaliser, formatDateLongue } from "@/lib/dates";
 import { formatGNF } from "@/lib/format";
-import { getEtablissement, getMedecin, nomComplet, patientDemo } from "@/lib/mock-data";
+import { getEtablissement, getMedecin, nomComplet } from "@/lib/mock-data";
 
 export const metadata: Metadata = {
   title: "Confirmer le rendez-vous | Docteur 224",
@@ -90,35 +90,7 @@ export default async function Reservation({
           </div>
         </div>
 
-        {/* Pour qui ? — soi-même uniquement à ce stade (proches en Phase 5) */}
-        <div className="mb-[18px] rounded-[18px] border border-line bg-white p-6">
-          <h3 className="mb-[14px] text-base font-extrabold">Pour qui est ce rendez-vous ?</h3>
-          <div className="grid gap-[10px] sm:grid-cols-2">
-            <div className="flex items-center gap-[11px] rounded-[13px] border-[1.5px] border-teal bg-teal-soft p-3 text-left">
-              <span
-                aria-hidden
-                className="grid h-10 w-10 flex-none place-items-center rounded-[11px] text-[13px] font-extrabold text-white"
-                style={{ background: patientDemo.gradient }}
-              >
-                {patientDemo.initiales}
-              </span>
-              <span className="flex-1">
-                <b className="block text-[13.5px]">Moi-même</b>
-                <small className="text-[11.5px] text-muted">
-                  {patientDemo.prenom} {patientDemo.nom} · {patientDemo.age} ans
-                </small>
-              </span>
-              <span className="h-[18px] w-[18px] flex-none rounded-full border-2 border-teal bg-teal shadow-[inset_0_0_0_3px_#fff]" />
-            </div>
-            <div className="flex cursor-not-allowed items-center justify-center gap-1 rounded-[13px] border-[1.5px] border-dashed border-line bg-white p-3 text-[13.5px] font-bold text-muted">
-              <span className="mr-1.5 text-lg" aria-hidden>
-                +
-              </span>
-              Ajouter un proche · Phase 5
-            </div>
-          </div>
-        </div>
-
+        {/* « Pour qui ? » (moi-même ou un proche), motif et confirmation */}
         <FormulaireReservation
           medecinId={medecin.id}
           medecinNom={nomComplet(medecin)}
@@ -128,7 +100,6 @@ export default async function Reservation({
           date={date}
           heure={heure}
           tarif={medecin.tarifConsultation}
-          pourQui={`${patientDemo.prenom} ${patientDemo.nom} (moi-même)`}
         />
       </div>
     </div>

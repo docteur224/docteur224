@@ -1,8 +1,9 @@
+import { creerMagasinLocal, useMagasinLocal } from "@/lib/stockage-local";
+
 /*
  * Stockage local (navigateur) des rendez-vous réservés pendant la phase mocks.
  * Joue le rôle de la future table « rendez_vous » : quand la base de données
  * sera branchée, seules ces fonctions changeront, pas les écrans.
- * À n'appeler que côté client.
  */
 
 export interface RendezVousLocal {
@@ -19,24 +20,37 @@ export interface RendezVousLocal {
   tarif: number;
   motif: string;
   pourQui: string;
+  /** « moi » pour le titulaire du compte, sinon l'id du proche */
+  pourQuiId?: string;
   statut: "confirme" | "annule";
   reservePar: "patient";
   creeLe: string;
 }
 
-const CLE_STOCKAGE = "docteur224.rendezvous";
+const AUCUN_RDV: RendezVousLocal[] = [];
+
+const magasinRdv = creerMagasinLocal<RendezVousLocal[]>(
+  "docteur224.rendezvous",
+  AUCUN_RDV,
+  (json) => (Array.isArray(json) ? (json as RendezVousLocal[]) : AUCUN_RDV)
+);
+
+/** Lecture réactive : l'écran se met à jour à chaque réservation/annulation. */
+export function useRendezVousLocaux(): RendezVousLocal[] {
+  return useMagasinLocal(magasinRdv);
+}
 
 export function lireRendezVousLocaux(): RendezVousLocal[] {
-  if (typeof window === "undefined") return [];
-  try {
-    return JSON.parse(window.localStorage.getItem(CLE_STOCKAGE) ?? "[]") as RendezVousLocal[];
-  } catch {
-    return [];
-  }
+  return magasinRdv.lire();
 }
 
 export function ajouterRendezVousLocal(rdv: RendezVousLocal): void {
-  const liste = lireRendezVousLocaux();
-  liste.push(rdv);
-  window.localStorage.setItem(CLE_STOCKAGE, JSON.stringify(liste));
+  magasinRdv.ecrire([...magasinRdv.lire(), rdv]);
+}
+
+/** Annulation par le patient : le rendez-vous est conservé avec le statut « annulé ». */
+export function annulerRendezVousLocal(id: string): void {
+  magasinRdv.ecrire(
+    magasinRdv.lire().map((rdv) => (rdv.id === id ? { ...rdv, statut: "annule" as const } : rdv))
+  );
 }

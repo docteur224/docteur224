@@ -12,6 +12,22 @@ export const JOURS_LONGS = [
 
 export const JOURS_COURTS = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 
+/** Abréviations affichées dans les pastilles de date des cartes RDV (« 11 JUIN »). */
+export const MOIS_ABREGES = [
+  "JANV",
+  "FÉVR",
+  "MARS",
+  "AVR",
+  "MAI",
+  "JUIN",
+  "JUIL",
+  "AOÛT",
+  "SEPT",
+  "OCT",
+  "NOV",
+  "DÉC",
+];
+
 export const MOIS_LONGS = [
   "janvier",
   "février",
@@ -48,6 +64,22 @@ export function formatDateLongue(iso: string): string {
 
 export function capitaliser(texte: string): string {
   return texte.charAt(0).toUpperCase() + texte.slice(1);
+}
+
+/** « 2024-03-12 » → « 12/03/2024 ». */
+export function formatDateCourte(iso: string): string {
+  const [annee, mois, jour] = iso.split("-");
+  return `${jour}/${mois}/${annee}`;
+}
+
+/** Âge en années révolues à partir d'une date de naissance « AAAA-MM-JJ ». */
+export function calculerAge(dateNaissanceISO: string): number {
+  const naissance = depuisISO(dateNaissanceISO);
+  const aujourdhui = new Date();
+  let age = aujourdhui.getFullYear() - naissance.getFullYear();
+  const m = aujourdhui.getMonth() - naissance.getMonth();
+  if (m < 0 || (m === 0 && aujourdhui.getDate() < naissance.getDate())) age--;
+  return age;
 }
 
 export interface JourDispo {

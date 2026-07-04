@@ -259,19 +259,6 @@ export function nomComplet(medecin: Medecin): string {
   return `${medecin.civilite} ${medecin.prenom} ${medecin.nom}`;
 }
 
-/**
- * Patient fictif « connecté » utilisé pour le parcours de réservation
- * tant que l'authentification (Phase 3) n'est pas branchée.
- */
-export const patientDemo = {
-  id: "p-demo",
-  prenom: "Mariama",
-  nom: "Sow",
-  age: 30,
-  initiales: "MS",
-  gradient: "linear-gradient(135deg,#2E9CCA,#15506B)",
-};
-
 /** Cartes « Médecins en vedette » de l'accueil. */
 export const medecinsEnVedette: Medecin[] = [
   medecins[0], // Dr Aïssata Barry
