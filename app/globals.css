@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+/*
+ * Charte graphique Docteur 224.
+ * Valeurs reprises à l'identique du bloc <style> des maquettes de référence
+ * (maquettes-web-docteur224.html et maquettes-docteur224.html).
+ */
+:root {
+  --blue: #15506b;
+  --blue-deep: #0e3b50;
+  --teal: #2e9cca;
+  --teal-soft: #e3f1f8;
+  --bg: #eaf1f6;
+  --card: #ffffff;
+  --ink: #16242e;
+  --muted: #647a89;
+  --line: #e2ebf0;
+  --green: #1e7b45;
+  --green-soft: #e4f3ea;
+  --amber: #c77b27;
+  --amber-soft: #fbefdf;
+  --red: #c0392b;
+  --red-soft: #fbe7e4;
+  --shadow: 0 14px 40px rgba(16, 59, 80, 0.12);
+}
+
+@theme inline {
+  --color-blue: var(--blue);
+  --color-blue-deep: var(--blue-deep);
+  --color-teal: var(--teal);
+  --color-teal-soft: var(--teal-soft);
+  --color-bg: var(--bg);
+  --color-card: var(--card);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-green: var(--green);
+  --color-green-soft: var(--green-soft);
+  --color-amber: var(--amber);
+  --color-amber-soft: var(--amber-soft);
+  --color-red: var(--red);
+  --color-red-soft: var(--red-soft);
+  --font-sans: var(--font-jakarta);
+  --shadow-card: var(--shadow);
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-jakarta), system-ui, sans-serif;
+}
