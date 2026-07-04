@@ -49,3 +49,15 @@ body {
   color: var(--ink);
   font-family: var(--font-jakarta), system-ui, sans-serif;
 }
+
+/* Apparition de la coche verte sur l'écran de confirmation (cf. maquettes). */
+@keyframes pop {
+  0% {
+    transform: scale(0.5);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

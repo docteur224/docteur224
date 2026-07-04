@@ -87,6 +87,7 @@ export const medecins: Medecin[] = [
     nbAvis: 128,
     disponibilite: { type: "aujourdhui", label: "Dispo aujourd'hui 14:30" },
     telephoneSecretariat: "+224 622 11 22 33",
+    joursFermes: [0],
     aPropos:
       "Pédiatre diplômée de l'Université Gamal Abdel Nasser de Conakry, le Dr Barry accompagne les familles depuis plus de 12 ans. Elle est spécialisée dans le suivi du nourrisson, la vaccination et la prise en charge des maladies infantiles courantes.",
     soinsEtActes: [
@@ -123,6 +124,7 @@ export const medecins: Medecin[] = [
     nbAvis: 102,
     disponibilite: { type: "aujourdhui", label: "Dispo aujourd'hui" },
     telephoneSecretariat: "+224 620 33 44 55",
+    joursFermes: [0, 6],
     aPropos:
       "Médecin généraliste exerçant à l'Hôpital Donka, le Dr Diallo assure les consultations de médecine générale, le suivi des maladies chroniques et la médecine préventive.",
     soinsEtActes: ["Consultation générale", "Suivi maladies chroniques", "Certificat médical", "Bilan de santé"],
@@ -153,6 +155,7 @@ export const medecins: Medecin[] = [
     nbAvis: 94,
     disponibilite: { type: "bientot", label: "Demain 08:30" },
     telephoneSecretariat: "+224 621 55 66 77",
+    joursFermes: [0],
     aPropos:
       "Pédiatre à l'Hôpital Ignace Deen, le Dr Camara prend en charge les urgences pédiatriques, le suivi de croissance et la vaccination des enfants.",
     soinsEtActes: ["Consultation de suivi", "Vaccination", "Urgences pédiatriques"],
@@ -183,6 +186,7 @@ export const medecins: Medecin[] = [
     nbAvis: 61,
     disponibilite: { type: "aujourdhui", label: "Dispo aujourd'hui 16:00" },
     telephoneSecretariat: "+224 622 77 88 99",
+    joursFermes: [0],
     aPropos:
       "Pédiatre à la Polyclinique de Ratoma, le Dr Bah est spécialisée dans le suivi du nouveau-né et l'accompagnement nutritionnel de l'enfant.",
     soinsEtActes: ["Consultation de suivi", "Nouveau-né — Première consultation", "Vaccination"],
@@ -213,6 +217,7 @@ export const medecins: Medecin[] = [
     nbAvis: 47,
     disponibilite: { type: "bientot", label: "Jeudi 10:00" },
     telephoneSecretariat: "+224 623 00 11 22",
+    joursFermes: [0, 6],
     aPropos:
       "Pédiatre au Centre de santé de Matam, le Dr Touré assure les consultations pédiatriques de proximité et les campagnes de vaccination.",
     soinsEtActes: ["Consultation de suivi", "Vaccination"],
@@ -253,6 +258,19 @@ export function getEtablissement(id: string): Etablissement | undefined {
 export function nomComplet(medecin: Medecin): string {
   return `${medecin.civilite} ${medecin.prenom} ${medecin.nom}`;
 }
+
+/**
+ * Patient fictif « connecté » utilisé pour le parcours de réservation
+ * tant que l'authentification (Phase 3) n'est pas branchée.
+ */
+export const patientDemo = {
+  id: "p-demo",
+  prenom: "Mariama",
+  nom: "Sow",
+  age: 30,
+  initiales: "MS",
+  gradient: "linear-gradient(135deg,#2E9CCA,#15506B)",
+};
 
 /** Cartes « Médecins en vedette » de l'accueil. */
 export const medecinsEnVedette: Medecin[] = [

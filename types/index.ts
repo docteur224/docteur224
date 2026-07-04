@@ -48,6 +48,8 @@ export interface Medecin {
   langues: string[];
   assurances: string[];
   horaires: { jours: string; detail: string };
+  /** Jours de fermeture hebdomadaires (0 = dimanche … 6 = samedi) */
+  joursFermes: number[];
 }
 
 export interface Creneau {
