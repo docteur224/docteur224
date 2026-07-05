@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import MedecinShell from "@/components/medecin/MedecinShell";
 import Interrupteur from "@/components/patient/Interrupteur";
 import {
@@ -121,14 +122,23 @@ export default function EquipeMedecin() {
             >
               {membre.statut}
             </span>
-            <button
-              type="button"
-              disabled
-              title="Disponible en Phase 7 (espace assistant)"
-              className="cursor-not-allowed rounded-[9px] border-[1.5px] border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-blue opacity-50"
-            >
-              {membre.statut === "Actif" ? "Voir l'espace" : "Réactiver"}
-            </button>
+            {membre.nom === "Hawa Diallo" ? (
+              <Link
+                href="/espace-assistant"
+                className="rounded-[9px] border-[1.5px] border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-blue transition-colors hover:bg-bg"
+              >
+                Voir l&apos;espace
+              </Link>
+            ) : (
+              <button
+                type="button"
+                disabled
+                title="Comptes multiples : disponible dans une phase ultérieure"
+                className="cursor-not-allowed rounded-[9px] border-[1.5px] border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-blue opacity-50"
+              >
+                {membre.statut === "Actif" ? "Permissions" : "Réactiver"}
+              </button>
+            )}
           </div>
         ))}
       </div>

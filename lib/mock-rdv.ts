@@ -24,7 +24,7 @@ export interface RendezVousLocal {
   pourQuiId?: string;
   statut: "confirme" | "annule";
   /** Réservation en ligne par le patient, ou déléguée par le cabinet (spec C.2.3) */
-  reservePar: "patient" | "medecin";
+  reservePar: "patient" | "medecin" | "assistant";
   creeLe: string;
 }
 
@@ -49,9 +49,16 @@ export function ajouterRendezVousLocal(rdv: RendezVousLocal): void {
   magasinRdv.ecrire([...magasinRdv.lire(), rdv]);
 }
 
-/** Annulation par le patient : le rendez-vous est conservé avec le statut « annulé ». */
+/** Annulation : le rendez-vous est conservé avec le statut « annulé ». */
 export function annulerRendezVousLocal(id: string): void {
   magasinRdv.ecrire(
     magasinRdv.lire().map((rdv) => (rdv.id === id ? { ...rdv, statut: "annule" as const } : rdv))
+  );
+}
+
+/** Reprogrammation : déplace le rendez-vous vers une autre date/heure. */
+export function reprogrammerRendezVousLocal(id: string, date: string, heure: string): void {
+  magasinRdv.ecrire(
+    magasinRdv.lire().map((rdv) => (rdv.id === id ? { ...rdv, date, heure } : rdv))
   );
 }

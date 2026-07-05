@@ -67,6 +67,11 @@ export function usePermissionsAssistante(): PermissionsAssistante {
   return useMagasinLocal(magasinPermissions);
 }
 
+/** Lecture directe (pour les gardes d'actions de lib/actions-assistante.ts). */
+export function lirePermissionsAssistante(): PermissionsAssistante {
+  return magasinPermissions.lire();
+}
+
 export function enregistrerPermissionsAssistante(permissions: PermissionsAssistante): void {
   magasinPermissions.ecrire(permissions);
 }

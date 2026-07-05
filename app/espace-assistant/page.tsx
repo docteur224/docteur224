@@ -1,0 +1,181 @@
+"use client";
+
+import Link from "next/link";
+import { useState } from "react";
+import AssistantShell from "@/components/assistant/AssistantShell";
+import { versISO } from "@/lib/dates";
+import { medecinConnecte } from "@/lib/mock-data";
+import { creneauxJourMedecin, useExceptionsLocales } from "@/lib/mock-disponibilites";
+import { usePermissionsAssistante } from "@/lib/mock-medecin";
+import { useRendezVousLocaux } from "@/lib/mock-rdv";
+
+/*
+ * Tableau de bord assistant(e) — reproduit l'écran « asst-dash » de la
+ * maquette web : bandeau d'accès limité, 4 statistiques, demandes à
+ * confirmer (gérées selon la permission), raccourcis.
+ */
+
+const DEMANDES_DEMO = [
+  {
+    id: "d1",
+    heure: "09:00",
+    patient: "Aboubacar Sylla",
+    detail: "Demande pour le 12 juin · +224 620 11 22 33",
+  },
+  {
+    id: "d2",
+    heure: "11:30",
+    patient: "Aminata Diané",
+    detail: "Demande pour le 14 juin · +224 622 44 55 66",
+  },
+];
+
+export default function TableauDeBordAssistant() {
+  const rdvs = useRendezVousLocaux();
+  const exceptions = useExceptionsLocales();
+  const permissions = usePermissionsAssistante();
+  const [demandes, setDemandes] = useState(DEMANDES_DEMO);
+  const [erreur, setErreur] = useState("");
+
+  const aujourdhui = versISO(new Date());
+  const rdvJour = creneauxJourMedecin(medecinConnecte.id, aujourdhui, exceptions, rdvs).filter(
+    (c) => c.statut === "reserve"
+  );
+
+  function traiterDemande(id: string) {
+    if (!permissions.confirmerAnnuler) {
+      setErreur(
+        "⛔ Action refusée : la permission « Confirmer / annuler les rendez-vous » ne vous a pas été accordée par le médecin."
+      );
+      return;
+    }
+    setErreur("");
+    setDemandes(demandes.filter((d) => d.id !== id));
+  }
+
+  return (
+    <AssistantShell>
+      <div className="mb-5">
+        <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Bonjour Hawa 👋</h2>
+        <small className="text-[13px] text-muted">
+          Espace assistant(e) · vous assistez le Dr A. Barry
+        </small>
+      </div>
+
+      <div className="mb-[18px] flex items-start gap-[9px] rounded-xl border border-[#BFE0EF] bg-teal-soft px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-blue">
+        <span aria-hidden>🔒</span>
+        <div>
+          Vous gérez les <b>rendez-vous</b>, les <b>créneaux</b> et la <b>communication</b> selon
+          les permissions accordées par le médecin. Les dossiers médicaux et les revenus ne vous
+          sont pas visibles.
+        </div>
+      </div>
+
+      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="rounded-2xl border border-line bg-white p-[18px]">
+          <span className="text-lg" aria-hidden>
+            📅
+          </span>
+          <b className="mt-2 block text-[26px] font-extrabold tracking-[-0.6px] text-blue">
+            {rdvJour.length}
+          </b>
+          <small className="text-xs font-semibold text-muted">RDV aujourd’hui</small>
+        </div>
+        <div className="rounded-2xl border border-line bg-white p-[18px]">
+          <span className="text-lg" aria-hidden>
+            ⏳
+          </span>
+          <b className="mt-2 block text-[26px] font-extrabold tracking-[-0.6px] text-amber">
+            {demandes.length}
+          </b>
+          <small className="text-xs font-semibold text-muted">À confirmer</small>
+        </div>
+        <div className="rounded-2xl border border-line bg-white p-[18px]">
+          <span className="text-lg" aria-hidden>
+            💬
+          </span>
+          <b className="mt-2 block text-[26px] font-extrabold tracking-[-0.6px] text-green">5</b>
+          <small className="text-xs font-semibold text-muted">Messages non lus</small>
+        </div>
+        <div className="rounded-2xl border border-line bg-white p-[18px]">
+          <span className="text-lg" aria-hidden>
+            ✅
+          </span>
+          <b className="mt-2 block text-[26px] font-extrabold tracking-[-0.6px] text-blue">12</b>
+          <small className="text-xs font-semibold text-muted">Confirmés cette semaine</small>
+        </div>
+      </div>
+
+      {erreur && (
+        <div className="mb-4 rounded-xl border border-[#F3C9C2] bg-red-soft px-[14px] py-3 text-[12.5px] font-bold text-red">
+          {erreur}
+        </div>
+      )}
+
+      <div className="mb-4 rounded-2xl border border-line bg-white p-5">
+        <h3 className="mb-[14px] text-[15px] font-extrabold">Demandes à confirmer</h3>
+        {demandes.map((demande) => (
+          <div
+            key={demande.id}
+            className="mb-[10px] flex flex-wrap items-center gap-3 rounded-xl border border-line p-[13px] last:mb-0"
+          >
+            <span className="flex-none rounded-[9px] bg-teal-soft px-[11px] py-[9px] text-[13px] font-extrabold text-blue">
+              {demande.heure}
+            </span>
+            <span className="min-w-0 flex-1">
+              <b className="block text-[13.5px]">{demande.patient}</b>
+              <small className="text-xs text-muted">{demande.detail}</small>
+            </span>
+            <span className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => traiterDemande(demande.id)}
+                className={`rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc] ${
+                  permissions.confirmerAnnuler ? "" : "opacity-50"
+                }`}
+              >
+                Confirmer
+              </button>
+              <button
+                type="button"
+                onClick={() => traiterDemande(demande.id)}
+                className={`rounded-[9px] border-[1.5px] border-[#F3C9C2] bg-white px-[14px] py-2 text-[12.5px] font-bold text-red transition-colors hover:bg-red-soft ${
+                  permissions.confirmerAnnuler ? "" : "opacity-50"
+                }`}
+              >
+                Refuser
+              </button>
+            </span>
+          </div>
+        ))}
+        {demandes.length === 0 && (
+          <p className="text-[13px] text-muted">Toutes les demandes ont été traitées. 👍</p>
+        )}
+      </div>
+
+      <div className="rounded-2xl border border-line bg-white p-5">
+        <h3 className="mb-[14px] text-[15px] font-extrabold">Raccourcis</h3>
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/espace-assistant/rendez-vous"
+            className="rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
+          >
+            📅 Gérer les rendez-vous
+          </Link>
+          <Link
+            href="/espace-assistant/creneaux"
+            className="rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
+          >
+            🕐 Ouvrir/fermer des créneaux
+          </Link>
+          <Link
+            href="/espace-assistant/messages"
+            className="rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
+          >
+            💬 Répondre aux messages
+          </Link>
+        </div>
+      </div>
+    </AssistantShell>
+  );
+}
