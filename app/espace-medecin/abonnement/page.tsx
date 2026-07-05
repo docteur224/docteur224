@@ -1,0 +1,198 @@
+"use client";
+
+import MedecinShell from "@/components/medecin/MedecinShell";
+import { formatGNF } from "@/lib/format";
+import {
+  enregistrerAbonnementMedecin,
+  useAbonnementMedecin,
+} from "@/lib/mock-medecin";
+
+/*
+ * Mon abonnement — reproduit l'écran « med-abonnement » de la maquette web
+ * (spec C.4.4) : abonnement en cours, bascule Mensuel / Annuel, formules
+ * Standard et Premium. Le choix est persisté en local (mock).
+ * Rappel spec : la prise de RDV reste gratuite pour les patients.
+ */
+
+const TARIFS = {
+  standard: { mensuel: 100000, annuel: 1000000 },
+  premium: { mensuel: 150000, annuel: 1500000 },
+};
+
+const AVANTAGES_STANDARD = [
+  "Profil & fiche enrichie",
+  "Agenda & gestion des RDV",
+  "Disponibilités & créneaux",
+  "1 assistant(e)",
+];
+
+const AVANTAGES_PREMIUM = [
+  "Tout le Standard",
+  "Mise en avant (en vedette)",
+  "Priorité dans la recherche",
+  "Plus de photos & d'assistant(e)s",
+  "Statistiques avancées · quota SMS",
+];
+
+export default function AbonnementMedecin() {
+  const abonnement = useAbonnementMedecin();
+  const { formule, periode } = abonnement;
+
+  const libelleFormule = formule === "premium" ? "Premium" : "Standard";
+  const libellePeriode = periode === "annuel" ? "Annuel" : "Mensuel";
+
+  return (
+    <MedecinShell>
+      <div className="mb-5">
+        <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Mon abonnement</h2>
+        <small className="text-[13px] text-muted">Votre présence sur Docteur 224</small>
+      </div>
+
+      <div className="mb-4 rounded-2xl border border-line bg-white p-5">
+        <h3 className="mb-1 text-[15px] font-extrabold">Abonnement actuel</h3>
+        <div className="flex items-center justify-between gap-[14px] py-[15px]">
+          <div>
+            <b className="block text-[13.5px] font-bold">
+              Formule {libelleFormule} · {libellePeriode}
+            </b>
+            <small className="text-xs text-muted">
+              Actif jusqu’au 30 juin 2026 · paiement Orange Money (démonstration)
+            </small>
+          </div>
+          <span className="rounded-lg bg-green-soft px-[9px] py-1 text-[11px] font-bold text-green">
+            Actif
+          </span>
+        </div>
+        <div className="flex items-start gap-[9px] rounded-xl bg-teal-soft px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-blue">
+          <span aria-hidden>ℹ️</span>
+          <div>
+            La prise de rendez-vous reste <b>gratuite pour vos patients</b>. Vous payez uniquement
+            votre abonnement.
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-2xl border border-line bg-white p-5">
+        <h3 className="mb-[14px] text-[15px] font-extrabold">Changer de formule</h3>
+
+        {/* Bascule Mensuel / Annuel */}
+        <div className="mb-[10px] inline-flex overflow-hidden rounded-[10px] border border-line">
+          <button
+            type="button"
+            onClick={() => enregistrerAbonnementMedecin({ ...abonnement, periode: "mensuel" })}
+            className={`px-4 py-2 text-[12.5px] font-bold ${
+              periode === "mensuel" ? "bg-teal-soft text-blue" : "bg-white text-muted"
+            }`}
+          >
+            Mensuel
+          </button>
+          <button
+            type="button"
+            onClick={() => enregistrerAbonnementMedecin({ ...abonnement, periode: "annuel" })}
+            className={`px-4 py-2 text-[12.5px] font-bold ${
+              periode === "annuel" ? "bg-teal-soft text-blue" : "bg-white text-muted"
+            }`}
+          >
+            Annuel (2 mois offerts)
+          </button>
+        </div>
+
+        <div className="mt-1.5 grid gap-[14px] md:grid-cols-2">
+          {/* Standard */}
+          <div
+            className={`relative rounded-[14px] border-[1.5px] p-4 ${
+              formule === "standard" ? "border-teal shadow-[0_0_0_3px_var(--teal-soft)]" : "border-line"
+            }`}
+          >
+            {formule === "standard" && (
+              <span className="absolute -top-[10px] right-[14px] rounded-full bg-teal px-[10px] py-[3px] text-[10.5px] font-extrabold text-white">
+                Actuel
+              </span>
+            )}
+            <h4 className="text-[15px] font-extrabold">Standard</h4>
+            <div className="my-1.5 text-[22px] font-extrabold text-blue">
+              {formatGNF(TARIFS.standard[periode])}{" "}
+              <span className="text-xs font-semibold text-muted">
+                /{periode === "annuel" ? "an" : "mois"}
+              </span>
+            </div>
+            <ul className="mb-3 mt-2">
+              {AVANTAGES_STANDARD.map((avantage) => (
+                <li key={avantage} className="relative py-1 pl-5 text-[12.5px]">
+                  <span className="absolute left-0 font-extrabold text-green" aria-hidden>
+                    ✓
+                  </span>
+                  {avantage}
+                </li>
+              ))}
+            </ul>
+            {formule === "standard" ? (
+              <button
+                type="button"
+                disabled
+                className="w-full cursor-default rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white"
+              >
+                Formule actuelle
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => enregistrerAbonnementMedecin({ ...abonnement, formule: "standard" })}
+                className="w-full rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg"
+              >
+                Choisir Standard
+              </button>
+            )}
+          </div>
+
+          {/* Premium */}
+          <div
+            className={`relative rounded-[14px] border-[1.5px] p-4 ${
+              formule === "premium" ? "border-teal shadow-[0_0_0_3px_var(--teal-soft)]" : "border-line"
+            }`}
+          >
+            {formule === "premium" && (
+              <span className="absolute -top-[10px] right-[14px] rounded-full bg-teal px-[10px] py-[3px] text-[10.5px] font-extrabold text-white">
+                Actuel
+              </span>
+            )}
+            <h4 className="text-[15px] font-extrabold">Premium</h4>
+            <div className="my-1.5 text-[22px] font-extrabold text-blue">
+              {formatGNF(TARIFS.premium[periode])}{" "}
+              <span className="text-xs font-semibold text-muted">
+                /{periode === "annuel" ? "an" : "mois"}
+              </span>
+            </div>
+            <ul className="mb-3 mt-2">
+              {AVANTAGES_PREMIUM.map((avantage, i) => (
+                <li key={avantage} className="relative py-1 pl-5 text-[12.5px]">
+                  <span className="absolute left-0 font-extrabold text-green" aria-hidden>
+                    ✓
+                  </span>
+                  {i === 1 ? <b>{avantage}</b> : avantage}
+                </li>
+              ))}
+            </ul>
+            {formule === "premium" ? (
+              <button
+                type="button"
+                disabled
+                className="w-full cursor-default rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white"
+              >
+                Formule actuelle
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => enregistrerAbonnementMedecin({ ...abonnement, formule: "premium" })}
+                className="w-full rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg"
+              >
+                Choisir Premium
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </MedecinShell>
+  );
+}

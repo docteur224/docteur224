@@ -3,7 +3,7 @@ import Link from "next/link";
 import TopNav from "@/components/site/TopNav";
 import { formatGNF, formatNote } from "@/lib/format";
 import { prochainsJours } from "@/lib/dates";
-import { premiersCreneauxOuverts } from "@/lib/mock-creneaux";
+import { premiersCreneauxOuvertsBase } from "@/lib/horaire-type";
 import { getEtablissement, medecins, nomComplet } from "@/lib/mock-data";
 
 export const metadata: Metadata = {
@@ -143,7 +143,7 @@ export default async function Resultats({
             const premierJourOuvert =
               prochainsJours(m.joursFermes, 6).find((j) => !j.ferme)?.iso ?? "";
             const minicreneaux = premierJourOuvert
-              ? premiersCreneauxOuverts(m.id, premierJourOuvert, 4)
+              ? premiersCreneauxOuvertsBase(m.id, premierJourOuvert, 4)
               : [];
             return (
               <div

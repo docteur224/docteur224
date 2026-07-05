@@ -23,7 +23,8 @@ export interface RendezVousLocal {
   /** « moi » pour le titulaire du compte, sinon l'id du proche */
   pourQuiId?: string;
   statut: "confirme" | "annule";
-  reservePar: "patient";
+  /** Réservation en ligne par le patient, ou déléguée par le cabinet (spec C.2.3) */
+  reservePar: "patient" | "medecin";
   creeLe: string;
 }
 

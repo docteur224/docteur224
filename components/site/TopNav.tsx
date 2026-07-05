@@ -39,7 +39,7 @@ export default function TopNav({
           <Link href="/#comment-ca-marche" className="text-[13.5px] font-semibold text-muted hover:text-blue">
             Comment ça marche
           </Link>
-          <Link href="/inscription" className="text-[13.5px] font-semibold text-muted hover:text-blue">
+          <Link href="/espace-medecin" className="text-[13.5px] font-semibold text-muted hover:text-blue">
             Pour les médecins
           </Link>
         </div>

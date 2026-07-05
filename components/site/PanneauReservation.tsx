@@ -3,13 +3,19 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { prochainsJours } from "@/lib/dates";
-import { creneauxDuJour } from "@/lib/mock-creneaux";
+import { creneauxJourPatient, useExceptionsLocales } from "@/lib/mock-disponibilites";
+import { useRendezVousLocaux } from "@/lib/mock-rdv";
 import { formatGNF } from "@/lib/format";
 
 /**
  * Panneau « Réserver un rendez-vous » de la fiche médecin — reproduit la
  * .bookcard de la maquette web : bandeau de dates, grille d'horaires
  * (barrés si réservés), bouton qui s'active à la sélection d'un horaire.
+ *
+ * Les créneaux viennent du modèle de disponibilités PARTAGÉ avec l'espace
+ * médecin : seuls les créneaux « ouverts » sont réservables, les « fermés »
+ * n'apparaissent pas (spec C.4.2), et une fermeture côté médecin se reflète
+ * immédiatement ici.
  */
 export default function PanneauReservation({
   medecinId,
@@ -20,11 +26,14 @@ export default function PanneauReservation({
   tarif: number;
   joursFermes: number[];
 }) {
+  const rdvs = useRendezVousLocaux();
+  const exceptions = useExceptionsLocales();
   const jours = useMemo(() => prochainsJours(joursFermes, 5), [joursFermes]);
   const premierOuvert = jours.find((j) => !j.ferme)?.iso ?? jours[0]?.iso ?? "";
   const [jourISO, setJourISO] = useState(premierOuvert);
   const [heure, setHeure] = useState<string | null>(null);
-  const creneaux = useMemo(() => creneauxDuJour(medecinId, jourISO), [medecinId, jourISO]);
+
+  const creneaux = creneauxJourPatient(medecinId, jourISO, exceptions, rdvs);
 
   return (
     <div className="rounded-[18px] border border-line bg-white p-[22px] shadow-[0_8px_22px_rgba(16,59,80,.06)] lg:sticky lg:top-[86px]">
@@ -73,8 +82,8 @@ export default function PanneauReservation({
         })}
       </div>
 
-      {/* Grille des horaires du jour sélectionné */}
-      <div className="mt-[14px] grid grid-cols-3 gap-2">
+      {/* Grille des horaires du jour sélectionné (ouverts + réservés barrés) */}
+      <div className="mt-[14px] grid max-h-[300px] grid-cols-3 gap-2 overflow-auto">
         {creneaux.map((c) =>
           c.statut === "reserve" ? (
             <span
@@ -97,6 +106,11 @@ export default function PanneauReservation({
               {c.heure}
             </button>
           )
+        )}
+        {creneaux.length === 0 && (
+          <p className="col-span-3 py-2 text-center text-xs text-muted">
+            Aucun créneau ce jour — choisissez une autre date.
+          </p>
         )}
       </div>
 

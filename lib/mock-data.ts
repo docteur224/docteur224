@@ -259,6 +259,12 @@ export function nomComplet(medecin: Medecin): string {
   return `${medecin.civilite} ${medecin.prenom} ${medecin.nom}`;
 }
 
+/**
+ * Médecin fictif « connecté » à l'espace médecin, tant que l'authentification
+ * (Phase 3) n'est pas branchée : le Dr Aïssata Barry, comme dans les maquettes.
+ */
+export const medecinConnecte: Medecin = medecins[0];
+
 /** Cartes « Médecins en vedette » de l'accueil. */
 export const medecinsEnVedette: Medecin[] = [
   medecins[0], // Dr Aïssata Barry
