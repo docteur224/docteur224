@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import AdminShell from "@/components/admin/AdminShell";
+import AppBarMobile from "@/components/mobile/AppBarMobile";
 import { envoyerAnnonce, useAnnonces } from "@/lib/mock-admin";
 
 /*
@@ -52,6 +53,90 @@ export default function AnnoncesAdmin() {
 
   return (
     <AdminShell>
+      {/* ===== Version mobile (écran « m-admin-annonces » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <AppBarMobile retour="/espace-admin/plus" titre="Annonces" />
+        <div className="pad">
+          <div className="card2">
+            <h4>Nouvelle annonce</h4>
+            <div className="fldm">
+              <label>Destinataires</label>
+              <select className="v" value={segment} onChange={(e) => setSegment(e.target.value)}>
+                {SEGMENTS.map((s) => (
+                  <option key={s}>{s}</option>
+                ))}
+              </select>
+            </div>
+            <div className="fldm">
+              <label>Ville (optionnel)</label>
+              <select className="v" value={ville} onChange={(e) => setVille(e.target.value)}>
+                {VILLES.map((v) => (
+                  <option key={v}>{v}</option>
+                ))}
+              </select>
+            </div>
+            <div className="fldm">
+              <label>Canaux</label>
+              <div className="chips">
+                {CANAUX.map((canal) => {
+                  const actif = canaux.includes(canal);
+                  return (
+                    <button
+                      key={canal}
+                      type="button"
+                      className={`chip${actif ? " on" : ""}`}
+                      onClick={() => basculerCanal(canal)}
+                    >
+                      {canal}
+                      {actif ? " ✓" : ""}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="fldm">
+              <label>Message</label>
+              <textarea
+                className="textarea"
+                rows={3}
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+              />
+            </div>
+            <button
+              type="button"
+              className="btn block"
+              style={{ opacity: !message.trim() || canaux.length === 0 ? 0.5 : 1 }}
+              disabled={!message.trim() || canaux.length === 0}
+              onClick={envoyer}
+            >
+              📢 Envoyer l&apos;annonce
+            </button>
+          </div>
+          <div className="card2">
+            <h4>Historique</h4>
+            {annonces.map((annonce) => (
+              <div key={annonce.id} className="asstrowm">
+                <span
+                  className="av"
+                  aria-hidden
+                  style={{ background: "linear-gradient(135deg,#2E9CCA,#15506B)" }}
+                >
+                  📢
+                </span>
+                <span className="meta">
+                  <b>{annonce.message}</b>
+                  <small>{annonce.detail}</small>
+                </span>
+                <span className="pill ok">Envoyée</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5">
         <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Annonces</h2>
         <small className="text-[13px] text-muted">
@@ -149,6 +234,7 @@ export default function AnnoncesAdmin() {
           apparaissent dans le centre de notifications (🔔). L’envoi réel sera branché avec la
           base de données.
         </p>
+      </div>
       </div>
     </AdminShell>
   );

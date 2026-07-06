@@ -38,6 +38,92 @@ export default function TableauDeBordMedecin() {
 
   return (
     <MedecinShell>
+      {/* ===== Version mobile (écran « medecin » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <div className="greet">
+          <b>
+            Bonjour, {medecinConnecte.civilite} {medecinConnecte.nom} 👋
+          </b>
+          <br />
+          <small>
+            {capitaliser(formatDateLongue(aujourdhui))} · {agendaJour.length} rendez-vous
+            aujourd&apos;hui
+          </small>
+        </div>
+        <div className="statcards">
+          <div className="sc b1">
+            <b>{agendaJour.length}</b>
+            <small>RDV aujourd&apos;hui</small>
+          </div>
+          <div className="sc b2">
+            <b>{demandes.length}</b>
+            <small>À confirmer</small>
+          </div>
+          <div className="sc b3">
+            <b>96%</b>
+            <small>Taux de présence</small>
+          </div>
+        </div>
+        <div className="pad" style={{ paddingTop: 18 }}>
+          <div className="section-t" style={{ marginTop: 0 }}>
+            Demandes à confirmer
+          </div>
+          {demandes.map((demande) => (
+            <div key={demande.id} className="agitem">
+              <div className="t">{demande.heure}</div>
+              <div className="who">
+                <b>{demande.patient}</b>
+                <small>{demande.detail}</small>
+              </div>
+              <div className="mini">
+                <button
+                  type="button"
+                  className="no"
+                  aria-label={`Refuser la demande de ${demande.patient}`}
+                  onClick={() => traiterDemande(demande.id)}
+                >
+                  ✕
+                </button>
+                <button
+                  type="button"
+                  className="yes"
+                  aria-label={`Confirmer la demande de ${demande.patient}`}
+                  onClick={() => traiterDemande(demande.id)}
+                >
+                  ✓
+                </button>
+              </div>
+            </div>
+          ))}
+          {demandes.length === 0 && (
+            <p className="muted" style={{ fontSize: 13 }}>
+              Toutes les demandes ont été traitées. 👍
+            </p>
+          )}
+
+          <div className="section-t">Agenda du jour</div>
+          {agendaJour.map((creneau) => (
+            <div key={creneau.heure} className="agitem">
+              <div className="t">{creneau.heure}</div>
+              <div className="who">
+                <b>{creneau.patient}</b>
+                <small>{creneau.motif}</small>
+              </div>
+              <span className="badge ok" style={{ marginLeft: "auto" }}>
+                Confirmé
+              </span>
+            </div>
+          ))}
+          {agendaJour.length === 0 && (
+            <p className="muted" style={{ fontSize: 13 }}>
+              Aucun rendez-vous aujourd&apos;hui.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">
@@ -169,6 +255,7 @@ export default function TableauDeBordMedecin() {
             Aucun rendez-vous aujourd’hui.
           </p>
         )}
+      </div>
       </div>
     </MedecinShell>
   );

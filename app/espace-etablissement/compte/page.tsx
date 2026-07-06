@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import EtablissementShell from "@/components/etablissement/EtablissementShell";
 import Interrupteur from "@/components/patient/Interrupteur";
 import {
@@ -52,6 +53,118 @@ export default function CompteEtablissement() {
 
   return (
     <EtablissementShell>
+      {/* ===== Version mobile (écran « m-etab-compte » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <div className="appbar">
+          <h3 style={{ paddingLeft: 4 }}>Compte &amp; paramètres</h3>
+        </div>
+        <div className="pad">
+          <div className="acctop">
+            <span className="av" aria-hidden style={{ background: ETABLISSEMENT_CONNECTE.gradient }}>
+              🏥
+            </span>
+            <div>
+              <b>{ETABLISSEMENT_CONNECTE.nomCourt}</b>
+              <small>Gestionnaire : {gestionnaire.nom}</small>
+            </div>
+          </div>
+          <div className="menu">
+            <Link href="/espace-etablissement/statistiques" className="mrow">
+              <span className="mi" aria-hidden>
+                📊
+              </span>
+              <span>
+                <b>Statistiques</b>
+                <small>Activité de l&apos;établissement</small>
+              </span>
+              <span className="ch" aria-hidden>
+                ›
+              </span>
+            </Link>
+            <Link href="/espace-etablissement/medecins" className="mrow">
+              <span className="mi" aria-hidden>
+                👨‍⚕️
+              </span>
+              <span>
+                <b>Médecins</b>
+                <small>Gérer les rattachements</small>
+              </span>
+              <span className="ch" aria-hidden>
+                ›
+              </span>
+            </Link>
+            <Link href="/espace-etablissement/abonnement" className="mrow">
+              <span className="mi" aria-hidden>
+                💳
+              </span>
+              <span>
+                <b>Abonnement</b>
+                <small>Palier de l&apos;établissement</small>
+              </span>
+              <span className="ch" aria-hidden>
+                ›
+              </span>
+            </Link>
+            <Link href="/" className="mrow">
+              <span className="mi" aria-hidden>
+                ↩️
+              </span>
+              <span>
+                <b>Déconnexion</b>
+              </span>
+              <span className="ch" aria-hidden>
+                ›
+              </span>
+            </Link>
+          </div>
+          <div className="card2" style={{ marginTop: 12 }}>
+            <h4>Gestionnaire</h4>
+            <div className="setrow">
+              <div>
+                <b>Nom</b>
+                <small>{gestionnaire.nom}</small>
+              </div>
+            </div>
+            <div className="setrow">
+              <div>
+                <b>Rôle</b>
+                <small>{gestionnaire.role}</small>
+              </div>
+            </div>
+            <div className="setrow">
+              <div>
+                <b>E-mail</b>
+                <small>{gestionnaire.email}</small>
+              </div>
+            </div>
+            <div className="setrow">
+              <div>
+                <b>Téléphone</b>
+                <small>{gestionnaire.telephone}</small>
+              </div>
+            </div>
+          </div>
+          <div className="card2">
+            <h4>Paramètres</h4>
+            {PARAMETRES.map((parametre) => (
+              <div key={parametre.cle} className="setrow">
+                <div>
+                  <b>{parametre.titre}</b>
+                  <small>{parametre.detail}</small>
+                </div>
+                <Interrupteur
+                  actif={parametres[parametre.cle]}
+                  onChange={(v) => basculer(parametre.cle, v)}
+                  label={parametre.titre}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5">
         <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Compte & paramètres</h2>
         <small className="text-[13px] text-muted">
@@ -128,6 +241,7 @@ export default function CompteEtablissement() {
             notifications simulées sont visibles dans le centre de notifications (🔔).
           </div>
         </div>
+      </div>
       </div>
     </EtablissementShell>
   );

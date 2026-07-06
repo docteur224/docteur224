@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import TopNav from "@/components/site/TopNav";
 import PanneauReservation from "@/components/site/PanneauReservation";
 import CarteLocalisation from "@/components/site/CarteLocalisation";
+import AppBarMobile from "@/components/mobile/AppBarMobile";
 import { formatNote } from "@/lib/format";
 import { getEtablissement, getMedecin, nomComplet } from "@/lib/mock-data";
 
@@ -46,6 +47,154 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
     <div className="min-h-screen bg-bg">
       <TopNav lienActif="trouver" droite="compte" />
 
+      {/* ================= VERSION MOBILE (écran « fiche » de la maquette mobile) ================= */}
+      <div className="flex flex-col md:hidden">
+        <div style={{ paddingBottom: 6 }}>
+          <AppBarMobile retour="/resultats" titre="Profil du médecin" />
+        </div>
+        <div className="profhead">
+          <span className="av" aria-hidden style={{ background: medecin.gradient }}>
+            {medecin.initiales}
+          </span>
+          <h3>{nomComplet(medecin)}</h3>
+          <div className="spec">{medecin.specialite}</div>
+          <div className="statrow">
+            <div className="s">
+              <b>★ {formatNote(medecin.note)}</b>
+              <small>{medecin.nbAvis} avis</small>
+            </div>
+            <div className="s">
+              <b>{medecin.anneesExperience} ans</b>
+              <small>d&apos;expérience</small>
+            </div>
+            <div className="s">
+              <b>{Math.round(medecin.tarifConsultation / 1000)}k</b>
+              <small>GNF / consult.</small>
+            </div>
+          </div>
+        </div>
+        <div className="pad" style={{ paddingTop: 6 }}>
+          <div className="infoline">
+            <span className="ic" aria-hidden>
+              🏥
+            </span>
+            <div>
+              <b>{etab?.nom}</b>
+              <small>
+                Quartier {etab?.quartier} · {etab?.ville}
+              </small>
+            </div>
+          </div>
+          <div className="infoline">
+            <span className="ic" aria-hidden>
+              🕐
+            </span>
+            <div>
+              <b>{medecin.horaires.jours}</b>
+              <small>{medecin.horaires.detail}</small>
+            </div>
+          </div>
+          <div className="infoline">
+            <span className="ic" aria-hidden>
+              📞
+            </span>
+            <div>
+              <b>{medecin.telephoneSecretariat}</b>
+              <small>Secrétariat</small>
+            </div>
+          </div>
+
+          <div className="section-t">À propos</div>
+          <p className="muted" style={{ fontSize: 13, lineHeight: 1.6 }}>
+            {medecin.aPropos}
+          </p>
+
+          <div className="section-t">Soins et actes</div>
+          <div className="chips">
+            {medecin.soinsEtActes.map((soin) => (
+              <span key={soin} className="chip grey">
+                {soin}
+              </span>
+            ))}
+          </div>
+
+          <div className="section-t">Diplôme et formation</div>
+          {medecin.diplomes.map((d) => (
+            <div key={d.titre} className="infoline">
+              <span className="ic" aria-hidden>
+                🎓
+              </span>
+              <div>
+                <b>{d.titre}</b>
+                <small>{d.lieu}</small>
+              </div>
+            </div>
+          ))}
+
+          <div className="section-t">Parcours professionnel</div>
+          {medecin.parcours.map((p) => (
+            <div key={p.lieu} className="infoline">
+              <span className="ic" aria-hidden>
+                🏥
+              </span>
+              <div>
+                <b>{p.lieu}</b>
+                <small>{p.duree}</small>
+              </div>
+            </div>
+          ))}
+
+          <div className="section-t">Langues parlées</div>
+          <div className="chips">
+            {medecin.langues.map((langue) => (
+              <span key={langue} className="chip grey">
+                {langue}
+              </span>
+            ))}
+          </div>
+
+          <div className="section-t">Assurances acceptées</div>
+          <div className="chips">
+            {medecin.assurances.map((assurance) => (
+              <span key={assurance} className="chip">
+                {assurance}
+              </span>
+            ))}
+          </div>
+
+          <div className="section-t">Photos de l&apos;établissement</div>
+          <div className="gallery">
+            {PHOTOS.map((photo) => (
+              <div key={photo.label} className="gphoto">
+                <div className="inner" style={{ background: photo.fond }}>
+                  <div style={{ fontSize: 23 }} aria-hidden>
+                    {photo.emoji}
+                  </div>
+                  <small style={{ fontSize: 10.5, color: "var(--blue)", fontWeight: 800 }}>
+                    {photo.label}
+                  </small>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="section-t">Lieu de consultation</div>
+          <CarteLocalisation
+            etablissementNom={etab?.nom ?? ""}
+            quartier={etab?.quartier ?? ""}
+            ville={etab?.ville ?? medecin.ville}
+            telephone={medecin.telephoneSecretariat}
+          />
+        </div>
+        <div className="ctafoot">
+          <Link href={`/medecin/${medecin.id}/creneaux`} className="btn">
+            📅 Voir les disponibilités
+          </Link>
+        </div>
+      </div>
+
+      {/* ================= VERSION WEB (inchangée) ================= */}
+      <div className="hidden md:block">
       <div className="border-b border-line bg-white px-[30px] py-[22px]">
         <div className="text-xs font-semibold text-muted">
           <Link href="/">Accueil</Link> › <Link href="/resultats">Recherche</Link> ›{" "}
@@ -230,6 +379,7 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
           tarif={medecin.tarifConsultation}
           joursFermes={medecin.joursFermes}
         />
+      </div>
       </div>
     </div>
   );

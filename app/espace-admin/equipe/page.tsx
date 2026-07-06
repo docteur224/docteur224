@@ -1,6 +1,7 @@
 "use client";
 
 import AdminShell from "@/components/admin/AdminShell";
+import AppBarMobile from "@/components/mobile/AppBarMobile";
 import Interrupteur from "@/components/patient/Interrupteur";
 import {
   enregistrerPermissionsAdmin,
@@ -67,6 +68,69 @@ export default function EquipeAdmin() {
 
   return (
     <AdminShell>
+      {/* ===== Version mobile (écran « m-admin-equipe » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <AppBarMobile retour="/espace-admin/plus" titre="Équipe admin" />
+        <div className="pad">
+          <div className="abannerm" style={{ background: "var(--red-soft)", borderColor: "#F3C9C2", color: "var(--red)" }}>
+            <span aria-hidden>🔒</span>
+            <div>
+              <b>Cloisonnement.</b> Aucun administrateur ne peut consulter les{" "}
+              <b>dossiers médicaux</b> des patients.
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn block"
+            disabled
+            title="Disponible avec l'authentification"
+            style={{ opacity: 0.5, cursor: "not-allowed", marginTop: 0 }}
+          >
+            + Ajouter un administrateur
+          </button>
+          <div className="card2" style={{ marginTop: 12 }}>
+            <h4>Administrateurs · {ADMINS.length}</h4>
+            {ADMINS.map((admin) => (
+              <div key={admin.nom} className="asstrowm">
+                <span className="av" aria-hidden style={{ background: admin.gradient }}>
+                  {admin.initiales}
+                </span>
+                <span className="meta">
+                  <b>{admin.nom}</b>
+                  <small>{admin.email}</small>
+                </span>
+                <span className="rolepill">{admin.role}</span>
+              </div>
+            ))}
+          </div>
+          <div className="card2">
+            <h4>Permissions — Mariam</h4>
+            {PERMISSIONS.map((permission) => (
+              <div key={permission.cle} className="setrow">
+                <div>
+                  <b>{permission.titre}</b>
+                  {permission.detail && <small>{permission.detail}</small>}
+                </div>
+                <Interrupteur
+                  actif={permissions[permission.cle]}
+                  onChange={(v) => basculer(permission.cle, v)}
+                  label={permission.titre}
+                />
+              </div>
+            ))}
+            <div className="setrow">
+              <div>
+                <b>🔒 Dossiers médicaux</b>
+                <small>Interdit à tous les admins</small>
+              </div>
+              <span className="pill bad">Verrouillé</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Équipe admin</h2>
@@ -155,6 +219,7 @@ export default function EquipeAdmin() {
             Verrouillé
           </span>
         </div>
+      </div>
       </div>
     </AdminShell>
   );

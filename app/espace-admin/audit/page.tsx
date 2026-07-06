@@ -1,6 +1,7 @@
 "use client";
 
 import AdminShell from "@/components/admin/AdminShell";
+import AppBarMobile from "@/components/mobile/AppBarMobile";
 import { useJournalAudit } from "@/lib/mock-admin";
 
 /*
@@ -14,6 +15,47 @@ export default function AuditAdmin() {
 
   return (
     <AdminShell>
+      {/* ===== Version mobile (écran « m-admin-audit » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <AppBarMobile retour="/espace-admin/plus" titre="Journal d'audit" />
+        <div className="pad">
+          <div className="card2">
+            <h4>Actions récentes</h4>
+            <div style={{ overflowX: "auto" }}>
+              <table className="atab">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Acteur</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {journal.map((entree) => (
+                    <tr key={entree.id}>
+                      <td style={{ whiteSpace: "nowrap" }}>{entree.date}</td>
+                      <td>{entree.acteur}</td>
+                      <td>
+                        {entree.action} — {entree.cible}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="privnote info">
+              <span aria-hidden>🔒</span>
+              <div>
+                Journal en lecture seule, conservé pour la traçabilité. Aucune action ne peut être
+                supprimée.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5">
         <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Journal d’audit</h2>
         <small className="text-[13px] text-muted">Traçabilité des actions sensibles</small>
@@ -58,6 +100,7 @@ export default function AuditAdmin() {
             peut être supprimée.
           </div>
         </div>
+      </div>
       </div>
     </AdminShell>
   );

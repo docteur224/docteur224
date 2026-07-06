@@ -1,6 +1,7 @@
 "use client";
 
 import AdminShell from "@/components/admin/AdminShell";
+import AppBarMobile from "@/components/mobile/AppBarMobile";
 import {
   modererAvis,
   traiterSignalement,
@@ -27,6 +28,96 @@ export default function ModerationAdmin() {
 
   return (
     <AdminShell>
+      {/* ===== Version mobile (écran « m-admin-moderation » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <AppBarMobile retour="/espace-admin/plus" titre="Modération" />
+        <div className="pad">
+          <div className="abannerm">
+            <span aria-hidden>🚩</span>
+            <div>
+              Signalements et avis abusifs. Un signalement confirmé peut entraîner un
+              avertissement ou une suspension.
+            </div>
+          </div>
+          <div className="card2">
+            <h4>Signalements · {signalements.length}</h4>
+            {signalements.length === 0 && (
+              <p className="muted" style={{ fontSize: 12.5 }}>
+                ✅ Tous les signalements ont été traités.
+              </p>
+            )}
+            {signalements.map((signalement) => (
+              <div key={signalement.id} className="asstrowm">
+                <span
+                  className="av"
+                  aria-hidden
+                  style={{ background: "linear-gradient(135deg,#9AA8B2,#647A89)" }}
+                >
+                  ⚠️
+                </span>
+                <span className="meta">
+                  <b>{signalement.titre}</b>
+                  <small>{signalement.detail}</small>
+                </span>
+                <span style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                  <button
+                    type="button"
+                    className="btnm"
+                    onClick={() => traiterSignalement(signalement, "examiné")}
+                  >
+                    Examiner
+                  </button>
+                  <button
+                    type="button"
+                    className={signalement.sanction === "Suspendre" ? "btnm dg" : "btnm gh"}
+                    onClick={() =>
+                      traiterSignalement(
+                        signalement,
+                        signalement.sanction === "Suspendre" ? "suspendu" : "averti"
+                      )
+                    }
+                  >
+                    {signalement.sanction}
+                  </button>
+                </span>
+              </div>
+            ))}
+          </div>
+          <div className="card2">
+            <h4>Avis à modérer · {avis.length}</h4>
+            {avis.length === 0 && (
+              <p className="muted" style={{ fontSize: 12.5 }}>
+                ✅ Tous les avis ont été modérés.
+              </p>
+            )}
+            {avis.map((a) => (
+              <div key={a.id} className="reviewmod">
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
+                  <b style={{ fontSize: 12.5 }}>{a.titre}</b>
+                  <span className="pill soon">{a.etiquette}</span>
+                </div>
+                <p className="muted" style={{ fontSize: 11.5, margin: "7px 0 9px" }}>
+                  {a.extrait}
+                </p>
+                <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  <button type="button" className="btnm gh" onClick={() => modererAvis(a, "conservé")}>
+                    Conserver
+                  </button>
+                  <button type="button" className="btnm gh" onClick={() => modererAvis(a, "masqué")}>
+                    Masquer
+                  </button>
+                  <button type="button" className="btnm dg" onClick={() => modererAvis(a, "supprimé")}>
+                    Supprimer
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5">
         <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Modération</h2>
         <small className="text-[13px] text-muted">Signalements et avis à traiter</small>
@@ -131,6 +222,7 @@ export default function ModerationAdmin() {
             </div>
           </div>
         ))}
+      </div>
       </div>
     </AdminShell>
   );

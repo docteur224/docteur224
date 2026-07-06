@@ -55,6 +55,100 @@ export default function TableauDeBordAssistant() {
 
   return (
     <AssistantShell>
+      {/* ===== Version mobile (écran « m-asst-dash » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <div className="appbar">
+          <h3 style={{ paddingLeft: 4 }}>Bonjour Hawa 👋</h3>
+        </div>
+        <div className="pad">
+          <div className="abannerm">
+            <span aria-hidden>🔒</span>
+            <div>
+              Espace assistant(e) · vous assistez le <b>Dr A. Barry</b>. Accès limité aux RDV et à
+              la communication.
+            </div>
+          </div>
+          <div className="statcards inpad">
+            <div className="sc b1">
+              <b>{rdvJour.length}</b>
+              <small>RDV aujourd&apos;hui</small>
+            </div>
+            <div className="sc b2">
+              <b>{demandes.length}</b>
+              <small>À confirmer</small>
+            </div>
+            <div className="sc b3">
+              <b>5</b>
+              <small>Messages</small>
+            </div>
+          </div>
+          {erreur && (
+            <div className="noteboxm" style={{ marginTop: 12, background: "var(--red-soft)", borderColor: "#F3C9C2", color: "var(--red)" }}>
+              <div>{erreur}</div>
+            </div>
+          )}
+          <div className="card2" style={{ marginTop: 12 }}>
+            <h4>Demandes à confirmer</h4>
+            {demandes.map((demande) => (
+              <div key={demande.id} className="aptm">
+                <div className="tm">{demande.heure}</div>
+                <div className="meta">
+                  <b>{demande.patient}</b>
+                  <small>{demande.detail}</small>
+                </div>
+                <div className="acts">
+                  <button
+                    type="button"
+                    className="btnm"
+                    style={permissions.confirmerAnnuler ? undefined : { opacity: 0.5 }}
+                    onClick={() => traiterDemande(demande.id)}
+                  >
+                    Confirmer
+                  </button>
+                  <button
+                    type="button"
+                    className="btnm dg"
+                    style={permissions.confirmerAnnuler ? undefined : { opacity: 0.5 }}
+                    onClick={() => traiterDemande(demande.id)}
+                  >
+                    Refuser
+                  </button>
+                </div>
+              </div>
+            ))}
+            {demandes.length === 0 && (
+              <p className="muted" style={{ fontSize: 13 }}>
+                Toutes les demandes ont été traitées. 👍
+              </p>
+            )}
+          </div>
+          <div className="card2">
+            <h4>Prochains rendez-vous</h4>
+            {rdvJour.slice(0, 4).map((creneau) => (
+              <div key={creneau.heure} className="aptm">
+                <div className="tm">{creneau.heure}</div>
+                <div className="meta">
+                  <b>{creneau.patient}</b>
+                  <small>{creneau.motif} · confirmé</small>
+                </div>
+                <div className="acts">
+                  <Link href="/espace-assistant/rendez-vous" className="btnm gh">
+                    Gérer
+                  </Link>
+                </div>
+              </div>
+            ))}
+            {rdvJour.length === 0 && (
+              <p className="muted" style={{ fontSize: 13 }}>
+                Aucun rendez-vous aujourd&apos;hui.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5">
         <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Bonjour Hawa 👋</h2>
         <small className="text-[13px] text-muted">
@@ -175,6 +269,7 @@ export default function TableauDeBordAssistant() {
             💬 Répondre aux messages
           </Link>
         </div>
+      </div>
       </div>
     </AssistantShell>
   );

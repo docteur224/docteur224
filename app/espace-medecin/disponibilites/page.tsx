@@ -2,6 +2,7 @@
 
 import MedecinShell from "@/components/medecin/MedecinShell";
 import GrilleDisponibilites from "@/components/pro/GrilleDisponibilites";
+import AppBarMobile from "@/components/mobile/AppBarMobile";
 import { medecinConnecte } from "@/lib/mock-data";
 import { basculerCreneauLocal } from "@/lib/mock-disponibilites";
 
@@ -23,9 +24,76 @@ const JOURS_OUVERTURE = [
   { jour: "Dim", heures: null },
 ];
 
+/** Libellés longs pour la liste « Horaires de la semaine » mobile. */
+const JOURS_SEMAINE_LONGS = [
+  { jour: "Lundi", heures: ["08:00", "17:00"] as [string, string] | null },
+  { jour: "Mardi", heures: ["08:00", "17:00"] as [string, string] | null },
+  { jour: "Mercredi", heures: ["08:00", "13:00"] as [string, string] | null },
+  { jour: "Jeudi", heures: ["08:00", "17:00"] as [string, string] | null },
+  { jour: "Vendredi", heures: ["08:00", "17:00"] as [string, string] | null },
+  { jour: "Samedi", heures: ["09:00", "13:00"] as [string, string] | null },
+  { jour: "Dimanche", heures: null as [string, string] | null },
+];
+
 export default function Disponibilites() {
   return (
     <MedecinShell>
+      {/* ===== Version mobile (écran « m-med-dispos » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <AppBarMobile retour="/espace-medecin/compte" titre="Mes disponibilités" />
+        <div className="pad">
+          <div className="card2">
+            <h4>Horaires de la semaine</h4>
+            <div className="weekm">
+              {JOURS_SEMAINE_LONGS.map((j) => (
+                <div key={j.jour} className={`wdm${j.heures === null ? " closed" : ""}`}>
+                  <b>{j.jour}</b>
+                  <span className="h">
+                    {j.heures === null ? "Fermé" : `${j.heures[0]} – ${j.heures[1]}`}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+          <GrilleDisponibilites
+            medecinId={medecinConnecte.id}
+            peutModifier
+            basculer={(dateISO, heure) => {
+              basculerCreneauLocal(medecinConnecte.id, dateISO, heure);
+              return { ok: true };
+            }}
+          />
+          <div className="card2" style={{ marginTop: 12 }}>
+            <h4>Congés et absences</h4>
+            <div className="setrow">
+              <div>
+                <b>Vacances annuelles</b>
+                <small>1 – 15 août 2026</small>
+              </div>
+              <span className="pill soon">Programmé</span>
+            </div>
+            <div className="setrow">
+              <div>
+                <b>Jour de congé</b>
+                <small>Chaque dimanche</small>
+              </div>
+              <span className="pill ok">Récurrent</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="btn ghost block"
+            disabled
+            title="Disponible dans une phase ultérieure"
+            style={{ opacity: 0.5, cursor: "not-allowed" }}
+          >
+            + Ajouter une absence
+          </button>
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Mes disponibilités</h2>
@@ -108,6 +176,7 @@ export default function Disponibilites() {
         >
           + Ajouter une absence
         </button>
+      </div>
       </div>
     </MedecinShell>
   );

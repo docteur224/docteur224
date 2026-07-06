@@ -3,6 +3,7 @@
 import Link from "next/link";
 import MedecinShell from "@/components/medecin/MedecinShell";
 import Interrupteur from "@/components/patient/Interrupteur";
+import AppBarMobile from "@/components/mobile/AppBarMobile";
 import {
   enregistrerPermissionsAssistante,
   usePermissionsAssistante,
@@ -78,6 +79,82 @@ export default function EquipeMedecin() {
 
   return (
     <MedecinShell>
+      {/* ===== Version mobile (écran « m-med-equipe » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <AppBarMobile retour="/espace-medecin/compte" titre="Mes assistant(e)s" />
+        <div className="pad">
+          <p className="muted" style={{ fontSize: 11.5, margin: "-2px 0 12px", lineHeight: 1.5 }}>
+            Créez des comptes et choisissez précisément ce que chaque assistant(e) peut faire.
+          </p>
+          <div className="card2">
+            <h4>Comptes de l&apos;équipe</h4>
+            {EQUIPE.map((membre) => (
+              <div key={membre.nom} className="asstrowm">
+                <span className="av" aria-hidden style={{ background: membre.gradient }}>
+                  {membre.initiales}
+                </span>
+                <span className="meta">
+                  <b>{membre.nom}</b>
+                  <small>{membre.detail}</small>
+                </span>
+                <span className={`pill ${membre.statut === "Actif" ? "ok" : "lock"}`}>
+                  {membre.statut}
+                </span>
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            className="btn block"
+            disabled
+            title="Disponible dans une phase ultérieure"
+            style={{ opacity: 0.5, cursor: "not-allowed" }}
+          >
+            + Ajouter un(e) assistant(e)
+          </button>
+          <div className="card2" style={{ marginTop: 12 }}>
+            <h4>Permissions — Hawa Diallo</h4>
+            {PERMISSIONS.map((permission) => (
+              <div key={permission.cle} className="setrow">
+                <div>
+                  <b>{permission.titre}</b>
+                  <small>{permission.detail}</small>
+                </div>
+                <Interrupteur
+                  actif={permissions[permission.cle]}
+                  onChange={(v) => basculer(permission.cle, v)}
+                  label={permission.titre}
+                />
+              </div>
+            ))}
+            <div className="setrow">
+              <div>
+                <b>🔒 Dossiers médicaux</b>
+              </div>
+              <span className="pill bad">Interdit</span>
+            </div>
+            <div className="setrow">
+              <div>
+                <b>🔒 Paiements et revenus</b>
+              </div>
+              <span className="pill bad">Interdit</span>
+            </div>
+            <div className="noteboxm">
+              <span aria-hidden>🔒</span>
+              <div>
+                Les dossiers médicaux et les données financières ne sont <b>jamais</b> accessibles
+                aux assistant(e)s.
+              </div>
+            </div>
+          </div>
+          <Link href="/espace-assistant" className="btn ghost block">
+            👁 Aperçu de l&apos;espace assistant
+          </Link>
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Mes assistant(e)s</h2>
@@ -187,6 +264,7 @@ export default function EquipeMedecin() {
             barrière est intégrée à la plateforme.
           </div>
         </div>
+      </div>
       </div>
     </MedecinShell>
   );

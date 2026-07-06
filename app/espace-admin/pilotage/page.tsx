@@ -1,6 +1,7 @@
 "use client";
 
 import AdminShell from "@/components/admin/AdminShell";
+import AppBarMobile from "@/components/mobile/AppBarMobile";
 import Interrupteur from "@/components/patient/Interrupteur";
 import { basculerVedette, useVedettes } from "@/lib/mock-admin";
 
@@ -29,6 +30,94 @@ export default function PilotageAdmin() {
 
   return (
     <AdminShell>
+      {/* ===== Version mobile (écran « m-admin-pilotage » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <AppBarMobile retour="/espace-admin/plus" titre="Pilotage & croissance" />
+        <div className="pad">
+          <div className="card2">
+            <h4>Couverture par ville</h4>
+            <table className="atab">
+              <thead>
+                <tr>
+                  <th>Ville</th>
+                  <th>Médecins</th>
+                  <th>Demande</th>
+                </tr>
+              </thead>
+              <tbody>
+                {COUVERTURE_VILLES.map((ligne) => (
+                  <tr key={ligne.ville}>
+                    <td>{ligne.ville}</td>
+                    <td>{ligne.medecins}</td>
+                    <td>
+                      <span
+                        className={`pill ${
+                          ligne.demande === "Bonne" ? "ok" : ligne.demande === "Moyenne" ? "soon" : "bad"
+                        }`}
+                      >
+                        {ligne.demande}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="card2">
+            <h4>Couverture par spécialité</h4>
+            <div className="chips">
+              {COUVERTURE_SPECIALITES.map((chip) => (
+                <span
+                  key={chip.nom}
+                  className={`chip ${
+                    chip.nom.includes("⚠") ? (chip.nom.includes("0") ? "bad" : "soon") : "grey"
+                  }`}
+                  style={
+                    chip.nom.includes("⚠")
+                      ? chip.nom.includes("0")
+                        ? { background: "var(--red-soft)", color: "var(--red)", borderColor: "#F1C9C2" }
+                        : { background: "var(--amber-soft)", color: "var(--amber)", borderColor: "#EAD3AE" }
+                      : undefined
+                  }
+                >
+                  {chip.nom}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="card2">
+            <h4>Consommation SMS</h4>
+            <b style={{ fontSize: 14 }}>
+              18 400 <span className="muted" style={{ fontWeight: 600, fontSize: 12 }}>/ 25 000 ce mois</span>
+            </b>
+            <div className="budget">
+              <span style={{ width: "74%" }} />
+            </div>
+            <small className="muted">
+              Budget à 74 %. Rechargez avant épuisement pour ne pas interrompre les rappels.
+            </small>
+          </div>
+          <div className="card2">
+            <h4>En vedette</h4>
+            {vedettes.map((vedette) => (
+              <div key={vedette.id} className="setrow">
+                <div>
+                  <b>{vedette.nom}</b>
+                  <small>{vedette.detail}</small>
+                </div>
+                <Interrupteur
+                  actif={vedette.actif}
+                  onChange={(v) => basculerVedette(vedette.id, v)}
+                  label={`Mettre en vedette ${vedette.nom}`}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5">
         <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Pilotage & croissance</h2>
         <small className="text-[13px] text-muted">
@@ -136,6 +225,7 @@ export default function PilotageAdmin() {
             />
           </div>
         ))}
+      </div>
       </div>
     </AdminShell>
   );

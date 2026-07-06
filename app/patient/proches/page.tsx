@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import PatientShell from "@/components/patient/PatientShell";
+import AppBarMobile from "@/components/mobile/AppBarMobile";
 import { calculerAge, formatDateCourte } from "@/lib/dates";
 import {
   ajouterProcheLocal,
@@ -67,6 +68,134 @@ export default function MesProches() {
 
   return (
     <PatientShell>
+      {/* ===== Version mobile (écran « m-pat-proches » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <AppBarMobile retour="/patient/compte" titre="Mes proches" />
+        <div className="pad">
+          <div className="abannerm">
+            <span aria-hidden>ℹ️</span>
+            <div>
+              Un proche <b>n&apos;a pas besoin de compte</b>. Vous prenez et gérez ses rendez-vous.
+              Lors d&apos;une réservation, choisissez « Pour qui ».
+            </div>
+          </div>
+          <div className="card2">
+            <h4>Proches enregistrés</h4>
+            {proches.map((proche) => (
+              <div key={proche.id} className="asstrowm">
+                <span className="av" aria-hidden style={{ background: proche.gradient }}>
+                  {initialesProche(proche)}
+                </span>
+                <span className="meta">
+                  <b>
+                    {proche.prenom} {proche.nom}
+                  </b>
+                  <small>
+                    {proche.lien} · {calculerAge(proche.dateNaissance)} an
+                    {calculerAge(proche.dateNaissance) > 1 ? "s" : ""} ·{" "}
+                    {proche.genre === "Femme" ? "née" : "né"} le{" "}
+                    {formatDateCourte(proche.dateNaissance)}
+                  </small>
+                </span>
+                <button type="button" className="btnm gh" onClick={() => commencerEdition(proche)}>
+                  Modifier
+                </button>
+              </div>
+            ))}
+            {proches.length === 0 && (
+              <p className="muted" style={{ fontSize: 13 }}>
+                Aucun proche enregistré pour le moment.
+              </p>
+            )}
+          </div>
+          <div className="card2">
+            <h4>{enEdition ? `Modifier ${enEdition.prenom} ${enEdition.nom}` : "Ajouter un proche"}</h4>
+            <div className="fgrid2">
+              <div>
+                <div className="flabel">Nom *</div>
+                <input
+                  className="inp"
+                  placeholder="Nom"
+                  value={formulaire.nom}
+                  onChange={(e) => setFormulaire({ ...formulaire, nom: e.target.value })}
+                />
+              </div>
+              <div>
+                <div className="flabel">Prénom *</div>
+                <input
+                  className="inp"
+                  placeholder="Prénom"
+                  value={formulaire.prenom}
+                  onChange={(e) => setFormulaire({ ...formulaire, prenom: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="fgrid2">
+              <div>
+                <div className="flabel">Lien *</div>
+                <select
+                  className="selm"
+                  value={formulaire.lien}
+                  onChange={(e) => setFormulaire({ ...formulaire, lien: e.target.value })}
+                >
+                  {LIENS_PROCHE.map((lien) => (
+                    <option key={lien}>{lien}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <div className="flabel">Naissance *</div>
+                <input
+                  type="date"
+                  className="inp"
+                  value={formulaire.dateNaissance}
+                  onChange={(e) => setFormulaire({ ...formulaire, dateNaissance: e.target.value })}
+                />
+              </div>
+            </div>
+            <div className="flabel">Genre</div>
+            <select
+              className="selm"
+              value={formulaire.genre}
+              onChange={(e) =>
+                setFormulaire({ ...formulaire, genre: e.target.value as ProcheLocal["genre"] })
+              }
+            >
+              <option>Femme</option>
+              <option>Homme</option>
+            </select>
+            {message && (
+              <div style={{ color: "var(--green)", fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>
+                {message}
+              </div>
+            )}
+            <button
+              type="button"
+              className="btn block"
+              style={{ opacity: valide ? 1 : 0.5 }}
+              disabled={!valide}
+              onClick={enregistrer}
+            >
+              {enEdition ? "Enregistrer les modifications" : "Enregistrer le proche"}
+            </button>
+            {enEdition && (
+              <button
+                type="button"
+                className="btn ghost block"
+                onClick={() => {
+                  setEnEdition(null);
+                  setFormulaire(FORMULAIRE_VIDE);
+                }}
+              >
+                Annuler la modification
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5">
         <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Mes proches</h2>
         <small className="text-[13px] text-muted">
@@ -203,6 +332,7 @@ export default function MesProches() {
           )}
           {message && <span className="text-[12.5px] font-bold text-green">{message}</span>}
         </div>
+      </div>
       </div>
     </PatientShell>
   );

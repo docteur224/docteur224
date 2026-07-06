@@ -1,6 +1,7 @@
 "use client";
 
 import MedecinShell from "@/components/medecin/MedecinShell";
+import AppBarMobile from "@/components/mobile/AppBarMobile";
 import { formatNote } from "@/lib/format";
 import { medecinConnecte } from "@/lib/mock-data";
 
@@ -33,6 +34,51 @@ const AVIS = [
 export default function StatistiquesMedecin() {
   return (
     <MedecinShell>
+      {/* ===== Version mobile (écran « m-med-stats » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <AppBarMobile retour="/espace-medecin/compte" titre="Statistiques" />
+        <div className="pad">
+          <div className="statcards inpad">
+            <div className="sc b1">
+              <b>142</b>
+              <small>RDV ce mois</small>
+            </div>
+            <div className="sc b2">
+              <b>4%</b>
+              <small>Annulation</small>
+            </div>
+            <div className="sc b3">
+              <b>96%</b>
+              <small>Présence</small>
+            </div>
+          </div>
+          <div className="card2" style={{ marginTop: 12 }}>
+            <h4>Rendez-vous par mois</h4>
+            <div className="bars">
+              {BARRES.map((barre) => (
+                <div key={barre.mois} className="b">
+                  <div className="bar" style={{ height: `${barre.hauteur}%` }} />
+                  <small>{barre.mois}</small>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="card2">
+            <h4>Derniers avis</h4>
+            {AVIS.map((avis) => (
+              <div key={avis.titre} className="setrow review">
+                <div>
+                  <b>{avis.titre}</b>
+                  <small>{avis.texte}</small>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Statistiques</h2>
@@ -99,6 +145,7 @@ export default function StatistiquesMedecin() {
             <small className="text-[12.5px] text-[#3f5360]">{avis.texte}</small>
           </div>
         ))}
+      </div>
       </div>
     </MedecinShell>
   );

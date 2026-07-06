@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import PatientShell from "@/components/patient/PatientShell";
+import AppBarMobile from "@/components/mobile/AppBarMobile";
 import { villes } from "@/lib/mock-data";
 import {
   enregistrerPatientLocal,
@@ -39,6 +40,104 @@ export default function MonProfil() {
 
   return (
     <PatientShell>
+      {/* ===== Version mobile (écran « m-pat-profil » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <AppBarMobile retour="/patient/compte" titre="Mon profil" />
+        <div className="pad">
+          <div className="acctop">
+            <span
+              className="av"
+              aria-hidden
+              style={{ background: "linear-gradient(135deg,#2E9CCA,#15506B)" }}
+            >
+              {initialesPatient(patient)}
+            </span>
+            <div>
+              <b>
+                {patient.prenom} {patient.nom}
+              </b>
+              <small>{patient.sexe === "Masculin" ? "Patient" : "Patiente"}</small>
+            </div>
+          </div>
+          <div className="fldm">
+            <label>Prénom</label>
+            <input
+              className="v"
+              value={patient.prenom}
+              onChange={(e) => setPatient({ ...patient, prenom: e.target.value })}
+            />
+          </div>
+          <div className="fldm">
+            <label>Nom</label>
+            <input
+              className="v"
+              value={patient.nom}
+              onChange={(e) => setPatient({ ...patient, nom: e.target.value })}
+            />
+          </div>
+          <div className="fldm">
+            <label>Téléphone</label>
+            <input
+              className="v"
+              value={patient.telephone}
+              onChange={(e) => setPatient({ ...patient, telephone: e.target.value })}
+            />
+          </div>
+          <div className="fldm">
+            <label>E-mail</label>
+            <input
+              className="v"
+              value={patient.email}
+              onChange={(e) => setPatient({ ...patient, email: e.target.value })}
+            />
+          </div>
+          <div className="fldm">
+            <label>Date de naissance</label>
+            <input
+              type="date"
+              className="v"
+              value={patient.dateNaissance}
+              onChange={(e) => setPatient({ ...patient, dateNaissance: e.target.value })}
+            />
+          </div>
+          <div className="fldm">
+            <label>Sexe</label>
+            <select
+              className="v"
+              value={patient.sexe}
+              onChange={(e) =>
+                setPatient({ ...patient, sexe: e.target.value as PatientLocal["sexe"] })
+              }
+            >
+              <option>Féminin</option>
+              <option>Masculin</option>
+            </select>
+          </div>
+          <div className="fldm">
+            <label>Ville</label>
+            <select
+              className="v"
+              value={patient.ville}
+              onChange={(e) => setPatient({ ...patient, ville: e.target.value })}
+            >
+              {villes.map((ville) => (
+                <option key={ville}>{ville}</option>
+              ))}
+            </select>
+          </div>
+          {message && (
+            <div style={{ color: "var(--green)", fontSize: 12.5, fontWeight: 700, marginBottom: 10 }}>
+              {message}
+            </div>
+          )}
+          <button type="button" className="btn block" onClick={enregistrer}>
+            💾 Enregistrer
+          </button>
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Mon profil</h2>
@@ -151,6 +250,7 @@ export default function MonProfil() {
             </select>
           </div>
         </div>
+      </div>
       </div>
     </PatientShell>
   );

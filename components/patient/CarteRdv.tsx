@@ -20,7 +20,39 @@ export default function CarteRdv({
   const pourUnProche = rdv.pourQuiId !== undefined && rdv.pourQuiId !== "moi";
 
   return (
-    <div className="mb-[14px] grid items-center gap-[18px] rounded-2xl border border-line bg-white p-[18px] sm:grid-cols-[64px_1fr] lg:grid-cols-[64px_1fr_auto]">
+    <>
+    {/* ===== Version mobile : carte .appt de la maquette mobile ===== */}
+    <div className="appt md:hidden">
+      <div className="top">
+        <div className="when">
+          <b>{d.getDate()}</b>
+          <small>{MOIS_ABREGES[d.getMonth()]}</small>
+        </div>
+        <div className="who" style={{ flex: 1 }}>
+          <b>{rdv.medecinNom}</b>
+          <small>
+            {rdv.specialite} · {rdv.heure}
+          </small>
+        </div>
+        <span className={`badge ${annule ? "no" : "ok"}`}>{annule ? "Annulé" : "Confirmé"}</span>
+      </div>
+      <div className="hr" />
+      <div className="det">
+        📍 {rdv.etablissementNom} · {rdv.ville}
+      </div>
+      {pourUnProche && <div className="det">👤 Pour : {rdv.pourQui}</div>}
+      {onAnnuler && !annule && (
+        <div className="acts">
+          <Link href={`/medecin/${rdv.medecinId}`}>Modifier</Link>
+          <button type="button" className="danger" onClick={() => onAnnuler(rdv.id)}>
+            Annuler
+          </button>
+        </div>
+      )}
+    </div>
+
+    {/* ===== Version web (inchangée) ===== */}
+    <div className="mb-[14px] hidden items-center gap-[18px] rounded-2xl border border-line bg-white p-[18px] sm:grid-cols-[64px_1fr] md:grid lg:grid-cols-[64px_1fr_auto]">
       <div className="rounded-[13px] bg-teal-soft py-3 text-center">
         <b className="block text-[22px] font-extrabold leading-none text-blue">{d.getDate()}</b>
         <small className="text-[10px] font-bold uppercase text-blue">
@@ -68,5 +100,6 @@ export default function CarteRdv({
         )}
       </div>
     </div>
+    </>
   );
 }

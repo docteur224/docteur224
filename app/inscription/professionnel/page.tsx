@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import AppBarMobile from "@/components/mobile/AppBarMobile";
 import CaseCocher from "@/components/site/CaseCocher";
 import CoteAuth from "@/components/site/CoteAuth";
 import FauxCaptcha from "@/components/site/FauxCaptcha";
@@ -51,7 +52,123 @@ export default function InscriptionProfessionnel() {
   const etiquette = "mb-1.5 mt-0.5 block text-[12.5px] font-bold text-ink";
 
   return (
-    <div className="grid min-h-screen bg-white lg:grid-cols-2">
+    <div className="min-h-screen bg-bg md:bg-white">
+      {/* ================= VERSION MOBILE (écran « m-inscription-pro » de la maquette mobile) ================= */}
+      <div className="md:hidden">
+        <AppBarMobile retour="/inscription" titre="Compte professionnel" />
+        <div className="pad">
+          <p className="muted" style={{ fontSize: 12, margin: "0 0 12px" }}>
+            Sélectionnez votre profil pour commencer.
+          </p>
+          <div className="rtabs">
+            {ONGLETS.map((onglet) => (
+              <button
+                key={onglet.id}
+                type="button"
+                onClick={() => setProfil(onglet.id)}
+                className={`rtab${profil === onglet.id ? " on" : ""}`}
+              >
+                {onglet.nom}
+              </button>
+            ))}
+          </div>
+          <FauxCaptcha />
+          {praticien ? (
+            <>
+              <div className="fgrid2">
+                <div>
+                  <div className="flabel">Civilité *</div>
+                  <select className="selm">
+                    <option>Dr</option>
+                    <option>Pr</option>
+                  </select>
+                </div>
+                <div>
+                  <div className="flabel">Genre *</div>
+                  <select className="selm">
+                    <option>Femme</option>
+                    <option>Homme</option>
+                  </select>
+                </div>
+              </div>
+              <div className="fgrid2">
+                <div>
+                  <div className="flabel">Nom *</div>
+                  <input className="inp" placeholder="Nom" />
+                </div>
+                <div>
+                  <div className="flabel">Prénom *</div>
+                  <input className="inp" placeholder="Prénom" />
+                </div>
+              </div>
+              <div className="flabel">Spécialité *</div>
+              <select className="selm">
+                {SPECIALITES.map((specialite) => (
+                  <option key={specialite}>{specialite}</option>
+                ))}
+              </select>
+            </>
+          ) : (
+            <>
+              <div className="abannerm">
+                <span aria-hidden>ℹ️</span>
+                <div>
+                  Vous compléterez le profil détaillé de l&apos;établissement après la création du
+                  compte.
+                </div>
+              </div>
+              <div className="flabel">{CHAMPS_ETABLISSEMENT[profil].label}</div>
+              <input className="inp" placeholder={CHAMPS_ETABLISSEMENT[profil].placeholder} />
+            </>
+          )}
+          <div className="flabel">Ville *</div>
+          <select className="selm">
+            {VILLES.map((ville) => (
+              <option key={ville}>{ville}</option>
+            ))}
+          </select>
+          <div className="flabel">Téléphone *</div>
+          <div className="phone-inp">
+            <span className="cc">🇬🇳 +224</span>
+            <input className="inp" placeholder="6XX XX XX XX" aria-label="Numéro de téléphone" />
+          </div>
+          <div className="muted" style={{ fontSize: 10.5, margin: "-6px 0 11px" }}>
+            Un SMS de vérification sera envoyé à ce numéro.
+          </div>
+          <div className="flabel">E-mail *</div>
+          <input className="inp" placeholder="contact@exemple.com" />
+          <div className="flabel">Mot de passe *</div>
+          <input className="inp" type="password" placeholder="••••••••" />
+          <CaseCocher texte="J'accepte les conditions d'utilisation et la politique de confidentialité." />
+          <Link href={praticien ? "/espace-medecin" : "/espace-etablissement"} className="btn block">
+            Continuer
+          </Link>
+          <div className="promo">
+            <h4>Élargissez votre patientèle</h4>
+            <p>Laissez vos patients prendre rendez-vous en ligne 24h/24.</p>
+            <div className="ps">
+              <div>
+                <b>15 000+</b>
+                <small>Patients</small>
+              </div>
+              <div>
+                <b>24/7</b>
+                <small>Prise de RDV</small>
+              </div>
+              <div>
+                <b>0 GNF</b>
+                <small>Inscription</small>
+              </div>
+            </div>
+          </div>
+          <div className="linkline">
+            Déjà inscrit ? <Link href="/connexion">Se connecter</Link>
+          </div>
+        </div>
+      </div>
+
+      {/* ================= VERSION WEB (inchangée) ================= */}
+      <div className="hidden min-h-screen bg-white md:grid lg:grid-cols-2">
       <div className="flex flex-col justify-center px-6 py-10 sm:px-[50px] sm:py-[54px]">
         <div className="mx-auto w-full max-w-[520px]">
           <h3 className="text-[22px] font-extrabold tracking-[-0.3px]">
@@ -192,6 +309,7 @@ export default function InscriptionProfessionnel() {
           { valeur: "0 GNF", label: "À l'inscription" },
         ]}
       />
+      </div>
     </div>
   );
 }

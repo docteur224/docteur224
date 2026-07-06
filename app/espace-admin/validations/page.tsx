@@ -33,6 +33,33 @@ const MOTIFS = [
   "Informations incohérentes",
 ];
 
+/** Ligne mobile de la file (mêmes actions que la version web). */
+function LigneDossierMobile({ dossier }: { dossier: DossierValidation }) {
+  return (
+    <div className="asstrowm">
+      <span
+        className="av"
+        aria-hidden
+        style={{ background: "linear-gradient(135deg,#9AA8B2,#647A89)" }}
+      >
+        {dossier.initiales}
+      </span>
+      <span className="meta">
+        <b>{dossier.nom}</b>
+        <small>{dossier.detail}</small>
+      </span>
+      <span style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+        <button type="button" className="btnm" onClick={() => approuverDossier(dossier)}>
+          Approuver
+        </button>
+        <button type="button" className="btnm dg" onClick={() => rejeterDossier(dossier)}>
+          Rejeter
+        </button>
+      </span>
+    </div>
+  );
+}
+
 function LigneDossier({ dossier }: { dossier: DossierValidation }) {
   return (
     <div className="flex flex-wrap items-center gap-[13px] border-b border-line py-[14px] last:border-b-0">
@@ -85,6 +112,94 @@ export default function ValidationsAdmin() {
 
   return (
     <AdminShell>
+      {/* ===== Version mobile (écran « m-admin-validation » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <div className="appbar">
+          <h3 style={{ paddingLeft: 4 }}>Validations</h3>
+        </div>
+        <div className="pad">
+          <div className="abannerm">
+            <span aria-hidden>ℹ️</span>
+            <div>
+              Vérifiez diplôme, carte de l&apos;ordre, autorisation d&apos;exercice et pièce
+              d&apos;identité avant d&apos;approuver.
+            </div>
+          </div>
+          {dossierEnCours ? (
+            <div className="card2">
+              <h4>Dossier en examen — {dossierEnCours.nom}</h4>
+              <div className="docthumbs">
+                {PIECES.map((piece) => (
+                  <div key={piece.label} className="docthumb">
+                    <span aria-hidden>{piece.icone}</span>
+                    <small>{piece.label}</small>
+                  </div>
+                ))}
+              </div>
+              <div className="fldm" style={{ marginTop: 6 }}>
+                <label>Motif (si rejet ou complément)</label>
+                <select className="v" value={motif} onChange={(e) => setMotif(e.target.value)}>
+                  {MOTIFS.map((m) => (
+                    <option key={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginTop: 8 }}>
+                <button type="button" className="btnm" onClick={() => approuverDossier(dossierEnCours)}>
+                  ✔ Approuver
+                </button>
+                <button type="button" className="btnm gh" onClick={() => demanderComplement(dossierEnCours)}>
+                  📩 Complément
+                </button>
+                <button
+                  type="button"
+                  className="btnm dg"
+                  onClick={() =>
+                    rejeterDossier(dossierEnCours, motif === MOTIFS[0] ? undefined : motif)
+                  }
+                >
+                  ✕ Rejeter
+                </button>
+              </div>
+              <div className="privnote info">
+                <span aria-hidden>📜</span>
+                <div>Toute décision est horodatée et tracée dans le journal d&apos;audit.</div>
+              </div>
+            </div>
+          ) : (
+            <div className="card2" style={{ textAlign: "center" }}>
+              <p className="muted" style={{ fontSize: 13 }}>
+                ✅ Aucun dossier médecin en cours d&apos;examen — la file est vide.
+              </p>
+            </div>
+          )}
+          <div className="card2">
+            <h4>Médecins en attente · {medecins.length}</h4>
+            {medecins.length === 0 && (
+              <p className="muted" style={{ fontSize: 12.5 }}>
+                Aucun médecin en attente.
+              </p>
+            )}
+            {medecins.map((dossier) => (
+              <LigneDossierMobile key={dossier.id} dossier={dossier} />
+            ))}
+          </div>
+          <div className="card2">
+            <h4>Établissements en attente · {etablissements.length}</h4>
+            {etablissements.length === 0 && (
+              <p className="muted" style={{ fontSize: 12.5 }}>
+                Aucun établissement en attente.
+              </p>
+            )}
+            {etablissements.map((dossier) => (
+              <LigneDossierMobile key={dossier.id} dossier={dossier} />
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5">
         <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Validations</h2>
         <small className="text-[13px] text-muted">
@@ -200,6 +315,7 @@ export default function ValidationsAdmin() {
         {etablissements.map((dossier) => (
           <LigneDossier key={dossier.id} dossier={dossier} />
         ))}
+      </div>
       </div>
     </AdminShell>
   );

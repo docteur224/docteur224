@@ -1,6 +1,7 @@
 "use client";
 
 import EtablissementShell from "@/components/etablissement/EtablissementShell";
+import AppBarMobile from "@/components/mobile/AppBarMobile";
 import { useMedecinsRattaches } from "@/lib/mock-etablissement";
 
 /*
@@ -26,6 +27,67 @@ export default function StatistiquesEtablissement() {
 
   return (
     <EtablissementShell>
+      {/* ===== Version mobile (écran « m-etab-stats » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <AppBarMobile retour="/espace-etablissement/compte" titre="Statistiques" />
+        <div className="pad">
+          <div className="statcards inpad two">
+            <div className="sc b1">
+              <b>486</b>
+              <small>RDV ce mois</small>
+            </div>
+            <div className="sc b2">
+              <b>{rattaches.length}</b>
+              <small>Médecins actifs</small>
+            </div>
+            <div className="sc b3">
+              <b>78%</b>
+              <small>Occupation</small>
+            </div>
+            <div className="sc b1">
+              <b>5%</b>
+              <small>Annulation</small>
+            </div>
+          </div>
+          <div className="card2" style={{ marginTop: 12 }}>
+            <h4>RDV par mois</h4>
+            <div className="bars">
+              {BARRES.map((barre) => (
+                <div key={barre.mois} className="b">
+                  <div className="bar" style={{ height: `${barre.hauteur}%` }} />
+                  <small>{barre.mois}</small>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="card2">
+            <h4>Médecins les plus consultés</h4>
+            {classement.map((medecin) => (
+              <div key={medecin.id} className="asstrowm">
+                <span className="av" aria-hidden style={{ background: medecin.gradient }}>
+                  {medecin.initiales}
+                </span>
+                <span className="meta">
+                  <b>{medecin.nom}</b>
+                  <small>
+                    {medecin.specialite} · {medecin.rdvSemaine} RDV
+                  </small>
+                </span>
+                <span className="budget" style={{ width: 70, flex: "none" }}>
+                  <span style={{ width: `${(medecin.rdvSemaine / maxRdv) * 100}%` }} />
+                </span>
+              </div>
+            ))}
+            <p className="muted" style={{ fontSize: 11.5, marginTop: 10 }}>
+              Chiffres de démonstration — les vraies statistiques viendront avec la base de
+              données.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Statistiques</h2>
@@ -124,6 +186,7 @@ export default function StatistiquesEtablissement() {
           Chiffres de démonstration — les vraies statistiques consolidées viendront avec la base
           de données.
         </p>
+      </div>
       </div>
     </EtablissementShell>
   );

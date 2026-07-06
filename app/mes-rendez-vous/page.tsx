@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import PatientShell from "@/components/patient/PatientShell";
 import CarteRdv from "@/components/patient/CarteRdv";
+import AppBarMobile from "@/components/mobile/AppBarMobile";
 import { versISO } from "@/lib/dates";
 import {
   annulerRendezVousLocal,
@@ -38,6 +39,31 @@ export default function MesRendezVous() {
 
   return (
     <PatientShell>
+      {/* ===== En-tête mobile (écran « mesrdv » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <div style={{ paddingBottom: 6 }}>
+          <AppBarMobile retour="/" titre="Mes rendez-vous" />
+        </div>
+        <div className="tabsm">
+          <button
+            type="button"
+            className={`tabm${onglet === "avenir" ? " on" : ""}`}
+            onClick={() => setOnglet("avenir")}
+          >
+            À venir ({aVenir.length})
+          </button>
+          <button
+            type="button"
+            className={`tabm${onglet === "passes" ? " on" : ""}`}
+            onClick={() => setOnglet("passes")}
+          >
+            Passés ({passes.length})
+          </button>
+        </div>
+      </div>
+
+      {/* ===== En-tête web (inchangé) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Mes rendez-vous</h2>
@@ -73,8 +99,9 @@ export default function MesRendezVous() {
           Passés ({passes.length})
         </button>
       </div>
+      </div>
 
-      <div>
+      <div className="pad pt-4 md:pt-0">
         {liste.map((rdv) => (
           <CarteRdv key={rdv.id} rdv={rdv} onAnnuler={onglet === "avenir" ? annuler : undefined} />
         ))}

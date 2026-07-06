@@ -66,6 +66,57 @@ export default function UtilisateursAdmin() {
 
   return (
     <AdminShell>
+      {/* ===== Version mobile (écran « m-admin-users » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <div className="appbar">
+          <h3 style={{ paddingLeft: 4 }}>Utilisateurs</h3>
+        </div>
+        <div className="pad">
+          <input
+            className="inp"
+            value={recherche}
+            onChange={(e) => setRecherche(e.target.value)}
+            placeholder="🔍 Rechercher un utilisateur…"
+          />
+          <div className="chips" style={{ marginBottom: 12 }}>
+            {CATEGORIES.map((c) => (
+              <button
+                key={c}
+                type="button"
+                className={`chip${categorie === c ? " blue" : ""}`}
+                onClick={() => setCategorie(c)}
+              >
+                {c}
+              </button>
+            ))}
+          </div>
+          <div className="card2">
+            <h4>15 240 comptes</h4>
+            {comptes.length === 0 && (
+              <p className="muted" style={{ fontSize: 12.5 }}>
+                Aucun compte ne correspond à la recherche.
+              </p>
+            )}
+            {comptes.map((compte) => (
+              <div key={compte.nom} className="asstrowm">
+                <span className="av" aria-hidden style={{ background: compte.gradient }}>
+                  {compte.initiales}
+                </span>
+                <span className="meta">
+                  <b>{compte.nom}</b>
+                  <small>{compte.detail}</small>
+                </span>
+                <span className={`pill ${compte.statut === "Actif" ? "ok" : "lock"}`}>
+                  {compte.statut}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Utilisateurs</h2>
@@ -138,6 +189,7 @@ export default function UtilisateursAdmin() {
             </button>
           </div>
         ))}
+      </div>
       </div>
     </AdminShell>
   );

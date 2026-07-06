@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import AdminShell from "@/components/admin/AdminShell";
+import AppBarMobile from "@/components/mobile/AppBarMobile";
 import Interrupteur from "@/components/patient/Interrupteur";
 import {
   ajouterAListeContenu,
@@ -33,7 +34,23 @@ function CarteListe({ cle, titre, question }: (typeof LISTES)[number]) {
   }
 
   return (
-    <div className="mb-4 rounded-2xl border border-line bg-white p-5">
+    <>
+    {/* Variante mobile : carte .card2 avec chips de la maquette */}
+    <div className="card2 md:hidden">
+      <h4>{titre}</h4>
+      <div className="chips">
+        {elements.map((element) => (
+          <span key={element} className="chip">
+            {element}
+          </span>
+        ))}
+        <button type="button" className="chip grey" onClick={ajouter}>
+          + Ajouter
+        </button>
+      </div>
+    </div>
+
+    <div className="mb-4 hidden rounded-2xl border border-line bg-white p-5 md:block">
       <h3 className="mb-3 text-[15px] font-extrabold">{titre}</h3>
       <div className="flex flex-wrap gap-2">
         {elements.map((element) => (
@@ -53,6 +70,7 @@ function CarteListe({ cle, titre, question }: (typeof LISTES)[number]) {
         </button>
       </div>
     </div>
+    </>
   );
 }
 
@@ -61,18 +79,65 @@ export default function ParametresAdmin() {
 
   return (
     <AdminShell>
-      <div className="mb-5">
+      {/* En-tête mobile (écran « m-admin-params » de la maquette mobile) */}
+      <div className="md:hidden">
+        <AppBarMobile retour="/espace-admin/plus" titre="Paramètres" />
+      </div>
+      {/* En-tête web (inchangé) */}
+      <div className="mb-5 hidden md:block">
         <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">
           Paramètres de la plateforme
         </h2>
         <small className="text-[13px] text-muted">Contenu et réglages généraux</small>
       </div>
 
+      <div className="pad">
       {LISTES.map((liste) => (
         <CarteListe key={liste.cle} {...liste} />
       ))}
 
-      <div className="mb-4 rounded-2xl border border-line bg-white p-5">
+      {/* Réglages — variante mobile */}
+      <div className="card2 md:hidden">
+        <h4>Réglages</h4>
+        <div className="setrow">
+          <div>
+            <b>Inscriptions médecins</b>
+            <small>Nouvelles demandes autorisées</small>
+          </div>
+          <Interrupteur
+            actif={reglages.inscriptionsOuvertes}
+            onChange={(v) => basculerReglage("inscriptionsOuvertes", v)}
+            label="Inscriptions médecins ouvertes"
+          />
+        </div>
+        <div className="setrow">
+          <div>
+            <b>Paiement en ligne</b>
+            <small>Orange Money, MTN MoMo</small>
+          </div>
+          <Interrupteur
+            actif={reglages.paiementEnLigne}
+            onChange={(v) => basculerReglage("paiementEnLigne", v)}
+            label="Paiement en ligne activé"
+          />
+        </div>
+        <div className="setrow">
+          <div>
+            <b>Mode maintenance</b>
+            <small>Plateforme inaccessible</small>
+          </div>
+          <Interrupteur
+            actif={reglages.modeMaintenance}
+            onChange={(v) => basculerReglage("modeMaintenance", v)}
+            label="Mode maintenance"
+          />
+        </div>
+        <p className="muted" style={{ fontSize: 11, marginTop: 8 }}>
+          Chaque bascule de réglage est tracée dans le journal d&apos;audit.
+        </p>
+      </div>
+
+      <div className="mb-4 hidden rounded-2xl border border-line bg-white p-5 md:block">
         <h3 className="mb-1 text-[15px] font-extrabold">Réglages</h3>
         <div className="flex items-center justify-between gap-[14px] border-b border-line py-[15px]">
           <div>
@@ -130,10 +195,11 @@ export default function ParametresAdmin() {
 
       <Link
         href="/"
-        className="block w-full rounded-[11px] border-[1.5px] border-line bg-white px-[18px] py-[11px] text-center text-[13.5px] font-bold text-blue transition-colors hover:bg-bg"
+        className="hidden w-full rounded-[11px] border-[1.5px] border-line bg-white px-[18px] py-[11px] text-center text-[13.5px] font-bold text-blue transition-colors hover:bg-bg md:block"
       >
         ↩️ Déconnexion
       </Link>
+      </div>
     </AdminShell>
   );
 }

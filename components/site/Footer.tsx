@@ -3,7 +3,7 @@ import Link from "next/link";
 /** Pied de page du site public — reproduit le .footer de la maquette web. */
 export default function Footer() {
   return (
-    <footer className="mt-[10px] bg-blue-deep px-[30px] py-10 text-white">
+    <footer className="mt-[10px] hidden bg-blue-deep px-[30px] py-10 text-white md:block">
       <div className="mx-auto flex max-w-[1020px] flex-wrap gap-[50px]">
         <div className="max-w-[260px]">
           <div className="flex items-center gap-[9px] text-base font-extrabold">

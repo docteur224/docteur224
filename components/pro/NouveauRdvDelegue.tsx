@@ -122,7 +122,7 @@ export default function NouveauRdvDelegue({
   /* ===== Écran de succès ===== */
   if (rdvEnregistre) {
     return (
-      <div className="mx-auto max-w-[560px] py-[40px] text-center">
+      <div className="mx-auto max-w-[560px] px-[18px] py-[40px] text-center md:px-0">
         <div className="mx-auto mb-[22px] grid h-[104px] w-[104px] animate-[pop_.4s_ease] place-items-center rounded-full bg-green-soft">
           <div className="grid h-[72px] w-[72px] place-items-center rounded-full bg-green text-4xl text-white">
             ✓
@@ -163,7 +163,7 @@ export default function NouveauRdvDelegue({
   }
 
   return (
-    <div className="mx-auto max-w-[780px]">
+    <div className="mx-auto max-w-[780px] px-[18px] pb-[26px] pt-3 md:px-0 md:pb-0 md:pt-0">
       <div className="mb-4 flex items-center gap-3">
         <Link
           href={lienRetour}

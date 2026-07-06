@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import TopNav from "@/components/site/TopNav";
+import AppBarMobile from "@/components/mobile/AppBarMobile";
 import FormulaireReservation from "@/components/site/FormulaireReservation";
 import { capitaliser, formatDateLongue } from "@/lib/dates";
 import { formatGNF } from "@/lib/format";
@@ -36,9 +37,42 @@ export default async function Reservation({
     <div className="min-h-screen bg-bg">
       <TopNav minimale />
 
-      <div className="mx-auto max-w-[680px] px-[30px] py-[34px]">
+      <div className="mx-auto w-full max-w-[680px] md:px-[30px] md:py-[34px]">
+        {/* ===== Mobile : appbar + récapitulatif (écran « reservation » de la maquette mobile) ===== */}
+        <div className="md:hidden">
+          <AppBarMobile retour={`/medecin/${medecin.id}/creneaux`} titre="Confirmer le rendez-vous" />
+          <div className="pad" style={{ paddingTop: 8, paddingBottom: 0 }}>
+            <div className="recap">
+              <div className="r">
+                <span className="k">Médecin</span>
+                <span className="v">{nomComplet(medecin)}</span>
+              </div>
+              <div className="r">
+                <span className="k">Spécialité</span>
+                <span className="v">{medecin.specialite}</span>
+              </div>
+              <div className="r">
+                <span className="k">Établissement</span>
+                <span className="v">{etab?.nom}</span>
+              </div>
+              <div className="r">
+                <span className="k">Date</span>
+                <span className="v">{capitaliser(formatDateLongue(date))}</span>
+              </div>
+              <div className="r">
+                <span className="k">Heure</span>
+                <span className="v">{heure}</span>
+              </div>
+              <div className="r">
+                <span className="k">Tarif</span>
+                <span className="v">{formatGNF(medecin.tarifConsultation)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Fil d'étapes */}
-        <div className="mb-[26px] flex items-center justify-center gap-[10px]">
+        <div className="mb-[26px] hidden items-center justify-center gap-[10px] md:flex">
           <div className="flex items-center gap-2 text-[12.5px] font-bold text-muted">
             <span className="grid h-6 w-6 place-items-center rounded-full bg-green text-xs text-white">
               ✓
@@ -62,7 +96,7 @@ export default async function Reservation({
         </div>
 
         {/* Récapitulatif */}
-        <div className="mb-[18px] rounded-[18px] border border-line bg-white p-6">
+        <div className="mb-[18px] hidden rounded-[18px] border border-line bg-white p-6 md:block">
           <h3 className="mb-[14px] text-base font-extrabold">Récapitulatif du rendez-vous</h3>
           <div className="flex justify-between border-b border-line py-[11px] text-[13.5px]">
             <span className="text-muted">Médecin</span>

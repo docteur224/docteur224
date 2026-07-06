@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import TabBarMobile from "@/components/mobile/TabBarMobile";
 
 /**
  * Coquille de l'espace assistant(e) — reproduit la structure .dash / .side /
@@ -25,7 +26,7 @@ export default function AssistantShell({ children }: { children: React.ReactNode
 
   return (
     <div className="grid min-h-screen bg-bg lg:grid-cols-[236px_1fr]">
-      <aside className="border-b border-line bg-white px-4 py-[22px] lg:border-b-0 lg:border-r">
+      <aside className="hidden border-b border-line bg-white px-4 py-[22px] md:block lg:border-b-0 lg:border-r">
         <div className="mb-[14px] flex items-center gap-[11px] border-b border-line px-1.5 pb-[18px]">
           <span
             aria-hidden
@@ -70,7 +71,8 @@ export default function AssistantShell({ children }: { children: React.ReactNode
           </Link>
         </nav>
       </aside>
-      <main className="overflow-auto px-4 py-[26px] md:px-[30px]">{children}</main>
+      <main className="with-tabbar overflow-auto md:px-[30px] md:py-[26px]">{children}</main>
+      <TabBarMobile role="assistant" />
     </div>
   );
 }

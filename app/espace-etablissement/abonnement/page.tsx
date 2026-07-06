@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import EtablissementShell from "@/components/etablissement/EtablissementShell";
+import AppBarMobile from "@/components/mobile/AppBarMobile";
 import { PALIERS, palierPour, useMedecinsRattaches } from "@/lib/mock-etablissement";
 
 /*
@@ -33,6 +34,66 @@ export default function AbonnementEtablissement() {
 
   return (
     <EtablissementShell>
+      {/* ===== Version mobile (écran « m-etab-abonnement » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <AppBarMobile retour="/espace-etablissement/compte" titre="Abonnement" />
+        <div className="pad">
+          <div className="card2">
+            <h4>Plan actuel</h4>
+            <div className="setrow">
+              <div>
+                <b>
+                  Palier {palierActuel.nom} · {rattaches.length} médecin
+                  {rattaches.length > 1 ? "s" : ""}
+                </b>
+                <small>{palierActuel.tarif} · actif jusqu&apos;au 30 juin 2026</small>
+              </div>
+              <span className="pill ok">Actif</span>
+            </div>
+            <div className="privnote info">
+              <span aria-hidden>ℹ️</span>
+              <div>
+                Le palier s&apos;ajuste <b>automatiquement</b> au nombre de médecins rattachés. La
+                prise de RDV reste <b>gratuite pour les patients</b>.
+              </div>
+            </div>
+          </div>
+          <div className="card2">
+            <h4>Paliers</h4>
+            <table className="atab">
+              <thead>
+                <tr>
+                  <th>Palier</th>
+                  <th>Médecins</th>
+                  <th>Tarif</th>
+                </tr>
+              </thead>
+              <tbody>
+                {PALIERS.map((palier) => {
+                  const actuel = palier.nom === palierActuel.nom;
+                  return (
+                    <tr key={palier.nom}>
+                      <td>{actuel ? <b>{palier.nom}</b> : palier.nom}</td>
+                      <td>{palier.medecins}</td>
+                      <td>{actuel ? <span className="pill ok">Actuel</span> : palier.tarif}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            <p className="muted" style={{ fontSize: 11.5, marginTop: 10 }}>
+              Tarifs indicatifs de démonstration. Invitez ou retirez des médecins depuis{" "}
+              <Link href="/espace-etablissement/medecins" style={{ color: "var(--teal)", fontWeight: 700 }}>
+                Médecins
+              </Link>
+              .
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5">
         <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Abonnement</h2>
         <small className="text-[13px] text-muted">
@@ -110,6 +171,7 @@ export default function AbonnementEtablissement() {
           Tarifs indicatifs de démonstration — la grille tarifaire définitive et le paiement
           mobile money seront branchés avec la base de données.
         </p>
+      </div>
       </div>
     </EtablissementShell>
   );

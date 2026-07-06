@@ -26,6 +26,80 @@ export default function TableauDeBordPatient() {
 
   return (
     <PatientShell>
+      {/* ===== Version mobile (présentation maquette mobile) ===== */}
+      <div className="md:hidden">
+        <div className="greet">
+          <b>Bonjour, {patient.prenom} 👋</b>
+          <br />
+          <small>Voici un aperçu de vos rendez-vous</small>
+        </div>
+        <div className="statcards">
+          <div className="sc b1">
+            <b>{aVenir.length}</b>
+            <small>RDV à venir</small>
+          </div>
+          <div className="sc b3">
+            <b>{passes.length}</b>
+            <small>RDV passés</small>
+          </div>
+          <div className="sc b2">
+            <b>{medecinsConsultes}</b>
+            <small>Médecins consultés</small>
+          </div>
+        </div>
+        <div className="pad" style={{ paddingTop: 18 }}>
+          <div className="section-t" style={{ marginTop: 0 }}>
+            Votre prochain rendez-vous
+          </div>
+          {prochain ? (
+            <CarteRdv rdv={prochain} />
+          ) : (
+            <p className="muted" style={{ fontSize: 13, lineHeight: 1.5 }}>
+              Aucun rendez-vous à venir. Lancez une recherche pour réserver votre premier
+              rendez-vous — la réservation est gratuite.
+            </p>
+          )}
+          <div className="section-t">Raccourcis</div>
+          <div className="menu">
+            <Link href="/resultats" className="mrow">
+              <span className="mi" aria-hidden>
+                🔍
+              </span>
+              <span>
+                <b>Trouver un médecin</b>
+              </span>
+              <span className="ch" aria-hidden>
+                ›
+              </span>
+            </Link>
+            <Link href="/mes-rendez-vous" className="mrow">
+              <span className="mi" aria-hidden>
+                📅
+              </span>
+              <span>
+                <b>Mes rendez-vous</b>
+              </span>
+              <span className="ch" aria-hidden>
+                ›
+              </span>
+            </Link>
+            <Link href="/patient/proches" className="mrow">
+              <span className="mi" aria-hidden>
+                👨‍👩‍👧
+              </span>
+              <span>
+                <b>Mes proches</b>
+              </span>
+              <span className="ch" aria-hidden>
+                ›
+              </span>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">
@@ -107,6 +181,7 @@ export default function TableauDeBordPatient() {
             👨‍👩‍👧 Mes proches
           </Link>
         </div>
+      </div>
       </div>
     </PatientShell>
   );

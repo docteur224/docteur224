@@ -50,6 +50,69 @@ export default function MessagesAssistant() {
 
   return (
     <AssistantShell>
+      {/* ===== Version mobile (écran « m-asst-messages » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <div className="appbar">
+          <h3 style={{ paddingLeft: 4 }}>Messagerie</h3>
+        </div>
+        <div className="pad">
+          {!permissions.messagerie ? (
+            <div className="abannerm" style={{ background: "var(--red-soft)", borderColor: "#F3C9C2", color: "var(--red)" }}>
+              <span aria-hidden>⛔</span>
+              <div>
+                La permission <b>« Messagerie patients »</b> ne vous a pas été accordée par le
+                médecin.
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="card2">
+                <h4>Conversations</h4>
+                {CONVERSATIONS.map((conversation) => (
+                  <div key={conversation.nom} className="msgm">
+                    <span className="av" aria-hidden style={{ background: conversation.gradient }}>
+                      {conversation.initiales}
+                    </span>
+                    <span className="mt">
+                      <b>{conversation.nom}</b>
+                      <small>{conversation.message}</small>
+                    </span>
+                    <span className="mr">
+                      {conversation.heure}
+                      {conversation.nonLus > 0 && (
+                        <>
+                          <br />
+                          <span className="badgec">{conversation.nonLus}</span>
+                        </>
+                      )}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="card2">
+                <h4>Réponses rapides</h4>
+                <p className="muted" style={{ fontSize: 11, margin: "-4px 0 11px" }}>
+                  Messages-types pour répondre sans tout réécrire.
+                </p>
+                <div className="chips">
+                  {REPONSES_RAPIDES.map((reponse) => (
+                    <span key={reponse} className="chip">
+                      {reponse}
+                    </span>
+                  ))}
+                </div>
+              </div>
+              <p className="muted" style={{ fontSize: 11.5 }}>
+                Conversations de démonstration — la messagerie temps réel sera branchée avec la
+                base de données.
+              </p>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5">
         <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Messagerie</h2>
         <small className="text-[13px] text-muted">
@@ -125,6 +188,7 @@ export default function MessagesAssistant() {
           </p>
         </>
       )}
+      </div>
     </AssistantShell>
   );
 }

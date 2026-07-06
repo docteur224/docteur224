@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import AdminShell from "@/components/admin/AdminShell";
+import AppBarMobile from "@/components/mobile/AppBarMobile";
 import Interrupteur from "@/components/patient/Interrupteur";
 import {
   enregistrerConfigAbonnements,
@@ -52,6 +53,156 @@ export default function AbonnementsAdmin() {
 
   return (
     <AdminShell>
+      {/* ===== Version mobile (écran « m-admin-abonnements » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <AppBarMobile retour="/espace-admin/plus" titre="Abonnements" />
+        <div className="pad">
+          <div className="card2">
+            <h4>Formules médecin</h4>
+            <table className="atab">
+              <thead>
+                <tr>
+                  <th>Formule</th>
+                  <th>Mensuel</th>
+                  <th>Annuel</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Standard</td>
+                  <td>
+                    <input
+                      className="inp"
+                      style={{ marginBottom: 0, padding: "6px 8px", fontSize: 12 }}
+                      value={valeurs.standardMensuel}
+                      onChange={(e) => modifier("standardMensuel", e.target.value)}
+                      aria-label="Standard mensuel"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      className="inp"
+                      style={{ marginBottom: 0, padding: "6px 8px", fontSize: 12 }}
+                      value={valeurs.standardAnnuel}
+                      onChange={(e) => modifier("standardAnnuel", e.target.value)}
+                      aria-label="Standard annuel"
+                    />
+                  </td>
+                </tr>
+                <tr>
+                  <td>Premium</td>
+                  <td>
+                    <input
+                      className="inp"
+                      style={{ marginBottom: 0, padding: "6px 8px", fontSize: 12 }}
+                      value={valeurs.premiumMensuel}
+                      onChange={(e) => modifier("premiumMensuel", e.target.value)}
+                      aria-label="Premium mensuel"
+                    />
+                  </td>
+                  <td>
+                    <input
+                      className="inp"
+                      style={{ marginBottom: 0, padding: "6px 8px", fontSize: 12 }}
+                      value={valeurs.premiumAnnuel}
+                      onChange={(e) => modifier("premiumAnnuel", e.target.value)}
+                      aria-label="Premium annuel"
+                    />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div className="setrow">
+              <div>
+                <b>Mise en avant incluse en Premium</b>
+              </div>
+              <span className="pill ok">Oui</span>
+            </div>
+          </div>
+          <div className="card2">
+            <h4>Paliers établissement</h4>
+            <table className="atab">
+              <thead>
+                <tr>
+                  <th>Palier</th>
+                  <th>Médecins</th>
+                  <th>Tarif/mois</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Cabinet</td>
+                  <td>1–3</td>
+                  <td>
+                    <input
+                      className="inp"
+                      style={{ marginBottom: 0, padding: "6px 8px", fontSize: 12 }}
+                      value={valeurs.palierCabinet}
+                      onChange={(e) => modifier("palierCabinet", e.target.value)}
+                      aria-label="Tarif palier Cabinet"
+                    />
+                  </td>
+                </tr>
+                <tr>
+                  <td>Clinique</td>
+                  <td>4–15</td>
+                  <td>
+                    <input
+                      className="inp"
+                      style={{ marginBottom: 0, padding: "6px 8px", fontSize: 12 }}
+                      value={valeurs.palierClinique}
+                      onChange={(e) => modifier("palierClinique", e.target.value)}
+                      aria-label="Tarif palier Clinique"
+                    />
+                  </td>
+                </tr>
+                <tr>
+                  <td>Hôpital</td>
+                  <td>16+</td>
+                  <td>Sur devis</td>
+                </tr>
+              </tbody>
+            </table>
+            <div className="privnote info">
+              <span aria-hidden>ℹ️</span>
+              <div>Un médecin couvert par son établissement ne paie pas en plus.</div>
+            </div>
+          </div>
+          <div className="card2">
+            <h4>Lancement &amp; paiement</h4>
+            {LANCEMENT.map((ligne) => (
+              <div key={ligne.cle} className="setrow">
+                <div>
+                  <b>{ligne.titre}</b>
+                  {ligne.detail && <small>{ligne.detail}</small>}
+                </div>
+                <Interrupteur
+                  actif={valeurs[ligne.cle] as boolean}
+                  onChange={(v) => modifier(ligne.cle, v)}
+                  label={ligne.titre}
+                />
+              </div>
+            ))}
+            {enregistre && (
+              <div style={{ color: "var(--green)", fontSize: 12.5, fontWeight: 700, marginTop: 8 }}>
+                ✓ Enregistré
+              </div>
+            )}
+            <button
+              type="button"
+              className="btn block"
+              style={{ marginTop: 10, opacity: brouillon ? 1 : 0.5 }}
+              disabled={!brouillon}
+              onClick={enregistrer}
+            >
+              💾 Enregistrer
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Abonnements</h2>
@@ -220,6 +371,7 @@ export default function AbonnementsAdmin() {
             />
           </div>
         ))}
+      </div>
       </div>
     </AdminShell>
   );

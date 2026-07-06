@@ -22,6 +22,61 @@ export default function PatientsMedecin() {
 
   return (
     <MedecinShell>
+      {/* ===== Version mobile (écran « m-med-patients » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <div className="appbar">
+          <h3 style={{ paddingLeft: 4 }}>Mes patients</h3>
+          <span className="sub" style={{ marginLeft: "auto", paddingRight: 6 }}>
+            {patients.length} suivis
+          </span>
+        </div>
+        <div className="pad" style={{ paddingTop: 8 }}>
+          <input
+            className="inp"
+            value={recherche}
+            onChange={(e) => setRecherche(e.target.value)}
+            placeholder="🔍 Rechercher un patient…"
+          />
+          {liste.map((patient) => (
+            <div key={patient.id} className="paycard">
+              <span
+                className="pi"
+                aria-hidden
+                style={{ background: patient.gradient, color: "#fff", fontWeight: 800 }}
+              >
+                {patient.prenom.charAt(0)}
+                {patient.nom.charAt(0)}
+              </span>
+              <span className="pinfo">
+                <b>
+                  {patient.prenom} {patient.nom}
+                </b>
+                <small>
+                  {patient.age ? `${patient.age} · ` : ""}dernière visite {patient.derniereVisite}
+                </small>
+              </span>
+              <span className="ch" aria-hidden>
+                ›
+              </span>
+            </div>
+          ))}
+          {liste.length === 0 && (
+            <p className="muted" style={{ fontSize: 13 }}>
+              Aucun patient ne correspond à « {recherche} ».
+            </p>
+          )}
+          <div className="noteboxm">
+            <span aria-hidden>🔒</span>
+            <div>
+              Le dossier médical détaillé arrivera avec la base de données ; seules les coordonnées
+              nécessaires aux rendez-vous sont affichées ici.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Mes patients</h2>
@@ -66,6 +121,7 @@ export default function PatientsMedecin() {
         🔒 Le dossier médical détaillé arrivera avec la base de données ; seules les coordonnées
         nécessaires aux rendez-vous sont affichées ici.
       </p>
+      </div>
     </MedecinShell>
   );
 }

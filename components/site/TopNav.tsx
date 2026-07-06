@@ -16,7 +16,7 @@ export default function TopNav({
   minimale?: boolean;
 }) {
   return (
-    <nav className="sticky top-0 z-20 flex h-[66px] items-center gap-[26px] border-b border-line bg-white px-4 md:px-[30px]">
+    <nav className="sticky top-0 z-20 hidden h-[66px] items-center gap-[26px] border-b border-line bg-white px-4 md:flex md:px-[30px]">
       <Link href="/" className="flex items-center gap-[9px] text-[17px] font-extrabold">
         <span
           aria-hidden

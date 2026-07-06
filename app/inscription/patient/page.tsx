@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import AppBarMobile from "@/components/mobile/AppBarMobile";
 import CaseCocher from "@/components/site/CaseCocher";
 import CoteAuth from "@/components/site/CoteAuth";
 import FauxCaptcha from "@/components/site/FauxCaptcha";
@@ -17,7 +18,74 @@ export default function InscriptionPatient() {
   const etiquette = "mb-1.5 mt-0.5 block text-[12.5px] font-bold text-ink";
 
   return (
-    <div className="grid min-h-screen bg-white lg:grid-cols-2">
+    <div className="min-h-screen bg-bg md:bg-white">
+      {/* ================= VERSION MOBILE (écran « m-inscription-patient » de la maquette mobile) ================= */}
+      <div className="md:hidden">
+        <AppBarMobile retour="/inscription" titre="Compte patient" />
+        <div className="pad">
+          <p className="muted" style={{ fontSize: 12, margin: "0 0 14px" }}>
+            Gratuit · 2 minutes · sans engagement.
+          </p>
+          <div className="fgrid2">
+            <div>
+              <div className="flabel">Nom *</div>
+              <input className="inp" placeholder="Nom" />
+            </div>
+            <div>
+              <div className="flabel">Prénom *</div>
+              <input className="inp" placeholder="Prénom" />
+            </div>
+          </div>
+          <div className="flabel">Genre</div>
+          <select className="selm">
+            <option>Femme</option>
+            <option>Homme</option>
+          </select>
+          <div className="flabel">Téléphone *</div>
+          <div className="phone-inp">
+            <span className="cc">🇬🇳 +224</span>
+            <input className="inp" placeholder="6XX XX XX XX" aria-label="Numéro de téléphone" />
+          </div>
+          <div className="muted" style={{ fontSize: 10.5, margin: "-6px 0 11px" }}>
+            Un SMS de vérification sera envoyé à ce numéro.
+          </div>
+          <div className="flabel">E-mail *</div>
+          <input className="inp" placeholder="votre@email.com" />
+          <div className="flabel">Mot de passe *</div>
+          <input className="inp" type="password" placeholder="••••••••" />
+          <div className="flabel">Confirmation *</div>
+          <input className="inp" type="password" placeholder="••••••••" />
+          <CaseCocher texte="J'accepte les conditions d'utilisation et la politique de confidentialité." />
+          <FauxCaptcha />
+          <Link href="/patient" className="btn block">
+            Créer mon compte
+          </Link>
+          <div className="promo">
+            <h4>La santé à portée de clics</h4>
+            <p>Réservez chez votre médecin sans téléphoner.</p>
+            <div className="ps">
+              <div>
+                <b>320+</b>
+                <small>Médecins</small>
+              </div>
+              <div>
+                <b>24/7</b>
+                <small>Prise de RDV</small>
+              </div>
+              <div>
+                <b>0 GNF</b>
+                <small>Inscription</small>
+              </div>
+            </div>
+          </div>
+          <div className="linkline">
+            Déjà inscrit ? <Link href="/connexion">Se connecter</Link>
+          </div>
+        </div>
+      </div>
+
+      {/* ================= VERSION WEB (inchangée) ================= */}
+      <div className="hidden min-h-screen bg-white md:grid lg:grid-cols-2">
       <div className="flex flex-col justify-center px-6 py-10 sm:px-[50px] sm:py-[54px]">
         <div className="mx-auto w-full max-w-[520px]">
           <h3 className="text-[22px] font-extrabold tracking-[-0.3px]">
@@ -103,6 +171,7 @@ export default function InscriptionPatient() {
           { valeur: "0 GNF", label: "À l'inscription" },
         ]}
       />
+      </div>
     </div>
   );
 }

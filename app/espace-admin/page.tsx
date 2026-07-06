@@ -31,6 +31,83 @@ export default function TableauDeBordAdmin() {
 
   return (
     <AdminShell>
+      {/* ===== Version mobile (écran « m-admin-dash » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <div className="appbar">
+          <h3 style={{ paddingLeft: 4 }}>Administration</h3>
+        </div>
+        <div className="pad">
+          <div className="statcards inpad two">
+            <div className="sc b1">
+              <b>15 240</b>
+              <small>Utilisateurs</small>
+            </div>
+            <div className="sc b2">
+              <b>320</b>
+              <small>Médecins</small>
+            </div>
+            <div className="sc b3">
+              <b>8 642</b>
+              <small>RDV ce mois</small>
+            </div>
+            <div className="sc b1">
+              <b>42 M</b>
+              <small>GNF revenus</small>
+            </div>
+          </div>
+          <div className="card2" style={{ marginTop: 12 }}>
+            <h4>À traiter</h4>
+            <div className="setrow">
+              <div>
+                <b>
+                  {medecinsEnAttente.length} médecin{medecinsEnAttente.length > 1 ? "s" : ""} en
+                  attente
+                </b>
+                <small>Documents à vérifier</small>
+              </div>
+              <Link href="/espace-admin/validations" className="btnm">
+                Traiter
+              </Link>
+            </div>
+            <div className="setrow">
+              <div>
+                <b>
+                  {etabsEnAttente.length} établissement{etabsEnAttente.length > 1 ? "s" : ""}
+                </b>
+                <small>À approuver</small>
+              </div>
+              <Link href="/espace-admin/validations" className="btnm">
+                Traiter
+              </Link>
+            </div>
+            <div className="setrow">
+              <div>
+                <b>
+                  {signalements.length} signalement{signalements.length > 1 ? "s" : ""}
+                </b>
+                <small>À examiner</small>
+              </div>
+              <Link href="/espace-admin/moderation" className="btnm gh">
+                Voir
+              </Link>
+            </div>
+          </div>
+          <div className="card2">
+            <h4>Croissance des inscriptions</h4>
+            <div className="bars">
+              {BARRES.map((barre) => (
+                <div key={barre.mois} className="b">
+                  <div className="bar" style={{ height: `${barre.hauteur}%` }} />
+                  <small>{barre.mois}</small>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">
@@ -147,6 +224,7 @@ export default function TableauDeBordAdmin() {
             </div>
           ))}
         </div>
+      </div>
       </div>
     </AdminShell>
   );

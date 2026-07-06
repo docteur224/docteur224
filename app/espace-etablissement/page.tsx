@@ -36,6 +36,75 @@ export default function TableauDeBordEtablissement() {
 
   return (
     <EtablissementShell>
+      {/* ===== Version mobile (écran « m-etab-dash » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <div className="appbar">
+          <h3 style={{ paddingLeft: 4 }}>{ETABLISSEMENT_CONNECTE.nomCourt}</h3>
+        </div>
+        <div className="pad">
+          <div className="statcards inpad two">
+            <div className="sc b1">
+              <b>{rattaches.length}</b>
+              <small>Médecins</small>
+            </div>
+            <div className="sc b2">
+              <b>32</b>
+              <small>RDV aujourd&apos;hui</small>
+            </div>
+            <div className="sc b3">
+              <b>4</b>
+              <small>Assistant(e)s</small>
+            </div>
+            <div className="sc b1">
+              <b>78%</b>
+              <small>Occupation</small>
+            </div>
+          </div>
+          <div className="card2" style={{ marginTop: 12 }}>
+            <h4>Médecins</h4>
+            {rattaches.slice(0, 3).map((medecin) => (
+              <div key={medecin.id} className="asstrowm">
+                <span className="av" aria-hidden style={{ background: medecin.gradient }}>
+                  {medecin.initiales}
+                </span>
+                <span className="meta">
+                  <b>{medecin.nom}</b>
+                  <small>{medecin.specialite}</small>
+                </span>
+                <Link href="/espace-etablissement/medecins" className="btnm gh">
+                  Voir
+                </Link>
+              </div>
+            ))}
+            <Link href="/espace-etablissement/medecins" className="btn ghost block">
+              Voir tous les médecins
+            </Link>
+          </div>
+          <div className="card2">
+            <h4>Prochains RDV · tous médecins</h4>
+            {PROCHAINS_RDV.map((rdv) => (
+              <div key={rdv.heure} className="aptm">
+                <div className="tm">{rdv.heure}</div>
+                <div className="meta">
+                  <b>{rdv.patient}</b>
+                  <small>{rdv.detail}</small>
+                </div>
+                <div className="acts">
+                  <span className={`pill ${rdv.statut === "Confirmé" ? "ok" : "soon"}`}>
+                    {rdv.statut === "Confirmé" ? "Confirmé" : "Attente"}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <Link href="/espace-etablissement/statistiques" className="btn ghost block">
+            📊 Voir les statistiques
+          </Link>
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">
@@ -146,6 +215,7 @@ export default function TableauDeBordEtablissement() {
           Rendez-vous de démonstration — la vue consolidée multi-médecins sera branchée avec la
           base de données.
         </p>
+      </div>
       </div>
     </EtablissementShell>
   );

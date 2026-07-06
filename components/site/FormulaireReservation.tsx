@@ -104,6 +104,162 @@ export default function FormulaireReservation({
 
   return (
     <>
+      {/* ================= VERSION MOBILE (écran « reservation » de la maquette mobile) ================= */}
+      <div className="md:hidden">
+        <div className="pad" style={{ paddingBottom: 0 }}>
+          <span className="labelm">Pour qui est ce rendez-vous ?</span>
+          <div className="benelist">
+            <button type="button" className={`bene${selection === "moi" ? " on" : ""}`} onClick={() => setSelection("moi")}>
+              <span
+                className="ba"
+                aria-hidden
+                style={{ background: "linear-gradient(135deg,#2E9CCA,#15506B)" }}
+              >
+                {initialesPatient(patient)}
+              </span>
+              <span className="bt">
+                <b>Moi-même</b>
+                <small>
+                  {patient.prenom} {patient.nom} · {calculerAge(patient.dateNaissance)} ans
+                </small>
+              </span>
+              <span className="rc" />
+            </button>
+            {proches.map((proche) => (
+              <button
+                key={proche.id}
+                type="button"
+                className={`bene${selection === proche.id ? " on" : ""}`}
+                onClick={() => setSelection(proche.id)}
+              >
+                <span className="ba" aria-hidden style={{ background: proche.gradient }}>
+                  {initialesProche(proche)}
+                </span>
+                <span className="bt">
+                  <b>
+                    {proche.prenom} {proche.nom}
+                  </b>
+                  <small>
+                    {proche.lien} · {calculerAge(proche.dateNaissance)} an
+                    {calculerAge(proche.dateNaissance) > 1 ? "s" : ""}
+                  </small>
+                </span>
+                <span className="rc" />
+              </button>
+            ))}
+            <button type="button" className="bene add" onClick={() => setAjoutOuvert(!ajoutOuvert)}>
+              <span className="plus" aria-hidden>
+                +
+              </span>
+              Ajouter un proche
+            </button>
+          </div>
+
+          {ajoutOuvert && (
+            <div className="addbene">
+              <div className="abannerm">
+                <span aria-hidden>ℹ️</span>
+                <div>
+                  Le proche <b>n&apos;a pas besoin de compte</b>. Vous gérez ses rendez-vous depuis
+                  votre espace.
+                </div>
+              </div>
+              <div className="fgrid2">
+                <div>
+                  <div className="flabel">Nom *</div>
+                  <input
+                    className="inp"
+                    placeholder="Nom"
+                    value={nouveau.nom}
+                    onChange={(e) => setNouveau({ ...nouveau, nom: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <div className="flabel">Prénom *</div>
+                  <input
+                    className="inp"
+                    placeholder="Prénom"
+                    value={nouveau.prenom}
+                    onChange={(e) => setNouveau({ ...nouveau, prenom: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="fgrid2">
+                <div>
+                  <div className="flabel">Lien *</div>
+                  <select
+                    className="selm"
+                    value={nouveau.lien}
+                    onChange={(e) => setNouveau({ ...nouveau, lien: e.target.value })}
+                  >
+                    {LIENS_PROCHE.map((lien) => (
+                      <option key={lien}>{lien}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <div className="flabel">Naissance *</div>
+                  <input
+                    type="date"
+                    className="inp"
+                    value={nouveau.dateNaissance}
+                    onChange={(e) => setNouveau({ ...nouveau, dateNaissance: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="flabel">Genre</div>
+              <select
+                className="selm"
+                value={nouveau.genre}
+                onChange={(e) =>
+                  setNouveau({ ...nouveau, genre: e.target.value as ProcheLocal["genre"] })
+                }
+              >
+                <option>Femme</option>
+                <option>Homme</option>
+              </select>
+              <div style={{ display: "flex", gap: 9 }}>
+                <button type="button" className="btnm gh" onClick={() => setAjoutOuvert(false)}>
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  className="btnm"
+                  style={{ flex: 1, opacity: nouveauValide ? 1 : 0.5 }}
+                  disabled={!nouveauValide}
+                  onClick={enregistrerNouveauProche}
+                >
+                  Enregistrer
+                </button>
+              </div>
+            </div>
+          )}
+
+          <span className="labelm">Motif de la consultation</span>
+          <textarea
+            className="textarea"
+            rows={3}
+            value={motif}
+            onChange={(e) => setMotif(e.target.value)}
+            placeholder="Ex. Vaccination de mon enfant, fièvre depuis 2 jours…"
+          />
+          <div className="abannerm" style={{ background: "var(--green-soft)", marginTop: 14 }}>
+            <span aria-hidden>✅</span>
+            <div>
+              <b>Réservation gratuite.</b> La consultation ({formatGNF(tarif)}) se règle{" "}
+              <b>sur place</b>. Aucun paiement en ligne requis.
+            </div>
+          </div>
+        </div>
+        <div className="ctafoot">
+          <button type="button" className="btn green" onClick={confirmer} disabled={enCours}>
+            {enCours ? "Enregistrement…" : "✅ Confirmer le rendez-vous"}
+          </button>
+        </div>
+      </div>
+
+      {/* ================= VERSION WEB (inchangée) ================= */}
+      <div className="hidden md:block">
       {/* ===== Pour qui est ce rendez-vous ? ===== */}
       <div className="mb-[18px] rounded-[18px] border border-line bg-white p-6">
         <h3 className="mb-[14px] text-base font-extrabold">Pour qui est ce rendez-vous ?</h3>
@@ -306,6 +462,7 @@ export default function FormulaireReservation({
         >
           {enCours ? "Enregistrement…" : "✅ Confirmer le rendez-vous"}
         </button>
+      </div>
       </div>
     </>
   );

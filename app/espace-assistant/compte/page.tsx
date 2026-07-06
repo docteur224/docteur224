@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import AssistantShell from "@/components/assistant/AssistantShell";
 import { usePermissionsAssistante, type PermissionsAssistante } from "@/lib/mock-medecin";
 
@@ -23,6 +24,103 @@ export default function CompteAssistant() {
 
   return (
     <AssistantShell>
+      {/* ===== Version mobile (écran « m-asst-compte » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <div className="appbar">
+          <h3 style={{ paddingLeft: 4 }}>Mon compte</h3>
+        </div>
+        <div className="pad">
+          <div className="acctop">
+            <span
+              className="av"
+              aria-hidden
+              style={{ background: "linear-gradient(135deg,#2E9CCA,#15506B)" }}
+            >
+              HD
+            </span>
+            <div>
+              <b>Hawa Diallo</b>
+              <small>Assistante · Dr A. Barry</small>
+            </div>
+          </div>
+          <div className="menu">
+            <Link href="/espace-assistant/creneaux" className="mrow">
+              <span className="mi" aria-hidden>
+                🕐
+              </span>
+              <span>
+                <b>Créneaux &amp; dispos</b>
+                <small>Ouvrir/fermer les créneaux</small>
+              </span>
+              <span className="ch" aria-hidden>
+                ›
+              </span>
+            </Link>
+            <Link href="/espace-assistant/patients" className="mrow">
+              <span className="mi" aria-hidden>
+                👥
+              </span>
+              <span>
+                <b>Patients</b>
+                <small>Coordonnées pour les RDV</small>
+              </span>
+              <span className="ch" aria-hidden>
+                ›
+              </span>
+            </Link>
+            <Link href="/" className="mrow">
+              <span className="mi" aria-hidden>
+                ↩️
+              </span>
+              <span>
+                <b>Déconnexion</b>
+              </span>
+              <span className="ch" aria-hidden>
+                ›
+              </span>
+            </Link>
+          </div>
+          <div className="card2" style={{ marginTop: 12 }}>
+            <h4>Mes permissions</h4>
+            <p className="muted" style={{ fontSize: 11, margin: "-4px 0 10px" }}>
+              Définies par le médecin · lecture seule.
+            </p>
+            {LIGNES_PERMISSIONS.map((ligne) => (
+              <div key={ligne.cle} className="setrow">
+                <div>
+                  <b>{ligne.titre}</b>
+                </div>
+                {permissions[ligne.cle] ? (
+                  <span className="pill ok">Autorisé</span>
+                ) : (
+                  <span className="pill bad">Interdit</span>
+                )}
+              </div>
+            ))}
+            <div className="setrow">
+              <div>
+                <b>🔒 Dossiers médicaux</b>
+              </div>
+              <span className="pill bad">Interdit</span>
+            </div>
+            <div className="setrow">
+              <div>
+                <b>🔒 Paiements et revenus</b>
+              </div>
+              <span className="pill bad">Interdit</span>
+            </div>
+            <div className="noteboxm">
+              <span aria-hidden>🔒</span>
+              <div>
+                Les dossiers médicaux et les données financières restent réservés au médecin.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5">
         <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Mon compte</h2>
         <small className="text-[13px] text-muted">
@@ -108,6 +206,7 @@ export default function CompteAssistant() {
             que soient les permissions accordées.
           </div>
         </div>
+      </div>
       </div>
     </AssistantShell>
   );

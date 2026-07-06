@@ -23,6 +23,105 @@ export default function InformationsEtablissement() {
 
   return (
     <EtablissementShell>
+      {/* ===== Version mobile (écran « m-etab-infos » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <div className="appbar">
+          <h3 style={{ paddingLeft: 4 }}>Informations</h3>
+        </div>
+        <div className="pad">
+          <div className="card2">
+            <h4>Identité</h4>
+            <div className="setrow">
+              <div>
+                <b>Nom</b>
+                <small>{etab.nom}</small>
+              </div>
+            </div>
+            <div className="setrow">
+              <div>
+                <b>Type</b>
+                <small>{etab.type}</small>
+              </div>
+            </div>
+            <div className="setrow">
+              <div>
+                <b>Description</b>
+                <small>{etab.description}</small>
+              </div>
+            </div>
+          </div>
+          <div className="card2">
+            <h4>Coordonnées</h4>
+            <div className="setrow">
+              <div>
+                <b>Adresse</b>
+                <small>{etab.adresse}</small>
+              </div>
+            </div>
+            <div className="setrow">
+              <div>
+                <b>Téléphone</b>
+                <small>{etab.telephone}</small>
+              </div>
+            </div>
+            <div className="setrow">
+              <div>
+                <b>E-mail</b>
+                <small>{etab.email}</small>
+              </div>
+            </div>
+            <div className="setrow">
+              <div>
+                <b>Site web</b>
+                <small>{etab.siteWeb}</small>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 9, marginTop: 12, flexWrap: "wrap" }}>
+              <a
+                className="btn small"
+                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(etab.adresse)}`}
+                target="_blank"
+                rel="noopener"
+              >
+                🧭 Itinéraire
+              </a>
+              <a className="btn ghost small" href={`tel:${etab.telephone.replace(/\s/g, "")}`}>
+                📞 Appeler
+              </a>
+            </div>
+          </div>
+          <div className="abannerm">
+            <span aria-hidden>ℹ️</span>
+            <div>
+              Champs de démonstration — la modification de la fiche sera possible quand la base de
+              données sera branchée.
+            </div>
+          </div>
+          <div className="card2">
+            <h4>🖼️ Photos de l&apos;établissement</h4>
+            <div className="gallery">
+              {PHOTOS.map((photo) => (
+                <div key={photo.label} className="gphoto">
+                  <div className="inner" style={{ background: photo.fond }}>
+                    <div style={{ fontSize: 23 }} aria-hidden>
+                      {photo.emoji}
+                    </div>
+                    <small style={{ fontSize: 10.5, color: "var(--blue)", fontWeight: 800 }}>
+                      {photo.label}
+                    </small>
+                  </div>
+                </div>
+              ))}
+              <div className="gadd" title="Disponible avec le stockage de fichiers" style={{ opacity: 0.6 }}>
+                ＋ Ajouter
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5">
         <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Informations</h2>
         <small className="text-[13px] text-muted">
@@ -117,6 +216,7 @@ export default function InformationsEtablissement() {
             ＋ Ajouter une photo
           </div>
         </div>
+      </div>
       </div>
     </EtablissementShell>
   );

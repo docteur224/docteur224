@@ -30,10 +30,39 @@ export default async function Confirmation({
   const etab = getEtablissement(medecin.etablissementId);
 
   return (
-    <div className="min-h-screen bg-bg">
+    <div className="flex min-h-screen flex-col bg-bg">
       <TopNav minimale />
 
-      <div className="mx-auto max-w-[560px] px-[30px] py-[60px] text-center">
+      {/* ================= VERSION MOBILE (écran « confirmation » de la maquette mobile) ================= */}
+      <div className="confwrap md:hidden">
+        <div className="check">
+          <div>✓</div>
+        </div>
+        <h2>Rendez-vous confirmé !</h2>
+        <p>
+          Votre rendez-vous avec <b>{nomComplet(medecin)}</b> est réservé pour le{" "}
+          <b>
+            {formatDateLongue(date)} à {heure}
+          </b>
+          , à la {etab?.nom}.
+        </p>
+        <div className="notif">📩 Confirmation envoyée par SMS et e-mail</div>
+        <p style={{ fontSize: 11 }}>
+          Mode démonstration : les envois simulés sont visibles dans le centre de notifications
+          (🔔).
+        </p>
+        <div style={{ width: "100%", marginTop: 26, display: "flex", flexDirection: "column", gap: 10 }}>
+          <Link href="/mes-rendez-vous" className="btn">
+            Voir mes rendez-vous
+          </Link>
+          <Link href="/" className="btn ghost">
+            Retour à l&apos;accueil
+          </Link>
+        </div>
+      </div>
+
+      {/* ================= VERSION WEB (inchangée) ================= */}
+      <div className="mx-auto hidden max-w-[560px] px-[30px] py-[60px] text-center md:block">
         <div className="mx-auto mb-[22px] grid h-[104px] w-[104px] animate-[pop_.4s_ease] place-items-center rounded-full bg-green-soft">
           <div className="grid h-[72px] w-[72px] place-items-center rounded-full bg-green text-4xl text-white">
             ✓

@@ -30,6 +30,64 @@ export default function AgendaMedecin() {
 
   return (
     <MedecinShell>
+      {/* ===== Version mobile (écran « m-med-agenda » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <div className="appbar">
+          <div>
+            <h3 style={{ paddingLeft: 4 }}>Mon agenda</h3>
+            <div className="sub" style={{ paddingLeft: 4 }}>
+              {capitaliser(formatDateLongue(dateISO))}
+            </div>
+          </div>
+          <Link href="/espace-medecin/nouveau-rdv" className="btnm" style={{ marginLeft: "auto" }}>
+            + RDV
+          </Link>
+        </div>
+        <div className="pad" style={{ paddingTop: 8 }}>
+          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+            <button type="button" className="btnm gh" onClick={() => decaler(-1)}>
+              ‹ Hier
+            </button>
+            <button
+              type="button"
+              className="btnm gh"
+              style={{ flex: 1 }}
+              onClick={() => setDateISO(versISO(new Date()))}
+            >
+              Aujourd&apos;hui
+            </button>
+            <button type="button" className="btnm gh" onClick={() => decaler(1)}>
+              Demain ›
+            </button>
+          </div>
+          {creneaux.map((creneau) =>
+            creneau.statut === "reserve" ? (
+              <div key={creneau.heure} className="agm">
+                <div className="t">{creneau.heure}</div>
+                <div className="who">
+                  <b>{creneau.patient}</b>
+                  <small>{creneau.motif}</small>
+                </div>
+              </div>
+            ) : (
+              <div key={creneau.heure} className="agm free">
+                <div className="t">{creneau.heure}</div>
+                <div className="who">
+                  <b>Disponible</b>
+                </div>
+              </div>
+            )
+          )}
+          {creneaux.length === 0 && (
+            <p className="muted" style={{ fontSize: 13 }}>
+              Aucun créneau ouvert ce jour (journée fermée).
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Mon agenda</h2>
@@ -97,6 +155,7 @@ export default function AgendaMedecin() {
             Aucun créneau ouvert ce jour (journée fermée).
           </p>
         )}
+      </div>
       </div>
     </MedecinShell>
   );

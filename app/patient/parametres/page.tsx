@@ -2,6 +2,7 @@
 
 import PatientShell from "@/components/patient/PatientShell";
 import Interrupteur from "@/components/patient/Interrupteur";
+import AppBarMobile from "@/components/mobile/AppBarMobile";
 import {
   enregistrerParametresLocaux,
   useParametresLocaux,
@@ -22,6 +23,98 @@ export default function Parametres() {
 
   return (
     <PatientShell>
+      {/* ===== Version mobile (écran « m-pat-params » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <AppBarMobile retour="/patient/compte" titre="Paramètres" />
+        <div className="pad">
+          <div className="card2">
+            <h4>Notifications</h4>
+            <div className="setrow">
+              <div>
+                <b>Rappels par SMS</b>
+                <small>Avant chaque rendez-vous</small>
+              </div>
+              <Interrupteur
+                actif={parametres.rappelsSms}
+                onChange={(v) => basculer("rappelsSms", v)}
+                label="Rappels par SMS"
+              />
+            </div>
+            <div className="setrow">
+              <div>
+                <b>Rappels par e-mail</b>
+                <small>Confirmations</small>
+              </div>
+              <Interrupteur
+                actif={parametres.rappelsEmail}
+                onChange={(v) => basculer("rappelsEmail", v)}
+                label="Rappels par e-mail"
+              />
+            </div>
+            <div className="setrow">
+              <div>
+                <b>Offres et nouveautés</b>
+                <small>Nouveaux médecins</small>
+              </div>
+              <Interrupteur
+                actif={parametres.offres}
+                onChange={(v) => basculer("offres", v)}
+                label="Offres et nouveautés"
+              />
+            </div>
+          </div>
+          <div className="card2">
+            <h4>Langue</h4>
+            <div className="setrow">
+              <div>
+                <b>Langue de l&apos;interface</b>
+                <small>Français</small>
+              </div>
+              <button
+                type="button"
+                disabled
+                title="L'anglais est prévu dans une évolution future"
+                className="btnm gh"
+                style={{ opacity: 0.5, cursor: "not-allowed" }}
+              >
+                Changer
+              </button>
+            </div>
+          </div>
+          <div className="card2">
+            <h4>Sécurité</h4>
+            <div className="setrow">
+              <div>
+                <b>Double authentification</b>
+                <small>Code par SMS</small>
+              </div>
+              <Interrupteur
+                actif={parametres.deuxFacteurs}
+                onChange={(v) => basculer("deuxFacteurs", v)}
+                label="Authentification à deux facteurs"
+              />
+            </div>
+            <div className="setrow">
+              <div>
+                <b>Mot de passe</b>
+                <small>Sera activé avec l&apos;authentification</small>
+              </div>
+              <button
+                type="button"
+                disabled
+                title="Disponible avec l'authentification (Phase 3)"
+                className="btnm gh"
+                style={{ opacity: 0.5, cursor: "not-allowed" }}
+              >
+                Modifier
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5">
         <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Paramètres</h2>
         <small className="text-[13px] text-muted">Notifications, langue et sécurité</small>
@@ -113,6 +206,7 @@ export default function Parametres() {
             Modifier
           </button>
         </div>
+      </div>
       </div>
     </PatientShell>
   );

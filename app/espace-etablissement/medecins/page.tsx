@@ -42,6 +42,112 @@ export default function MedecinsEtablissement() {
 
   return (
     <EtablissementShell>
+      {/* ===== Version mobile (écran « m-etab-medecins » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <div className="appbar">
+          <h3 style={{ paddingLeft: 4 }}>Médecins</h3>
+        </div>
+        <div className="pad">
+          <div className="abannerm">
+            <span aria-hidden>ℹ️</span>
+            <div>
+              Chaque médecin garde son agenda et son compte. L&apos;établissement gère le
+              rattachement et les infos communes.
+            </div>
+          </div>
+          <div className="card2">
+            <h4>Inviter un médecin</h4>
+            <form onSubmit={envoyerInvitation}>
+              <input
+                className="inp"
+                value={nom}
+                onChange={(e) => setNom(e.target.value)}
+                placeholder="Nom du médecin, ex. Dr Oumar Baldé"
+                aria-label="Nom du médecin"
+              />
+              <input
+                className="inp"
+                value={specialite}
+                onChange={(e) => setSpecialite(e.target.value)}
+                placeholder="Spécialité, ex. Ophtalmologie"
+                aria-label="Spécialité"
+              />
+              <button type="submit" className="btn block" style={{ marginTop: 0 }}>
+                + Inviter un médecin
+              </button>
+            </form>
+          </div>
+          <div className="card2">
+            <h4>Invitations · {invitations.length}</h4>
+            {invitations.map((invitation) => {
+              const statut = LIBELLES_STATUT[invitation.statut];
+              return (
+                <div key={invitation.id} className="asstrowm">
+                  <span className="av" aria-hidden style={{ background: invitation.gradient }}>
+                    {invitation.initiales}
+                  </span>
+                  <span className="meta">
+                    <b>{invitation.nom}</b>
+                    <small>
+                      {invitation.specialite} · envoyée le {invitation.envoyeeLe}
+                    </small>
+                  </span>
+                  {invitation.statut === "envoyee" ? (
+                    <span style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+                      <button
+                        type="button"
+                        className="btnm"
+                        onClick={() => accepterInvitation(invitation.id)}
+                      >
+                        Simuler : accepte
+                      </button>
+                      <button
+                        type="button"
+                        className="btnm dg"
+                        onClick={() => refuserInvitation(invitation.id)}
+                      >
+                        Simuler : refuse
+                      </button>
+                    </span>
+                  ) : (
+                    <span
+                      className={`pill ${
+                        invitation.statut === "acceptee"
+                          ? "ok"
+                          : invitation.statut === "refusee"
+                            ? "bad"
+                            : "soon"
+                      }`}
+                    >
+                      {statut.texte}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <div className="card2">
+            <h4>{rattaches.length} médecins rattachés</h4>
+            {rattaches.map((medecin) => (
+              <div key={medecin.id} className="asstrowm">
+                <span className="av" aria-hidden style={{ background: medecin.gradient }}>
+                  {medecin.initiales}
+                </span>
+                <span className="meta">
+                  <b>{medecin.nom}</b>
+                  <small>
+                    {medecin.specialite} · {medecin.rdvSemaine} RDV cette semaine
+                  </small>
+                </span>
+                <span className="pill ok">Actif</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5">
         <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Médecins</h2>
         <small className="text-[13px] text-muted">
@@ -162,6 +268,7 @@ export default function MedecinsEtablissement() {
             </span>
           </div>
         ))}
+      </div>
       </div>
     </EtablissementShell>
   );

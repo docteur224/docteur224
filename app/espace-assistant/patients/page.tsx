@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import AssistantShell from "@/components/assistant/AssistantShell";
+import AppBarMobile from "@/components/mobile/AppBarMobile";
 import { assistantePeutCreerRdv } from "@/lib/actions-assistante";
 import {
   initialesPatientCabinet,
@@ -19,6 +20,53 @@ export default function PatientsAssistant() {
 
   return (
     <AssistantShell>
+      {/* ===== Version mobile (écran « m-asst-patients » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <AppBarMobile retour="/espace-assistant/compte" titre="Patients" />
+        <div className="pad">
+          <div className="noteboxm" style={{ marginTop: 0 }}>
+            <span aria-hidden>🔒</span>
+            <div>
+              Coordonnées uniquement (nom, téléphone). Le <b>dossier médical</b> n&apos;est pas
+              accessible.
+            </div>
+          </div>
+          <div className="card2" style={{ marginTop: 10 }}>
+            <h4>Liste des patients</h4>
+            {patients.map((patient) => (
+              <div key={patient.id} className="asstrowm">
+                <span className="av" aria-hidden style={{ background: patient.gradient }}>
+                  {initialesPatientCabinet(patient)}
+                </span>
+                <span className="meta">
+                  <b>
+                    {patient.prenom} {patient.nom}
+                  </b>
+                  <small>
+                    {patient.derniereVisite} · {patient.telephone}
+                  </small>
+                </span>
+                {peutCreer ? (
+                  <Link href="/espace-assistant/nouveau-rdv" className="btnm gh">
+                    RDV
+                  </Link>
+                ) : (
+                  <span
+                    className="btnm gh"
+                    style={{ opacity: 0.5 }}
+                    title="Permission « Créer un rendez-vous pour un patient » non accordée"
+                  >
+                    RDV 🔒
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5">
         <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Patients</h2>
         <small className="text-[13px] text-muted">
@@ -73,6 +121,7 @@ export default function PatientsAssistant() {
             )}
           </div>
         ))}
+      </div>
       </div>
     </AssistantShell>
   );

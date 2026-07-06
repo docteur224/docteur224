@@ -26,7 +26,54 @@ export default function Connexion() {
     "mb-3 w-full rounded-xl border border-line bg-white p-[14px] text-sm outline-none focus:border-teal";
 
   return (
-    <div className="grid min-h-screen bg-white lg:grid-cols-2">
+    <div className="min-h-screen bg-bg md:bg-white">
+      {/* ================= VERSION MOBILE (écran « login » de la maquette mobile) ================= */}
+      <div className="authwrap md:hidden">
+        <div className="logo-dot" aria-hidden>
+          D
+        </div>
+        <div className="eyebrow2" style={{ marginTop: 8 }}>
+          Je me connecte en tant que
+        </div>
+        <div className="rtabs">
+          {ROLES.map((r) => (
+            <button
+              key={r.nom}
+              type="button"
+              onClick={() => setRole(r)}
+              className={`rtab${role.nom === r.nom ? " on" : ""}`}
+            >
+              {r.nom}
+            </button>
+          ))}
+        </div>
+        <h2 style={{ marginBottom: 4 }}>Connexion</h2>
+        <div className="sub">Accédez à votre espace Docteur 224.</div>
+        <input className="inp" placeholder="vous@exemple.com" />
+        <input className="inp" type="password" placeholder="••••••••" />
+        <Link href={role.cible} className="btn block">
+          S&apos;identifier
+        </Link>
+        <div style={{ textAlign: "right", marginTop: 10 }}>
+          <span
+            className="muted"
+            title="Disponible avec l'authentification réelle"
+            style={{ color: "var(--teal)", fontSize: 12.5, fontWeight: 700, opacity: 0.6 }}
+          >
+            Mot de passe oublié ?
+          </span>
+        </div>
+        <div className="split">ou</div>
+        <Link href="/patient" className="btn ghost">
+          📱 Continuer avec mon numéro
+        </Link>
+        <div className="linkline">
+          Pas encore de compte ? <Link href="/inscription">S&apos;inscrire</Link>
+        </div>
+      </div>
+
+      {/* ================= VERSION WEB (inchangée) ================= */}
+      <div className="hidden min-h-screen bg-white md:grid lg:grid-cols-2">
       <div className="flex flex-col justify-center px-6 py-10 sm:px-[50px] sm:py-[54px]">
         <div className="mx-auto w-full max-w-[520px]">
           <div className="mb-[10px] text-[11px] font-extrabold uppercase tracking-[0.12em] text-muted">
@@ -102,6 +149,7 @@ export default function Connexion() {
           { icone: "🔒", texte: "Vos données protégées" },
         ]}
       />
+      </div>
     </div>
   );
 }

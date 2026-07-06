@@ -1,6 +1,7 @@
 "use client";
 
 import MedecinShell from "@/components/medecin/MedecinShell";
+import AppBarMobile from "@/components/mobile/AppBarMobile";
 import { formatGNF } from "@/lib/format";
 import {
   enregistrerAbonnementMedecin,
@@ -43,6 +44,114 @@ export default function AbonnementMedecin() {
 
   return (
     <MedecinShell>
+      {/* ===== Version mobile (écran « m-med-abonnement » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <AppBarMobile retour="/espace-medecin/compte" titre="Mon abonnement" />
+        <div className="pad">
+          <div className="card2">
+            <h4>Abonnement actuel</h4>
+            <div className="setrow">
+              <div>
+                <b>
+                  {libelleFormule} · {libellePeriode}
+                </b>
+                <small>Actif jusqu&apos;au 30 juin · Orange Money</small>
+              </div>
+              <span className="pill ok">Actif</span>
+            </div>
+            <div className="privnote info">
+              <span aria-hidden>ℹ️</span>
+              <div>
+                La prise de RDV reste <b>gratuite pour vos patients</b>.
+              </div>
+            </div>
+          </div>
+          <div className="card2">
+            <h4>Changer de formule</h4>
+            <div className="seg">
+              <button
+                type="button"
+                className={periode === "mensuel" ? "on" : undefined}
+                onClick={() => enregistrerAbonnementMedecin({ ...abonnement, periode: "mensuel" })}
+              >
+                Mensuel
+              </button>
+              <button
+                type="button"
+                className={periode === "annuel" ? "on" : undefined}
+                onClick={() => enregistrerAbonnementMedecin({ ...abonnement, periode: "annuel" })}
+              >
+                Annuel
+              </button>
+            </div>
+            <div className={`plan${formule === "standard" ? " cur" : ""}`}>
+              {formule === "standard" && <span className="tag">Actuel</span>}
+              <h4>Standard</h4>
+              <div className="pr">
+                {formatGNF(TARIFS.standard[periode])}{" "}
+                <span style={{ fontSize: 11, color: "var(--muted)" }}>
+                  /{periode === "annuel" ? "an" : "mois"}
+                </span>
+              </div>
+              <ul>
+                {AVANTAGES_STANDARD.map((avantage) => (
+                  <li key={avantage}>{avantage}</li>
+                ))}
+              </ul>
+              {formule === "standard" ? (
+                <button type="button" className="btnm" style={{ width: "100%" }} disabled>
+                  Formule actuelle
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="btnm gh"
+                  style={{ width: "100%" }}
+                  onClick={() =>
+                    enregistrerAbonnementMedecin({ ...abonnement, formule: "standard" })
+                  }
+                >
+                  Choisir Standard
+                </button>
+              )}
+            </div>
+            <div className={`plan${formule === "premium" ? " cur" : ""}`}>
+              {formule === "premium" && <span className="tag">Actuel</span>}
+              <h4>Premium</h4>
+              <div className="pr">
+                {formatGNF(TARIFS.premium[periode])}{" "}
+                <span style={{ fontSize: 11, color: "var(--muted)" }}>
+                  /{periode === "annuel" ? "an" : "mois"}
+                </span>
+              </div>
+              <ul>
+                {AVANTAGES_PREMIUM.map((avantage, i) => (
+                  <li key={avantage}>{i === 1 ? <b>{avantage}</b> : avantage}</li>
+                ))}
+              </ul>
+              {formule === "premium" ? (
+                <button type="button" className="btnm" style={{ width: "100%" }} disabled>
+                  Formule actuelle
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="btnm gh"
+                  style={{ width: "100%" }}
+                  onClick={() =>
+                    enregistrerAbonnementMedecin({ ...abonnement, formule: "premium" })
+                  }
+                >
+                  Choisir Premium
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5">
         <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Mon abonnement</h2>
         <small className="text-[13px] text-muted">Votre présence sur Docteur 224</small>
@@ -192,6 +301,7 @@ export default function AbonnementMedecin() {
             )}
           </div>
         </div>
+      </div>
       </div>
     </MedecinShell>
   );

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import TopNav from "@/components/site/TopNav";
+import AppBarMobile from "@/components/mobile/AppBarMobile";
 import { formatGNF, formatNote } from "@/lib/format";
 import { prochainsJours } from "@/lib/dates";
 import { premiersCreneauxOuvertsBase } from "@/lib/horaire-type";
@@ -72,6 +73,72 @@ export default async function Resultats({
     <div className="min-h-screen bg-bg">
       <TopNav lienActif="trouver" droite="compte" />
 
+      {/* ================= VERSION MOBILE (écran « resultats » de la maquette mobile) ================= */}
+      <div className="md:hidden">
+        <AppBarMobile
+          retour="/"
+          titre={`${specialite || "Médecins"} · ${ville || "Conakry"}`}
+          sousTitre={`${liste.length} médecin${liste.length > 1 ? "s" : ""} disponible${
+            liste.length > 1 ? "s" : ""
+          }`}
+        />
+        <div className="filterbar">
+          <span className="fb on">Tous</span>
+          <span className="fb">Dispo aujourd&apos;hui</span>
+          <span className="fb">Mieux notés</span>
+          <span className="fb">Prix ↓</span>
+        </div>
+        <div className="pad" style={{ paddingTop: 14 }}>
+          {liste.length === 0 && (
+            <div className="card2" style={{ textAlign: "center", padding: 24 }}>
+              <div style={{ fontSize: 30 }} aria-hidden>
+                🔍
+              </div>
+              <b style={{ display: "block", marginTop: 10, fontSize: 15, fontWeight: 800 }}>
+                Aucun médecin trouvé
+              </b>
+              <p className="muted" style={{ fontSize: 13, marginTop: 8, lineHeight: 1.5 }}>
+                Aucun médecin de démonstration ne correspond à cette recherche. Essayez «
+                Pédiatrie » ou « Médecine générale » à Conakry.
+              </p>
+              <Link href="/resultats" className="btn block" style={{ marginTop: 14 }}>
+                Voir tous les médecins
+              </Link>
+            </div>
+          )}
+          {liste.map((m) => {
+            const etab = getEtablissement(m.etablissementId);
+            return (
+              <Link key={m.id} href={`/medecin/${m.id}`} className="doc">
+                <span className="av" aria-hidden style={{ background: m.gradient }}>
+                  {m.initiales}
+                </span>
+                <span className="info">
+                  <b>{nomComplet(m)}</b>
+                  <span className="spec">{m.specialite}</span>
+                  <span className="meta">
+                    📍 {etab?.nom} · {m.ville}
+                  </span>
+                  <span className="row2">
+                    <span className="stars">
+                      ★ {formatNote(m.note)} ({m.nbAvis})
+                    </span>
+                    <span className="price">{formatGNF(m.tarifConsultation)}</span>
+                  </span>
+                  <span className="row2">
+                    <span className={`pill ${m.disponibilite.type === "aujourdhui" ? "ok" : "soon"}`}>
+                      {m.disponibilite.label}
+                    </span>
+                  </span>
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ================= VERSION WEB (inchangée) ================= */}
+      <div className="hidden md:block">
       {/* En-tête de page : fil d'Ariane + titre + pastilles de recherche */}
       <div className="border-b border-line bg-white px-[30px] py-[22px]">
         <div className="text-xs font-semibold text-muted">
@@ -207,6 +274,7 @@ export default async function Resultats({
             );
           })}
         </div>
+      </div>
       </div>
     </div>
   );

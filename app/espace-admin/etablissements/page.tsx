@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import AdminShell from "@/components/admin/AdminShell";
+import AppBarMobile from "@/components/mobile/AppBarMobile";
 import { useEtablissementsEnAttente } from "@/lib/mock-admin";
 
 /*
@@ -34,6 +35,53 @@ export default function EtablissementsAdmin() {
 
   return (
     <AdminShell>
+      {/* ===== Version mobile (écran « m-admin-etabs » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <AppBarMobile retour="/espace-admin/plus" titre="Établissements" />
+        <div className="pad">
+          <div className="card2">
+            <h4>Structures inscrites</h4>
+            {STRUCTURES.map((structure) => (
+              <div key={structure.nom} className="asstrowm">
+                <span className="av" aria-hidden style={{ background: structure.gradient }}>
+                  🏥
+                </span>
+                <span className="meta">
+                  <b>{structure.nom}</b>
+                  <small>{structure.detail}</small>
+                </span>
+                <span className="pill ok">Vérifié</span>
+              </div>
+            ))}
+            <div className="asstrowm">
+              <span
+                className="av"
+                aria-hidden
+                style={{ background: "linear-gradient(135deg,#9AA8B2,#647A89)" }}
+              >
+                🏥
+              </span>
+              <span className="meta">
+                <b>Polyclinique de Ratoma</b>
+                <small>
+                  Clinique privée · Conakry ·{" "}
+                  {ratomaEnAttente ? "en cours de validation" : "dossier traité"}
+                </small>
+              </span>
+              {ratomaEnAttente ? (
+                <Link href="/espace-admin/validations" className="pill soon">
+                  Attente
+                </Link>
+              ) : (
+                <span className="pill ok">Traité ✓</span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5">
         <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Établissements</h2>
         <small className="text-[13px] text-muted">Toutes les structures de la plateforme</small>
@@ -103,6 +151,7 @@ export default function EtablissementsAdmin() {
             </span>
           )}
         </div>
+      </div>
       </div>
     </AdminShell>
   );

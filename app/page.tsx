@@ -1,6 +1,7 @@
 import Link from "next/link";
 import TopNav from "@/components/site/TopNav";
 import Footer from "@/components/site/Footer";
+import TabBarMobile from "@/components/mobile/TabBarMobile";
 import { formatGNF, formatNote } from "@/lib/format";
 import {
   etablissementsEnVedette,
@@ -20,6 +21,134 @@ export default function Accueil() {
     <div className="flex min-h-screen flex-col bg-bg">
       <TopNav lienActif="trouver" />
 
+      {/* ================= VERSION MOBILE (écran « accueil » de la maquette mobile) ================= */}
+      <div className="with-tabbar md:hidden">
+        <div className="hero">
+          <div className="hi">Bonjour 👋</div>
+          <h2>
+            Trouvez un médecin
+            <br />
+            et prenez rendez-vous
+          </h2>
+          <form action="/resultats" className="searchbox">
+            <label className="field">
+              <span className="ic" aria-hidden>
+                🩺
+              </span>
+              <input name="specialite" placeholder="Spécialité (ex. Pédiatrie)" />
+            </label>
+            <label className="field">
+              <span className="ic" aria-hidden>
+                📍
+              </span>
+              <input name="ville" placeholder="Ville (ex. Conakry)" />
+            </label>
+            <label className="field">
+              <span className="ic" aria-hidden>
+                🔎
+              </span>
+              <input name="q" placeholder="Médecin ou établissement" />
+            </label>
+            <button type="submit" className="btn block">
+              🔎 Rechercher
+            </button>
+          </form>
+        </div>
+        <div className="pad">
+          <div className="section-t">Spécialités courantes</div>
+          <div className="chips scroll">
+            {specialites.slice(0, 5).map((s) => (
+              <Link
+                key={s.nom}
+                href={`/resultats?specialite=${encodeURIComponent(s.nom)}`}
+                className="speccard"
+              >
+                <span className="em" aria-hidden>
+                  {s.emoji}
+                </span>
+                <b>{s.nom}</b>
+              </Link>
+            ))}
+          </div>
+
+          <div className="section-t">Comment ça marche</div>
+          <div className="steps">
+            <div className="step">
+              <div className="n">1</div>
+              <div>
+                <b>Cherchez</b>
+                <small>Par spécialité, ville ou nom du médecin.</small>
+              </div>
+            </div>
+            <div className="step">
+              <div className="n">2</div>
+              <div>
+                <b>Choisissez un créneau</b>
+                <small>Voyez les disponibilités en temps réel.</small>
+              </div>
+            </div>
+            <div className="step">
+              <div className="n">3</div>
+              <div>
+                <b>Confirmez</b>
+                <small>Recevez un SMS et un e-mail de confirmation.</small>
+              </div>
+            </div>
+          </div>
+
+          <div className="section-t">Médecins en vedette</div>
+          {medecinsEnVedette.map((m) => {
+            const etab = getEtablissement(m.etablissementId);
+            return (
+              <Link key={m.id} href={`/medecin/${m.id}`} className="doc">
+                <span className="av" aria-hidden style={{ background: m.gradient }}>
+                  {m.initiales}
+                </span>
+                <span className="info">
+                  <b>{nomComplet(m)}</b>
+                  <span className="spec">{m.specialite}</span>
+                  <span className="meta">
+                    📍 {etab?.nom} · {m.ville}
+                  </span>
+                  <span className="row2">
+                    <span className={`pill ${m.disponibilite.type === "aujourdhui" ? "ok" : "soon"}`}>
+                      {m.disponibilite.label}
+                    </span>
+                    <span className="price">{formatGNF(m.tarifConsultation)}</span>
+                  </span>
+                </span>
+              </Link>
+            );
+          })}
+
+          <div className="section-t">Établissements en vedette</div>
+          {etablissementsEnVedette.map((e) => (
+            <Link key={e.id} href={`/resultats?q=${encodeURIComponent(e.nom)}`} className="doc">
+              <span className="av" aria-hidden style={{ background: e.gradient }}>
+                🏥
+              </span>
+              <span className="info">
+                <b>{e.nom}</b>
+                <span className="spec">{e.type}</span>
+                <span className="meta">
+                  📍 {e.quartier} · {e.ville}
+                </span>
+                <span className="row2">
+                  <span className="pill ok">
+                    {e.nbMedecins}
+                    {e.id === "e-chu" ? "+" : ""} médecins
+                  </span>
+                  <span className="price">★ {formatNote(e.note)}</span>
+                </span>
+              </span>
+            </Link>
+          ))}
+        </div>
+        <TabBarMobile role="public" />
+      </div>
+
+      {/* ================= VERSION WEB (inchangée) ================= */}
+      <div className="hidden md:block">
       {/* ===== HERO ===== */}
       <section className="relative overflow-hidden bg-[linear-gradient(150deg,var(--blue)_0%,var(--blue-deep)_100%)] px-[30px] pb-16 pt-[54px] text-center text-white">
         <span
@@ -268,6 +397,7 @@ export default function Accueil() {
           </div>
         </div>
       </section>
+      </div>
 
       <Footer />
     </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import AdminShell from "@/components/admin/AdminShell";
+import AppBarMobile from "@/components/mobile/AppBarMobile";
 import { useRemboursements, validerRemboursement } from "@/lib/mock-admin";
 
 /*
@@ -62,6 +63,134 @@ export default function FinancesAdmin() {
 
   return (
     <AdminShell>
+      {/* ===== Version mobile (écran « m-admin-finances » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <AppBarMobile retour="/espace-admin/plus" titre="Finances" />
+        <div className="pad">
+          <div className="statcards inpad two">
+            <div className="sc b1">
+              <b>42 M</b>
+              <small>GNF ce mois</small>
+            </div>
+            <div className="sc b2">
+              <b>210</b>
+              <small>Abonnements</small>
+            </div>
+            <div className="sc b3">
+              <b>6,3 M</b>
+              <small>Commissions MoMo</small>
+            </div>
+            <div className="sc b1">
+              <b>3</b>
+              <small>Impayés</small>
+            </div>
+          </div>
+          <div className="card2" style={{ marginTop: 12 }}>
+            <h4>Transactions récentes</h4>
+            {TRANSACTIONS.map((transaction) => (
+              <div key={transaction.titre} className="asstrowm">
+                <span className="av" aria-hidden style={{ background: transaction.gradient }}>
+                  {transaction.initiales}
+                </span>
+                <span className="meta">
+                  <b>{transaction.titre}</b>
+                  <small>{transaction.detail}</small>
+                </span>
+                <span className="price">{transaction.montant.replace(" GNF", "")}</span>
+              </div>
+            ))}
+          </div>
+          <div className="card2">
+            <h4>Remboursements &amp; litiges · {remboursements.length}</h4>
+            {remboursements.length === 0 && (
+              <p className="muted" style={{ fontSize: 12.5 }}>
+                ✅ Aucun remboursement en attente.
+              </p>
+            )}
+            {remboursements.map((remboursement) => (
+              <div key={remboursement.id} className="asstrowm">
+                <span className="av" aria-hidden style={{ background: remboursement.gradient }}>
+                  {remboursement.initiales}
+                </span>
+                <span className="meta">
+                  <b>{remboursement.titre}</b>
+                  <small>{remboursement.detail}</small>
+                </span>
+                <button type="button" className="btnm" onClick={() => validerRemboursement(remboursement)}>
+                  Rembourser
+                </button>
+              </div>
+            ))}
+          </div>
+          <div className="card2">
+            <h4>Reversements &amp; réconciliation</h4>
+            <table className="atab">
+              <thead>
+                <tr>
+                  <th>Bénéficiaire</th>
+                  <th>À reverser</th>
+                  <th>Statut</th>
+                </tr>
+              </thead>
+              <tbody>
+                {REVERSEMENTS.map((ligne) => (
+                  <tr key={ligne.beneficiaire}>
+                    <td>{ligne.beneficiaire}</td>
+                    <td>{ligne.montant.replace(" GNF", "")}</td>
+                    <td>
+                      <span
+                        className={`pill ${
+                          ligne.statut === "Réconcilié"
+                            ? "ok"
+                            : ligne.statut === "À reverser"
+                              ? ""
+                              : "soon"
+                        }`}
+                        style={
+                          ligne.statut === "À reverser"
+                            ? { background: "var(--teal-soft)", color: "var(--blue)" }
+                            : undefined
+                        }
+                      >
+                        {ligne.statut === "Réconcilié" ? "OK" : ligne.statut === "À reverser" ? "À faire" : "Écart"}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="privnote info">
+              <span aria-hidden>🔄</span>
+              <div>Rapprochement Orange Money / MTN MoMo avec la plateforme.</div>
+            </div>
+          </div>
+          <div className="card2">
+            <h4>Export comptable</h4>
+            <div className="setrow">
+              <div>
+                <b>Transactions (CSV)</b>
+                <small>Période en cours</small>
+              </div>
+              <button
+                type="button"
+                className="btnm gh"
+                disabled
+                title="Disponible avec la base de données"
+                style={{ opacity: 0.5, cursor: "not-allowed" }}
+              >
+                ⬇️ CSV
+              </button>
+            </div>
+          </div>
+          <div className="noteboxm">
+            <span aria-hidden>ℹ️</span>
+            <div>Chiffres illustratifs. Ceci ne constitue pas un conseil financier.</div>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Finances</h2>
@@ -242,6 +371,7 @@ export default function FinancesAdmin() {
       <div className="flex items-start gap-[9px] rounded-xl border border-[#F2D9B6] bg-[#FFF5E9] px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-[#8A5A1B]">
         <span aria-hidden>ℹ️</span>
         <div>Chiffres illustratifs pour la maquette. Ceci ne constitue pas un conseil financier.</div>
+      </div>
       </div>
     </AdminShell>
   );

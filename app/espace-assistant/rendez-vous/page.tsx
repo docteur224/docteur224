@@ -88,6 +88,127 @@ export default function RendezVousAssistant() {
 
   return (
     <AssistantShell>
+      {/* ===== Version mobile (écran « m-asst-agenda » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <div className="appbar">
+          <div>
+            <h3 style={{ paddingLeft: 4 }}>Rendez-vous</h3>
+            <div className="sub" style={{ paddingLeft: 4 }}>
+              {capitaliser(formatDateLongue(dateISO))}
+            </div>
+          </div>
+          {peutCreer ? (
+            <Link href="/espace-assistant/nouveau-rdv" className="btnm" style={{ marginLeft: "auto" }}>
+              + RDV
+            </Link>
+          ) : (
+            <span
+              className="btnm"
+              style={{ marginLeft: "auto", opacity: 0.5 }}
+              title="Permission « Créer un rendez-vous pour un patient » non accordée"
+            >
+              + RDV 🔒
+            </span>
+          )}
+        </div>
+        <div className="pad" style={{ paddingTop: 8 }}>
+          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+            <button type="button" className="btnm gh" onClick={() => decaler(-1)}>
+              ‹ Hier
+            </button>
+            <button
+              type="button"
+              className="btnm gh"
+              style={{ flex: 1 }}
+              onClick={() => setDateISO(versISO(new Date()))}
+            >
+              Aujourd&apos;hui
+            </button>
+            <button type="button" className="btnm gh" onClick={() => decaler(1)}>
+              Demain ›
+            </button>
+          </div>
+          <div className="abannerm">
+            <span aria-hidden>🔒</span>
+            <div>
+              Vous confirmez, annulez ou reprogrammez les RDV. Le dossier médical reste réservé au
+              médecin.
+            </div>
+          </div>
+          {erreur && (
+            <div className="noteboxm" style={{ marginBottom: 12, background: "var(--red-soft)", borderColor: "#F3C9C2", color: "var(--red)" }}>
+              <div>{erreur}</div>
+            </div>
+          )}
+          {rdvJour.map((creneau) => {
+            const reel = creneau.demo === false;
+            return (
+              <div key={creneau.heure}>
+                <div className="aptm">
+                  <div className="tm">{creneau.heure}</div>
+                  <div className="meta">
+                    <b>{creneau.patient}</b>
+                    <small>
+                      {creneau.motif}
+                      {reel ? " · réservé en ligne" : " · démonstration"}
+                    </small>
+                  </div>
+                  <div className="acts">
+                    <button
+                      type="button"
+                      className="btnm gh"
+                      disabled={!reel}
+                      style={reel && permissions.reprogrammer ? undefined : { opacity: 0.5 }}
+                      onClick={() => ouvrirReprogrammation(creneau.heure)}
+                    >
+                      Décaler
+                    </button>
+                    <button
+                      type="button"
+                      className="btnm dg"
+                      disabled={!reel}
+                      style={reel && permissions.confirmerAnnuler ? undefined : { opacity: 0.5 }}
+                      onClick={() => annuler(creneau.heure)}
+                    >
+                      Annuler
+                    </button>
+                  </div>
+                </div>
+                {enReprogrammation === creneau.heure && (
+                  <div className="addbene" style={{ marginBottom: 9 }}>
+                    <div className="flabel">Choisir un nouvel horaire (même journée) :</div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      {creneauxLibres.map((libre) => (
+                        <button
+                          key={libre.heure}
+                          type="button"
+                          className="btnm gh"
+                          onClick={() => reprogrammer(creneau.heure, libre.heure)}
+                        >
+                          {libre.heure}
+                        </button>
+                      ))}
+                      {creneauxLibres.length === 0 && (
+                        <p className="muted" style={{ fontSize: 11.5 }}>
+                          Aucun créneau libre ce jour.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {rdvJour.length === 0 && (
+            <p className="muted" style={{ fontSize: 13 }}>
+              Aucun rendez-vous ce jour.
+            </p>
+          )}
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Rendez-vous</h2>
@@ -229,6 +350,7 @@ export default function RendezVousAssistant() {
         {rdvJour.length === 0 && (
           <p className="text-[13px] text-muted">Aucun rendez-vous ce jour.</p>
         )}
+      </div>
       </div>
     </AssistantShell>
   );

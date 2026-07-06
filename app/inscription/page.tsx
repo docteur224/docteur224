@@ -1,4 +1,5 @@
 import Link from "next/link";
+import AppBarMobile from "@/components/mobile/AppBarMobile";
 
 /*
  * Inscription · choix du profil — reproduit l'écran « inscription » de la
@@ -26,8 +27,48 @@ const PROFILS = [
 
 export default function ChoixInscription() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-white px-6 py-[54px]">
-      <div className="w-full max-w-[880px] text-center">
+    <main className="min-h-screen bg-bg md:flex md:items-center md:justify-center md:bg-white md:px-6 md:py-[54px]">
+      {/* ================= VERSION MOBILE (écran « m-inscription » de la maquette mobile) ================= */}
+      <div className="md:hidden">
+        <AppBarMobile retour="/connexion" titre="Rejoignez Docteur 224" />
+        <div className="pad">
+          <p className="muted" style={{ fontSize: 12.5, margin: "2px 0 16px", lineHeight: 1.5 }}>
+            Choisissez votre profil pour créer votre compte gratuitement.
+          </p>
+          <Link href="/inscription/patient" className="choicecardm">
+            <span className="ic" aria-hidden>
+              🧑
+            </span>
+            <span className="tx">
+              <b>Patient</b>
+              <small>Trouvez un médecin et prenez RDV en ligne. Immédiat, simple et gratuit.</small>
+            </span>
+            <span className="ar" aria-hidden>
+              →
+            </span>
+          </Link>
+          <Link href="/inscription/professionnel" className="choicecardm">
+            <span className="ic" aria-hidden>
+              👨‍⚕️
+            </span>
+            <span className="tx">
+              <b>Professionnel de santé</b>
+              <small>
+                Médecin, clinique, hôpital ou cabinet. Laissez vos patients réserver en ligne.
+              </small>
+            </span>
+            <span className="ar" aria-hidden>
+              →
+            </span>
+          </Link>
+          <div className="linkline" style={{ marginTop: 18 }}>
+            Déjà inscrit ? <Link href="/connexion">Se connecter</Link>
+          </div>
+        </div>
+      </div>
+
+      {/* ================= VERSION WEB (inchangée) ================= */}
+      <div className="hidden w-full max-w-[880px] text-center md:block">
         <h1 className="text-[30px] font-extrabold tracking-[-0.5px]">Rejoignez Docteur 224</h1>
         <p className="mt-[10px] text-muted">
           Choisissez votre profil pour créer votre compte gratuitement.

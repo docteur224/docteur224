@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import MedecinShell from "@/components/medecin/MedecinShell";
+import AppBarMobile from "@/components/mobile/AppBarMobile";
 import { formatGNF } from "@/lib/format";
 import { getEtablissement, medecinConnecte, nomComplet } from "@/lib/mock-data";
 import {
@@ -78,6 +79,246 @@ export default function ProfilMedecin() {
 
   return (
     <MedecinShell>
+      {/* ===== Version mobile (écran « m-med-profil » de la maquette mobile) ===== */}
+      <div className="md:hidden">
+        <AppBarMobile retour="/espace-medecin/compte" titre="Mon profil" />
+        <div className="pad">
+          <div className="acctop">
+            <span className="av" aria-hidden style={{ background: medecinConnecte.gradient }}>
+              {medecinConnecte.initiales}
+            </span>
+            <div>
+              <b>{nomComplet(medecinConnecte)}</b>
+              <small>{medecinConnecte.specialite}</small>
+            </div>
+          </div>
+          <div className="fldm">
+            <label>Spécialité</label>
+            <div className="v">{medecinConnecte.specialite}</div>
+          </div>
+          <div className="fldm">
+            <label>Établissement</label>
+            <div className="v">{etab?.nom}</div>
+          </div>
+          <div className="fldm">
+            <label>Adresse du cabinet</label>
+            <div className="v">
+              Quartier {etab?.quartier} · {etab?.ville}
+            </div>
+          </div>
+          <div className="fldm">
+            <label>Téléphone</label>
+            <div className="v">{medecinConnecte.telephoneSecretariat}</div>
+          </div>
+          <div className="fldm">
+            <label>Tarif de consultation</label>
+            <div className="v">{formatGNF(medecinConnecte.tarifConsultation)}</div>
+          </div>
+          <div className="fldm">
+            <label>Présentation</label>
+            <div className="v">{medecinConnecte.aPropos}</div>
+          </div>
+
+          <div className="card2">
+            <h4>📍 Localisation du cabinet</h4>
+            <p className="muted" style={{ fontSize: 11.5, margin: "-4px 0 11px", lineHeight: 1.5 }}>
+              Récupérez votre position depuis votre établissement, ou collez un lien Google Maps.
+            </p>
+            <button type="button" className="posbtn" onClick={recupererPosition} disabled={geolocEnCours}>
+              🎯 {geolocEnCours ? "Localisation en cours…" : "Récupérer ma position actuelle"}
+            </button>
+            <div className="poscoord">
+              {erreurGeoloc ||
+                (profil.positionTexte ? (
+                  <>
+                    📍 Position enregistrée : <b style={{ color: "var(--ink)" }}>{profil.positionTexte}</b> ·{" "}
+                    <a
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(profil.positionTexte)}`}
+                      target="_blank"
+                      rel="noopener"
+                      style={{ color: "var(--teal)", fontWeight: 700 }}
+                    >
+                      Vérifier sur la carte
+                    </a>
+                  </>
+                ) : (
+                  "Aucune position enregistrée pour le moment."
+                ))}
+            </div>
+            <div className="fldm" style={{ marginTop: 12 }}>
+              <label>Lien Google Maps (optionnel)</label>
+              <input
+                className="v"
+                value={profil.lienMaps}
+                onChange={(e) => enregistrerProfilMedecin({ ...profil, lienMaps: e.target.value })}
+              />
+            </div>
+            <div className="fldm">
+              <label>Adresse affichée aux patients</label>
+              <div className="v">
+                Quartier {etab?.quartier} · {etab?.ville}
+              </div>
+            </div>
+            <div className="privnote info">
+              <span aria-hidden>ℹ️</span>
+              <div>
+                La position alimente le bouton « Voir l&apos;itinéraire » côté patient.
+              </div>
+            </div>
+          </div>
+
+          <div className="card2">
+            <h4>📄 Documents de validation</h4>
+            <label className="uploadzone" style={{ cursor: "pointer" }}>
+              <span className="ic" aria-hidden>
+                ⬆️
+              </span>
+              <span>
+                <b style={{ fontSize: 12.5 }}>Charger un document</b>
+                <span className="muted" style={{ display: "block", fontSize: 11 }}>
+                  Autorisation d&apos;exercice, diplôme, carte de l&apos;ordre, pièce d&apos;identité.
+                </span>
+              </span>
+              <input
+                type="file"
+                accept=".pdf,image/*"
+                style={{ display: "none" }}
+                onChange={(e) => {
+                  ajouterFichier(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+            </label>
+            {profil.documents.map((document, i) => (
+              <div key={`${document.nom}-${i}`} className="docrow">
+                <span aria-hidden>📄</span>
+                <span className="nm">{document.nom}</span>
+                <span
+                  className="st"
+                  style={
+                    document.statut === "Validé"
+                      ? { background: "var(--green-soft)", color: "var(--green)" }
+                      : undefined
+                  }
+                >
+                  {document.statut}
+                </span>
+              </div>
+            ))}
+            <div className="privnote">
+              <span aria-hidden>🔒</span>
+              <div>
+                <b>Privé.</b> Visibles uniquement par l&apos;administrateur lors de la validation.
+                Jamais affichés aux patients.
+              </div>
+            </div>
+          </div>
+
+          <div className="card2">
+            <h4>🩺 Soins et actes</h4>
+            <div className="chips">
+              {profil.soins.map((soin) => (
+                <span key={soin} className="chip grey">
+                  {soin}
+                </span>
+              ))}
+              <button
+                type="button"
+                className="chip"
+                onClick={() => ajouterElement("soins", "Nom du soin ou de l'acte à ajouter :")}
+              >
+                + Ajouter
+              </button>
+            </div>
+          </div>
+
+          <div className="card2">
+            <h4>🎓 Diplôme et formation</h4>
+            {medecinConnecte.diplomes.map((diplome) => (
+              <div key={diplome.titre} className="docrow">
+                <span aria-hidden>🎓</span>
+                <span className="nm">{diplome.titre}</span>
+              </div>
+            ))}
+          </div>
+
+          <div className="card2">
+            <h4>💼 Parcours professionnel</h4>
+            {medecinConnecte.parcours.map((etape) => (
+              <div key={etape.lieu} className="docrow">
+                <span aria-hidden>🏥</span>
+                <span className="nm">
+                  {etape.lieu} · {etape.duree}
+                </span>
+              </div>
+            ))}
+          </div>
+
+          <div className="card2">
+            <h4>🗣️ Langues parlées</h4>
+            <div className="chips">
+              {profil.langues.map((langue) => (
+                <span key={langue} className="chip grey">
+                  {langue}
+                </span>
+              ))}
+              <button type="button" className="chip" onClick={() => ajouterElement("langues", "Langue à ajouter :")}>
+                + Ajouter
+              </button>
+            </div>
+          </div>
+
+          <div className="card2">
+            <h4>💳 Assurances acceptées</h4>
+            <p className="muted" style={{ fontSize: 11.5, margin: "-4px 0 11px" }}>
+              Parmi les assurances référencées par la plateforme.
+            </p>
+            <div className="chips">
+              {ASSURANCES_REFERENCEES.map((assurance) => {
+                const active = profil.assurances.includes(assurance);
+                return (
+                  <button
+                    key={assurance}
+                    type="button"
+                    className={`chip${active ? " on" : ""}`}
+                    onClick={() => basculerAssurance(assurance)}
+                  >
+                    {assurance}
+                    {active ? " ✓" : ""}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="card2">
+            <h4>🖼️ Photos de l&apos;établissement</h4>
+            <div className="gallery">
+              {PHOTOS.map((photo) => (
+                <div key={photo.label} className="gphoto">
+                  <div className="inner" style={{ background: photo.fond }}>
+                    <div style={{ fontSize: 23 }} aria-hidden>
+                      {photo.emoji}
+                    </div>
+                    <small style={{ fontSize: 10.5, color: "var(--blue)", fontWeight: 800 }}>
+                      {photo.label}
+                    </small>
+                  </div>
+                </div>
+              ))}
+              <div className="gadd" title="Disponible avec le stockage de fichiers" style={{ opacity: 0.6 }}>
+                ＋ Ajouter
+              </div>
+            </div>
+          </div>
+          <p className="muted" style={{ fontSize: 11.5, textAlign: "center" }}>
+            ✓ Modifications enregistrées automatiquement
+          </p>
+        </div>
+      </div>
+
+      {/* ===== Version web (inchangée) ===== */}
+      <div className="hidden md:block">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Mon profil</h2>
@@ -402,6 +643,7 @@ export default function ProfilMedecin() {
             ＋ Ajouter une photo
           </div>
         </div>
+      </div>
       </div>
     </MedecinShell>
   );
