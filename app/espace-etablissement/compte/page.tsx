@@ -125,7 +125,7 @@ export default function CompteEtablissement() {
           <span aria-hidden>ℹ️</span>
           <div>
             Préférences enregistrées automatiquement sur cet appareil (mode démonstration). Les
-            notifications réelles seront branchées en Phase 10.
+            notifications simulées sont visibles dans le centre de notifications (🔔).
           </div>
         </div>
       </div>

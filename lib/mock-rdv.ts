@@ -1,3 +1,9 @@
+import { formatDateCourte } from "@/lib/dates";
+import {
+  simulerNotification,
+  type CanalNotification,
+} from "@/lib/mock-notifications";
+import { lireParametresLocaux } from "@/lib/mock-parametres";
 import { creerMagasinLocal, useMagasinLocal } from "@/lib/stockage-local";
 
 /*
@@ -45,20 +51,61 @@ export function lireRendezVousLocaux(): RendezVousLocal[] {
   return magasinRdv.lire();
 }
 
+/**
+ * Canaux d'envoi vers le patient selon ses préférences (spec : confirmation
+ * par SMS et e-mail — désactivables dans Paramètres côté patient).
+ */
+function canauxPatient(): CanalNotification[] {
+  const parametres = lireParametresLocaux();
+  const canaux: CanalNotification[] = [];
+  if (parametres.rappelsSms) canaux.push("SMS");
+  if (parametres.rappelsEmail) canaux.push("E-mail");
+  return canaux;
+}
+
 export function ajouterRendezVousLocal(rdv: RendezVousLocal): void {
   magasinRdv.ecrire([...magasinRdv.lire(), rdv]);
+  const quand = `le ${formatDateCourte(rdv.date)} à ${rdv.heure}`;
+  simulerNotification(
+    canauxPatient(),
+    rdv.pourQui,
+    `RDV confirmé avec ${rdv.medecinNom} ${quand} · ${rdv.etablissementNom}. Rappel 24 h avant.`
+  );
+  simulerNotification(
+    ["In-app"],
+    rdv.medecinNom,
+    `Nouveau rendez-vous : ${rdv.pourQui} ${quand}${
+      rdv.reservePar === "patient" ? "" : " · réservé par le cabinet"
+    }.`
+  );
 }
 
 /** Annulation : le rendez-vous est conservé avec le statut « annulé ». */
 export function annulerRendezVousLocal(id: string): void {
+  const rdv = magasinRdv.lire().find((r) => r.id === id);
   magasinRdv.ecrire(
-    magasinRdv.lire().map((rdv) => (rdv.id === id ? { ...rdv, statut: "annule" as const } : rdv))
+    magasinRdv.lire().map((r) => (r.id === id ? { ...r, statut: "annule" as const } : r))
   );
+  if (rdv) {
+    simulerNotification(
+      canauxPatient(),
+      rdv.pourQui,
+      `Votre RDV avec ${rdv.medecinNom} du ${formatDateCourte(rdv.date)} à ${rdv.heure} est annulé.`
+    );
+  }
 }
 
 /** Reprogrammation : déplace le rendez-vous vers une autre date/heure. */
 export function reprogrammerRendezVousLocal(id: string, date: string, heure: string): void {
+  const rdv = magasinRdv.lire().find((r) => r.id === id);
   magasinRdv.ecrire(
-    magasinRdv.lire().map((rdv) => (rdv.id === id ? { ...rdv, date, heure } : rdv))
+    magasinRdv.lire().map((r) => (r.id === id ? { ...r, date, heure } : r))
   );
+  if (rdv) {
+    simulerNotification(
+      canauxPatient(),
+      rdv.pourQui,
+      `Votre RDV avec ${rdv.medecinNom} est déplacé au ${formatDateCourte(date)} à ${heure}.`
+    );
+  }
 }

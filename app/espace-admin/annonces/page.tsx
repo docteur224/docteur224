@@ -7,8 +7,8 @@ import { envoyerAnnonce, useAnnonces } from "@/lib/mock-admin";
 /*
  * Annonces — reproduit l'écran « admin-annonces » de la maquette web :
  * diffusion d'un message à un segment d'utilisateurs (canaux SMS, e-mail,
- * in-app) et historique. L'envoi ajoute l'annonce à l'historique (mock) —
- * la vraie diffusion arrivera avec les notifications (Phase 10).
+ * in-app) et historique. L'envoi ajoute l'annonce à l'historique et consigne
+ * les envois simulés dans le centre de notifications (Phase 10).
  */
 
 const SEGMENTS = [
@@ -145,8 +145,9 @@ export default function AnnoncesAdmin() {
           </div>
         ))}
         <p className="mt-3 text-[11.5px] text-muted">
-          Mode démonstration : l’annonce est ajoutée à l’historique. L’envoi réel (SMS, e-mail,
-          in-app) sera simulé en Phase 10 puis branché avec la base de données.
+          Mode démonstration : l’annonce est ajoutée à l’historique et les envois simulés
+          apparaissent dans le centre de notifications (🔔). L’envoi réel sera branché avec la
+          base de données.
         </p>
       </div>
     </AdminShell>

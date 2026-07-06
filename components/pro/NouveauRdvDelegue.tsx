@@ -140,7 +140,8 @@ export default function NouveauRdvDelegue({
           📩 SMS de confirmation envoyé au patient
         </div>
         <p className="mt-2 text-[11.5px] text-muted">
-          Mode démonstration : l’envoi réel des SMS sera branché en Phase 10.
+          Mode démonstration : le SMS simulé est visible dans le centre de notifications (🔔).
+          L’envoi réel sera branché avec la base de données.
         </p>
         <div className="mt-7 flex flex-wrap justify-center gap-3">
           <Link

@@ -1,5 +1,6 @@
 import { creerMagasinLocal, useMagasinLocal } from "@/lib/stockage-local";
 import { formatDateCourte, versISO } from "@/lib/dates";
+import { simulerNotification } from "@/lib/mock-notifications";
 
 /*
  * Données de l'espace établissement (mocks) : médecins rattachés, cycle
@@ -167,6 +168,11 @@ export function inviterMedecin(nom: string, specialite: string): void {
       statut: "envoyee",
     },
   ]);
+  simulerNotification(
+    ["E-mail", "In-app"],
+    nom,
+    `${ETABLISSEMENT_CONNECTE.nom} vous invite à rejoindre son équipe sur Docteur 224.`
+  );
 }
 
 /** Le médecin accepte le rattachement : il rejoint la liste des rattachés. */
@@ -189,14 +195,27 @@ export function accepterInvitation(id: string): void {
       rdvSemaine: 0,
     },
   ]);
+  simulerNotification(
+    ["In-app"],
+    ETABLISSEMENT_CONNECTE.nom,
+    `${invitation.nom} a accepté votre invitation de rattachement.`
+  );
 }
 
 export function refuserInvitation(id: string): void {
+  const invitation = magasinInvitations.lire().find((i) => i.id === id);
   magasinInvitations.ecrire(
     magasinInvitations.lire().map((i) =>
       i.id === id && i.statut === "envoyee" ? { ...i, statut: "refusee" as const } : i
     )
   );
+  if (invitation && invitation.statut === "envoyee") {
+    simulerNotification(
+      ["In-app"],
+      ETABLISSEMENT_CONNECTE.nom,
+      `${invitation.nom} a refusé votre invitation de rattachement.`
+    );
+  }
 }
 
 /* ===== Paliers d'abonnement (spec C.6.1 / C.10.2) ===== */

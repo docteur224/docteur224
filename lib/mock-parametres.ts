@@ -33,6 +33,11 @@ export function useParametresLocaux(): ParametresLocaux {
   return useMagasinLocal(magasinParametres);
 }
 
+/** Lecture ponctuelle (hors rendu) — utilisée par les notifications simulées. */
+export function lireParametresLocaux(): ParametresLocaux {
+  return magasinParametres.lire();
+}
+
 export function enregistrerParametresLocaux(parametres: ParametresLocaux): void {
   magasinParametres.ecrire(parametres);
 }

@@ -52,7 +52,8 @@ export default async function Confirmation({
           📩 Confirmation envoyée par SMS et e-mail · rappel 24 h avant
         </div>
         <p className="mt-2 text-[11.5px] text-muted">
-          Mode démonstration : l’envoi réel des SMS et e-mails sera branché en Phase 10.
+          Mode démonstration : les envois simulés sont visibles dans le centre de notifications
+          (🔔). L’envoi réel sera branché avec la base de données.
         </p>
         <div className="mt-7 flex flex-wrap justify-center gap-3">
           <Link

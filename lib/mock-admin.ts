@@ -1,3 +1,8 @@
+import {
+  horodatage,
+  simulerNotification,
+  type CanalNotification,
+} from "@/lib/mock-notifications";
 import { creerMagasinLocal, useMagasinLocal } from "@/lib/stockage-local";
 
 /*
@@ -8,14 +13,6 @@ import { creerMagasinLocal, useMagasinLocal } from "@/lib/stockage-local";
  * est horodatée et tracée dans le journal d'audit — reproduit ici en direct.
  * Hooks client uniquement : ne jamais importer dans un composant serveur.
  */
-
-/** Horodatage court « 6 juillet · 14:02 » pour le journal et les annonces. */
-export function horodatage(): string {
-  const maintenant = new Date();
-  const jourMois = maintenant.toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
-  const heure = maintenant.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-  return `${jourMois} · ${heure}`;
-}
 
 /* ===== Journal d'audit (lecture seule, alimenté par les décisions) ===== */
 
@@ -106,6 +103,11 @@ export function approuverDossier(dossier: DossierValidation): void {
     dossier.etablissement ? "A approuvé un établissement" : "A approuvé un médecin",
     dossier.nom
   );
+  simulerNotification(
+    ["SMS", "E-mail"],
+    dossier.nom,
+    "Félicitations ! Votre profil Docteur 224 est validé — vous avez le badge Vérifié."
+  );
 }
 
 export function rejeterDossier(dossier: DossierValidation, motif?: string): void {
@@ -114,10 +116,20 @@ export function rejeterDossier(dossier: DossierValidation, motif?: string): void
     dossier.etablissement ? "A rejeté un établissement" : "A rejeté un médecin",
     motif ? `${dossier.nom} · ${motif}` : dossier.nom
   );
+  simulerNotification(
+    ["E-mail"],
+    dossier.nom,
+    `Votre dossier Docteur 224 a été rejeté${motif ? ` — motif : ${motif}` : ""}.`
+  );
 }
 
 export function demanderComplement(dossier: DossierValidation): void {
   tracerAudit("A demandé un complément de dossier", dossier.nom);
+  simulerNotification(
+    ["E-mail"],
+    dossier.nom,
+    "Votre dossier Docteur 224 est incomplet — merci d'ajouter les pièces demandées."
+  );
 }
 
 /* ===== Modération : signalements et avis ===== */
@@ -385,6 +397,10 @@ export function envoyerAnnonce(message: string, segment: string, canaux: string[
     ...magasinAnnonces.lire(),
   ]);
   tracerAudit("A envoyé une annonce", `${segment} · ${canaux.join(" + ")}`);
+  const canauxNotification = canaux.map<CanalNotification>((canal) =>
+    canal === "Notification in-app" ? "In-app" : (canal as CanalNotification)
+  );
+  simulerNotification(canauxNotification, segment, message);
 }
 
 /* ===== Permissions de l'équipe admin (démonstration : Mariam) ===== */
