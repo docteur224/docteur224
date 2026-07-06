@@ -1,0 +1,80 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+/**
+ * Coquille de l'espace administrateur — reproduit la structure .dash / .side /
+ * .snav des scènes admin-* de la maquette web. Menu complet : Tableau de bord,
+ * Validations, Modération, Utilisateurs, Établissements, Pilotage & croissance,
+ * Annonces, Finances, Abonnements, Paramètres, Équipe admin, Journal d'audit.
+ */
+const LIENS = [
+  { href: "/espace-admin", icone: "📊", label: "Tableau de bord" },
+  { href: "/espace-admin/validations", icone: "✅", label: "Validations" },
+  { href: "/espace-admin/moderation", icone: "🚩", label: "Modération" },
+  { href: "/espace-admin/utilisateurs", icone: "👥", label: "Utilisateurs" },
+  { href: "/espace-admin/etablissements", icone: "🏥", label: "Établissements" },
+  { href: "/espace-admin/pilotage", icone: "🧭", label: "Pilotage & croissance" },
+  { href: "/espace-admin/annonces", icone: "📢", label: "Annonces" },
+  { href: "/espace-admin/finances", icone: "💳", label: "Finances" },
+  { href: "/espace-admin/abonnements", icone: "🏷️", label: "Abonnements" },
+  { href: "/espace-admin/parametres", icone: "⚙️", label: "Paramètres" },
+  { href: "/espace-admin/equipe", icone: "🛡️", label: "Équipe admin" },
+  { href: "/espace-admin/audit", icone: "📜", label: "Journal d'audit" },
+];
+
+export default function AdminShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+
+  return (
+    <div className="grid min-h-screen bg-bg lg:grid-cols-[236px_1fr]">
+      <aside className="border-b border-line bg-white px-4 py-[22px] lg:border-b-0 lg:border-r">
+        <div className="mb-[14px] flex items-center gap-[11px] border-b border-line px-1.5 pb-[18px]">
+          <span
+            aria-hidden
+            className="grid h-[42px] w-[42px] flex-none place-items-center rounded-xl text-lg text-white"
+            style={{ background: "linear-gradient(135deg,#15506B,#0B2E3D)" }}
+          >
+            🛡️
+          </span>
+          <div>
+            <b className="block text-[13.5px] font-extrabold">Administrateur</b>
+            <small className="text-[11.5px] text-muted">Docteur 224</small>
+          </div>
+        </div>
+        <nav className="flex flex-col gap-[3px]">
+          {LIENS.map((lien) => {
+            const actif = pathname === lien.href;
+            return (
+              <Link
+                key={lien.href}
+                href={lien.href}
+                className={`flex items-center gap-[11px] rounded-[11px] px-3 py-[11px] text-[13.5px] ${
+                  actif
+                    ? "bg-teal-soft font-bold text-blue"
+                    : "font-semibold text-muted hover:bg-bg"
+                }`}
+              >
+                <span className="text-base" aria-hidden>
+                  {lien.icone}
+                </span>
+                {lien.label}
+              </Link>
+            );
+          })}
+          <Link
+            href="/"
+            className="flex items-center gap-[11px] rounded-[11px] px-3 py-[11px] text-[13.5px] font-semibold text-muted hover:bg-bg"
+          >
+            <span className="text-base" aria-hidden>
+              ↩️
+            </span>
+            Déconnexion
+          </Link>
+        </nav>
+      </aside>
+      <main className="overflow-auto px-4 py-[26px] md:px-[30px]">{children}</main>
+    </div>
+  );
+}

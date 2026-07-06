@@ -1,0 +1,64 @@
+"use client";
+
+import AdminShell from "@/components/admin/AdminShell";
+import { useJournalAudit } from "@/lib/mock-admin";
+
+/*
+ * Journal d'audit — reproduit l'écran « admin-audit » de la maquette web.
+ * Alimenté en direct par les décisions prises dans Validations, Modération,
+ * Finances, Paramètres et Abonnements. Lecture seule.
+ */
+
+export default function AuditAdmin() {
+  const journal = useJournalAudit();
+
+  return (
+    <AdminShell>
+      <div className="mb-5">
+        <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Journal d’audit</h2>
+        <small className="text-[13px] text-muted">Traçabilité des actions sensibles</small>
+      </div>
+
+      <div className="rounded-2xl border border-line bg-white p-5">
+        <h3 className="mb-[14px] text-[15px] font-extrabold">Actions récentes</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-[13px]">
+            <thead>
+              <tr>
+                {["Date", "Acteur", "Action", "Cible"].map((th) => (
+                  <th
+                    key={th}
+                    className="border-b border-line px-[10px] py-[9px] text-left text-[11px] font-extrabold uppercase tracking-[0.04em] text-muted"
+                  >
+                    {th}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {journal.map((entree) => (
+                <tr key={entree.id}>
+                  <td className="whitespace-nowrap border-b border-line px-[10px] py-[9px]">
+                    {entree.date}
+                  </td>
+                  <td className="whitespace-nowrap border-b border-line px-[10px] py-[9px]">
+                    {entree.acteur}
+                  </td>
+                  <td className="border-b border-line px-[10px] py-[9px]">{entree.action}</td>
+                  <td className="border-b border-line px-[10px] py-[9px]">{entree.cible}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="mt-[14px] flex items-start gap-[9px] rounded-[11px] bg-teal-soft px-[13px] py-[11px] text-[12.5px] font-semibold leading-relaxed text-blue">
+          <span aria-hidden>🔒</span>
+          <div>
+            Le journal est en lecture seule et conservé pour la traçabilité. Aucune action ne
+            peut être supprimée.
+          </div>
+        </div>
+      </div>
+    </AdminShell>
+  );
+}
