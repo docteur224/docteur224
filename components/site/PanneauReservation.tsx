@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { prochainsJours } from "@/lib/dates";
-import { creneauxJourPatient, useExceptionsLocales } from "@/lib/mock-disponibilites";
-import { useRendezVousLocaux } from "@/lib/mock-rdv";
+import { useDisponibilites } from "@/lib/disponibilites";
 import { formatGNF } from "@/lib/format";
 
 /**
@@ -26,14 +25,13 @@ export default function PanneauReservation({
   tarif: number;
   joursFermes: number[];
 }) {
-  const rdvs = useRendezVousLocaux();
-  const exceptions = useExceptionsLocales();
+  const { chargement, creneauxJour } = useDisponibilites(medecinId);
   const jours = useMemo(() => prochainsJours(joursFermes, 5), [joursFermes]);
   const premierOuvert = jours.find((j) => !j.ferme)?.iso ?? jours[0]?.iso ?? "";
   const [jourISO, setJourISO] = useState(premierOuvert);
   const [heure, setHeure] = useState<string | null>(null);
 
-  const creneaux = creneauxJourPatient(medecinId, jourISO, exceptions, rdvs);
+  const creneaux = chargement ? [] : creneauxJour(jourISO);
 
   return (
     <div className="rounded-[18px] border border-line bg-white p-[22px] shadow-[0_8px_22px_rgba(16,59,80,.06)] lg:sticky lg:top-[86px]">

@@ -6,11 +6,10 @@ import AppBarMobile from "@/components/mobile/AppBarMobile";
 import Interrupteur from "@/components/patient/Interrupteur";
 import {
   ajouterAListeContenu,
-  basculerReglage,
   useListeContenu,
   useReglagesPlateforme,
   type CleListeContenu,
-} from "@/lib/mock-admin";
+} from "@/lib/admin";
 
 /*
  * Paramètres de la plateforme — reproduit l'écran « admin-params » de la
@@ -26,11 +25,11 @@ const LISTES: { cle: CleListeContenu; titre: string; question: string }[] = [
 ];
 
 function CarteListe({ cle, titre, question }: (typeof LISTES)[number]) {
-  const elements = useListeContenu(cle);
+  const { liste: elements, recharger } = useListeContenu(cle);
 
   function ajouter() {
     const valeur = window.prompt(question)?.trim();
-    if (valeur) ajouterAListeContenu(cle, valeur);
+    if (valeur) ajouterAListeContenu(cle, valeur).then(recharger);
   }
 
   return (
@@ -75,7 +74,7 @@ function CarteListe({ cle, titre, question }: (typeof LISTES)[number]) {
 }
 
 export default function ParametresAdmin() {
-  const reglages = useReglagesPlateforme();
+  const { reglages, basculer } = useReglagesPlateforme();
 
   return (
     <AdminShell>
@@ -106,7 +105,7 @@ export default function ParametresAdmin() {
           </div>
           <Interrupteur
             actif={reglages.inscriptionsOuvertes}
-            onChange={(v) => basculerReglage("inscriptionsOuvertes", v)}
+            onChange={(v) => basculer("inscriptionsOuvertes", v)}
             label="Inscriptions médecins ouvertes"
           />
         </div>
@@ -117,7 +116,7 @@ export default function ParametresAdmin() {
           </div>
           <Interrupteur
             actif={reglages.paiementEnLigne}
-            onChange={(v) => basculerReglage("paiementEnLigne", v)}
+            onChange={(v) => basculer("paiementEnLigne", v)}
             label="Paiement en ligne activé"
           />
         </div>
@@ -128,7 +127,7 @@ export default function ParametresAdmin() {
           </div>
           <Interrupteur
             actif={reglages.modeMaintenance}
-            onChange={(v) => basculerReglage("modeMaintenance", v)}
+            onChange={(v) => basculer("modeMaintenance", v)}
             label="Mode maintenance"
           />
         </div>
@@ -146,7 +145,7 @@ export default function ParametresAdmin() {
           </div>
           <Interrupteur
             actif={reglages.inscriptionsOuvertes}
-            onChange={(v) => basculerReglage("inscriptionsOuvertes", v)}
+            onChange={(v) => basculer("inscriptionsOuvertes", v)}
             label="Inscriptions médecins ouvertes"
           />
         </div>
@@ -157,7 +156,7 @@ export default function ParametresAdmin() {
           </div>
           <Interrupteur
             actif={reglages.paiementEnLigne}
-            onChange={(v) => basculerReglage("paiementEnLigne", v)}
+            onChange={(v) => basculer("paiementEnLigne", v)}
             label="Paiement en ligne activé"
           />
         </div>
@@ -170,7 +169,7 @@ export default function ParametresAdmin() {
           </div>
           <Interrupteur
             actif={reglages.modeMaintenance}
-            onChange={(v) => basculerReglage("modeMaintenance", v)}
+            onChange={(v) => basculer("modeMaintenance", v)}
             label="Mode maintenance"
           />
         </div>

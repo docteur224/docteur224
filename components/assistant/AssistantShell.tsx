@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
+import { useContextePro } from "@/lib/pro";
 
 /**
  * Coquille de l'espace assistant(e) — reproduit la structure .dash / .side /
@@ -23,6 +24,9 @@ const LIENS = [
 
 export default function AssistantShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { medecin, utilisateur } = useContextePro();
+  const nomAssistant = utilisateur ? `${utilisateur.prenom} ${utilisateur.nom}`.trim() : "…";
+  const nomMedecin = medecin ? `${medecin.civilite} ${medecin.prenom.charAt(0)}. ${medecin.nom}` : "";
 
   return (
     <div className="grid min-h-screen bg-bg lg:grid-cols-[236px_1fr]">
@@ -36,8 +40,8 @@ export default function AssistantShell({ children }: { children: React.ReactNode
             HD
           </span>
           <div>
-            <b className="block text-[13.5px] font-extrabold">Hawa Diallo</b>
-            <small className="text-[11.5px] text-muted">Assistante · Dr A. Barry</small>
+            <b className="block text-[13.5px] font-extrabold">{nomAssistant}</b>
+            <small className="text-[11.5px] text-muted">Assistant(e){nomMedecin ? ` · ${nomMedecin}` : ""}</small>
           </div>
         </div>
         <nav className="flex flex-col gap-[3px]">

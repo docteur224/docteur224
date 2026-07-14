@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import EtablissementShell from "@/components/etablissement/EtablissementShell";
-import { ETABLISSEMENT_CONNECTE, useMedecinsRattaches } from "@/lib/mock-etablissement";
+import { useEtablissementConnecte, useMedecinsRattaches } from "@/lib/etablissement";
 
 /*
  * Tableau de bord établissement — reproduit l'écran « etab-dash » de la
@@ -32,7 +32,9 @@ const PROCHAINS_RDV = [
 ];
 
 export default function TableauDeBordEtablissement() {
-  const rattaches = useMedecinsRattaches();
+  const { etablissement } = useEtablissementConnecte();
+  const { rattaches } = useMedecinsRattaches(etablissement?.id);
+  const ETABLISSEMENT_CONNECTE = etablissement ?? { id: "", nom: "…", nomCourt: "…", type: "", description: "", adresse: "", telephone: "", email: "", siteWeb: "", gradient: "linear-gradient(135deg,#16A085,#0E6655)", statut: "", parametres: {}, gestionnaire: { nom: "", role: "", email: "", telephone: "" } };
 
   return (
     <EtablissementShell>

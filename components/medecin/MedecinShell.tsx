@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
-import { medecinConnecte } from "@/lib/mock-data";
+import { seDeconnecter } from "@/lib/auth";
+import { useContextePro } from "@/lib/pro";
 
 /**
  * Coquille de l'espace médecin — reproduit la structure .dash / .side / .snav
@@ -24,6 +25,16 @@ const LIENS = [
 
 export default function MedecinShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { medecin } = useContextePro();
+  const medecinConnecte = medecin ?? {
+    gradient: "linear-gradient(135deg,#2E9CCA,#15506B)",
+    initiales: "…",
+    civilite: "Dr",
+    prenom: "",
+    nom: "",
+    specialite: "",
+  };
 
   return (
     <div className="grid min-h-screen bg-bg lg:grid-cols-[236px_1fr]">
@@ -40,7 +51,7 @@ export default function MedecinShell({ children }: { children: React.ReactNode }
             <b className="block text-[13.5px] font-extrabold">
               {medecinConnecte.civilite} {medecinConnecte.prenom.charAt(0)}. {medecinConnecte.nom}
             </b>
-            <small className="text-[11.5px] text-muted">Pédiatre</small>
+            <small className="text-[11.5px] text-muted">{medecinConnecte.specialite}</small>
           </div>
         </div>
         <nav className="flex flex-col gap-[3px]">
@@ -63,15 +74,19 @@ export default function MedecinShell({ children }: { children: React.ReactNode }
               </Link>
             );
           })}
-          <Link
-            href="/"
-            className="flex items-center gap-[11px] rounded-[11px] px-3 py-[11px] text-[13.5px] font-semibold text-muted hover:bg-bg"
+          <button
+            type="button"
+            onClick={async () => {
+              await seDeconnecter();
+              router.push("/");
+            }}
+            className="flex items-center gap-[11px] rounded-[11px] px-3 py-[11px] text-left text-[13.5px] font-semibold text-muted hover:bg-bg"
           >
             <span className="text-base" aria-hidden>
               ↩️
             </span>
             Déconnexion
-          </Link>
+          </button>
         </nav>
       </aside>
       <main className="with-tabbar overflow-auto md:px-[30px] md:py-[26px]">{children}</main>

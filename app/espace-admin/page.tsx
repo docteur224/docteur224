@@ -6,7 +6,7 @@ import {
   useEtablissementsEnAttente,
   useMedecinsEnAttente,
   useSignalements,
-} from "@/lib/mock-admin";
+} from "@/lib/admin";
 
 /*
  * Tableau de bord admin — reproduit l'écran « admin-dash » de la maquette
@@ -25,9 +25,9 @@ const BARRES = [
 ];
 
 export default function TableauDeBordAdmin() {
-  const medecinsEnAttente = useMedecinsEnAttente();
-  const etabsEnAttente = useEtablissementsEnAttente();
-  const signalements = useSignalements();
+  const { dossiers: medecinsEnAttente } = useMedecinsEnAttente();
+  const { dossiers: etabsEnAttente } = useEtablissementsEnAttente();
+  const { signalements } = useSignalements();
 
   return (
     <AdminShell>

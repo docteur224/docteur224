@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { prochainsJours } from "@/lib/dates";
-import { creneauxJourPatient, useExceptionsLocales } from "@/lib/mock-disponibilites";
-import { useRendezVousLocaux } from "@/lib/mock-rdv";
+import { useDisponibilites } from "@/lib/disponibilites";
 
 /**
  * Écran mobile « Choisir un créneau » — reproduit la scène « creneaux » de la
@@ -19,14 +18,13 @@ export default function CreneauxMobile({
   medecinId: string;
   joursFermes: number[];
 }) {
-  const rdvs = useRendezVousLocaux();
-  const exceptions = useExceptionsLocales();
+  const { chargement, creneauxJour } = useDisponibilites(medecinId);
   const jours = useMemo(() => prochainsJours(joursFermes, 6), [joursFermes]);
   const premierOuvert = jours.find((j) => !j.ferme)?.iso ?? jours[0]?.iso ?? "";
   const [jourISO, setJourISO] = useState(premierOuvert);
   const [heure, setHeure] = useState<string | null>(null);
 
-  const creneaux = creneauxJourPatient(medecinId, jourISO, exceptions, rdvs);
+  const creneaux = chargement ? [] : creneauxJour(jourISO);
   const matin = creneaux.filter((c) => Number(c.heure.slice(0, 2)) < 13);
   const apresMidi = creneaux.filter((c) => Number(c.heure.slice(0, 2)) >= 13);
 

@@ -2,7 +2,7 @@
 
 import AdminShell from "@/components/admin/AdminShell";
 import AppBarMobile from "@/components/mobile/AppBarMobile";
-import { useJournalAudit } from "@/lib/mock-admin";
+import { useJournalAudit } from "@/lib/admin";
 
 /*
  * Journal d'audit — reproduit l'écran « admin-audit » de la maquette web.

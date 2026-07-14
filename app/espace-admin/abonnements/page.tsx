@@ -4,11 +4,29 @@ import { useState } from "react";
 import AdminShell from "@/components/admin/AdminShell";
 import AppBarMobile from "@/components/mobile/AppBarMobile";
 import Interrupteur from "@/components/patient/Interrupteur";
+import { useEffect } from "react";
 import {
-  enregistrerConfigAbonnements,
+  ecrireReglageBool,
+  lireReglagesBool,
+  tracerAudit,
   useConfigAbonnements,
-  type ConfigAbonnements,
-} from "@/lib/mock-admin";
+} from "@/lib/admin";
+
+interface ConfigAbonnements {
+  standardMensuel: string;
+  standardAnnuel: string;
+  premiumMensuel: string;
+  premiumAnnuel: string;
+  palierCabinet: string;
+  palierClinique: string;
+  periodeGratuite: boolean;
+  essaiGratuit: boolean;
+  orangeMoney: boolean;
+  mtnMomo: boolean;
+}
+
+const fmt = (n: number) => n.toLocaleString("fr-FR").replace(/ | /g, " ");
+const parseGNF = (t: string) => Number(t.replace(/[^0-9]/g, "")) || 0;
 
 /*
  * Abonnements — reproduit l'écran « admin-abonnements » de la maquette web
@@ -29,7 +47,25 @@ const LANCEMENT: { cle: keyof ConfigAbonnements; titre: string; detail?: string 
 ];
 
 export default function AbonnementsAdmin() {
-  const config = useConfigAbonnements();
+  const { tarifs, enregistrer: enregistrerTarif } = useConfigAbonnements();
+  const [reglagesExtra, setReglagesExtra] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    lireReglagesBool(["periode_gratuite", "essai_gratuit", "orange_money", "mtn_momo"]).then(setReglagesExtra);
+  }, []);
+
+  const tarif = (f: string) => tarifs.find((t) => t.formule === f);
+  const config: ConfigAbonnements = {
+    standardMensuel: fmt(tarif("standard")?.prixMensuel ?? 0),
+    standardAnnuel: fmt(tarif("standard")?.prixAnnuel ?? 0),
+    premiumMensuel: fmt(tarif("premium")?.prixMensuel ?? 0),
+    premiumAnnuel: fmt(tarif("premium")?.prixAnnuel ?? 0),
+    palierCabinet: `${fmt(tarif("cabinet")?.prixMensuel ?? 0)} / mois`,
+    palierClinique: `${fmt(tarif("clinique")?.prixMensuel ?? 0)} / mois`,
+    periodeGratuite: reglagesExtra["periode_gratuite"] ?? true,
+    essaiGratuit: reglagesExtra["essai_gratuit"] ?? true,
+    orangeMoney: reglagesExtra["orange_money"] ?? true,
+    mtnMomo: reglagesExtra["mtn_momo"] ?? true,
+  };
   const [brouillon, setBrouillon] = useState<ConfigAbonnements | null>(null);
   const [enregistre, setEnregistre] = useState(false);
   const valeurs = brouillon ?? config;
@@ -39,8 +75,18 @@ export default function AbonnementsAdmin() {
     setBrouillon({ ...valeurs, [cle]: valeur });
   }
 
-  function enregistrer() {
-    enregistrerConfigAbonnements(valeurs);
+  async function enregistrer() {
+    await Promise.all([
+      enregistrerTarif("standard", { prixMensuel: parseGNF(valeurs.standardMensuel), prixAnnuel: parseGNF(valeurs.standardAnnuel) }),
+      enregistrerTarif("premium", { prixMensuel: parseGNF(valeurs.premiumMensuel), prixAnnuel: parseGNF(valeurs.premiumAnnuel) }),
+      enregistrerTarif("cabinet", { prixMensuel: parseGNF(valeurs.palierCabinet) }),
+      enregistrerTarif("clinique", { prixMensuel: parseGNF(valeurs.palierClinique) }),
+      ecrireReglageBool("periode_gratuite", valeurs.periodeGratuite),
+      ecrireReglageBool("essai_gratuit", valeurs.essaiGratuit),
+      ecrireReglageBool("orange_money", valeurs.orangeMoney),
+      ecrireReglageBool("mtn_momo", valeurs.mtnMomo),
+    ]);
+    await tracerAudit("A modifié la configuration des abonnements", "Formules médecin · paliers");
     setBrouillon(null);
     setEnregistre(true);
   }

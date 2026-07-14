@@ -3,11 +3,23 @@
 import AdminShell from "@/components/admin/AdminShell";
 import AppBarMobile from "@/components/mobile/AppBarMobile";
 import Interrupteur from "@/components/patient/Interrupteur";
-import {
-  enregistrerPermissionsAdmin,
-  usePermissionsAdmin,
-  type PermissionsAdmin,
-} from "@/lib/mock-admin";
+import { majSousRoles, useEquipeAdmin } from "@/lib/admin";
+
+type PermissionsAdmin = {
+  validations: boolean;
+  moderation: boolean;
+  pilotageAnnonces: boolean;
+  finances: boolean;
+  parametres: boolean;
+};
+
+const SOUS_ROLES: Record<keyof PermissionsAdmin, string> = {
+  validations: "validations",
+  moderation: "moderation",
+  pilotageAnnonces: "pilotage",
+  finances: "finance",
+  parametres: "parametres",
+};
 
 /*
  * Équipe admin — reproduit l'écran « admin-equipe » de la maquette web :
@@ -15,41 +27,6 @@ import {
  * modératrice (persistée en local). Cloisonnement : les dossiers médicaux
  * ne sont jamais accessibles depuis l'espace d'administration.
  */
-
-const ADMINS = [
-  {
-    nom: "Fatou Keïta",
-    email: "fatou@docteur224.gn",
-    initiales: "FK",
-    gradient: "linear-gradient(135deg,#15506B,#0B2E3D)",
-    role: "Super-admin",
-    classes: "bg-teal-soft text-blue",
-  },
-  {
-    nom: "Mariam Diané",
-    email: "mariam@docteur224.gn",
-    initiales: "MD",
-    gradient: "linear-gradient(135deg,#6C5CE7,#341F97)",
-    role: "Modératrice",
-    classes: "bg-amber-soft text-amber",
-  },
-  {
-    nom: "Sékou Camara",
-    email: "sekou@docteur224.gn",
-    initiales: "SC",
-    gradient: "linear-gradient(135deg,#16A085,#0E6655)",
-    role: "Finance",
-    classes: "bg-green-soft text-green",
-  },
-  {
-    nom: "Aïcha Baldé",
-    email: "aicha@docteur224.gn",
-    initiales: "AB",
-    gradient: "linear-gradient(135deg,#9AA8B2,#647A89)",
-    role: "Validation",
-    classes: "bg-teal-soft text-blue",
-  },
-];
 
 const PERMISSIONS: { cle: keyof PermissionsAdmin; titre: string; detail?: string }[] = [
   { cle: "validations", titre: "Validations", detail: "Approuver / rejeter les professionnels" },
@@ -60,10 +37,35 @@ const PERMISSIONS: { cle: keyof PermissionsAdmin; titre: string; detail?: string
 ];
 
 export default function EquipeAdmin() {
-  const permissions = usePermissionsAdmin();
+  const { admins, recharger } = useEquipeAdmin();
+  const GRADIENTS = ["linear-gradient(135deg,#15506B,#0B2E3D)","linear-gradient(135deg,#6C5CE7,#341F97)","linear-gradient(135deg,#16A085,#0E6655)","linear-gradient(135deg,#9AA8B2,#647A89)"];
+  const ADMINS = admins.map((a, i) => ({
+    id: a.id,
+    nom: a.nom,
+    email: a.email,
+    initiales: a.nom.split(/s+/).slice(0, 2).map((m) => m.charAt(0)).join("").toUpperCase() || "AD",
+    gradient: GRADIENTS[i % GRADIENTS.length],
+    role: a.sousRoles.includes("finance") && a.sousRoles.includes("moderation") ? "Super-admin" : (a.sousRoles[0] ?? "Admin"),
+    classes: "bg-teal-soft text-blue",
+    sousRoles: a.sousRoles,
+  }));
+  const adminCible = ADMINS[0];
+  const permissions: PermissionsAdmin = {
+    validations: adminCible?.sousRoles.includes("validations") ?? false,
+    moderation: adminCible?.sousRoles.includes("moderation") ?? false,
+    pilotageAnnonces: adminCible?.sousRoles.includes("pilotage") ?? false,
+    finances: adminCible?.sousRoles.includes("finance") ?? false,
+    parametres: adminCible?.sousRoles.includes("parametres") ?? false,
+  };
 
-  function basculer(cle: keyof PermissionsAdmin, valeur: boolean) {
-    enregistrerPermissionsAdmin({ ...permissions, [cle]: valeur });
+  async function basculer(cle: keyof PermissionsAdmin, valeur: boolean) {
+    if (!adminCible) return;
+    const slug = SOUS_ROLES[cle];
+    const nouveaux = valeur
+      ? [...new Set([...adminCible.sousRoles, slug])]
+      : adminCible.sousRoles.filter((r) => r !== slug);
+    await majSousRoles(adminCible.id, nouveaux);
+    recharger();
   }
 
   return (
@@ -91,7 +93,7 @@ export default function EquipeAdmin() {
           <div className="card2" style={{ marginTop: 12 }}>
             <h4>Administrateurs · {ADMINS.length}</h4>
             {ADMINS.map((admin) => (
-              <div key={admin.nom} className="asstrowm">
+              <div key={admin.id} className="asstrowm">
                 <span className="av" aria-hidden style={{ background: admin.gradient }}>
                   {admin.initiales}
                 </span>
@@ -104,7 +106,7 @@ export default function EquipeAdmin() {
             ))}
           </div>
           <div className="card2">
-            <h4>Permissions — Mariam</h4>
+            <h4>Permissions — {adminCible?.nom ?? "…"}</h4>
             {PERMISSIONS.map((permission) => (
               <div key={permission.cle} className="setrow">
                 <div>
@@ -159,7 +161,7 @@ export default function EquipeAdmin() {
         <h3 className="mb-1 text-[15px] font-extrabold">Administrateurs · {ADMINS.length}</h3>
         {ADMINS.map((admin) => (
           <div
-            key={admin.nom}
+            key={admin.id}
             className="flex flex-wrap items-center gap-[13px] border-b border-line py-[14px] last:border-b-0"
           >
             <span
@@ -191,7 +193,7 @@ export default function EquipeAdmin() {
       </div>
 
       <div className="rounded-2xl border border-line bg-white p-5">
-        <h3 className="mb-1 text-[15px] font-extrabold">Permissions — Mariam (Modératrice)</h3>
+        <h3 className="mb-1 text-[15px] font-extrabold">Permissions — {adminCible?.nom ?? "…"} (Modératrice)</h3>
         {PERMISSIONS.map((permission) => (
           <div
             key={permission.cle}

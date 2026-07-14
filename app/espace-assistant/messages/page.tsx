@@ -1,7 +1,7 @@
 "use client";
 
 import AssistantShell from "@/components/assistant/AssistantShell";
-import { usePermissionsAssistante } from "@/lib/mock-medecin";
+import { useContextePro } from "@/lib/pro";
 
 /*
  * Messagerie (assistant(e)) — reproduit l'écran « asst-messages » de la
@@ -46,7 +46,7 @@ const REPONSES_RAPIDES = [
 ];
 
 export default function MessagesAssistant() {
-  const permissions = usePermissionsAssistante();
+  const { permissions } = useContextePro();
 
   return (
     <AssistantShell>

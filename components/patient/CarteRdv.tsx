@@ -2,22 +2,31 @@
 
 import Link from "next/link";
 import { depuisISO, MOIS_ABREGES } from "@/lib/dates";
-import type { RendezVousLocal } from "@/lib/mock-rdv";
+import type { RendezVousPatient } from "@/lib/patient";
 
 /**
  * Carte de rendez-vous — reproduit la .appt de la maquette web
  * (pastille de date, médecin, lignes de détail, badge de statut, actions).
  */
+
+const LIBELLES_STATUT: Record<RendezVousPatient["statut"], string> = {
+  en_attente: "En attente",
+  confirme: "Confirmé",
+  annule: "Annulé",
+  honore: "Honoré",
+};
+
 export default function CarteRdv({
   rdv,
   onAnnuler,
 }: {
-  rdv: RendezVousLocal;
+  rdv: RendezVousPatient;
   onAnnuler?: (id: string) => void;
 }) {
   const d = depuisISO(rdv.date);
   const annule = rdv.statut === "annule";
-  const pourUnProche = rdv.pourQuiId !== undefined && rdv.pourQuiId !== "moi";
+  const libelle = LIBELLES_STATUT[rdv.statut];
+  const pourUnProche = rdv.procheId !== undefined;
 
   return (
     <>
@@ -34,7 +43,7 @@ export default function CarteRdv({
             {rdv.specialite} · {rdv.heure}
           </small>
         </div>
-        <span className={`badge ${annule ? "no" : "ok"}`}>{annule ? "Annulé" : "Confirmé"}</span>
+        <span className={`badge ${annule ? "no" : "ok"}`}>{libelle}</span>
       </div>
       <div className="hr" />
       <div className="det">
@@ -76,10 +85,14 @@ export default function CarteRdv({
       <div className="flex flex-wrap items-center gap-[9px]">
         <span
           className={`rounded-lg px-[10px] py-[5px] text-[10.5px] font-extrabold uppercase tracking-[.03em] ${
-            annule ? "bg-red-soft text-red" : "bg-green-soft text-green"
+            annule
+              ? "bg-red-soft text-red"
+              : rdv.statut === "en_attente"
+                ? "bg-amber-soft text-amber"
+                : "bg-green-soft text-green"
           }`}
         >
-          {annule ? "Annulé" : "Confirmé"}
+          {libelle}
         </span>
         {onAnnuler && !annule && (
           <>

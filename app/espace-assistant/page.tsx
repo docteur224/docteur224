@@ -4,45 +4,35 @@ import Link from "next/link";
 import { useState } from "react";
 import AssistantShell from "@/components/assistant/AssistantShell";
 import { versISO } from "@/lib/dates";
-import { medecinConnecte } from "@/lib/mock-data";
-import { creneauxJourMedecin, useExceptionsLocales } from "@/lib/mock-disponibilites";
-import { usePermissionsAssistante } from "@/lib/mock-medecin";
-import { useRendezVousLocaux } from "@/lib/mock-rdv";
+import { majStatutRdv, useAgenda, useContextePro } from "@/lib/pro";
 
 /*
  * Tableau de bord assistant(e) — reproduit l'écran « asst-dash » de la
- * maquette web : bandeau d'accès limité, 4 statistiques, demandes à
- * confirmer (gérées selon la permission), raccourcis.
+ * maquette web : bandeau d'accès limité, statistiques, demandes à
+ * confirmer (vrais RDV en_attente, gérés selon la permission), raccourcis.
  */
-
-const DEMANDES_DEMO = [
-  {
-    id: "d1",
-    heure: "09:00",
-    patient: "Aboubacar Sylla",
-    detail: "Demande pour le 12 juin · +224 620 11 22 33",
-  },
-  {
-    id: "d2",
-    heure: "11:30",
-    patient: "Aminata Diané",
-    detail: "Demande pour le 14 juin · +224 622 44 55 66",
-  },
-];
-
 export default function TableauDeBordAssistant() {
-  const rdvs = useRendezVousLocaux();
-  const exceptions = useExceptionsLocales();
-  const permissions = usePermissionsAssistante();
-  const [demandes, setDemandes] = useState(DEMANDES_DEMO);
+  const { medecin, permissions, utilisateur } = useContextePro();
+  const { creneauxJour, rdvs, recharger } = useAgenda(medecin?.id);
   const [erreur, setErreur] = useState("");
 
-  const aujourdhui = versISO(new Date());
-  const rdvJour = creneauxJourMedecin(medecinConnecte.id, aujourdhui, exceptions, rdvs).filter(
-    (c) => c.statut === "reserve"
-  );
+  const prenomAssistant = utilisateur?.prenom ?? "";
+  const nomMedecin = medecin
+    ? `${medecin.civilite} ${medecin.prenom.charAt(0)}. ${medecin.nom}`
+    : "votre médecin";
 
-  function traiterDemande(id: string) {
+  const aujourdhui = versISO(new Date());
+  const rdvJour = creneauxJour(aujourdhui).filter((c) => c.statut === "reserve");
+  const demandes = rdvs
+    .filter((r) => r.statut === "en_attente" && r.date >= aujourdhui)
+    .map((r) => ({
+      id: r.id,
+      heure: r.heure,
+      patient: r.beneficiaire,
+      detail: `Demande pour le ${r.date}${r.motif ? ` · ${r.motif}` : ""}`,
+    }));
+
+  async function traiterDemande(id: string) {
     if (!permissions.confirmerAnnuler) {
       setErreur(
         "⛔ Action refusée : la permission « Confirmer / annuler les rendez-vous » ne vous a pas été accordée par le médecin."
@@ -50,7 +40,8 @@ export default function TableauDeBordAssistant() {
       return;
     }
     setErreur("");
-    setDemandes(demandes.filter((d) => d.id !== id));
+    await majStatutRdv(id, "confirme");
+    recharger();
   }
 
   return (
@@ -58,13 +49,13 @@ export default function TableauDeBordAssistant() {
       {/* ===== Version mobile (écran « m-asst-dash » de la maquette mobile) ===== */}
       <div className="md:hidden">
         <div className="appbar">
-          <h3 style={{ paddingLeft: 4 }}>Bonjour Hawa 👋</h3>
+          <h3 style={{ paddingLeft: 4 }}>Bonjour {prenomAssistant} 👋</h3>
         </div>
         <div className="pad">
           <div className="abannerm">
             <span aria-hidden>🔒</span>
             <div>
-              Espace assistant(e) · vous assistez le <b>Dr A. Barry</b>. Accès limité aux RDV et à
+              Espace assistant(e) · vous assistez <b>{nomMedecin}</b>. Accès limité aux RDV et à
               la communication.
             </div>
           </div>
@@ -150,9 +141,9 @@ export default function TableauDeBordAssistant() {
       {/* ===== Version web (inchangée) ===== */}
       <div className="hidden md:block">
       <div className="mb-5">
-        <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Bonjour Hawa 👋</h2>
+        <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Bonjour {prenomAssistant} 👋</h2>
         <small className="text-[13px] text-muted">
-          Espace assistant(e) · vous assistez le Dr A. Barry
+          Espace assistant(e) · vous assistez {nomMedecin}
         </small>
       </div>
 

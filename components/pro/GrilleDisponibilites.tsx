@@ -2,9 +2,7 @@
 
 import { useRef, useState } from "react";
 import { capitaliser, depuisISO, formatDateLongue, JOURS_COURTS, versISO } from "@/lib/dates";
-import { creneauxJourMedecin, useExceptionsLocales } from "@/lib/mock-disponibilites";
-import { useRendezVousLocaux } from "@/lib/mock-rdv";
-import type { ResultatAction } from "@/lib/actions-assistante";
+import { basculerCreneau, useAgenda } from "@/lib/pro";
 
 /**
  * Grille de créneaux 30 min (08:00 → 20:00) à 3 états — reproduit le bloc
@@ -18,19 +16,16 @@ import type { ResultatAction } from "@/lib/actions-assistante";
 export default function GrilleDisponibilites({
   medecinId,
   peutModifier,
-  basculer,
 }: {
   medecinId: string;
   peutModifier: boolean;
-  basculer: (dateISO: string, heure: string) => ResultatAction;
 }) {
-  const rdvs = useRendezVousLocaux();
-  const exceptions = useExceptionsLocales();
+  const { creneauxJour, recharger } = useAgenda(medecinId);
   const [dateISO, setDateISO] = useState(() => versISO(new Date()));
   const [message, setMessage] = useState("");
   const champDate = useRef<HTMLInputElement>(null);
 
-  const creneaux = creneauxJourMedecin(medecinId, dateISO, exceptions, rdvs);
+  const creneaux = creneauxJour(dateISO);
   const dateCourante = depuisISO(dateISO);
   const lundi = new Date(dateCourante);
   lundi.setDate(lundi.getDate() - ((lundi.getDay() + 6) % 7));
@@ -56,9 +51,11 @@ export default function GrilleDisponibilites({
     }
   }
 
-  function cliquerCreneau(heure: string) {
-    const resultat = basculer(dateISO, heure);
-    setMessage(resultat.ok ? "" : (resultat.erreur ?? ""));
+  async function cliquerCreneau(heure: string) {
+    const statut = creneaux.find((c) => c.heure === heure)?.statut ?? "ouvert";
+    const resultat = await basculerCreneau(medecinId, dateISO, heure, statut);
+    setMessage(resultat.erreur ?? "");
+    if (!resultat.erreur) recharger();
   }
 
   return (

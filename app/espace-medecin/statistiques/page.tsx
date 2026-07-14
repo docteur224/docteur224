@@ -3,7 +3,7 @@
 import MedecinShell from "@/components/medecin/MedecinShell";
 import AppBarMobile from "@/components/mobile/AppBarMobile";
 import { formatNote } from "@/lib/format";
-import { medecinConnecte } from "@/lib/mock-data";
+import { useContextePro } from "@/lib/pro";
 
 /*
  * Statistiques — reproduit l'écran « med-stats » de la maquette web :
@@ -32,6 +32,8 @@ const AVIS = [
 ];
 
 export default function StatistiquesMedecin() {
+  const { medecin } = useContextePro();
+  const medecinConnecte = medecin ?? { gradient: "linear-gradient(135deg,#2E9CCA,#15506B)", initiales: "…", civilite: "Dr", prenom: "", nom: "", note: 0, specialite: "" };
   return (
     <MedecinShell>
       {/* ===== Version mobile (écran « m-med-stats » de la maquette mobile) ===== */}

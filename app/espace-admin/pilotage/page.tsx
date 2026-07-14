@@ -3,7 +3,7 @@
 import AdminShell from "@/components/admin/AdminShell";
 import AppBarMobile from "@/components/mobile/AppBarMobile";
 import Interrupteur from "@/components/patient/Interrupteur";
-import { basculerVedette, useVedettes } from "@/lib/mock-admin";
+import { basculerVedette, useVedettes } from "@/lib/admin";
 
 /*
  * Pilotage & croissance — reproduit l'écran « admin-pilotage » de la maquette
@@ -26,7 +26,7 @@ const COUVERTURE_SPECIALITES = [
 ];
 
 export default function PilotageAdmin() {
-  const vedettes = useVedettes();
+  const { vedettes, recharger } = useVedettes();
 
   return (
     <AdminShell>
@@ -107,7 +107,7 @@ export default function PilotageAdmin() {
                 </div>
                 <Interrupteur
                   actif={vedette.actif}
-                  onChange={(v) => basculerVedette(vedette.id, v)}
+                  onChange={(v) => basculerVedette(vedette.id, v).then(recharger)}
                   label={`Mettre en vedette ${vedette.nom}`}
                 />
               </div>
@@ -220,7 +220,7 @@ export default function PilotageAdmin() {
             </div>
             <Interrupteur
               actif={vedette.actif}
-              onChange={(v) => basculerVedette(vedette.id, v)}
+              onChange={(v) => basculerVedette(vedette.id, v).then(recharger)}
               label={`Mettre en vedette ${vedette.nom}`}
             />
           </div>

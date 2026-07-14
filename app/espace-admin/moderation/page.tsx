@@ -7,7 +7,7 @@ import {
   traiterSignalement,
   useAvisAModerer,
   useSignalements,
-} from "@/lib/mock-admin";
+} from "@/lib/admin";
 
 /*
  * Modération — reproduit l'écran « admin-moderation » de la maquette web :
@@ -16,8 +16,8 @@ import {
  */
 
 export default function ModerationAdmin() {
-  const signalements = useSignalements();
-  const avis = useAvisAModerer();
+  const { signalements, recharger: rechargerSignalements } = useSignalements();
+  const { avis, recharger: rechargerAvis } = useAvisAModerer();
 
   const boutonPrimaire =
     "rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]";
@@ -100,13 +100,13 @@ export default function ModerationAdmin() {
                   {a.extrait}
                 </p>
                 <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                  <button type="button" className="btnm gh" onClick={() => modererAvis(a, "conservé")}>
+                  <button type="button" className="btnm gh" onClick={() => modererAvis(a, "conservé").then(rechargerAvis)}>
                     Conserver
                   </button>
-                  <button type="button" className="btnm gh" onClick={() => modererAvis(a, "masqué")}>
+                  <button type="button" className="btnm gh" onClick={() => modererAvis(a, "masqué").then(rechargerAvis)}>
                     Masquer
                   </button>
-                  <button type="button" className="btnm dg" onClick={() => modererAvis(a, "supprimé")}>
+                  <button type="button" className="btnm dg" onClick={() => modererAvis(a, "supprimé").then(rechargerAvis)}>
                     Supprimer
                   </button>
                 </div>
@@ -200,21 +200,21 @@ export default function ModerationAdmin() {
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
-                onClick={() => modererAvis(a, "conservé")}
+                onClick={() => modererAvis(a, "conservé").then(rechargerAvis)}
                 className={boutonGhost}
               >
                 Conserver
               </button>
               <button
                 type="button"
-                onClick={() => modererAvis(a, "masqué")}
+                onClick={() => modererAvis(a, "masqué").then(rechargerAvis)}
                 className={boutonGhost}
               >
                 Masquer
               </button>
               <button
                 type="button"
-                onClick={() => modererAvis(a, "supprimé")}
+                onClick={() => modererAvis(a, "supprimé").then(rechargerAvis)}
                 className={boutonDanger}
               >
                 Supprimer

@@ -6,7 +6,7 @@ import PanneauReservation from "@/components/site/PanneauReservation";
 import CarteLocalisation from "@/components/site/CarteLocalisation";
 import AppBarMobile from "@/components/mobile/AppBarMobile";
 import { formatNote } from "@/lib/format";
-import { getEtablissement, getMedecin, nomComplet } from "@/lib/mock-data";
+import { chargerEtablissementParId, chargerMedecinParId, nomComplet } from "@/lib/donnees";
 
 /*
  * Fiche médecin — reproduit l'écran « fiche » de la maquette web :
@@ -32,16 +32,16 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const medecin = getMedecin(id);
+  const medecin = await chargerMedecinParId(id);
   if (!medecin) return { title: "Médecin introuvable | Docteur 224" };
   return { title: `${nomComplet(medecin)} — ${medecin.specialite} à ${medecin.ville} | Docteur 224` };
 }
 
 export default async function FicheMedecin({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const medecin = getMedecin(id);
+  const medecin = await chargerMedecinParId(id);
   if (!medecin) notFound();
-  const etab = getEtablissement(medecin.etablissementId);
+  const etab = await chargerEtablissementParId(medecin.etablissementId);
 
   return (
     <div className="min-h-screen bg-bg">

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import AdminShell from "@/components/admin/AdminShell";
 import AppBarMobile from "@/components/mobile/AppBarMobile";
-import { useEtablissementsEnAttente } from "@/lib/mock-admin";
+import { useEtablissementsEnAttente } from "@/lib/admin";
 
 /*
  * Établissements — reproduit l'écran « admin-etabs » de la maquette web :
@@ -30,7 +30,7 @@ const STRUCTURES = [
 ];
 
 export default function EtablissementsAdmin() {
-  const enAttente = useEtablissementsEnAttente();
+  const { dossiers: enAttente } = useEtablissementsEnAttente();
   const ratomaEnAttente = enAttente.some((d) => d.id === "val-ratoma");
 
   return (

@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import TopNav from "@/components/site/TopNav";
 import { formatDateLongue } from "@/lib/dates";
-import { getEtablissement, getMedecin, nomComplet } from "@/lib/mock-data";
+import { chargerEtablissementParId, chargerMedecinParId, nomComplet } from "@/lib/donnees";
 
 export const metadata: Metadata = {
   title: "Rendez-vous confirmé | Docteur 224",
@@ -23,11 +23,11 @@ export default async function Confirmation({
   const date = typeof sp.date === "string" ? sp.date : "";
   const heure = typeof sp.heure === "string" ? sp.heure : "";
 
-  const medecin = getMedecin(medecinId);
+  const medecin = await chargerMedecinParId(medecinId);
   if (!medecin || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(heure)) {
     redirect("/");
   }
-  const etab = getEtablissement(medecin.etablissementId);
+  const etab = await chargerEtablissementParId(medecin.etablissementId);
 
   return (
     <div className="flex min-h-screen flex-col bg-bg">

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import AdminShell from "@/components/admin/AdminShell";
 import AppBarMobile from "@/components/mobile/AppBarMobile";
-import { envoyerAnnonce, useAnnonces } from "@/lib/mock-admin";
+import { envoyerAnnonce, useAnnonces } from "@/lib/admin";
 
 /*
  * Annonces — reproduit l'écran « admin-annonces » de la maquette web :
@@ -28,7 +28,7 @@ const MESSAGE_DEFAUT =
   "Maintenance prévue dimanche de 02:00 à 04:00. La plateforme sera momentanément indisponible. Merci de votre compréhension.";
 
 export default function AnnoncesAdmin() {
-  const annonces = useAnnonces();
+  const { annonces, recharger } = useAnnonces();
   const [segment, setSegment] = useState(SEGMENTS[0]);
   const [ville, setVille] = useState(VILLES[0]);
   const [canaux, setCanaux] = useState<string[]>(["SMS", "E-mail"]);
@@ -43,7 +43,7 @@ export default function AnnoncesAdmin() {
   function envoyer() {
     if (!message.trim() || canaux.length === 0) return;
     const cible = ville === VILLES[0] ? segment : `${segment} · ${ville}`;
-    envoyerAnnonce(message.trim(), cible, canaux);
+    envoyerAnnonce(message.trim(), cible, canaux).then(() => recharger());
     setMessage("");
   }
 

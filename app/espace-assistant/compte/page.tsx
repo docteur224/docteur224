@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import AssistantShell from "@/components/assistant/AssistantShell";
-import { usePermissionsAssistante, type PermissionsAssistante } from "@/lib/mock-medecin";
+import { useContextePro, type PermissionsAssistante } from "@/lib/pro";
 
 /*
  * Mon compte (assistant(e)) — reproduit l'écran « asst-compte » de la
@@ -20,7 +20,10 @@ const LIGNES_PERMISSIONS: { cle: keyof PermissionsAssistante; titre: string }[] 
 ];
 
 export default function CompteAssistant() {
-  const permissions = usePermissionsAssistante();
+  const { permissions, medecin, utilisateur } = useContextePro();
+  const nomAssistant = utilisateur ? `${utilisateur.prenom} ${utilisateur.nom}`.trim() : "…";
+  const initialesAssistant = utilisateur ? `${utilisateur.prenom.charAt(0)}${utilisateur.nom.charAt(0)}`.toUpperCase() : "?";
+  const nomMedecin = medecin ? `${medecin.civilite} ${medecin.prenom.charAt(0)}. ${medecin.nom}` : "";
 
   return (
     <AssistantShell>
@@ -36,11 +39,11 @@ export default function CompteAssistant() {
               aria-hidden
               style={{ background: "linear-gradient(135deg,#2E9CCA,#15506B)" }}
             >
-              HD
+              {initialesAssistant}
             </span>
             <div>
-              <b>Hawa Diallo</b>
-              <small>Assistante · Dr A. Barry</small>
+              <b>{nomAssistant}</b>
+              <small>Assistant(e){nomMedecin ? ` · ${nomMedecin}` : ""}</small>
             </div>
           </div>
           <div className="menu">
@@ -133,7 +136,7 @@ export default function CompteAssistant() {
         <div className="flex items-center justify-between gap-[14px] border-b border-line py-[15px]">
           <div>
             <b className="block text-[13.5px] font-bold">Nom complet</b>
-            <small className="text-xs text-muted">Hawa Diallo</small>
+            <small className="text-xs text-muted">{nomAssistant}</small>
           </div>
         </div>
         <div className="flex items-center justify-between gap-[14px] border-b border-line py-[15px]">

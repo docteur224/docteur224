@@ -3,24 +3,22 @@
 import Link from "next/link";
 import { useState } from "react";
 import { capitaliser, formatDateLongue, versISO } from "@/lib/dates";
-import { getEtablissement, medecinConnecte, nomComplet } from "@/lib/mock-data";
-import { creneauxJourPatient, useExceptionsLocales } from "@/lib/mock-disponibilites";
-import { assistantePeutCreerRdv } from "@/lib/actions-assistante";
 import {
-  ajouterPatientCabinet,
-  initialesPatientCabinet,
+  creerRdvDelegue,
+  useAgenda,
+  useContextePro,
   usePatientsCabinet,
   type PatientCabinet,
-} from "@/lib/mock-patients-cabinet";
-import { ajouterRendezVousLocal, useRendezVousLocaux } from "@/lib/mock-rdv";
+} from "@/lib/pro";
 
 /**
  * « + Nouveau rendez-vous » — réservation déléguée (spec C.2.3), partagée
  * entre l'espace médecin et l'espace assistant(e) : réserver AU NOM d'un
- * patient, existant ou nouveau (fiche minimale sans compte). Le rendez-vous
- * est tracé « Réservé par : le cabinet · canal téléphone » et occupe
- * immédiatement le créneau partout.
- * Pour l'assistant(e), l'enregistrement repasse par la garde de permissions.
+ * patient, existant ou nouveau (fiche minimale sans compte, table
+ * patients_sans_compte). Le rendez-vous est tracé « réservé par le cabinet ·
+ * source téléphone » dans la table rendez_vous.
+ * Pour l'assistant(e), la RLS refuse l'écriture si la permission
+ * « créer un RDV » n'est pas accordée.
  */
 
 const FICHE_VIDE = { nom: "", prenom: "", telephone: "" };
@@ -32,9 +30,9 @@ export default function NouveauRdvDelegue({
   reservePar: "medecin" | "assistant";
   lienRetour: string;
 }) {
-  const patients = usePatientsCabinet();
-  const rdvs = useRendezVousLocaux();
-  const exceptions = useExceptionsLocales();
+  const { medecin } = useContextePro();
+  const { patients, recharger: rechargerPatients } = usePatientsCabinet(medecin?.id);
+  const { creneauxJour, recharger: rechargerAgenda } = useAgenda(medecin?.id);
 
   const [recherche, setRecherche] = useState("");
   const [patientChoisi, setPatientChoisi] = useState<PatientCabinet | null>(null);
@@ -47,11 +45,20 @@ export default function NouveauRdvDelegue({
   const [heure, setHeure] = useState<string | null>(null);
   const [motif, setMotif] = useState("");
   const [erreur, setErreur] = useState("");
+  const [enCours, setEnCours] = useState(false);
   const [rdvEnregistre, setRdvEnregistre] = useState<{ nomPatient: string; heure: string } | null>(
     null
   );
 
-  const etab = getEtablissement(medecinConnecte.etablissementId);
+  const medecinConnecte = medecin ?? {
+    id: "",
+    civilite: "Dr" as const,
+    prenom: "",
+    nom: "",
+    specialite: "",
+  };
+  const nomMedecin = `${medecinConnecte.civilite} ${medecinConnecte.prenom} ${medecinConnecte.nom}`;
+
   const filtre = recherche.trim().toLowerCase();
   const resultats =
     filtre === ""
@@ -64,45 +71,36 @@ export default function NouveauRdvDelegue({
           )
           .slice(0, 3);
 
-  const creneauxOuverts = creneauxJourPatient(medecinConnecte.id, dateISO, exceptions, rdvs).filter(
-    (c) => c.statut === "ouvert"
-  );
+  const creneauxOuverts = creneauxJour(dateISO).filter((c) => c.statut === "ouvert");
 
   const fichePrete =
     fiche.nom.trim() !== "" && fiche.prenom.trim() !== "" && fiche.telephone.trim() !== "";
   const patientPret = patientChoisi !== null || fichePrete;
   const tout = patientPret && heure !== null;
 
-  function enregistrer() {
-    if (!tout || heure === null) return;
-    // Garde de permissions (équivalent mock de la RLS) pour l'assistant(e).
-    if (reservePar === "assistant") {
-      const acces = assistantePeutCreerRdv();
-      if (!acces.ok) {
-        setErreur(acces.erreur ?? "Action refusée.");
-        return;
-      }
-    }
-    const patient = patientChoisi ?? ajouterPatientCabinet(fiche);
-    const nomPatient = `${patient.prenom} ${patient.nom}`;
-    ajouterRendezVousLocal({
-      id: `rdv-${Date.now()}`,
-      medecinId: medecinConnecte.id,
-      medecinNom: nomComplet(medecinConnecte),
-      specialite: medecinConnecte.specialite,
-      etablissementNom: etab?.nom ?? "",
-      ville: etab?.ville ?? medecinConnecte.ville,
+  async function enregistrer() {
+    if (!tout || heure === null || !medecin || enCours) return;
+    setEnCours(true);
+    const nomPatient = patientChoisi
+      ? `${patientChoisi.prenom} ${patientChoisi.nom}`
+      : `${fiche.prenom} ${fiche.nom}`;
+    const res = await creerRdvDelegue({
+      medecinId: medecin.id,
       date: dateISO,
       heure,
-      tarif: medecinConnecte.tarifConsultation,
       motif: motif.trim() || "Consultation",
-      pourQui: `${nomPatient} (patient du cabinet)`,
-      pourQuiId: patient.id,
-      statut: "confirme",
-      reservePar,
-      creeLe: new Date().toISOString(),
+      source: "telephone",
+      patientCle: patientChoisi?.id,
+      nouvelleFiche: patientChoisi ? undefined : { ...fiche, telephone: `+224${fiche.telephone.replace(/\D/g, "").replace(/^224/, "")}` },
     });
+    setEnCours(false);
+    if (res.erreur) {
+      setErreur(res.erreur);
+      return;
+    }
     setErreur("");
+    rechargerPatients();
+    rechargerAgenda();
     setRdvEnregistre({ nomPatient, heure });
   }
 
@@ -137,12 +135,8 @@ export default function NouveauRdvDelegue({
           .
         </p>
         <div className="mt-[18px] inline-flex items-center gap-2 rounded-xl bg-green-soft px-[18px] py-[11px] text-[13px] font-bold text-green">
-          📩 SMS de confirmation envoyé au patient
+          ✅ Rendez-vous enregistré dans l’agenda
         </div>
-        <p className="mt-2 text-[11.5px] text-muted">
-          Mode démonstration : le SMS simulé est visible dans le centre de notifications (🔔).
-          L’envoi réel sera branché avec la base de données.
-        </p>
         <div className="mt-7 flex flex-wrap justify-center gap-3">
           <Link
             href={lienRetour}
@@ -206,7 +200,7 @@ export default function NouveauRdvDelegue({
                 className="grid h-10 w-10 flex-none place-items-center rounded-[11px] text-[13px] font-extrabold text-white"
                 style={{ background: patient.gradient }}
               >
-                {initialesPatientCabinet(patient)}
+                {`${patient.prenom.charAt(0)}${patient.nom.charAt(0)}`.toUpperCase()}
               </span>
               <span className="flex-1">
                 <b className="block text-[13.5px]">
@@ -230,7 +224,7 @@ export default function NouveauRdvDelegue({
               className="grid h-10 w-10 flex-none place-items-center rounded-[11px] text-[13px] font-extrabold text-white"
               style={{ background: patientChoisi.gradient }}
             >
-              {initialesPatientCabinet(patientChoisi)}
+              {`${patientChoisi.prenom.charAt(0)}${patientChoisi.nom.charAt(0)}`.toUpperCase()}
             </span>
             <span className="flex-1">
               <b className="block text-[13.5px]">
@@ -300,7 +294,7 @@ export default function NouveauRdvDelegue({
         <h3 className="mb-[14px] text-base font-extrabold">2 · Médecin &amp; créneau</h3>
         <div className="mb-1.5 text-[12.5px] font-bold">Médecin</div>
         <div className="rounded-[11px] border border-line bg-[#F4F8FA] px-[13px] py-3 text-[13.5px] font-bold">
-          {nomComplet(medecinConnecte)} · {medecinConnecte.specialite}
+          {nomMedecin} · {medecinConnecte.specialite}
         </div>
         <div className="mb-1.5 mt-3 text-[12.5px] font-bold">Date</div>
         <input
@@ -376,7 +370,7 @@ export default function NouveauRdvDelegue({
         <button
           type="button"
           onClick={enregistrer}
-          disabled={!tout}
+          disabled={!tout || enCours}
           className="flex-1 rounded-[11px] bg-green px-[18px] py-[11px] text-[13.5px] font-bold text-white transition-colors hover:bg-[#196a3b] disabled:cursor-not-allowed disabled:opacity-50"
         >
           ✅ Enregistrer le rendez-vous

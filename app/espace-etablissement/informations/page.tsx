@@ -1,7 +1,7 @@
 "use client";
 
 import EtablissementShell from "@/components/etablissement/EtablissementShell";
-import { ETABLISSEMENT_CONNECTE } from "@/lib/mock-etablissement";
+import { useEtablissementConnecte } from "@/lib/etablissement";
 
 /*
  * Informations — reproduit l'écran « etab-infos » de la maquette web :
@@ -17,6 +17,8 @@ const PHOTOS = [
 ];
 
 export default function InformationsEtablissement() {
+  const { etablissement } = useEtablissementConnecte();
+  const ETABLISSEMENT_CONNECTE = etablissement ?? { id: "", nom: "…", nomCourt: "…", type: "", description: "", adresse: "", telephone: "", email: "", siteWeb: "", gradient: "linear-gradient(135deg,#16A085,#0E6655)", statut: "", parametres: {}, gestionnaire: { nom: "", role: "", email: "", telephone: "" } };
   const etab = ETABLISSEMENT_CONNECTE;
   const champStatique = "rounded-[11px] border border-line bg-white px-[13px] py-3 text-[13.5px]";
   const labelChamp = "mb-1.5 block text-xs font-bold text-muted";

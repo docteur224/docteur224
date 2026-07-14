@@ -5,23 +5,20 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { calculerAge } from "@/lib/dates";
 import { formatGNF } from "@/lib/format";
-import { initialesPatient, usePatientLocal } from "@/lib/mock-patient";
 import {
-  ajouterProcheLocal,
-  initialesProche,
+  ajouterProche,
   LIENS_PROCHE,
-  useProchesLocaux,
-  type ProcheLocal,
-} from "@/lib/mock-proches";
-import { ajouterRendezVousLocal } from "@/lib/mock-rdv";
+  reserverRendezVous,
+  useProches,
+  useProfilConnecte,
+} from "@/lib/patient";
 
 /**
  * Partie interactive de l'écran de réservation :
  * - « Pour qui est ce rendez-vous ? » : moi-même ou un proche enregistré,
  *   avec ajout d'un proche sans quitter l'écran (spec C.2.1 / C.3) ;
  * - motif de consultation et bandeau « réservation gratuite » ;
- * - à la confirmation, le rendez-vous part dans le stockage local (mock
- *   de la future table « rendez_vous »).
+ * - à la confirmation, écriture réelle dans la table `rendez_vous`.
  */
 
 const NOUVEAU_PROCHE_VIDE = {
@@ -29,8 +26,11 @@ const NOUVEAU_PROCHE_VIDE = {
   prenom: "",
   lien: LIENS_PROCHE[0],
   dateNaissance: "",
-  genre: "Femme" as ProcheLocal["genre"],
+  genre: "Femme",
 };
+
+const initiales = (prenom: string, nom: string) =>
+  `${prenom.charAt(0)}${nom.charAt(0)}`.toUpperCase() || "?";
 
 export default function FormulaireReservation({
   medecinId,
@@ -52,50 +52,80 @@ export default function FormulaireReservation({
   tarif: number;
 }) {
   const router = useRouter();
-  const patient = usePatientLocal();
-  const proches = useProchesLocaux();
+  const { profil, chargement } = useProfilConnecte();
+  const { proches, recharger } = useProches();
   const [selection, setSelection] = useState<string>("moi");
   const [ajoutOuvert, setAjoutOuvert] = useState(false);
   const [nouveau, setNouveau] = useState(NOUVEAU_PROCHE_VIDE);
   const [motif, setMotif] = useState("");
   const [enCours, setEnCours] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
 
   const nouveauValide =
     nouveau.nom.trim() !== "" && nouveau.prenom.trim() !== "" && nouveau.dateNaissance !== "";
 
-  function enregistrerNouveauProche() {
+  async function enregistrerNouveauProche() {
     if (!nouveauValide) return;
-    const proche = ajouterProcheLocal(nouveau);
-    setSelection(proche.id);
+    const res = await ajouterProche(nouveau);
+    if (res.erreur) {
+      setErreur(res.erreur);
+      return;
+    }
+    recharger();
+    setSelection(res.proche!.id);
     setNouveau(NOUVEAU_PROCHE_VIDE);
     setAjoutOuvert(false);
   }
 
-  function confirmer() {
+  async function confirmer() {
+    if (enCours) return;
+    setErreur(null);
     setEnCours(true);
-    const procheChoisi = proches.find((p) => p.id === selection);
-    const pourQui = procheChoisi
-      ? `${procheChoisi.prenom} ${procheChoisi.nom} (${procheChoisi.lien.toLowerCase()})`
-      : `${patient.prenom} ${patient.nom} (moi-même)`;
-    ajouterRendezVousLocal({
-      id: `rdv-${Date.now()}`,
+    const res = await reserverRendezVous({
       medecinId,
-      medecinNom,
-      specialite,
-      etablissementNom,
-      ville,
       date,
       heure,
-      tarif,
       motif: motif.trim(),
-      pourQui,
-      pourQuiId: procheChoisi ? procheChoisi.id : "moi",
-      statut: "confirme",
-      reservePar: "patient",
-      creeLe: new Date().toISOString(),
+      procheId: selection === "moi" ? undefined : selection,
     });
+    setEnCours(false);
+    if (res.erreur === "non_connecte") {
+      router.push(`/connexion`);
+      return;
+    }
+    if (res.erreur) {
+      setErreur(res.erreur);
+      return;
+    }
     router.push(
       `/confirmation?medecin=${medecinId}&date=${date}&heure=${encodeURIComponent(heure)}`
+    );
+  }
+
+  // Identité affichée sur la carte « Moi-même »
+  const patient = {
+    prenom: profil?.prenom ?? "",
+    nom: profil?.nom ?? "",
+    dateNaissance: profil?.dateNaissance ?? "",
+  };
+
+  if (!chargement && !profil) {
+    return (
+      <div className="mx-4 my-6 rounded-2xl border border-line bg-white p-6 text-center md:mx-0">
+        <div className="text-3xl" aria-hidden>🔒</div>
+        <b className="mt-3 block text-base font-extrabold">Connectez-vous pour réserver</b>
+        <p className="mt-2 text-[13px] text-muted">
+          La réservation nécessite un compte patient (gratuit).
+        </p>
+        <div className="mt-4 flex justify-center gap-3">
+          <Link href="/connexion" className="rounded-[11px] bg-teal px-[18px] py-[11px] text-[13.5px] font-bold text-white">
+            Se connecter
+          </Link>
+          <Link href="/inscription/patient" className="rounded-[11px] border-[1.5px] border-line bg-white px-[18px] py-[11px] text-[13.5px] font-bold text-blue">
+            Créer un compte
+          </Link>
+        </div>
+      </div>
     );
   }
 
@@ -107,6 +137,11 @@ export default function FormulaireReservation({
       {/* ================= VERSION MOBILE (écran « reservation » de la maquette mobile) ================= */}
       <div className="md:hidden">
         <div className="pad" style={{ paddingBottom: 0 }}>
+          {erreur && (
+            <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-[12.5px] font-semibold text-red-600">
+              {erreur}
+            </p>
+          )}
           <span className="labelm">Pour qui est ce rendez-vous ?</span>
           <div className="benelist">
             <button type="button" className={`bene${selection === "moi" ? " on" : ""}`} onClick={() => setSelection("moi")}>
@@ -115,12 +150,12 @@ export default function FormulaireReservation({
                 aria-hidden
                 style={{ background: "linear-gradient(135deg,#2E9CCA,#15506B)" }}
               >
-                {initialesPatient(patient)}
+                {initiales(patient.prenom, patient.nom)}
               </span>
               <span className="bt">
                 <b>Moi-même</b>
                 <small>
-                  {patient.prenom} {patient.nom} · {calculerAge(patient.dateNaissance)} ans
+                  {patient.prenom} {patient.nom} · {patient.dateNaissance ? `${calculerAge(patient.dateNaissance)} ans` : "titulaire du compte"}
                 </small>
               </span>
               <span className="rc" />
@@ -133,7 +168,7 @@ export default function FormulaireReservation({
                 onClick={() => setSelection(proche.id)}
               >
                 <span className="ba" aria-hidden style={{ background: proche.gradient }}>
-                  {initialesProche(proche)}
+                  {initiales(proche.prenom, proche.nom)}
                 </span>
                 <span className="bt">
                   <b>
@@ -212,7 +247,7 @@ export default function FormulaireReservation({
                 className="selm"
                 value={nouveau.genre}
                 onChange={(e) =>
-                  setNouveau({ ...nouveau, genre: e.target.value as ProcheLocal["genre"] })
+                  setNouveau({ ...nouveau, genre: e.target.value })
                 }
               >
                 <option>Femme</option>
@@ -260,6 +295,11 @@ export default function FormulaireReservation({
 
       {/* ================= VERSION WEB (inchangée) ================= */}
       <div className="hidden md:block">
+      {erreur && (
+        <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-[12.5px] font-semibold text-red-600">
+          {erreur}
+        </p>
+      )}
       {/* ===== Pour qui est ce rendez-vous ? ===== */}
       <div className="mb-[18px] rounded-[18px] border border-line bg-white p-6">
         <h3 className="mb-[14px] text-base font-extrabold">Pour qui est ce rendez-vous ?</h3>
@@ -277,12 +317,12 @@ export default function FormulaireReservation({
               className="grid h-10 w-10 flex-none place-items-center rounded-[11px] text-[13px] font-extrabold text-white"
               style={{ background: "linear-gradient(135deg,#2E9CCA,#15506B)" }}
             >
-              {initialesPatient(patient)}
+              {initiales(patient.prenom, patient.nom)}
             </span>
             <span className="flex-1">
               <b className="block text-[13.5px]">Moi-même</b>
               <small className="text-[11.5px] text-muted">
-                {patient.prenom} {patient.nom} · {calculerAge(patient.dateNaissance)} ans
+                {patient.prenom} {patient.nom} · {patient.dateNaissance ? `${calculerAge(patient.dateNaissance)} ans` : "titulaire du compte"}
               </small>
             </span>
             <span
@@ -309,7 +349,7 @@ export default function FormulaireReservation({
                 className="grid h-10 w-10 flex-none place-items-center rounded-[11px] text-[13px] font-extrabold text-white"
                 style={{ background: proche.gradient }}
               >
-                {initialesProche(proche)}
+                {initiales(proche.prenom, proche.nom)}
               </span>
               <span className="flex-1">
                 <b className="block text-[13.5px]">
@@ -400,7 +440,7 @@ export default function FormulaireReservation({
                 className={classeChamp}
                 value={nouveau.genre}
                 onChange={(e) =>
-                  setNouveau({ ...nouveau, genre: e.target.value as ProcheLocal["genre"] })
+                  setNouveau({ ...nouveau, genre: e.target.value })
                 }
               >
                 <option>Femme</option>

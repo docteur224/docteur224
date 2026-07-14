@@ -3,39 +3,42 @@
 import MedecinShell from "@/components/medecin/MedecinShell";
 import GrilleDisponibilites from "@/components/pro/GrilleDisponibilites";
 import AppBarMobile from "@/components/mobile/AppBarMobile";
-import { medecinConnecte } from "@/lib/mock-data";
-import { basculerCreneauLocal } from "@/lib/mock-disponibilites";
+import { useContextePro } from "@/lib/pro";
 
 /*
  * Mes disponibilités — reproduit l'écran « med-dispos » de la maquette web :
- * jours d'ouverture, grille de créneaux de 30 min (08:00 → 20:00) avec les
- * 3 états Ouvert / Fermé / Réservé (règle C.4.3 : réservé = verrouillé).
- * Les modifications (exceptions par date) sont visibles immédiatement côté
- * patient (même modèle de données).
+ * jours d'ouverture (horaires-types réels), grille de créneaux de 30 min
+ * (08:00 → 20:00) à 3 états Ouvert / Fermé / Réservé (règle C.4.3 :
+ * réservé = verrouillé). Chaque bascule écrit une exception dans la table
+ * `creneaux_exceptions`, immédiatement visible côté patient.
  */
 
-const JOURS_OUVERTURE = [
-  { jour: "Lun", heures: ["08:00", "17:00"] },
-  { jour: "Mar", heures: ["08:00", "17:00"] },
-  { jour: "Mer", heures: ["08:00", "13:00"] },
-  { jour: "Jeu", heures: ["08:00", "17:00"] },
-  { jour: "Ven", heures: ["08:00", "17:00"] },
-  { jour: "Sam", heures: ["09:00", "13:00"] },
-  { jour: "Dim", heures: null },
-];
-
-/** Libellés longs pour la liste « Horaires de la semaine » mobile. */
-const JOURS_SEMAINE_LONGS = [
-  { jour: "Lundi", heures: ["08:00", "17:00"] as [string, string] | null },
-  { jour: "Mardi", heures: ["08:00", "17:00"] as [string, string] | null },
-  { jour: "Mercredi", heures: ["08:00", "13:00"] as [string, string] | null },
-  { jour: "Jeudi", heures: ["08:00", "17:00"] as [string, string] | null },
-  { jour: "Vendredi", heures: ["08:00", "17:00"] as [string, string] | null },
-  { jour: "Samedi", heures: ["09:00", "13:00"] as [string, string] | null },
-  { jour: "Dimanche", heures: null as [string, string] | null },
-];
+const NOMS_COURTS = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+const NOMS_LONGS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
 
 export default function Disponibilites() {
+  const { medecin, chargement } = useContextePro();
+
+  // Horaires-types réels, agrégés par jour (lundi → dimanche)
+  const parJour = (jour: number): [string, string] | null => {
+    const plages = (medecin?.plages ?? []).filter((p) => p.jour_semaine === jour);
+    if (plages.length === 0) return null;
+    const debuts = plages.map((p) => p.heure_debut.slice(0, 5)).sort();
+    const fins = plages.map((p) => p.heure_fin.slice(0, 5)).sort();
+    return [debuts[0], fins[fins.length - 1]];
+  };
+  const ordreJours = [1, 2, 3, 4, 5, 6, 0];
+  const JOURS_OUVERTURE = ordreJours.map((j) => ({ jour: NOMS_COURTS[j], heures: parJour(j) }));
+  const JOURS_SEMAINE_LONGS = ordreJours.map((j) => ({ jour: NOMS_LONGS[j], heures: parJour(j) }));
+
+  if (chargement || !medecin) {
+    return (
+      <MedecinShell>
+        <p className="p-6 text-[13px] text-muted">Chargement…</p>
+      </MedecinShell>
+    );
+  }
+
   return (
     <MedecinShell>
       {/* ===== Version mobile (écran « m-med-dispos » de la maquette mobile) ===== */}
@@ -55,14 +58,7 @@ export default function Disponibilites() {
               ))}
             </div>
           </div>
-          <GrilleDisponibilites
-            medecinId={medecinConnecte.id}
-            peutModifier
-            basculer={(dateISO, heure) => {
-              basculerCreneauLocal(medecinConnecte.id, dateISO, heure);
-              return { ok: true };
-            }}
-          />
+          <GrilleDisponibilites medecinId={medecin.id} peutModifier />
           <div className="card2" style={{ marginTop: 12 }}>
             <h4>Congés et absences</h4>
             <div className="setrow">
@@ -137,14 +133,7 @@ export default function Disponibilites() {
 
       {/* Grille de créneaux partagée (le médecin a tous les droits) */}
       <div className="mb-4">
-        <GrilleDisponibilites
-          medecinId={medecinConnecte.id}
-          peutModifier
-          basculer={(dateISO, heure) => {
-            basculerCreneauLocal(medecinConnecte.id, dateISO, heure);
-            return { ok: true };
-          }}
-        />
+        <GrilleDisponibilites medecinId={medecin.id} peutModifier />
       </div>
 
       {/* Congés et absences (démonstration) */}

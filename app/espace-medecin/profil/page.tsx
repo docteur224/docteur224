@@ -1,21 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import MedecinShell from "@/components/medecin/MedecinShell";
 import AppBarMobile from "@/components/mobile/AppBarMobile";
 import { formatGNF } from "@/lib/format";
-import { getEtablissement, medecinConnecte, nomComplet } from "@/lib/mock-data";
+import { chargerEtablissementParId } from "@/lib/donnees";
+import type { Etablissement } from "@/types";
 import {
-  ASSURANCES_REFERENCEES,
   enregistrerProfilMedecin,
-  useProfilMedecin,
-} from "@/lib/mock-medecin";
+  televerserDocumentValidation,
+  useAssurancesMedecin,
+  useContextePro,
+  useDocumentsValidation,
+} from "@/lib/pro";
 
 /*
  * Mon profil (médecin) — reproduit l'écran « med-profil » de la maquette web
  * (spec C.4.5) : identité, localisation (géolocalisation navigateur + repli
- * lien Google Maps), documents de validation privés, soins et actes,
- * diplômes, parcours, langues, assurances, photos.
+ * lien Google Maps), documents de validation privés (Storage + table
+ * documents_validation), soins et actes, langues, assurances — tout est
+ * écrit dans la table `medecins`.
  */
 
 const PHOTOS = [
@@ -24,11 +28,67 @@ const PHOTOS = [
   { emoji: "🩺", label: "Consultation", fond: "linear-gradient(135deg,#EAE6F1,#D9D2E8)" },
 ];
 
+const LIBELLES_STATUT_DOC: Record<string, string> = {
+  en_attente: "En vérification",
+  valide: "Validé",
+  refuse: "Refusé",
+};
+
+const MEDECIN_VIDE = {
+  id: "",
+  gradient: "linear-gradient(135deg,#2E9CCA,#15506B)",
+  initiales: "…",
+  civilite: "Dr" as const,
+  prenom: "",
+  nom: "",
+  specialite: "",
+  etablissementId: "",
+  ville: "",
+  anneesExperience: 0,
+  tarifConsultation: 0,
+  telephoneSecretariat: "",
+  aPropos: "",
+  soinsEtActes: [] as string[],
+  diplomes: [] as { titre: string; lieu: string }[],
+  parcours: [] as { lieu: string; duree: string }[],
+  langues: [] as string[],
+};
+
 export default function ProfilMedecin() {
-  const profil = useProfilMedecin();
-  const etab = getEtablissement(medecinConnecte.etablissementId);
+  const { medecin } = useContextePro();
+  const medecinConnecte = medecin ?? MEDECIN_VIDE;
+  const [etab, setEtab] = useState<Etablissement | undefined>();
+  useEffect(() => {
+    if (medecin?.etablissementId) {
+      chargerEtablissementParId(medecin.etablissementId).then(setEtab);
+    }
+  }, [medecin?.etablissementId]);
+
+  const { documents: docsBase, recharger: rechargerDocs } = useDocumentsValidation();
+  const { referentiel, actives, basculer } = useAssurancesMedecin(medecin?.id);
+
+  // Surcharges locales (affichage immédiat) au-dessus du profil chargé
+  const [soinsLocaux, setSoinsLocaux] = useState<string[] | null>(null);
+  const [languesLocales, setLanguesLocales] = useState<string[] | null>(null);
+  const [lienMapsLocal, setLienMapsLocal] = useState<string | null>(null);
   const [geolocEnCours, setGeolocEnCours] = useState(false);
   const [erreurGeoloc, setErreurGeoloc] = useState("");
+  const [erreurDoc, setErreurDoc] = useState("");
+
+  const localisation = lienMapsLocal ?? (medecin as { localisation?: string } | null)?.localisation ?? "";
+  const estCoordonnees = /^-?\d+\.\d+,\s*-?\d+\.\d+$/.test(localisation.trim());
+  const profil = {
+    soins: soinsLocaux ?? medecinConnecte.soinsEtActes,
+    langues: languesLocales ?? medecinConnecte.langues,
+    lienMaps: estCoordonnees ? "" : localisation,
+    positionTexte: estCoordonnees ? localisation : "",
+    documents: docsBase.map((d) => ({
+      nom: d.fichier.split("/").pop() ?? d.type,
+      statut: LIBELLES_STATUT_DOC[d.statut] ?? d.statut,
+    })),
+    assurances: referentiel.filter((a) => actives.has(a.id)).map((a) => a.libelle),
+  };
+  const ASSURANCES_REFERENCEES = referentiel.map((a) => a.libelle);
 
   function recupererPosition() {
     setErreurGeoloc("");
@@ -38,10 +98,11 @@ export default function ProfilMedecin() {
     }
     setGeolocEnCours(true);
     navigator.geolocation.getCurrentPosition(
-      (position) => {
+      async (position) => {
         const lat = position.coords.latitude.toFixed(5);
         const lon = position.coords.longitude.toFixed(5);
-        enregistrerProfilMedecin({ ...profil, positionTexte: `${lat}, ${lon}` });
+        setLienMapsLocal(`${lat}, ${lon}`);
+        await enregistrerProfilMedecin({ lienMaps: `${lat}, ${lon}` });
         setGeolocEnCours(false);
       },
       () => {
@@ -53,25 +114,39 @@ export default function ProfilMedecin() {
     );
   }
 
-  function ajouterFichier(fichiers: FileList | null) {
+  async function ajouterFichier(fichiers: FileList | null) {
     if (!fichiers || fichiers.length === 0) return;
-    enregistrerProfilMedecin({
-      ...profil,
-      documents: [...profil.documents, { nom: fichiers[0].name, statut: "En vérification" }],
-    });
+    setErreurDoc("");
+    const res = await televerserDocumentValidation(fichiers[0]);
+    if (res.erreur) setErreurDoc(res.erreur);
+    else rechargerDocs();
   }
 
-  function ajouterElement(cle: "soins" | "langues", question: string) {
+  async function ajouterElement(cle: "soins" | "langues", question: string) {
     const valeur = window.prompt(question)?.trim();
     if (!valeur) return;
-    enregistrerProfilMedecin({ ...profil, [cle]: [...profil[cle], valeur] });
+    const nouvelle = [...profil[cle], valeur];
+    if (cle === "soins") {
+      setSoinsLocaux(nouvelle);
+      await enregistrerProfilMedecin({ soins: nouvelle });
+    } else {
+      setLanguesLocales(nouvelle);
+      await enregistrerProfilMedecin({ langues: nouvelle });
+    }
   }
 
-  function basculerAssurance(nom: string) {
-    const actives = profil.assurances.includes(nom)
-      ? profil.assurances.filter((a) => a !== nom)
-      : [...profil.assurances, nom];
-    enregistrerProfilMedecin({ ...profil, assurances: actives });
+  async function basculerAssurance(nom: string) {
+    const assurance = referentiel.find((a) => a.libelle === nom);
+    if (!assurance) return;
+    await basculer(assurance.id, !actives.has(assurance.id));
+  }
+
+  async function changerLienMaps(valeur: string) {
+    setLienMapsLocal(valeur);
+  }
+
+  async function sauverLienMaps() {
+    await enregistrerProfilMedecin({ lienMaps: localisation });
   }
 
   const champStatique = "rounded-[11px] border border-line bg-white px-[13px] py-3 text-[13.5px]";
@@ -88,7 +163,7 @@ export default function ProfilMedecin() {
               {medecinConnecte.initiales}
             </span>
             <div>
-              <b>{nomComplet(medecinConnecte)}</b>
+              <b>{`${medecinConnecte.civilite} ${medecinConnecte.prenom} ${medecinConnecte.nom}`}</b>
               <small>{medecinConnecte.specialite}</small>
             </div>
           </div>
@@ -149,8 +224,9 @@ export default function ProfilMedecin() {
               <label>Lien Google Maps (optionnel)</label>
               <input
                 className="v"
-                value={profil.lienMaps}
-                onChange={(e) => enregistrerProfilMedecin({ ...profil, lienMaps: e.target.value })}
+                value={estCoordonnees ? "" : localisation}
+                onChange={(e) => changerLienMaps(e.target.value)}
+                onBlur={sauverLienMaps}
               />
             </div>
             <div className="fldm">
@@ -340,7 +416,7 @@ export default function ProfilMedecin() {
             {medecinConnecte.initiales}
           </span>
           <div>
-            <b className="block text-base font-extrabold">{nomComplet(medecinConnecte)}</b>
+            <b className="block text-base font-extrabold">{`${medecinConnecte.civilite} ${medecinConnecte.prenom} ${medecinConnecte.nom}`}</b>
             <div className="text-[12.5px] text-muted">
               {medecinConnecte.specialite} · Profil vérifié ✔
             </div>
@@ -437,8 +513,9 @@ export default function ProfilMedecin() {
           <div>
             <label className={labelChamp}>Lien Google Maps (optionnel)</label>
             <input
-              value={profil.lienMaps}
-              onChange={(e) => enregistrerProfilMedecin({ ...profil, lienMaps: e.target.value })}
+              value={estCoordonnees ? "" : localisation}
+              onChange={(e) => changerLienMaps(e.target.value)}
+                onBlur={sauverLienMaps}
               className="w-full rounded-[11px] border border-line bg-white px-[13px] py-3 text-[13.5px] outline-none focus:border-teal"
             />
           </div>
@@ -506,8 +583,7 @@ export default function ProfilMedecin() {
           <span aria-hidden>🔒</span>
           <div>
             <b>Privé.</b> Ces documents sont visibles uniquement par l’administrateur lors de la
-            validation. Ils ne sont jamais affichés aux patients. (Mode démonstration : seul le
-            nom du fichier est conservé — le téléversement réel arrivera avec le stockage.)
+            validation. Ils ne sont jamais affichés aux patients. 
           </div>
         </div>
       </div>

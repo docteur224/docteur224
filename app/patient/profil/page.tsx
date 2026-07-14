@@ -3,36 +3,68 @@
 import { useState } from "react";
 import PatientShell from "@/components/patient/PatientShell";
 import AppBarMobile from "@/components/mobile/AppBarMobile";
-import { villes } from "@/lib/mock-data";
 import {
-  enregistrerPatientLocal,
-  initialesPatient,
-  usePatientLocal,
-  type PatientLocal,
-} from "@/lib/mock-patient";
+  enregistrerProfilPatient,
+  useProfilConnecte,
+  useVilles,
+} from "@/lib/patient";
 
 /*
  * Mon profil — reproduit l'écran « pat-profil » de la maquette web :
  * avatar, grille de champs (prénom, nom, téléphone, e-mail, naissance,
- * sexe, ville) et bouton Enregistrer. Persisté en local (mock).
+ * sexe, ville) et bouton Enregistrer. Écrit réellement dans les tables
+ * `utilisateurs` et `patients` (RLS : sa propre ligne uniquement).
  */
+
+interface ChampsProfil {
+  prenom: string;
+  nom: string;
+  telephone: string;
+  email: string;
+  dateNaissance: string;
+  sexe: string;
+  ville: string; // id de la ville
+}
+
+const initialesPatient = (p: { prenom: string; nom: string }) =>
+  `${p.prenom.charAt(0)}${p.nom.charAt(0)}`.toUpperCase() || "?";
+
 export default function MonProfil() {
-  const enregistre = usePatientLocal();
-  // Modifications non enregistrées, superposées au profil stocké.
-  const [brouillon, setBrouillon] = useState<Partial<PatientLocal>>({});
+  const { profil } = useProfilConnecte();
+  const villesRef = useVilles();
+  const villes = villesRef.map((v) => v.id);
+  const nomVille = (id: string) => villesRef.find((v) => v.id === id)?.nom ?? "—";
+  // Modifications non enregistrées, superposées au profil chargé.
+  const [brouillon, setBrouillon] = useState<Partial<ChampsProfil>>({});
   const [message, setMessage] = useState("");
 
-  const patient: PatientLocal = { ...enregistre, ...brouillon };
+  const patient: ChampsProfil = {
+    prenom: profil?.prenom ?? "",
+    nom: profil?.nom ?? "",
+    telephone: profil?.telephone ?? "",
+    email: profil?.email ?? "",
+    dateNaissance: profil?.dateNaissance ?? "",
+    sexe: profil?.genre === "M" ? "Masculin" : "Féminin",
+    ville: profil?.villeId ?? "",
+    ...brouillon,
+  };
 
-  function setPatient(valeurs: PatientLocal) {
+  function setPatient(valeurs: ChampsProfil) {
     setBrouillon({ ...brouillon, ...valeurs });
     setMessage("");
   }
 
-  function enregistrer() {
-    enregistrerPatientLocal(patient);
-    setBrouillon({});
-    setMessage("✓ Profil enregistré");
+  async function enregistrer() {
+    const res = await enregistrerProfilPatient({
+      nom: patient.nom,
+      prenom: patient.prenom,
+      telephone: patient.telephone,
+      dateNaissance: patient.dateNaissance,
+      genre: patient.sexe,
+      villeId: patient.ville || null,
+    });
+    setMessage(res.erreur ? `⚠️ ${res.erreur}` : "✓ Profil enregistré");
+    if (!res.erreur) setBrouillon({});
   }
 
   const classeChamp =
@@ -106,7 +138,7 @@ export default function MonProfil() {
               className="v"
               value={patient.sexe}
               onChange={(e) =>
-                setPatient({ ...patient, sexe: e.target.value as PatientLocal["sexe"] })
+                setPatient({ ...patient, sexe: e.target.value })
               }
             >
               <option>Féminin</option>
@@ -121,7 +153,7 @@ export default function MonProfil() {
               onChange={(e) => setPatient({ ...patient, ville: e.target.value })}
             >
               {villes.map((ville) => (
-                <option key={ville}>{ville}</option>
+                <option key={ville} value={ville}>{nomVille(ville)}</option>
               ))}
             </select>
           </div>
@@ -230,7 +262,7 @@ export default function MonProfil() {
               className={classeChamp}
               value={patient.sexe}
               onChange={(e) =>
-                setPatient({ ...patient, sexe: e.target.value as PatientLocal["sexe"] })
+                setPatient({ ...patient, sexe: e.target.value })
               }
             >
               <option>Féminin</option>
@@ -245,7 +277,7 @@ export default function MonProfil() {
               onChange={(e) => setPatient({ ...patient, ville: e.target.value })}
             >
               {villes.map((ville) => (
-                <option key={ville}>{ville}</option>
+                <option key={ville} value={ville}>{nomVille(ville)}</option>
               ))}
             </select>
           </div>

@@ -1,39 +1,41 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import MedecinShell from "@/components/medecin/MedecinShell";
 import { capitaliser, formatDateLongue, versISO } from "@/lib/dates";
 import { formatNote } from "@/lib/format";
-import { medecinConnecte } from "@/lib/mock-data";
-import { creneauxJourMedecin, useExceptionsLocales } from "@/lib/mock-disponibilites";
-import { useRendezVousLocaux } from "@/lib/mock-rdv";
+import { majStatutRdv, useAgenda, useContextePro } from "@/lib/pro";
 
 /*
  * Tableau de bord médecin — reproduit l'écran « medecin » de la maquette web :
  * salutation, 4 cartes de statistiques, demandes à confirmer, agenda du jour.
- * L'agenda du jour vient du modèle de disponibilités partagé (mocks).
+ * Les demandes sont les vrais rendez-vous « en_attente » ; confirmer/refuser
+ * écrit le nouveau statut dans la table `rendez_vous`.
  */
-
-/** Demandes de confirmation de démonstration (mêmes lignes que la maquette). */
-const DEMANDES_DEMO = [
-  { id: "d1", heure: "14:30", patient: "Mariama Sow", detail: "Vaccination · enfant 2 ans" },
-  { id: "d2", heure: "15:30", patient: "Sékou Konaté", detail: "Suivi · fièvre" },
-  { id: "d3", heure: "16:00", patient: "Hadja Camara", detail: "Première visite" },
-];
-
 export default function TableauDeBordMedecin() {
-  const rdvs = useRendezVousLocaux();
-  const exceptions = useExceptionsLocales();
-  const [demandes, setDemandes] = useState(DEMANDES_DEMO);
+  const { medecin, utilisateur } = useContextePro();
+  const { creneauxJour, rdvs, recharger } = useAgenda(medecin?.id);
+
+  const medecinConnecte = medecin ?? {
+    civilite: "Dr",
+    nom: utilisateur?.nom ?? "",
+    note: 0,
+  };
 
   const aujourdhui = versISO(new Date());
-  const agendaJour = creneauxJourMedecin(medecinConnecte.id, aujourdhui, exceptions, rdvs).filter(
-    (c) => c.statut === "reserve"
-  );
+  const agendaJour = creneauxJour(aujourdhui).filter((c) => c.statut === "reserve");
+  const demandes = rdvs
+    .filter((r) => r.statut === "en_attente" && r.date >= aujourdhui)
+    .map((r) => ({
+      id: r.id,
+      heure: r.heure,
+      patient: r.beneficiaire,
+      detail: r.motif || "Consultation",
+    }));
 
-  function traiterDemande(id: string) {
-    setDemandes(demandes.filter((d) => d.id !== id));
+  async function traiterDemande(id: string, decision: "confirme" | "annule") {
+    await majStatutRdv(id, decision);
+    recharger();
   }
 
   return (
@@ -80,7 +82,7 @@ export default function TableauDeBordMedecin() {
                   type="button"
                   className="no"
                   aria-label={`Refuser la demande de ${demande.patient}`}
-                  onClick={() => traiterDemande(demande.id)}
+                  onClick={() => traiterDemande(demande.id, "annule")}
                 >
                   ✕
                 </button>
@@ -88,7 +90,7 @@ export default function TableauDeBordMedecin() {
                   type="button"
                   className="yes"
                   aria-label={`Confirmer la demande de ${demande.patient}`}
-                  onClick={() => traiterDemande(demande.id)}
+                  onClick={() => traiterDemande(demande.id, "confirme")}
                 >
                   ✓
                 </button>
@@ -208,7 +210,7 @@ export default function TableauDeBordMedecin() {
             <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => traiterDemande(demande.id)}
+                onClick={() => traiterDemande(demande.id, "annule")}
                 aria-label={`Refuser la demande de ${demande.patient}`}
                 className="grid h-9 w-9 place-items-center rounded-[10px] bg-red-soft text-[15px] text-red"
               >
@@ -216,7 +218,7 @@ export default function TableauDeBordMedecin() {
               </button>
               <button
                 type="button"
-                onClick={() => traiterDemande(demande.id)}
+                onClick={() => traiterDemande(demande.id, "confirme")}
                 aria-label={`Confirmer la demande de ${demande.patient}`}
                 className="grid h-9 w-9 place-items-center rounded-[10px] bg-green-soft text-[15px] text-green"
               >

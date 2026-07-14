@@ -3,12 +3,14 @@
 import Link from "next/link";
 import EtablissementShell from "@/components/etablissement/EtablissementShell";
 import Interrupteur from "@/components/patient/Interrupteur";
-import {
-  ETABLISSEMENT_CONNECTE,
-  enregistrerParametresEtablissement,
-  useParametresEtablissement,
-  type ParametresEtablissement,
-} from "@/lib/mock-etablissement";
+import { enregistrerParametresEtablissement, useEtablissementConnecte } from "@/lib/etablissement";
+
+type ParametresEtablissement = {
+  affichagePublic: boolean;
+  notifEmail: boolean;
+  rappelsSms: boolean;
+  premiumVedette: boolean;
+};
 
 /*
  * Compte & paramètres — reproduit l'écran « etab-compte » de la maquette
@@ -44,11 +46,15 @@ const PARAMETRES: {
 ];
 
 export default function CompteEtablissement() {
-  const parametres = useParametresEtablissement();
+  const { etablissement, recharger } = useEtablissementConnecte();
+  const ETABLISSEMENT_CONNECTE = etablissement ?? { id: "", nom: "…", nomCourt: "…", type: "", description: "", adresse: "", telephone: "", email: "", siteWeb: "", gradient: "linear-gradient(135deg,#16A085,#0E6655)", statut: "", parametres: {}, gestionnaire: { nom: "", role: "", email: "", telephone: "" } };
+  const parametres = { affichagePublic: true, notifEmail: true, rappelsSms: true, premiumVedette: false, ...ETABLISSEMENT_CONNECTE.parametres };
   const gestionnaire = ETABLISSEMENT_CONNECTE.gestionnaire;
 
-  function basculer(cle: keyof ParametresEtablissement, valeur: boolean) {
-    enregistrerParametresEtablissement({ ...parametres, [cle]: valeur });
+  async function basculer(cle: keyof ParametresEtablissement, valeur: boolean) {
+    if (!etablissement) return;
+    await enregistrerParametresEtablissement(etablissement.id, { ...parametres, [cle]: valeur });
+    recharger();
   }
 
   return (

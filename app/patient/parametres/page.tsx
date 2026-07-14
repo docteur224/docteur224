@@ -3,23 +3,15 @@
 import PatientShell from "@/components/patient/PatientShell";
 import Interrupteur from "@/components/patient/Interrupteur";
 import AppBarMobile from "@/components/mobile/AppBarMobile";
-import {
-  enregistrerParametresLocaux,
-  useParametresLocaux,
-  type ParametresLocaux,
-} from "@/lib/mock-parametres";
+import { useParametresPatient } from "@/lib/patient";
 
 /*
  * Paramètres — reproduit l'écran « pat-params » de la maquette web :
  * notifications, langue et sécurité. Les interrupteurs sont persistés
- * en local (mock des futurs réglages en base).
+ * dans la table `patients` (colonnes pref_*).
  */
 export default function Parametres() {
-  const parametres = useParametresLocaux();
-
-  function basculer(cle: keyof ParametresLocaux, valeur: boolean) {
-    enregistrerParametresLocaux({ ...parametres, [cle]: valeur });
-  }
+  const { parametres, basculer } = useParametresPatient();
 
   return (
     <PatientShell>

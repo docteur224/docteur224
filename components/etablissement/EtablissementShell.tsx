@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
-import { ETABLISSEMENT_CONNECTE } from "@/lib/mock-etablissement";
+import { useEtablissementConnecte } from "@/lib/etablissement";
 
 /**
  * Coquille de l'espace établissement — reproduit la structure .dash / .side /
@@ -22,6 +22,8 @@ const LIENS = [
 
 export default function EtablissementShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { etablissement } = useEtablissementConnecte();
+  const ETABLISSEMENT_CONNECTE = etablissement ?? { id: "", nom: "…", nomCourt: "…", type: "", description: "", adresse: "", telephone: "", email: "", siteWeb: "", gradient: "linear-gradient(135deg,#16A085,#0E6655)", statut: "", parametres: {}, gestionnaire: { nom: "", role: "", email: "", telephone: "" } };
 
   return (
     <div className="grid min-h-screen bg-bg lg:grid-cols-[236px_1fr]">

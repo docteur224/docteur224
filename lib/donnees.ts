@@ -1,0 +1,318 @@
+import { createClient } from "@supabase/supabase-js";
+import type { Etablissement, Medecin } from "@/types";
+import { versISO } from "@/lib/dates";
+
+/*
+ * Couche de données publique (remplace lib/mock-data.ts) : lit les vraies
+ * tables Supabase (clé anon — RLS n'expose que les profils validés) et les
+ * transpose dans les types UI existants pour que les écrans ne changent pas.
+ * Utilisable côté serveur comme côté client (aucune session requise).
+ */
+
+function clientPublic() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    { auth: { persistSession: false, autoRefreshToken: false } }
+  );
+}
+
+/** Dégradés d'avatar des maquettes, attribués de façon stable par empreinte. */
+const GRADIENTS = [
+  "linear-gradient(135deg,#E08E45,#C0392B)",
+  "linear-gradient(135deg,#2E9CCA,#15506B)",
+  "linear-gradient(135deg,#16A085,#0E6655)",
+  "linear-gradient(135deg,#6C5CE7,#341F97)",
+  "linear-gradient(135deg,#1E7B45,#15506B)",
+  "linear-gradient(135deg,#7A5BB5,#15506B)",
+];
+
+function empreinte(texte: string): number {
+  let h = 0;
+  for (let i = 0; i < texte.length; i++) h = (Math.imul(h, 31) + texte.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
+
+const gradientPour = (id: string) => GRADIENTS[empreinte(id) % GRADIENTS.length];
+
+const JOURS_NOMS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+
+interface LigneMedecin {
+  id: string;
+  civilite: string;
+  tarif_consultation: number | null;
+  presentation: string | null;
+  soins_et_actes: string[];
+  diplomes: { titre: string; lieu: string }[];
+  parcours: { lieu: string; duree: string }[];
+  langues: string[];
+  annees_experience: number | null;
+  telephone_secretariat: string | null;
+  note_moyenne: number;
+  nb_avis: number;
+  etablissement_id: string | null;
+  quartier: string | null;
+  utilisateurs: { nom: string | null; prenom: string | null } | null;
+  specialites: { nom: string } | null;
+  villes: { nom: string } | null;
+  medecin_assurances: { assurances: { libelle: string } | null }[];
+  horaires_types: { jour_semaine: number; heure_debut: string; heure_fin: string }[];
+}
+
+const SELECTION_MEDECIN = `
+  id, civilite, tarif_consultation, presentation, soins_et_actes, diplomes,
+  parcours, langues, annees_experience, telephone_secretariat, note_moyenne,
+  nb_avis, etablissement_id, quartier,
+  utilisateurs ( nom, prenom ),
+  specialites ( nom ),
+  villes ( nom ),
+  medecin_assurances ( assurances ( libelle ) ),
+  horaires_types ( jour_semaine, heure_debut, heure_fin )
+`;
+
+/** Médecin UI enrichi de ses plages horaires (pour calculer les créneaux). */
+export type MedecinAvecPlages = Medecin & {
+  plages: { jour_semaine: number; heure_debut: string; heure_fin: string }[];
+};
+
+function versMedecinUI(ligne: LigneMedecin): MedecinAvecPlages {
+  const prenom = ligne.utilisateurs?.prenom ?? "";
+  const nom = ligne.utilisateurs?.nom ?? "";
+  const joursOuverts = new Set(ligne.horaires_types.map((h) => h.jour_semaine));
+  const joursFermes = [0, 1, 2, 3, 4, 5, 6].filter((j) => !joursOuverts.has(j));
+
+  // Résumé d'horaires pour la fiche (ex. « Lundi — Vendredi », « 08:00 à 18:00 »)
+  const tries = [...joursOuverts].sort();
+  const jours =
+    tries.length === 0
+      ? "Sur rendez-vous"
+      : `${JOURS_NOMS[tries[0]]} — ${JOURS_NOMS[tries[tries.length - 1]]}`;
+  const debuts = ligne.horaires_types.map((h) => h.heure_debut.slice(0, 5)).sort();
+  const fins = ligne.horaires_types.map((h) => h.heure_fin.slice(0, 5)).sort();
+  const detail =
+    debuts.length > 0 ? `${debuts[0]} à ${fins[fins.length - 1]}` : "Horaires à confirmer";
+
+  const aujourdHui = new Date().getDay();
+  const ouvertAujourdHui = joursOuverts.has(aujourdHui);
+  let prochainJour = aujourdHui;
+  for (let i = 1; i <= 7 && !joursOuverts.has(prochainJour); i++) prochainJour = (aujourdHui + i) % 7;
+
+  return {
+    id: ligne.id,
+    civilite: (ligne.civilite === "Pr" ? "Pr" : "Dr") as Medecin["civilite"],
+    prenom,
+    nom,
+    initiales: `${prenom.charAt(0)}${nom.charAt(0)}`.toUpperCase() || "DR",
+    gradient: gradientPour(ligne.id),
+    specialite: ligne.specialites?.nom ?? "Médecine générale",
+    etablissementId: ligne.etablissement_id ?? "",
+    ville: ligne.villes?.nom ?? "",
+    anneesExperience: ligne.annees_experience ?? 0,
+    tarifConsultation: ligne.tarif_consultation ?? 0,
+    note: Number(ligne.note_moyenne) || 0,
+    nbAvis: ligne.nb_avis,
+    disponibilite: ouvertAujourdHui
+      ? { type: "aujourdhui", label: "Dispo aujourd'hui" }
+      : { type: "bientot", label: joursOuverts.size ? JOURS_NOMS[prochainJour] : "Sur demande" },
+    telephoneSecretariat: ligne.telephone_secretariat ?? "",
+    aPropos: ligne.presentation ?? "",
+    soinsEtActes: ligne.soins_et_actes ?? [],
+    diplomes: ligne.diplomes ?? [],
+    parcours: ligne.parcours ?? [],
+    langues: ligne.langues ?? [],
+    assurances: ligne.medecin_assurances.map((a) => a.assurances?.libelle ?? "").filter(Boolean),
+    horaires: { jours, detail },
+    joursFermes,
+    plages: ligne.horaires_types ?? [],
+  };
+}
+
+/** Alias des chips d'accueil vers les libellés du référentiel. */
+const ALIAS_SPECIALITES: Record<string, string> = {
+  généraliste: "médecine générale",
+  generaliste: "médecine générale",
+  "ophtalmo.": "ophtalmologie",
+  ophtalmo: "ophtalmologie",
+  cardio: "cardiologie",
+  dentiste: "dentaire",
+};
+
+const normaliser = (t: string) => t.trim().toLowerCase();
+
+export async function chargerMedecins(filtres?: {
+  specialite?: string;
+  ville?: string;
+  q?: string;
+}): Promise<MedecinAvecPlages[]> {
+  const { data, error } = await clientPublic()
+    .from("medecins")
+    .select(SELECTION_MEDECIN)
+    .eq("statut", "valide");
+  if (error) throw new Error(`chargerMedecins: ${error.message}`);
+  let liste = ((data ?? []) as unknown as LigneMedecin[]).map(versMedecinUI);
+
+  if (filtres?.specialite) {
+    const cible = ALIAS_SPECIALITES[normaliser(filtres.specialite)] ?? normaliser(filtres.specialite);
+    liste = liste.filter((m) => normaliser(m.specialite).includes(cible));
+  }
+  if (filtres?.ville) {
+    liste = liste.filter((m) => normaliser(m.ville).includes(normaliser(filtres.ville!)));
+  }
+  if (filtres?.q) {
+    const q = normaliser(filtres.q);
+    liste = liste.filter((m) =>
+      normaliser(`${m.civilite} ${m.prenom} ${m.nom} ${m.specialite}`).includes(q)
+    );
+  }
+  return liste.sort((a, b) => b.note - a.note);
+}
+
+export async function chargerMedecinParId(id: string): Promise<MedecinAvecPlages | undefined> {
+  const { data, error } = await clientPublic()
+    .from("medecins")
+    .select(SELECTION_MEDECIN)
+    .eq("id", id)
+    .maybeSingle();
+  if (error || !data) return undefined;
+  return versMedecinUI(data as unknown as LigneMedecin);
+}
+
+interface LigneEtablissement {
+  id: string;
+  nom: string;
+  type: string;
+  quartier: string | null;
+  villes: { nom: string } | null;
+  medecins: { id: string }[];
+}
+
+function versEtablissementUI(ligne: LigneEtablissement): Etablissement {
+  return {
+    id: ligne.id,
+    nom: ligne.nom,
+    type: ligne.type,
+    quartier: ligne.quartier ?? "",
+    ville: ligne.villes?.nom ?? "",
+    note: 4.5, // pas encore d'avis d'établissement dans le modèle
+    nbMedecins: ligne.medecins?.length ?? 0,
+    gradient: gradientPour(ligne.id),
+  };
+}
+
+export async function chargerEtablissements(): Promise<Etablissement[]> {
+  const { data, error } = await clientPublic()
+    .from("etablissements")
+    .select("id, nom, type, quartier, villes ( nom ), medecins ( id )")
+    .eq("statut", "valide");
+  if (error) throw new Error(`chargerEtablissements: ${error.message}`);
+  return ((data ?? []) as unknown as LigneEtablissement[]).map(versEtablissementUI);
+}
+
+export async function chargerEtablissementParId(id: string): Promise<Etablissement | undefined> {
+  if (!id) return undefined;
+  const { data } = await clientPublic()
+    .from("etablissements")
+    .select("id, nom, type, quartier, villes ( nom ), medecins ( id )")
+    .eq("id", id)
+    .maybeSingle();
+  return data ? versEtablissementUI(data as unknown as LigneEtablissement) : undefined;
+}
+
+export async function chargerSpecialites(): Promise<{ id: string; nom: string; emoji: string }[]> {
+  const { data } = await clientPublic().from("specialites").select("id, nom, emoji").order("nom");
+  return (data ?? []).map((s) => ({ ...s, emoji: s.emoji ?? "🩺" }));
+}
+
+export async function chargerVilles(): Promise<string[]> {
+  const { data } = await clientPublic().from("villes").select("nom").order("nom");
+  return (data ?? []).map((v) => v.nom);
+}
+
+/**
+ * Créneaux indisponibles (réservés ou fermés) d'un médecin sur une période,
+ * via la fonction SQL `heures_indisponibles` (aucune donnée personnelle).
+ * Renvoie une Map « AAAA-MM-JJ|HH:MM » → 'reserve' | 'ferme'.
+ */
+export type EtatCreneau = "ouvert" | "ferme" | "reserve";
+
+export async function chargerIndisponibilites(
+  medecinId: string,
+  debutISO?: string,
+  finISO?: string
+): Promise<Map<string, EtatCreneau>> {
+  const debut = debutISO ?? versISO(new Date());
+  const fin = finISO ?? versISO(new Date(Date.now() + 30 * 86400000));
+  const { data, error } = await clientPublic().rpc("heures_indisponibles", {
+    p_medecin_id: medecinId,
+    p_debut: debut,
+    p_fin: fin,
+  });
+  if (error) throw new Error(`chargerIndisponibilites: ${error.message}`);
+  const map = new Map<string, EtatCreneau>();
+  for (const ligne of data ?? []) {
+    const cle = `${ligne.jour}|${ligne.heure.slice(0, 5)}`;
+    // Un RDV réservé prime toujours sur une exception d'ouverture/fermeture.
+    if (map.get(cle) === "reserve") continue;
+    map.set(cle, ligne.etat as EtatCreneau);
+  }
+  return map;
+}
+
+/** Créneaux de 30 minutes, de 08:00 à 20:00 (spec C.4.2). */
+export const HEURES_JOURNEE: string[] = (() => {
+  const heures: string[] = [];
+  for (let h = 8; h <= 20; h++) {
+    heures.push(`${String(h).padStart(2, "0")}:00`);
+    if (h < 20) heures.push(`${String(h).padStart(2, "0")}:30`);
+  }
+  return heures;
+})();
+
+/**
+ * Statut réel d'un créneau : l'exception (ou la réservation) prime,
+ * sinon l'horaire-type du jour décide (spec : exceptions > horaire-type).
+ */
+export function statutCreneau(
+  horairesTypes: { jour_semaine: number; heure_debut: string; heure_fin: string }[],
+  etats: Map<string, EtatCreneau>,
+  dateISO: string,
+  heure: string
+): EtatCreneau {
+  const exception = etats.get(`${dateISO}|${heure}`);
+  if (exception) return exception;
+  const jour = new Date(`${dateISO}T00:00:00`).getDay();
+  const dansPlage = horairesTypes.some(
+    (h) =>
+      h.jour_semaine === jour &&
+      heure >= h.heure_debut.slice(0, 5) &&
+      heure < h.heure_fin.slice(0, 5)
+  );
+  return dansPlage ? "ouvert" : "ferme";
+}
+
+/** Premiers créneaux libres d'un jour (mini-créneaux des cartes de résultats). */
+export function premiersCreneauxOuverts(
+  horairesTypes: { jour_semaine: number; heure_debut: string; heure_fin: string }[],
+  etats: Map<string, EtatCreneau>,
+  dateISO: string,
+  nb = 4
+): string[] {
+  return HEURES_JOURNEE.filter(
+    (h) => statutCreneau(horairesTypes, etats, dateISO, h) === "ouvert"
+  ).slice(0, nb);
+}
+
+/** Plages horaires-types d'un médecin (pour construire la grille de créneaux). */
+export async function chargerHorairesTypes(
+  medecinId: string
+): Promise<{ jour_semaine: number; heure_debut: string; heure_fin: string }[]> {
+  const { data } = await clientPublic()
+    .from("horaires_types")
+    .select("jour_semaine, heure_debut, heure_fin")
+    .eq("medecin_id", medecinId);
+  return data ?? [];
+}
+
+export function nomComplet(medecin: Medecin): string {
+  return `${medecin.civilite} ${medecin.prenom} ${medecin.nom}`;
+}

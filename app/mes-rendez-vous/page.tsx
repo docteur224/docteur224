@@ -7,33 +7,35 @@ import CarteRdv from "@/components/patient/CarteRdv";
 import AppBarMobile from "@/components/mobile/AppBarMobile";
 import { versISO } from "@/lib/dates";
 import {
-  annulerRendezVousLocal,
-  useRendezVousLocaux,
-  type RendezVousLocal,
-} from "@/lib/mock-rdv";
+  annulerRendezVous,
+  useMesRendezVous,
+  type RendezVousPatient,
+} from "@/lib/patient";
 
 /*
  * Mes rendez-vous — reproduit l'écran « mesrdv » de la maquette web :
  * onglets « À venir / Passés », cartes de rendez-vous avec Modifier / Annuler.
- * Les données viennent du stockage local (mock de la table rendez_vous).
+ * Lecture et annulation réelles dans la table `rendez_vous` (RLS : le patient
+ * ne voit que ses rendez-vous et ceux de ses proches).
  */
 export default function MesRendezVous() {
-  const rdvs = useRendezVousLocaux();
+  const { rdvs, recharger } = useMesRendezVous();
   const [onglet, setOnglet] = useState<"avenir" | "passes">("avenir");
 
   const aujourdhui = versISO(new Date());
-  const cle = (r: RendezVousLocal) => `${r.date} ${r.heure}`;
+  const cle = (r: RendezVousPatient) => `${r.date} ${r.heure}`;
   const aVenir = rdvs
-    .filter((r) => r.statut === "confirme" && r.date >= aujourdhui)
+    .filter((r) => r.statut !== "annule" && r.date >= aujourdhui)
     .sort((a, b) => cle(a).localeCompare(cle(b)));
   const passes = rdvs
     .filter((r) => r.statut === "annule" || r.date < aujourdhui)
     .sort((a, b) => cle(b).localeCompare(cle(a)));
   const liste = onglet === "avenir" ? aVenir : passes;
 
-  function annuler(id: string) {
+  async function annuler(id: string) {
     if (window.confirm("Voulez-vous vraiment annuler ce rendez-vous ?")) {
-      annulerRendezVousLocal(id);
+      await annulerRendezVous(id);
+      recharger();
     }
   }
 

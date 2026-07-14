@@ -5,7 +5,7 @@ import AppBarMobile from "@/components/mobile/AppBarMobile";
 import FormulaireReservation from "@/components/site/FormulaireReservation";
 import { capitaliser, formatDateLongue } from "@/lib/dates";
 import { formatGNF } from "@/lib/format";
-import { getEtablissement, getMedecin, nomComplet } from "@/lib/mock-data";
+import { chargerEtablissementParId, chargerMedecinParId, nomComplet } from "@/lib/donnees";
 
 export const metadata: Metadata = {
   title: "Confirmer le rendez-vous | Docteur 224",
@@ -27,11 +27,11 @@ export default async function Reservation({
   const date = typeof sp.date === "string" ? sp.date : "";
   const heure = typeof sp.heure === "string" ? sp.heure : "";
 
-  const medecin = getMedecin(medecinId);
+  const medecin = await chargerMedecinParId(medecinId);
   if (!medecin || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(heure)) {
     redirect("/");
   }
-  const etab = getEtablissement(medecin.etablissementId);
+  const etab = await chargerEtablissementParId(medecin.etablissementId);
 
   return (
     <div className="min-h-screen bg-bg">

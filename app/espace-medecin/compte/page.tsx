@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import MedecinShell from "@/components/medecin/MedecinShell";
-import { medecinConnecte } from "@/lib/mock-data";
+import { useContextePro } from "@/lib/pro";
 
 /*
  * Mon compte (hub mobile) — reproduit l'écran « m-med-compte » de la maquette
@@ -26,6 +26,8 @@ const ENTREES = [
 ];
 
 export default function CompteMedecin() {
+  const { medecin } = useContextePro();
+  const medecinConnecte = medecin ?? { gradient: "linear-gradient(135deg,#2E9CCA,#15506B)", initiales: "…", civilite: "Dr", prenom: "", nom: "", note: 0, specialite: "" };
   return (
     <MedecinShell>
       {/* ===== Version mobile ===== */}

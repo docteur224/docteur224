@@ -3,13 +3,12 @@
 import { useState } from "react";
 import AdminShell from "@/components/admin/AdminShell";
 import {
-  approuverDossier,
+  deciderDossier,
   demanderComplement,
-  rejeterDossier,
   useEtablissementsEnAttente,
   useMedecinsEnAttente,
   type DossierValidation,
-} from "@/lib/mock-admin";
+} from "@/lib/admin";
 
 /*
  * Validations — reproduit l'écran « admin-validation » de la maquette web :
@@ -34,7 +33,7 @@ const MOTIFS = [
 ];
 
 /** Ligne mobile de la file (mêmes actions que la version web). */
-function LigneDossierMobile({ dossier }: { dossier: DossierValidation }) {
+function LigneDossierMobile({ dossier, decider }: { dossier: DossierValidation; decider: (d: DossierValidation, decision: "valide" | "refuse") => void }) {
   return (
     <div className="asstrowm">
       <span
@@ -49,10 +48,10 @@ function LigneDossierMobile({ dossier }: { dossier: DossierValidation }) {
         <small>{dossier.detail}</small>
       </span>
       <span style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-        <button type="button" className="btnm" onClick={() => approuverDossier(dossier)}>
+        <button type="button" className="btnm" onClick={() => decider(dossier, "valide")}>
           Approuver
         </button>
-        <button type="button" className="btnm dg" onClick={() => rejeterDossier(dossier)}>
+        <button type="button" className="btnm dg" onClick={() => decider(dossier, "refuse")}>
           Rejeter
         </button>
       </span>
@@ -60,7 +59,7 @@ function LigneDossierMobile({ dossier }: { dossier: DossierValidation }) {
   );
 }
 
-function LigneDossier({ dossier }: { dossier: DossierValidation }) {
+function LigneDossier({ dossier, decider }: { dossier: DossierValidation; decider: (d: DossierValidation, decision: "valide" | "refuse") => void }) {
   return (
     <div className="flex flex-wrap items-center gap-[13px] border-b border-line py-[14px] last:border-b-0">
       <span
@@ -86,14 +85,14 @@ function LigneDossier({ dossier }: { dossier: DossierValidation }) {
       </div>
       <button
         type="button"
-        onClick={() => approuverDossier(dossier)}
+        onClick={() => decider(dossier, "valide")}
         className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
       >
         Approuver
       </button>
       <button
         type="button"
-        onClick={() => rejeterDossier(dossier)}
+        onClick={() => decider(dossier, "refuse")}
         className="rounded-[9px] border-[1.5px] border-[#F3CDC8] bg-white px-[14px] py-2 text-[12.5px] font-bold text-red transition-colors hover:bg-[#FBE9E7]"
       >
         Rejeter
@@ -103,9 +102,16 @@ function LigneDossier({ dossier }: { dossier: DossierValidation }) {
 }
 
 export default function ValidationsAdmin() {
-  const medecins = useMedecinsEnAttente();
-  const etablissements = useEtablissementsEnAttente();
+  const { dossiers: medecins, recharger: rechargerMedecins } = useMedecinsEnAttente();
+  const { dossiers: etablissements, recharger: rechargerEtabs } = useEtablissementsEnAttente();
   const [motif, setMotif] = useState(MOTIFS[0]);
+
+  function decider(d: DossierValidation, decision: "valide" | "refuse", motifRejet?: string) {
+    deciderDossier(d, decision, motifRejet).then(() => {
+      rechargerMedecins();
+      rechargerEtabs();
+    });
+  }
 
   // Le dossier « en cours d'examen » est le premier médecin de la file.
   const dossierEnCours = medecins[0];
@@ -145,7 +151,7 @@ export default function ValidationsAdmin() {
                 </select>
               </div>
               <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginTop: 8 }}>
-                <button type="button" className="btnm" onClick={() => approuverDossier(dossierEnCours)}>
+                <button type="button" className="btnm" onClick={() => decider(dossierEnCours, "valide")}>
                   ✔ Approuver
                 </button>
                 <button type="button" className="btnm gh" onClick={() => demanderComplement(dossierEnCours)}>
@@ -155,7 +161,7 @@ export default function ValidationsAdmin() {
                   type="button"
                   className="btnm dg"
                   onClick={() =>
-                    rejeterDossier(dossierEnCours, motif === MOTIFS[0] ? undefined : motif)
+                    decider(dossierEnCours, "refuse", motif === MOTIFS[0] ? undefined : motif)
                   }
                 >
                   ✕ Rejeter
@@ -181,7 +187,7 @@ export default function ValidationsAdmin() {
               </p>
             )}
             {medecins.map((dossier) => (
-              <LigneDossierMobile key={dossier.id} dossier={dossier} />
+              <LigneDossierMobile key={dossier.id} dossier={dossier} decider={decider} />
             ))}
           </div>
           <div className="card2">
@@ -192,7 +198,7 @@ export default function ValidationsAdmin() {
               </p>
             )}
             {etablissements.map((dossier) => (
-              <LigneDossierMobile key={dossier.id} dossier={dossier} />
+              <LigneDossierMobile key={dossier.id} dossier={dossier} decider={decider} />
             ))}
           </div>
         </div>
@@ -257,7 +263,7 @@ export default function ValidationsAdmin() {
           <div className="mt-[14px] flex flex-wrap gap-[9px]">
             <button
               type="button"
-              onClick={() => approuverDossier(dossierEnCours)}
+              onClick={() => decider(dossierEnCours, "valide")}
               className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
             >
               ✔ Approuver
@@ -272,7 +278,7 @@ export default function ValidationsAdmin() {
             <button
               type="button"
               onClick={() =>
-                rejeterDossier(dossierEnCours, motif === MOTIFS[0] ? undefined : motif)
+                decider(dossierEnCours, "refuse", motif === MOTIFS[0] ? undefined : motif)
               }
               className="rounded-[9px] border-[1.5px] border-[#F3CDC8] bg-white px-[14px] py-2 text-[12.5px] font-bold text-red transition-colors hover:bg-[#FBE9E7]"
             >
@@ -301,7 +307,7 @@ export default function ValidationsAdmin() {
           <p className="py-3 text-[12.5px] text-muted">Aucun médecin en attente.</p>
         )}
         {medecins.map((dossier) => (
-          <LigneDossier key={dossier.id} dossier={dossier} />
+          <LigneDossier key={dossier.id} dossier={dossier} decider={decider} />
         ))}
       </div>
 
@@ -313,7 +319,7 @@ export default function ValidationsAdmin() {
           <p className="py-3 text-[12.5px] text-muted">Aucun établissement en attente.</p>
         )}
         {etablissements.map((dossier) => (
-          <LigneDossier key={dossier.id} dossier={dossier} />
+          <LigneDossier key={dossier.id} dossier={dossier} decider={decider} />
         ))}
       </div>
       </div>

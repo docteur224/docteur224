@@ -4,24 +4,24 @@ import Link from "next/link";
 import PatientShell from "@/components/patient/PatientShell";
 import CarteRdv from "@/components/patient/CarteRdv";
 import { versISO } from "@/lib/dates";
-import { usePatientLocal } from "@/lib/mock-patient";
-import { useRendezVousLocaux } from "@/lib/mock-rdv";
+import { useMesRendezVous, useProfilConnecte } from "@/lib/patient";
 
 /*
  * Tableau de bord patient — reproduit l'écran « pat-dash » de la maquette web :
  * salutation, 3 cartes de statistiques, prochain rendez-vous, raccourcis.
- * Les chiffres sont calculés à partir des rendez-vous stockés en local (mocks).
+ * Les chiffres sont calculés à partir des rendez-vous réels (Supabase).
  */
 export default function TableauDeBordPatient() {
-  const patient = usePatientLocal();
-  const rdvs = useRendezVousLocaux();
+  const { profil } = useProfilConnecte();
+  const { rdvs } = useMesRendezVous();
+  const patient = { prenom: profil?.prenom ?? "" };
 
   const aujourdhui = versISO(new Date());
   const aVenir = rdvs
-    .filter((r) => r.statut === "confirme" && r.date >= aujourdhui)
+    .filter((r) => r.statut !== "annule" && r.date >= aujourdhui)
     .sort((a, b) => `${a.date} ${a.heure}`.localeCompare(`${b.date} ${b.heure}`));
-  const passes = rdvs.filter((r) => r.statut === "confirme" && r.date < aujourdhui);
-  const medecinsConsultes = new Set(rdvs.filter((r) => r.statut === "confirme").map((r) => r.medecinId)).size;
+  const passes = rdvs.filter((r) => r.statut !== "annule" && r.date < aujourdhui);
+  const medecinsConsultes = new Set(rdvs.filter((r) => r.statut !== "annule").map((r) => r.medecinId)).size;
   const prochain = aVenir[0];
 
   return (

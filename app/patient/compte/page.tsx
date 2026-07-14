@@ -2,7 +2,10 @@
 
 import Link from "next/link";
 import PatientShell from "@/components/patient/PatientShell";
-import { initialesPatient, usePatientLocal } from "@/lib/mock-patient";
+import { useProfilConnecte } from "@/lib/patient";
+
+const initialesPatient = (p: { prenom: string; nom: string }) =>
+  `${p.prenom.charAt(0)}${p.nom.charAt(0)}`.toUpperCase() || "?";
 
 /*
  * Mon compte (hub mobile) — reproduit l'écran « m-pat-compte » de la maquette
@@ -23,7 +26,8 @@ const ENTREES = [
 ];
 
 export default function ComptePatient() {
-  const patient = usePatientLocal();
+  const { profil } = useProfilConnecte();
+  const patient = { prenom: profil?.prenom ?? "", nom: profil?.nom ?? "", sexe: profil?.genre === "M" ? "Masculin" : "Féminin", telephone: profil?.telephone ?? "" };
 
   return (
     <PatientShell>

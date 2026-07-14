@@ -2,7 +2,7 @@
 
 import AdminShell from "@/components/admin/AdminShell";
 import AppBarMobile from "@/components/mobile/AppBarMobile";
-import { useRemboursements, validerRemboursement } from "@/lib/mock-admin";
+import { useRemboursements, validerRemboursement } from "@/lib/admin";
 
 /*
  * Finances — reproduit l'écran « admin-finances » de la maquette web :

@@ -4,19 +4,29 @@ import Footer from "@/components/site/Footer";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
 import { formatGNF, formatNote } from "@/lib/format";
 import {
-  etablissementsEnVedette,
-  getEtablissement,
-  medecinsEnVedette,
+  chargerEtablissements,
+  chargerMedecins,
+  chargerSpecialites,
   nomComplet,
-  specialites,
-} from "@/lib/mock-data";
+} from "@/lib/donnees";
+
+/** Les vedettes et référentiels sont relus au plus toutes les 60 s. */
+export const revalidate = 60;
 
 /**
  * Page d'accueil — reproduit l'écran « accueil » de la maquette web
  * (hero de recherche à 3 filtres, spécialités, comment ça marche, vedettes).
- * Les cartes sont alimentées par les données fictives de lib/mock-data.ts.
+ * Les cartes sont alimentées par Supabase (lib/donnees.ts).
  */
-export default function Accueil() {
+export default async function Accueil() {
+  const [tousMedecins, tousEtablissements, specialites] = await Promise.all([
+    chargerMedecins(),
+    chargerEtablissements(),
+    chargerSpecialites(),
+  ]);
+  const medecinsEnVedette = tousMedecins.slice(0, 3);
+  const etablissementsEnVedette = tousEtablissements.slice(0, 3);
+  const getEtablissement = (id: string) => tousEtablissements.find((e) => e.id === id);
   return (
     <div className="flex min-h-screen flex-col bg-bg">
       <TopNav lienActif="trouver" />

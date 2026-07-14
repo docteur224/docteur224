@@ -4,7 +4,7 @@ import TopNav from "@/components/site/TopNav";
 import AppBarMobile from "@/components/mobile/AppBarMobile";
 import CreneauxMobile from "@/components/mobile/CreneauxMobile";
 import PanneauReservation from "@/components/site/PanneauReservation";
-import { getMedecin, nomComplet } from "@/lib/mock-data";
+import { chargerMedecinParId, nomComplet } from "@/lib/donnees";
 
 /*
  * Choix du créneau (mobile) — reproduit l'écran « creneaux » de la maquette
@@ -19,14 +19,14 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const medecin = getMedecin(id);
+  const medecin = await chargerMedecinParId(id);
   if (!medecin) return { title: "Médecin introuvable | Docteur 224" };
   return { title: `Choisir un créneau — ${nomComplet(medecin)} | Docteur 224` };
 }
 
 export default async function ChoixCreneau({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const medecin = getMedecin(id);
+  const medecin = await chargerMedecinParId(id);
   if (!medecin) notFound();
 
   return (

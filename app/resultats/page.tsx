@@ -4,8 +4,12 @@ import TopNav from "@/components/site/TopNav";
 import AppBarMobile from "@/components/mobile/AppBarMobile";
 import { formatGNF, formatNote } from "@/lib/format";
 import { prochainsJours } from "@/lib/dates";
-import { premiersCreneauxOuvertsBase } from "@/lib/horaire-type";
-import { getEtablissement, medecins, nomComplet } from "@/lib/mock-data";
+import {
+  chargerEtablissements,
+  chargerMedecins,
+  nomComplet,
+  premiersCreneauxOuverts,
+} from "@/lib/donnees";
 
 export const metadata: Metadata = {
   title: "Résultats de recherche | Docteur 224",
@@ -14,21 +18,9 @@ export const metadata: Metadata = {
 /*
  * Page de résultats — reproduit l'écran « resultats » de la maquette web :
  * en-tête avec fil d'Ariane, colonne de filtres à gauche, cartes médecins
- * avec mini-créneaux réservables à droite. Alimentée par lib/mock-data.ts.
+ * avec mini-créneaux réservables à droite. Alimentée par Supabase
+ * (lib/donnees.ts — médecins validés uniquement, via RLS).
  */
-
-/** Fait correspondre les libellés courts des chips d'accueil aux spécialités. */
-const ALIAS_SPECIALITES: Record<string, string> = {
-  généraliste: "médecine générale",
-  generaliste: "médecine générale",
-  "ophtalmo.": "ophtalmologie",
-  ophtalmo: "ophtalmologie",
-  cardio: "cardiologie",
-};
-
-function normaliser(texte: string): string {
-  return texte.trim().toLowerCase();
-}
 
 const GROUPES_FILTRES: { titre: string; options: string[] }[] = [
   { titre: "Disponibilité", options: ["Aujourd'hui", "Cette semaine", "Week-end"] },
@@ -47,23 +39,11 @@ export default async function Resultats({
   const ville = typeof sp.ville === "string" ? sp.ville.trim() : "";
   const q = typeof sp.q === "string" ? sp.q.trim() : "";
 
-  let liste = medecins;
-  if (specialite) {
-    const cible = ALIAS_SPECIALITES[normaliser(specialite)] ?? normaliser(specialite);
-    liste = liste.filter((m) => normaliser(m.specialite).includes(cible));
-  }
-  if (ville) {
-    liste = liste.filter((m) => normaliser(m.ville).includes(normaliser(ville)));
-  }
-  if (q) {
-    liste = liste.filter((m) => {
-      const etab = getEtablissement(m.etablissementId);
-      return (
-        normaliser(nomComplet(m)).includes(normaliser(q)) ||
-        normaliser(etab?.nom ?? "").includes(normaliser(q))
-      );
-    });
-  }
+  const [liste, etablissements] = await Promise.all([
+    chargerMedecins({ specialite, ville, q }),
+    chargerEtablissements(),
+  ]);
+  const getEtablissement = (id: string) => etablissements.find((e) => e.id === id);
 
   const titre = `${specialite || "Médecins"} à ${ville || "Conakry"} — ${liste.length} résultat${
     liste.length > 1 ? "s" : ""
@@ -210,7 +190,7 @@ export default async function Resultats({
             const premierJourOuvert =
               prochainsJours(m.joursFermes, 6).find((j) => !j.ferme)?.iso ?? "";
             const minicreneaux = premierJourOuvert
-              ? premiersCreneauxOuvertsBase(m.id, premierJourOuvert, 4)
+              ? premiersCreneauxOuverts(m.plages, new Map(), premierJourOuvert, 4)
               : [];
             return (
               <div

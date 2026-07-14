@@ -5,18 +5,18 @@ import PatientShell from "@/components/patient/PatientShell";
 import AppBarMobile from "@/components/mobile/AppBarMobile";
 import { calculerAge, formatDateCourte } from "@/lib/dates";
 import {
-  ajouterProcheLocal,
-  initialesProche,
+  ajouterProche,
   LIENS_PROCHE,
-  mettreAJourProcheLocal,
-  useProchesLocaux,
-  type ProcheLocal,
-} from "@/lib/mock-proches";
+  modifierProche,
+  useProches,
+  type Proche,
+} from "@/lib/patient";
 
 /*
  * Mes proches — reproduit l'écran « pat-proches » de la maquette web :
  * bandeau d'information, liste des proches enregistrés (Modifier) et
  * formulaire d'ajout. Un proche n'a pas besoin de compte (spec C.3).
+ * Lecture/écriture réelles dans la table `proches` (RLS : titulaire seul).
  */
 
 const FORMULAIRE_VIDE = {
@@ -24,13 +24,16 @@ const FORMULAIRE_VIDE = {
   prenom: "",
   lien: LIENS_PROCHE[0],
   dateNaissance: "",
-  genre: "Femme" as ProcheLocal["genre"],
+  genre: "Femme",
 };
 
+const initialesProche = (p: { prenom: string; nom: string }) =>
+  `${p.prenom.charAt(0)}${p.nom.charAt(0)}`.toUpperCase();
+
 export default function MesProches() {
-  const proches = useProchesLocaux();
+  const { proches, recharger } = useProches();
   const [formulaire, setFormulaire] = useState(FORMULAIRE_VIDE);
-  const [enEdition, setEnEdition] = useState<ProcheLocal | null>(null);
+  const [enEdition, setEnEdition] = useState<Proche | null>(null);
   const [message, setMessage] = useState("");
 
   const valide =
@@ -38,7 +41,7 @@ export default function MesProches() {
     formulaire.prenom.trim() !== "" &&
     formulaire.dateNaissance !== "";
 
-  function commencerEdition(proche: ProcheLocal) {
+  function commencerEdition(proche: Proche) {
     setEnEdition(proche);
     setFormulaire({
       nom: proche.nom,
@@ -50,15 +53,16 @@ export default function MesProches() {
     setMessage("");
   }
 
-  function enregistrer() {
+  async function enregistrer() {
     if (!valide) return;
     if (enEdition) {
-      mettreAJourProcheLocal({ ...enEdition, ...formulaire });
-      setMessage(`✓ ${formulaire.prenom} ${formulaire.nom} a été mis à jour.`);
+      const res = await modifierProche(enEdition.id, formulaire);
+      setMessage(res.erreur ? `⚠️ ${res.erreur}` : `✓ ${formulaire.prenom} ${formulaire.nom} a été mis à jour.`);
     } else {
-      ajouterProcheLocal(formulaire);
-      setMessage(`✓ ${formulaire.prenom} ${formulaire.nom} a été ajouté à vos proches.`);
+      const res = await ajouterProche(formulaire);
+      setMessage(res.erreur ? `⚠️ ${res.erreur}` : `✓ ${formulaire.prenom} ${formulaire.nom} a été ajouté à vos proches.`);
     }
+    recharger();
     setFormulaire(FORMULAIRE_VIDE);
     setEnEdition(null);
   }
@@ -158,7 +162,7 @@ export default function MesProches() {
               className="selm"
               value={formulaire.genre}
               onChange={(e) =>
-                setFormulaire({ ...formulaire, genre: e.target.value as ProcheLocal["genre"] })
+                setFormulaire({ ...formulaire, genre: e.target.value })
               }
             >
               <option>Femme</option>
@@ -302,7 +306,7 @@ export default function MesProches() {
             className={classeChamp}
             value={formulaire.genre}
             onChange={(e) =>
-              setFormulaire({ ...formulaire, genre: e.target.value as ProcheLocal["genre"] })
+              setFormulaire({ ...formulaire, genre: e.target.value })
             }
           >
             <option>Femme</option>

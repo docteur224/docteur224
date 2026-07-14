@@ -3,18 +3,26 @@
 import AssistantShell from "@/components/assistant/AssistantShell";
 import GrilleDisponibilites from "@/components/pro/GrilleDisponibilites";
 import AppBarMobile from "@/components/mobile/AppBarMobile";
-import { assistanteBasculeCreneau } from "@/lib/actions-assistante";
-import { medecinConnecte } from "@/lib/mock-data";
-import { usePermissionsAssistante } from "@/lib/mock-medecin";
+import { useContextePro } from "@/lib/pro";
 
 /*
  * Créneaux & disponibilités (assistant(e)) — reproduit l'écran « asst-dispos »
  * de la maquette web. La grille est PARTAGÉE avec l'espace médecin ; la
- * bascule ouvert/fermé passe par la garde de permissions : si le médecin
- * retire « Ouvrir / fermer des créneaux », l'action est réellement refusée.
+ * permission « gérer les créneaux » vient de la table `assistants` et la
+ * RLS refuse réellement l'écriture si elle n'est pas accordée.
  */
 export default function CreneauxAssistant() {
-  const permissions = usePermissionsAssistante();
+  const { medecin, permissions, chargement } = useContextePro();
+
+  if (chargement || !medecin) {
+    return (
+      <AssistantShell>
+        <p className="p-6 text-[13px] text-muted">Chargement…</p>
+      </AssistantShell>
+    );
+  }
+
+  const nomMedecin = `${medecin.civilite} ${medecin.prenom.charAt(0)}. ${medecin.nom}`;
 
   return (
     <AssistantShell>
@@ -26,7 +34,7 @@ export default function CreneauxAssistant() {
             <div className="abannerm">
               <span aria-hidden>✅</span>
               <div>
-                Le Dr Barry vous a accordé la permission de <b>gérer les créneaux</b>. Vos
+                {nomMedecin} vous a accordé la permission de <b>gérer les créneaux</b>. Vos
                 modifications sont visibles par le médecin.
               </div>
             </div>
@@ -39,17 +47,11 @@ export default function CreneauxAssistant() {
               </div>
             </div>
           )}
-          <GrilleDisponibilites
-            medecinId={medecinConnecte.id}
-            peutModifier={permissions.gererCreneaux}
-            basculer={(dateISO, heure) =>
-              assistanteBasculeCreneau(medecinConnecte.id, dateISO, heure)
-            }
-          />
+          <GrilleDisponibilites medecinId={medecin.id} peutModifier={permissions.gererCreneaux} />
         </div>
       </div>
 
-      {/* ===== Version web (inchangée) ===== */}
+      {/* ===== Version web ===== */}
       <div className="hidden md:block">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
@@ -71,7 +73,7 @@ export default function CreneauxAssistant() {
         <div className="mb-[18px] flex items-start gap-[9px] rounded-xl border border-[#BFE0EF] bg-teal-soft px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-blue">
           <span aria-hidden>✅</span>
           <div>
-            Le Dr A. Barry vous a accordé la permission de <b>gérer les créneaux</b>. Vos
+            {nomMedecin} vous a accordé la permission de <b>gérer les créneaux</b>. Vos
             modifications sont visibles par le médecin.
           </div>
         </div>
@@ -81,16 +83,12 @@ export default function CreneauxAssistant() {
           <div>
             La permission <b>« Ouvrir / fermer des créneaux »</b> ne vous a pas été accordée par
             le médecin. La grille est en lecture seule — et toute tentative de modification est
-            refusée par la plateforme, pas seulement masquée.
+            refusée par la base de données (RLS), pas seulement masquée.
           </div>
         </div>
       )}
 
-      <GrilleDisponibilites
-        medecinId={medecinConnecte.id}
-        peutModifier={permissions.gererCreneaux}
-        basculer={(dateISO, heure) => assistanteBasculeCreneau(medecinConnecte.id, dateISO, heure)}
-      />
+      <GrilleDisponibilites medecinId={medecin.id} peutModifier={permissions.gererCreneaux} />
       </div>
     </AssistantShell>
   );

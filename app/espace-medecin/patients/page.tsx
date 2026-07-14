@@ -2,15 +2,16 @@
 
 import { useState } from "react";
 import MedecinShell from "@/components/medecin/MedecinShell";
-import { usePatientsCabinet } from "@/lib/mock-patients-cabinet";
+import { useContextePro, usePatientsCabinet } from "@/lib/pro";
 
 /*
  * Mes patients — reproduit l'écran « med-patients » de la maquette web :
- * recherche et tableau Patient / Âge / Dernière visite. La liste vient du
+ * recherche et tableau Patient / Téléphone / Dernière visite. La liste vient du
  * magasin local partagé avec l'écran « + Nouveau rendez-vous ».
  */
 export default function PatientsMedecin() {
-  const patients = usePatientsCabinet();
+  const { medecin } = useContextePro();
+  const { patients } = usePatientsCabinet(medecin?.id);
   const [recherche, setRecherche] = useState("");
 
   const filtre = recherche.trim().toLowerCase();
@@ -52,7 +53,7 @@ export default function PatientsMedecin() {
                   {patient.prenom} {patient.nom}
                 </b>
                 <small>
-                  {patient.age ? `${patient.age} · ` : ""}dernière visite {patient.derniereVisite}
+                  dernière visite {patient.derniereVisite}
                 </small>
               </span>
               <span className="ch" aria-hidden>
@@ -93,7 +94,7 @@ export default function PatientsMedecin() {
       <div className="overflow-hidden rounded-2xl border border-line bg-white">
         <div className="grid grid-cols-[1fr_90px_130px] items-center gap-3 bg-[#F3F7FA] px-[18px] py-[13px] text-[11px] font-extrabold uppercase tracking-[.04em] text-muted sm:grid-cols-[1fr_110px_150px_140px]">
           <span>Patient</span>
-          <span>Âge</span>
+          <span>Téléphone</span>
           <span>Dernière visite</span>
           <span className="hidden sm:block">Téléphone</span>
         </div>
@@ -105,7 +106,7 @@ export default function PatientsMedecin() {
             <b className="font-extrabold">
               {patient.prenom} {patient.nom}
             </b>
-            <span>{patient.age}</span>
+            <span>{patient.telephone || "—"}</span>
             <span>{patient.derniereVisite}</span>
             <span className="hidden text-muted sm:block">{patient.telephone}</span>
           </div>

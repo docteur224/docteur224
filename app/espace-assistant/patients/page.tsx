@@ -3,11 +3,8 @@
 import Link from "next/link";
 import AssistantShell from "@/components/assistant/AssistantShell";
 import AppBarMobile from "@/components/mobile/AppBarMobile";
-import { assistantePeutCreerRdv } from "@/lib/actions-assistante";
-import {
-  initialesPatientCabinet,
-  usePatientsCabinet,
-} from "@/lib/mock-patients-cabinet";
+
+import { useContextePro, usePatientsCabinet } from "@/lib/pro";
 
 /*
  * Patients (assistant(e)) — reproduit l'écran « asst-patients » de la
@@ -15,8 +12,9 @@ import {
  * rendez-vous. Le dossier médical n'est pas accessible (spec C.5).
  */
 export default function PatientsAssistant() {
-  const patients = usePatientsCabinet();
-  const peutCreer = assistantePeutCreerRdv().ok;
+  const { medecin, permissions } = useContextePro();
+  const { patients } = usePatientsCabinet(medecin?.id);
+  const peutCreer = permissions.creerRdv;
 
   return (
     <AssistantShell>
@@ -36,7 +34,7 @@ export default function PatientsAssistant() {
             {patients.map((patient) => (
               <div key={patient.id} className="asstrowm">
                 <span className="av" aria-hidden style={{ background: patient.gradient }}>
-                  {initialesPatientCabinet(patient)}
+                  {`${patient.prenom.charAt(0)}${patient.nom.charAt(0)}`.toUpperCase()}
                 </span>
                 <span className="meta">
                   <b>
@@ -94,7 +92,7 @@ export default function PatientsAssistant() {
               className="grid h-[42px] w-[42px] flex-none place-items-center rounded-xl text-sm font-extrabold text-white"
               style={{ background: patient.gradient }}
             >
-              {initialesPatientCabinet(patient)}
+              {`${patient.prenom.charAt(0)}${patient.nom.charAt(0)}`.toUpperCase()}
             </span>
             <div className="min-w-0 flex-1">
               <b className="block text-sm font-extrabold">

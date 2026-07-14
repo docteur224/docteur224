@@ -4,23 +4,19 @@ import Link from "next/link";
 import { useState } from "react";
 import MedecinShell from "@/components/medecin/MedecinShell";
 import { capitaliser, depuisISO, formatDateLongue, versISO } from "@/lib/dates";
-import { medecinConnecte } from "@/lib/mock-data";
-import { creneauxJourMedecin, useExceptionsLocales } from "@/lib/mock-disponibilites";
-import { useRendezVousLocaux } from "@/lib/mock-rdv";
+import { useAgenda, useContextePro } from "@/lib/pro";
 
 /*
  * Mon agenda — reproduit l'écran « med-agenda » de la maquette web :
- * vue de la journée (créneaux réservés et « Disponible »), navigation
+ * vue de la journée (rendez-vous réels et « Disponible »), navigation
  * Hier / Aujourd'hui / Demain, bouton « + Nouveau RDV ».
  */
 export default function AgendaMedecin() {
-  const rdvs = useRendezVousLocaux();
-  const exceptions = useExceptionsLocales();
+  const { medecin } = useContextePro();
+  const { creneauxJour } = useAgenda(medecin?.id);
   const [dateISO, setDateISO] = useState(() => versISO(new Date()));
 
-  const creneaux = creneauxJourMedecin(medecinConnecte.id, dateISO, exceptions, rdvs).filter(
-    (c) => c.statut !== "ferme"
-  );
+  const creneaux = creneauxJour(dateISO).filter((c) => c.statut !== "ferme");
 
   function decaler(jours: number) {
     const d = depuisISO(dateISO);
@@ -138,9 +134,6 @@ export default function AgendaMedecin() {
                 <div className="rounded-lg border-l-[3px] border-teal bg-teal-soft px-3 py-[9px] text-[12.5px]">
                   <b className="font-extrabold">{creneau.patient}</b>{" "}
                   <small className="text-muted">· {creneau.motif}</small>
-                  {creneau.demo === false && (
-                    <small className="text-muted"> · réservé en ligne</small>
-                  )}
                 </div>
               ) : (
                 <div className="rounded-lg border-l-[3px] border-[#CBD8E0] bg-[#F4F8FA] px-3 py-[9px] text-[12.5px] italic text-muted">

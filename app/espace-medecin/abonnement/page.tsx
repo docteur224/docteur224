@@ -3,22 +3,17 @@
 import MedecinShell from "@/components/medecin/MedecinShell";
 import AppBarMobile from "@/components/mobile/AppBarMobile";
 import { formatGNF } from "@/lib/format";
-import {
-  enregistrerAbonnementMedecin,
-  useAbonnementMedecin,
-} from "@/lib/mock-medecin";
+import { useState } from "react";
+import { useAbonnement } from "@/lib/pro";
 
 /*
  * Mon abonnement — reproduit l'écran « med-abonnement » de la maquette web
  * (spec C.4.4) : abonnement en cours, bascule Mensuel / Annuel, formules
- * Standard et Premium. Le choix est persisté en local (mock).
+ * Standard et Premium. Le choix est écrit dans la table `abonnements`.
  * Rappel spec : la prise de RDV reste gratuite pour les patients.
  */
 
-const TARIFS = {
-  standard: { mensuel: 100000, annuel: 1000000 },
-  premium: { mensuel: 150000, annuel: 1500000 },
-};
+
 
 const AVANTAGES_STANDARD = [
   "Profil & fiche enrichie",
@@ -36,8 +31,23 @@ const AVANTAGES_PREMIUM = [
 ];
 
 export default function AbonnementMedecin() {
-  const abonnement = useAbonnementMedecin();
-  const { formule, periode } = abonnement;
+  const { abonnement, tarifs, changerFormule } = useAbonnement();
+  const formule = abonnement?.formule ?? "standard";
+  const [periodeVue, setPeriodeVue] = useState<"mensuel" | "annuel" | null>(null);
+  const periode = periodeVue ?? ((abonnement?.periode as "mensuel" | "annuel") ?? "mensuel");
+  const [message, setMessage] = useState("");
+
+  const prix = (f: string) => {
+    const t = tarifs.find((x) => x.formule === f);
+    return { mensuel: t?.prixMensuel ?? 0, annuel: t?.prixAnnuel ?? 0 };
+  };
+  const TARIFS = { standard: prix("standard"), premium: prix("premium") };
+  const finAbo = abonnement?.dateFin ?? "";
+
+  async function choisir(f: "standard" | "premium") {
+    const res = await changerFormule(f, periode);
+    setMessage(res.erreur ? `⚠️ ${res.erreur}` : "✓ Abonnement mis à jour");
+  }
 
   const libelleFormule = formule === "premium" ? "Premium" : "Standard";
   const libellePeriode = periode === "annuel" ? "Annuel" : "Mensuel";
@@ -55,7 +65,7 @@ export default function AbonnementMedecin() {
                 <b>
                   {libelleFormule} · {libellePeriode}
                 </b>
-                <small>Actif jusqu&apos;au 30 juin · Orange Money</small>
+                <small>{finAbo ? `Actif jusqu'au ${finAbo}` : "Aucun abonnement actif"}</small>
               </div>
               <span className="pill ok">Actif</span>
             </div>
@@ -68,18 +78,19 @@ export default function AbonnementMedecin() {
           </div>
           <div className="card2">
             <h4>Changer de formule</h4>
+            {message && <p style={{ color: "var(--green)", fontSize: 12.5, fontWeight: 700 }}>{message}</p>}
             <div className="seg">
               <button
                 type="button"
                 className={periode === "mensuel" ? "on" : undefined}
-                onClick={() => enregistrerAbonnementMedecin({ ...abonnement, periode: "mensuel" })}
+                onClick={() => setPeriodeVue("mensuel")}
               >
                 Mensuel
               </button>
               <button
                 type="button"
                 className={periode === "annuel" ? "on" : undefined}
-                onClick={() => enregistrerAbonnementMedecin({ ...abonnement, periode: "annuel" })}
+                onClick={() => setPeriodeVue("annuel")}
               >
                 Annuel
               </button>
@@ -107,9 +118,7 @@ export default function AbonnementMedecin() {
                   type="button"
                   className="btnm gh"
                   style={{ width: "100%" }}
-                  onClick={() =>
-                    enregistrerAbonnementMedecin({ ...abonnement, formule: "standard" })
-                  }
+                  onClick={() => choisir("standard")}
                 >
                   Choisir Standard
                 </button>
@@ -138,9 +147,7 @@ export default function AbonnementMedecin() {
                   type="button"
                   className="btnm gh"
                   style={{ width: "100%" }}
-                  onClick={() =>
-                    enregistrerAbonnementMedecin({ ...abonnement, formule: "premium" })
-                  }
+                  onClick={() => choisir("premium")}
                 >
                   Choisir Premium
                 </button>
@@ -165,7 +172,7 @@ export default function AbonnementMedecin() {
               Formule {libelleFormule} · {libellePeriode}
             </b>
             <small className="text-xs text-muted">
-              Actif jusqu’au 30 juin 2026 · paiement Orange Money (démonstration)
+              {finAbo ? `Actif jusqu'au ${finAbo}` : "Aucun abonnement actif"}
             </small>
           </div>
           <span className="rounded-lg bg-green-soft px-[9px] py-1 text-[11px] font-bold text-green">
@@ -183,12 +190,13 @@ export default function AbonnementMedecin() {
 
       <div className="rounded-2xl border border-line bg-white p-5">
         <h3 className="mb-[14px] text-[15px] font-extrabold">Changer de formule</h3>
+        {message && <p className="mb-2 text-[12.5px] font-bold text-green">{message}</p>}
 
         {/* Bascule Mensuel / Annuel */}
         <div className="mb-[10px] inline-flex overflow-hidden rounded-[10px] border border-line">
           <button
             type="button"
-            onClick={() => enregistrerAbonnementMedecin({ ...abonnement, periode: "mensuel" })}
+            onClick={() => setPeriodeVue("mensuel")}
             className={`px-4 py-2 text-[12.5px] font-bold ${
               periode === "mensuel" ? "bg-teal-soft text-blue" : "bg-white text-muted"
             }`}
@@ -197,7 +205,7 @@ export default function AbonnementMedecin() {
           </button>
           <button
             type="button"
-            onClick={() => enregistrerAbonnementMedecin({ ...abonnement, periode: "annuel" })}
+            onClick={() => setPeriodeVue("annuel")}
             className={`px-4 py-2 text-[12.5px] font-bold ${
               periode === "annuel" ? "bg-teal-soft text-blue" : "bg-white text-muted"
             }`}
@@ -246,7 +254,7 @@ export default function AbonnementMedecin() {
             ) : (
               <button
                 type="button"
-                onClick={() => enregistrerAbonnementMedecin({ ...abonnement, formule: "standard" })}
+                onClick={() => choisir("standard")}
                 className="w-full rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg"
               >
                 Choisir Standard
@@ -293,7 +301,7 @@ export default function AbonnementMedecin() {
             ) : (
               <button
                 type="button"
-                onClick={() => enregistrerAbonnementMedecin({ ...abonnement, formule: "premium" })}
+                onClick={() => choisir("premium")}
                 className="w-full rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg"
               >
                 Choisir Premium

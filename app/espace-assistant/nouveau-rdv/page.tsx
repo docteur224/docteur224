@@ -3,16 +3,24 @@
 import Link from "next/link";
 import AssistantShell from "@/components/assistant/AssistantShell";
 import NouveauRdvDelegue from "@/components/pro/NouveauRdvDelegue";
-import { usePermissionsAssistante } from "@/lib/mock-medecin";
+import { useContextePro } from "@/lib/pro";
 
 /*
  * « + Nouveau rendez-vous » côté assistant(e) — réservation déléguée
  * (spec C.2.3), soumise à la permission « Créer un rendez-vous pour un
  * patient ». Sans la permission, l'écran est bloqué ET l'action est refusée
- * dans la couche de données (lib/actions-assistante.ts).
+ * par la base de données (RLS).
  */
 export default function NouveauRendezVousAssistant() {
-  const permissions = usePermissionsAssistante();
+  const { permissions, chargement } = useContextePro();
+
+  if (chargement) {
+    return (
+      <AssistantShell>
+        <p className="p-6 text-[13px] text-muted">Chargement…</p>
+      </AssistantShell>
+    );
+  }
 
   if (!permissions.creerRdv) {
     return (

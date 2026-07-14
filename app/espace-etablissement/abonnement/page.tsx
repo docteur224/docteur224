@@ -3,7 +3,7 @@
 import Link from "next/link";
 import EtablissementShell from "@/components/etablissement/EtablissementShell";
 import AppBarMobile from "@/components/mobile/AppBarMobile";
-import { PALIERS, palierPour, useMedecinsRattaches } from "@/lib/mock-etablissement";
+import { PALIERS, palierPour, useEtablissementConnecte, useMedecinsRattaches } from "@/lib/etablissement";
 
 /*
  * Abonnement — reproduit l'écran « etab-abonnement » de la maquette web
@@ -29,7 +29,8 @@ const DETAILS_PALIERS: Record<string, string[]> = {
 };
 
 export default function AbonnementEtablissement() {
-  const rattaches = useMedecinsRattaches();
+  const { etablissement } = useEtablissementConnecte();
+  const { rattaches } = useMedecinsRattaches(etablissement?.id);
   const palierActuel = palierPour(rattaches.length);
 
   return (

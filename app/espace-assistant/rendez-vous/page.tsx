@@ -4,51 +4,29 @@ import Link from "next/link";
 import { useState } from "react";
 import AssistantShell from "@/components/assistant/AssistantShell";
 import { capitaliser, depuisISO, formatDateLongue, versISO } from "@/lib/dates";
-import { medecinConnecte } from "@/lib/mock-data";
 import {
-  creneauxJourMedecin,
-  creneauxJourPatient,
-  useExceptionsLocales,
-} from "@/lib/mock-disponibilites";
-import { useRendezVousLocaux } from "@/lib/mock-rdv";
-import {
-  assistanteAnnuleRdv,
-  assistantePeutCreerRdv,
-  assistanteReprogrammeRdv,
-} from "@/lib/actions-assistante";
-import { usePermissionsAssistante } from "@/lib/mock-medecin";
+  majStatutRdv,
+  reprogrammerRdv,
+  useAgenda,
+  useContextePro,
+} from "@/lib/pro";
 
 /*
  * Rendez-vous (assistant(e)) — reproduit l'écran « asst-agenda » de la
  * maquette web : liste du jour avec Reprogrammer / Annuler.
- * Chaque action repasse par la garde de permissions (lib/actions-assistante) :
- * si le médecin retire une permission, l'action est réellement refusée,
- * pas seulement masquée.
+ * Les permissions viennent de la table `assistants` ; la RLS refuse
+ * réellement l'écriture si une permission est retirée par le médecin.
  */
 export default function RendezVousAssistant() {
-  const rdvs = useRendezVousLocaux();
-  const exceptions = useExceptionsLocales();
-  const permissions = usePermissionsAssistante();
+  const { medecin, permissions } = useContextePro();
+  const { creneauxJour, recharger } = useAgenda(medecin?.id);
   const [dateISO, setDateISO] = useState(() => versISO(new Date()));
   const [erreur, setErreur] = useState("");
   const [enReprogrammation, setEnReprogrammation] = useState<string | null>(null);
 
-  const rdvJour = creneauxJourMedecin(medecinConnecte.id, dateISO, exceptions, rdvs).filter(
-    (c) => c.statut === "reserve"
-  );
-  const creneauxLibres = creneauxJourPatient(medecinConnecte.id, dateISO, exceptions, rdvs).filter(
-    (c) => c.statut === "ouvert"
-  );
-
-  function idRdvReel(heure: string): string | undefined {
-    return rdvs.find(
-      (r) =>
-        r.medecinId === medecinConnecte.id &&
-        r.date === dateISO &&
-        r.heure === heure &&
-        r.statut === "confirme"
-    )?.id;
-  }
+  const creneaux = creneauxJour(dateISO);
+  const rdvJour = creneaux.filter((c) => c.statut === "reserve");
+  const creneauxLibres = creneaux.filter((c) => c.statut === "ouvert");
 
   function decaler(jours: number) {
     const d = depuisISO(dateISO);
@@ -57,20 +35,30 @@ export default function RendezVousAssistant() {
     setEnReprogrammation(null);
   }
 
-  function annuler(heure: string) {
-    const id = idRdvReel(heure);
+  async function annuler(heure: string) {
+    if (!permissions.confirmerAnnuler) {
+      setErreur(
+        "⛔ Action refusée : la permission « Confirmer / annuler les rendez-vous » ne vous a pas été accordée par le médecin."
+      );
+      return;
+    }
+    const id = rdvJour.find((c) => c.heure === heure)?.rdvId;
     if (!id) return;
     if (!window.confirm("Annuler ce rendez-vous ?")) return;
-    const resultat = assistanteAnnuleRdv(id);
-    setErreur(resultat.ok ? "" : (resultat.erreur ?? ""));
+    const resultat = await majStatutRdv(id, "annule");
+    setErreur(resultat.erreur ?? "");
+    if (!resultat.erreur) recharger();
   }
 
-  function reprogrammer(heureActuelle: string, nouvelleHeure: string) {
-    const id = idRdvReel(heureActuelle);
+  async function reprogrammer(heureActuelle: string, nouvelleHeure: string) {
+    const id = rdvJour.find((c) => c.heure === heureActuelle)?.rdvId;
     if (!id) return;
-    const resultat = assistanteReprogrammeRdv(id, dateISO, nouvelleHeure);
-    setErreur(resultat.ok ? "" : (resultat.erreur ?? ""));
-    if (resultat.ok) setEnReprogrammation(null);
+    const resultat = await reprogrammerRdv(id, dateISO, nouvelleHeure);
+    setErreur(resultat.erreur ?? "");
+    if (!resultat.erreur) {
+      setEnReprogrammation(null);
+      recharger();
+    }
   }
 
   function ouvrirReprogrammation(heure: string) {
@@ -84,7 +72,7 @@ export default function RendezVousAssistant() {
     setEnReprogrammation(enReprogrammation === heure ? null : heure);
   }
 
-  const peutCreer = assistantePeutCreerRdv().ok;
+  const peutCreer = permissions.creerRdv;
 
   return (
     <AssistantShell>
@@ -141,7 +129,7 @@ export default function RendezVousAssistant() {
             </div>
           )}
           {rdvJour.map((creneau) => {
-            const reel = creneau.demo === false;
+            const reel = true;
             return (
               <div key={creneau.heure}>
                 <div className="aptm">
@@ -150,7 +138,7 @@ export default function RendezVousAssistant() {
                     <b>{creneau.patient}</b>
                     <small>
                       {creneau.motif}
-                      {reel ? " · réservé en ligne" : " · démonstration"}
+                      
                     </small>
                   </div>
                   <div className="acts">
@@ -275,7 +263,7 @@ export default function RendezVousAssistant() {
           {capitaliser(formatDateLongue(dateISO))}
         </h3>
         {rdvJour.map((creneau) => {
-          const reel = creneau.demo === false;
+          const reel = true;
           return (
             <div key={creneau.heure} className="mb-[10px] last:mb-0">
               <div className="flex flex-wrap items-center gap-3 rounded-xl border border-line p-[13px]">
@@ -286,7 +274,7 @@ export default function RendezVousAssistant() {
                   <b className="block text-[13.5px]">{creneau.patient}</b>
                   <small className="text-xs text-muted">
                     {creneau.motif}
-                    {reel ? " · réservé en ligne" : " · démonstration"}
+                    
                   </small>
                 </span>
                 <span className="flex gap-2">

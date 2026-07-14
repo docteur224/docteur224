@@ -2,7 +2,7 @@
 
 import EtablissementShell from "@/components/etablissement/EtablissementShell";
 import AppBarMobile from "@/components/mobile/AppBarMobile";
-import { useMedecinsRattaches } from "@/lib/mock-etablissement";
+import { useEtablissementConnecte, useMedecinsRattaches } from "@/lib/etablissement";
 
 /*
  * Statistiques — reproduit l'écran « etab-stats » de la maquette web :
@@ -21,7 +21,8 @@ const BARRES = [
 ];
 
 export default function StatistiquesEtablissement() {
-  const rattaches = useMedecinsRattaches();
+  const { etablissement } = useEtablissementConnecte();
+  const { rattaches } = useMedecinsRattaches(etablissement?.id);
   const classement = [...rattaches].sort((a, b) => b.rdvSemaine - a.rdvSemaine);
   const maxRdv = Math.max(1, ...classement.map((m) => m.rdvSemaine));
 
