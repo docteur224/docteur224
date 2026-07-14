@@ -3,6 +3,8 @@
 import Link from "next/link";
 import AdminShell from "@/components/admin/AdminShell";
 import {
+  useCompteursAdmin,
+  useCroissanceInscriptions,
   useEtablissementsEnAttente,
   useMedecinsEnAttente,
   useSignalements,
@@ -10,24 +12,18 @@ import {
 
 /*
  * Tableau de bord admin — reproduit l'écran « admin-dash » de la maquette
- * web : 4 statistiques plateforme, liste « À traiter » (compteurs calculés
- * en direct depuis les files de validation et de modération), croissance
- * des inscriptions.
+ * web : statistiques plateforme (comptées en direct dans Supabase), liste
+ * « À traiter » (files de validation et de modération), croissance des
+ * inscriptions.
  */
-
-const BARRES = [
-  { mois: "Jan", hauteur: 48 },
-  { mois: "Fév", hauteur: 58 },
-  { mois: "Mar", hauteur: 65 },
-  { mois: "Avr", hauteur: 79 },
-  { mois: "Mai", hauteur: 90 },
-  { mois: "Juin", hauteur: 100 },
-];
-
 export default function TableauDeBordAdmin() {
   const { dossiers: medecinsEnAttente } = useMedecinsEnAttente();
   const { dossiers: etabsEnAttente } = useEtablissementsEnAttente();
   const { signalements } = useSignalements();
+  const compteurs = useCompteursAdmin();
+  const croissance = useCroissanceInscriptions();
+  const maxCroissance = Math.max(1, ...croissance.map((m) => m.total));
+  const BARRES = croissance.map((m) => ({ mois: m.mois, hauteur: Math.round((m.total / maxCroissance) * 100) }));
 
   return (
     <AdminShell>
@@ -39,20 +35,16 @@ export default function TableauDeBordAdmin() {
         <div className="pad">
           <div className="statcards inpad two">
             <div className="sc b1">
-              <b>15 240</b>
+              <b>{compteurs.utilisateurs.toLocaleString("fr-FR")}</b>
               <small>Utilisateurs</small>
             </div>
             <div className="sc b2">
-              <b>320</b>
+              <b>{compteurs.medecinsValides.toLocaleString("fr-FR")}</b>
               <small>Médecins</small>
             </div>
             <div className="sc b3">
-              <b>8 642</b>
+              <b>{compteurs.rdvCeMois.toLocaleString("fr-FR")}</b>
               <small>RDV ce mois</small>
-            </div>
-            <div className="sc b1">
-              <b>42 M</b>
-              <small>GNF revenus</small>
             </div>
           </div>
           <div className="card2" style={{ marginTop: 12 }}>
@@ -129,7 +121,7 @@ export default function TableauDeBordAdmin() {
             👥
           </span>
           <b className="mt-2 block text-[26px] font-extrabold tracking-[-0.6px] text-blue">
-            15 240
+            {compteurs.utilisateurs.toLocaleString("fr-FR")}
           </b>
           <small className="text-xs font-semibold text-muted">Utilisateurs</small>
         </div>
@@ -137,7 +129,7 @@ export default function TableauDeBordAdmin() {
           <span className="text-lg" aria-hidden>
             👨‍⚕️
           </span>
-          <b className="mt-2 block text-[26px] font-extrabold tracking-[-0.6px] text-amber">320</b>
+          <b className="mt-2 block text-[26px] font-extrabold tracking-[-0.6px] text-amber">{compteurs.medecinsValides.toLocaleString("fr-FR")}</b>
           <small className="text-xs font-semibold text-muted">Médecins</small>
         </div>
         <div className="rounded-2xl border border-line bg-white p-[18px]">
@@ -145,16 +137,9 @@ export default function TableauDeBordAdmin() {
             📅
           </span>
           <b className="mt-2 block text-[26px] font-extrabold tracking-[-0.6px] text-green">
-            8 642
+            {compteurs.rdvCeMois.toLocaleString("fr-FR")}
           </b>
           <small className="text-xs font-semibold text-muted">RDV ce mois</small>
-        </div>
-        <div className="rounded-2xl border border-line bg-white p-[18px]">
-          <span className="text-lg" aria-hidden>
-            💳
-          </span>
-          <b className="mt-2 block text-[26px] font-extrabold tracking-[-0.6px] text-teal">42 M</b>
-          <small className="text-xs font-semibold text-muted">GNF de revenus</small>
         </div>
       </div>
 

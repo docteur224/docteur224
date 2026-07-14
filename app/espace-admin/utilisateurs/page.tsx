@@ -2,67 +2,76 @@
 
 import { useState } from "react";
 import AdminShell from "@/components/admin/AdminShell";
+import { majStatutUtilisateur, useUtilisateurs } from "@/lib/admin";
 
 /*
  * Utilisateurs — reproduit l'écran « admin-users » de la maquette web :
- * recherche, filtres par type de compte et liste des comptes. Recherche et
- * filtres fonctionnent en direct sur la liste de démonstration.
+ * recherche, filtres par rôle et liste des comptes réels (table
+ * `utilisateurs`). Suspendre/réactiver écrit le statut en base.
  */
 
 const CATEGORIES = ["Tous", "Patients", "Médecins", "Assistant(e)s", "Établissements"] as const;
 
-const COMPTES = [
-  {
-    nom: "Mariama Sow",
-    detail: "Patiente · +224 621 00 11 22",
-    initiales: "MS",
-    gradient: "linear-gradient(135deg,#E08E45,#C0392B)",
-    categorie: "Patients",
-    statut: "Actif",
-  },
-  {
-    nom: "Dr Aïssata Barry",
-    detail: "Médecin · Pédiatrie · Vérifié",
-    initiales: "AB",
-    gradient: "linear-gradient(135deg,#2E9CCA,#15506B)",
-    categorie: "Médecins",
-    statut: "Actif",
-  },
-  {
-    nom: "Hawa Diallo",
-    detail: "Assistante · Dr A. Barry",
-    initiales: "HD",
-    gradient: "linear-gradient(135deg,#6C5CE7,#341F97)",
-    categorie: "Assistant(e)s",
-    statut: "Actif",
-  },
-  {
-    nom: "Clinique Ambroise Paré",
-    detail: "Établissement · 5 médecins",
-    initiales: "🏥",
-    gradient: "linear-gradient(135deg,#16A085,#0E6655)",
-    categorie: "Établissements",
-    statut: "Actif",
-  },
-  {
-    nom: "Ousmane Baldé",
-    detail: "Patient · compte suspendu",
-    initiales: "OB",
-    gradient: "linear-gradient(135deg,#9AA8B2,#647A89)",
-    categorie: "Patients",
-    statut: "Suspendu",
-  },
+const ROLE_PAR_CATEGORIE: Record<(typeof CATEGORIES)[number], string | null> = {
+  Tous: null,
+  Patients: "patient",
+  Médecins: "medecin",
+  "Assistant(e)s": "assistant",
+  Établissements: "etablissement",
+};
+
+const GRADIENTS = [
+  "linear-gradient(135deg,#2E9CCA,#15506B)",
+  "linear-gradient(135deg,#E08E45,#C0392B)",
+  "linear-gradient(135deg,#6C5CE7,#341F97)",
+  "linear-gradient(135deg,#16A085,#0E6655)",
+  "linear-gradient(135deg,#9AA8B2,#647A89)",
 ];
 
+const gradientPour = (id: string) => {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (Math.imul(h, 31) + id.charCodeAt(i)) | 0;
+  return GRADIENTS[Math.abs(h) % GRADIENTS.length];
+};
+
+const initiales = (nom: string) =>
+  nom
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((m) => m.charAt(0))
+    .join("")
+    .toUpperCase() || "?";
+
+const LIBELLE_ROLE: Record<string, string> = {
+  patient: "Patient",
+  medecin: "Médecin",
+  assistant: "Assistant(e)",
+  etablissement: "Établissement",
+  admin: "Administrateur",
+};
+
 export default function UtilisateursAdmin() {
+  const { utilisateurs, recharger } = useUtilisateurs();
   const [categorie, setCategorie] = useState<(typeof CATEGORIES)[number]>("Tous");
   const [recherche, setRecherche] = useState("");
 
-  const comptes = COMPTES.filter(
-    (compte) =>
-      (categorie === "Tous" || compte.categorie === categorie) &&
-      compte.nom.toLowerCase().includes(recherche.trim().toLowerCase())
-  );
+  const roleCible = ROLE_PAR_CATEGORIE[categorie];
+  const comptes = utilisateurs
+    .filter((u) => (roleCible === null || u.role === roleCible))
+    .filter((u) => u.nom.toLowerCase().includes(recherche.trim().toLowerCase()))
+    .map((u) => ({
+      ...u,
+      detail: `${LIBELLE_ROLE[u.role] ?? u.role} · ${u.email}`,
+      initiales: initiales(u.nom),
+      gradient: gradientPour(u.id),
+      actif: u.statut === "actif",
+    }));
+
+  async function basculerStatut(id: string, actif: boolean) {
+    await majStatutUtilisateur(id, actif ? "suspendu" : "actif");
+    recharger();
+  }
 
   return (
     <AdminShell>
@@ -91,14 +100,14 @@ export default function UtilisateursAdmin() {
             ))}
           </div>
           <div className="card2">
-            <h4>15 240 comptes</h4>
+            <h4>{utilisateurs.length} comptes</h4>
             {comptes.length === 0 && (
               <p className="muted" style={{ fontSize: 12.5 }}>
                 Aucun compte ne correspond à la recherche.
               </p>
             )}
             {comptes.map((compte) => (
-              <div key={compte.nom} className="asstrowm">
+              <div key={compte.id} className="asstrowm">
                 <span className="av" aria-hidden style={{ background: compte.gradient }}>
                   {compte.initiales}
                 </span>
@@ -106,8 +115,8 @@ export default function UtilisateursAdmin() {
                   <b>{compte.nom}</b>
                   <small>{compte.detail}</small>
                 </span>
-                <span className={`pill ${compte.statut === "Actif" ? "ok" : "lock"}`}>
-                  {compte.statut}
+                <span className={`pill ${compte.actif ? "ok" : "lock"}`}>
+                  {compte.actif ? "Actif" : "Suspendu"}
                 </span>
               </div>
             ))}
@@ -115,12 +124,12 @@ export default function UtilisateursAdmin() {
         </div>
       </div>
 
-      {/* ===== Version web (inchangée) ===== */}
+      {/* ===== Version web ===== */}
       <div className="hidden md:block">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Utilisateurs</h2>
-          <small className="text-[13px] text-muted">15 240 comptes au total</small>
+          <small className="text-[13px] text-muted">{utilisateurs.length} comptes au total</small>
         </div>
         <input
           value={recherche}
@@ -156,7 +165,7 @@ export default function UtilisateursAdmin() {
         )}
         {comptes.map((compte) => (
           <div
-            key={compte.nom}
+            key={compte.id}
             className="flex flex-wrap items-center gap-[13px] border-b border-line py-[14px] last:border-b-0"
           >
             <span
@@ -172,20 +181,17 @@ export default function UtilisateursAdmin() {
             </div>
             <span
               className={`rounded-lg px-[9px] py-1 text-[11px] font-bold ${
-                compte.statut === "Actif"
-                  ? "bg-green-soft text-green"
-                  : "bg-[#EEF1F4] text-[#7E8C97]"
+                compte.actif ? "bg-green-soft text-green" : "bg-[#EEF1F4] text-[#7E8C97]"
               }`}
             >
-              {compte.statut}
+              {compte.actif ? "Actif" : "Suspendu"}
             </span>
             <button
               type="button"
-              disabled
-              title="Disponible avec la base de données"
-              className="cursor-not-allowed rounded-[9px] border-[1.5px] border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-blue opacity-50"
+              onClick={() => basculerStatut(compte.id, compte.actif)}
+              className="rounded-[9px] border-[1.5px] border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-blue transition-colors hover:bg-bg"
             >
-              {compte.statut === "Actif" ? "Gérer" : "Réactiver"}
+              {compte.actif ? "Suspendre" : "Réactiver"}
             </button>
           </div>
         ))}

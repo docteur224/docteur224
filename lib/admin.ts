@@ -484,6 +484,23 @@ export function useConfigAbonnements(): {
   return { tarifs: donnees, enregistrer, recharger };
 }
 
+/** Compteurs financiers réels — pas de paiement en ligne actif pour l'instant,
+ * donc seuls les abonnements (payés hors-ligne, suivis manuellement) sont réels. */
+export interface CompteursFinances {
+  abonnementsActifs: number;
+}
+
+export function useCompteursFinances(): CompteursFinances {
+  const { donnees } = utiliserRequete<CompteursFinances>({ abonnementsActifs: 0 }, async () => {
+    const { count } = await creerClientNavigateur()
+      .from("abonnements")
+      .select("id", { count: "exact", head: true })
+      .eq("statut", "actif");
+    return { abonnementsActifs: count ?? 0 };
+  });
+  return donnees;
+}
+
 /* ===== Remboursements & litiges =====
  * Le paiement en ligne n'est pas encore actif (consultations réglées sur
  * place) : il n'existe donc pas encore de transactions à rembourser en base.
@@ -527,19 +544,26 @@ export interface CompteursAdmin {
   signalements: number;
   avisAModerer: number;
   utilisateurs: number;
+  medecinsValides: number;
+  rdvCeMois: number;
 }
 
 export function useCompteursAdmin(): CompteursAdmin {
   const { donnees } = utiliserRequete<CompteursAdmin>(
-    { medecinsEnAttente: 0, etablissementsEnAttente: 0, signalements: 0, avisAModerer: 0, utilisateurs: 0 },
+    { medecinsEnAttente: 0, etablissementsEnAttente: 0, signalements: 0, avisAModerer: 0, utilisateurs: 0, medecinsValides: 0, rdvCeMois: 0 },
     async () => {
       const supabase = creerClientNavigateur();
-      const [m, e, s, a, u] = await Promise.all([
+      const debutMois = new Date();
+      debutMois.setDate(1);
+      const debutMoisISO = debutMois.toISOString().slice(0, 10);
+      const [m, e, s, a, u, mv, rdv] = await Promise.all([
         supabase.from("medecins").select("id", { count: "exact", head: true }).eq("statut", "en_attente"),
         supabase.from("etablissements").select("id", { count: "exact", head: true }).eq("statut", "en_attente"),
         supabase.from("signalements").select("id", { count: "exact", head: true }).in("statut", ["nouveau", "en_cours"]),
         supabase.from("avis").select("id", { count: "exact", head: true }).eq("statut", "en_attente"),
         supabase.from("utilisateurs").select("id", { count: "exact", head: true }),
+        supabase.from("medecins").select("id", { count: "exact", head: true }).eq("statut", "valide"),
+        supabase.from("rendez_vous").select("id", { count: "exact", head: true }).gte("date", debutMoisISO),
       ]);
       return {
         medecinsEnAttente: m.count ?? 0,
@@ -547,9 +571,47 @@ export function useCompteursAdmin(): CompteursAdmin {
         signalements: s.count ?? 0,
         avisAModerer: a.count ?? 0,
         utilisateurs: u.count ?? 0,
+        medecinsValides: mv.count ?? 0,
+        rdvCeMois: rdv.count ?? 0,
       };
     }
   );
+  return donnees;
+}
+
+/** Nombre d'inscriptions par mois sur les 6 derniers mois (croissance). */
+export interface MoisCroissance {
+  mois: string;
+  total: number;
+}
+
+export function useCroissanceInscriptions(): MoisCroissance[] {
+  const { donnees } = utiliserRequete<MoisCroissance[]>([], async () => {
+    const debut = new Date();
+    debut.setMonth(debut.getMonth() - 5, 1);
+    debut.setHours(0, 0, 0, 0);
+    const { data } = await creerClientNavigateur()
+      .from("utilisateurs")
+      .select("cree_le")
+      .gte("cree_le", debut.toISOString());
+    const noms = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sept", "Oct", "Nov", "Déc"];
+    const mois: MoisCroissance[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i, 1);
+      mois.push({ mois: noms[d.getMonth()], total: 0 });
+    }
+    for (const u of data ?? []) {
+      const d = new Date(u.cree_le);
+      const idx = mois.findIndex((m, i) => {
+        const ref = new Date();
+        ref.setMonth(ref.getMonth() - (5 - i), 1);
+        return d.getMonth() === ref.getMonth() && d.getFullYear() === ref.getFullYear();
+      });
+      if (idx >= 0) mois[idx].total++;
+    }
+    return mois;
+  });
   return donnees;
 }
 
