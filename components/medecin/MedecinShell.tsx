@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
 import { seDeconnecter } from "@/lib/auth";
 import { useContextePro } from "@/lib/pro";
@@ -26,7 +27,15 @@ const LIENS = [
 export default function MedecinShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { medecin } = useContextePro();
+  const { medecin, chargement, role } = useContextePro();
+
+  // Garde d'accès : l'espace médecin exige un compte medecin ou assistant.
+  // Sans ça, un patient (ou une session expirée) restait bloqué sur « Chargement… ».
+  useEffect(() => {
+    if (!chargement && role !== "medecin" && role !== "assistant") {
+      router.replace("/connexion");
+    }
+  }, [chargement, role, router]);
   const medecinConnecte = medecin ?? {
     gradient: "linear-gradient(135deg,#2E9CCA,#15506B)",
     initiales: "…",

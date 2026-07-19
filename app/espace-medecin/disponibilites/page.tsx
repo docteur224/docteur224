@@ -31,10 +31,22 @@ export default function Disponibilites() {
   const JOURS_OUVERTURE = ordreJours.map((j) => ({ jour: NOMS_COURTS[j], heures: parJour(j) }));
   const JOURS_SEMAINE_LONGS = ordreJours.map((j) => ({ jour: NOMS_LONGS[j], heures: parJour(j) }));
 
-  if (chargement || !medecin) {
+  if (chargement) {
     return (
       <MedecinShell>
         <p className="p-6 text-[13px] text-muted">Chargement…</p>
+      </MedecinShell>
+    );
+  }
+
+  if (!medecin) {
+    // Connecté mais sans profil médecin accessible (le shell redirige les
+    // non-professionnels vers /connexion ; ce message couvre le cas restant).
+    return (
+      <MedecinShell>
+        <p className="p-6 text-[13px] text-muted">
+          Profil médecin introuvable. Reconnectez-vous avec un compte professionnel.
+        </p>
       </MedecinShell>
     );
   }

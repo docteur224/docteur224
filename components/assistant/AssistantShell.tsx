@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
 import { useContextePro } from "@/lib/pro";
 
@@ -24,7 +25,15 @@ const LIENS = [
 
 export default function AssistantShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const { medecin, utilisateur } = useContextePro();
+  const router = useRouter();
+  const { medecin, utilisateur, chargement, role } = useContextePro();
+
+  // Garde d'accès : l'espace assistant exige un compte assistant (ou médecin).
+  useEffect(() => {
+    if (!chargement && role !== "medecin" && role !== "assistant") {
+      router.replace("/connexion");
+    }
+  }, [chargement, role, router]);
   const nomAssistant = utilisateur ? `${utilisateur.prenom} ${utilisateur.nom}`.trim() : "…";
   const nomMedecin = medecin ? `${medecin.civilite} ${medecin.prenom.charAt(0)}. ${medecin.nom}` : "";
 
