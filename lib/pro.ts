@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { creerClientNavigateur } from "@/lib/supabase/client";
 import {
-  chargerMedecinParId,
   HEURES_JOURNEE,
   statutCreneau,
   type EtatCreneau,
@@ -107,7 +106,113 @@ export function useContextePro(): ContextePro {
           gererCreneaux: a.peut_gerer_creneaux,
         };
       }
-      const medecin = (await chargerMedecinParId(medecinId)) ?? null;
+      const { data: ligneMedecin, error: errMedecin } = await supabase
+        .from("medecins")
+        .select(`
+          id, civilite, tarif_consultation, presentation, soins_et_actes, diplomes,
+          parcours, langues, annees_experience, telephone_secretariat, note_moyenne,
+          nb_avis, etablissement_id, quartier,
+          utilisateurs ( nom, prenom ),
+          specialites ( nom ),
+          villes ( nom ),
+          medecin_assurances ( assurances ( libelle ) ),
+          horaires_types ( jour_semaine, heure_debut, heure_fin )
+        `)
+        .eq("id", medecinId)
+        .maybeSingle();
+
+      let medecin: MedecinAvecPlages | null = null;
+      if (!errMedecin && ligneMedecin) {
+        const ligne = ligneMedecin as unknown as {
+          id: string;
+          civilite: string;
+          tarif_consultation: number | null;
+          presentation: string | null;
+          soins_et_actes: string[];
+          diplomes: { titre: string; lieu: string }[];
+          parcours: { lieu: string; duree: string }[];
+          langues: string[];
+          annees_experience: number | null;
+          telephone_secretariat: string | null;
+          note_moyenne: number;
+          nb_avis: number;
+          etablissement_id: string | null;
+          quartier: string | null;
+          utilisateurs: { nom: string | null; prenom: string | null } | null;
+          specialites: { nom: string } | null;
+          villes: { nom: string } | null;
+          medecin_assurances: { assurances: { libelle: string } | null }[];
+          horaires_types: { jour_semaine: number; heure_debut: string; heure_fin: string }[];
+        };
+
+        const prenom = ligne.utilisateurs?.prenom ?? "";
+        const nom = ligne.utilisateurs?.nom ?? "";
+        const joursOuverts = new Set(ligne.horaires_types?.map((h) => h.jour_semaine) ?? []);
+        const joursFermes = [0, 1, 2, 3, 4, 5, 6].filter((j) => !joursOuverts.has(j));
+
+        const JOURS_NOMS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+        const tries = [...joursOuverts].sort();
+        const jours =
+          tries.length === 0
+            ? "Sur rendez-vous"
+            : `${JOURS_NOMS[tries[0]]} — ${JOURS_NOMS[tries[tries.length - 1]]}`;
+        const debuts = ligne.horaires_types?.map((h) => h.heure_debut.slice(0, 5)).sort() ?? [];
+        const fins = ligne.horaires_types?.map((h) => h.heure_fin.slice(0, 5)).sort() ?? [];
+        const detail =
+          debuts.length > 0 ? `${debuts[0]} à ${fins[fins.length - 1]}` : "Horaires à confirmer";
+
+        const GRADIENTS = [
+          "linear-gradient(135deg,#E08E45,#C0392B)",
+          "linear-gradient(135deg,#2E9CCA,#15506B)",
+          "linear-gradient(135deg,#16A085,#0E6655)",
+          "linear-gradient(135deg,#6C5CE7,#341F97)",
+          "linear-gradient(135deg,#1E7B45,#15506B)",
+          "linear-gradient(135deg,#7A5BB5,#15506B)",
+        ];
+
+        function empreinte(texte: string): number {
+          let h = 0;
+          for (let i = 0; i < texte.length; i++) h = (Math.imul(h, 31) + texte.charCodeAt(i)) | 0;
+          return Math.abs(h);
+        }
+
+        const gradient = GRADIENTS[empreinte(medecinId) % GRADIENTS.length];
+
+        const aujourdHui = new Date().getDay();
+        const ouvertAujourdHui = joursOuverts.has(aujourdHui);
+        let prochainJour = aujourdHui;
+        for (let i = 1; i <= 7 && !joursOuverts.has(prochainJour); i++) prochainJour = (aujourdHui + i) % 7;
+
+        medecin = {
+          id: medecinId,
+          civilite: (ligne.civilite === "Pr" ? "Pr" : "Dr") as "Dr" | "Pr",
+          prenom,
+          nom,
+          initiales: `${prenom.charAt(0)}${nom.charAt(0)}`.toUpperCase() || "DR",
+          gradient,
+          specialite: ligne.specialites?.nom ?? "Médecine générale",
+          etablissementId: ligne.etablissement_id ?? "",
+          ville: ligne.villes?.nom ?? "",
+          anneesExperience: ligne.annees_experience ?? 0,
+          tarifConsultation: ligne.tarif_consultation ?? 0,
+          note: Number(ligne.note_moyenne) || 0,
+          nbAvis: ligne.nb_avis,
+          disponibilite: ouvertAujourdHui
+            ? { type: "aujourdhui", label: "Dispo aujourd'hui" }
+            : { type: "bientot", label: joursOuverts.size ? JOURS_NOMS[prochainJour] : "Sur demande" },
+          telephoneSecretariat: ligne.telephone_secretariat ?? "",
+          aPropos: ligne.presentation ?? "",
+          soinsEtActes: ligne.soins_et_actes ?? [],
+          diplomes: ligne.diplomes ?? [],
+          parcours: ligne.parcours ?? [],
+          langues: ligne.langues ?? [],
+          assurances: ligne.medecin_assurances?.map((a) => a.assurances?.libelle ?? "").filter(Boolean) ?? [],
+          horaires: { jours, detail },
+          joursFermes,
+          plages: ligne.horaires_types ?? [],
+        };
+      }
+
       if (actif) {
         setCtx({
           chargement: false,
