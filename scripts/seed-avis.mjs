@@ -57,6 +57,8 @@ await supabase.from("avis").delete().not("id", "is", null);
 await supabase.from("rendez_vous").delete().eq("motif", MOTIF_DEMO);
 
 const jourPasse = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
+/** Horodatage il y a n jours — sert à étaler les avis dans le temps. */
+const momentPasse = (n) => new Date(Date.now() - n * 86400000).toISOString();
 
 let deposes = 0;
 let iCommentaire = 0;
@@ -64,6 +66,11 @@ let iPatient = 0;
 let decalage = 5;
 
 for (const [iMedecin, medecin] of medecins.entries()) {
+  // Le dernier médecin reste volontairement sans aucun avis : c'est le cas
+  // que les indicateurs admin doivent savoir remonter (« Aucun avis », taux
+  // de couverture), et il n'existerait jamais si on notait tout le monde.
+  if (iMedecin === medecins.length - 1) continue;
+
   // Nombre d'avis variable d'un médecin à l'autre : une fiche à 5 avis et une
   // fiche à 1 avis rendent le tri « Mieux notés » et la répartition lisibles.
   const nbAvis = 1 + ((iMedecin * 2) % 5);
@@ -98,6 +105,10 @@ for (const [iMedecin, medecin] of medecins.entries()) {
       continue;
     }
 
+    // L'avis est déposé au lendemain de la consultation : les avis s'étalent
+    // ainsi sur plusieurs mois, ce qui donne du sens aux indicateurs admin
+    // (« ce mois vs mois précédent », « sans réponse depuis plus de 7 jours »).
+    const deposeIlYA = Math.max(decalage - 1, 0);
     const reponse = REPONSES[modele.note] ?? null;
     const { error } = await supabase.from("avis").insert({
       patient_id: patient.id,
@@ -106,8 +117,10 @@ for (const [iMedecin, medecin] of medecins.entries()) {
       note: modele.note,
       commentaire: modele.texte,
       statut: "publie",
+      cree_le: momentPasse(deposeIlYA),
       reponse_medecin: reponse,
-      reponse_le: reponse ? new Date().toISOString() : null,
+      // Le médecin répond deux jours après l'avis, jamais dans le futur.
+      reponse_le: reponse ? momentPasse(Math.max(deposeIlYA - 2, 0)) : null,
     });
     if (error) {
       console.warn(`  ⚠ avis ${medecin.id.slice(0, 8)}: ${error.message}`);

@@ -292,6 +292,154 @@ export async function modererAvis(
   await tracerAudit(actions[decision], avis.titre);
 }
 
+/* ===== Indicateurs d'avis (migration 0012) ===== */
+
+/**
+ * Baromètre des avis. Tout est agrégé par la fonction SQL
+ * `avis_stats_globales` : rapatrier les avis pour en faire la moyenne côté
+ * navigateur ne tiendrait pas la charge et donnerait des chiffres faux dès
+ * qu'un avis est masqué.
+ */
+export interface StatsAvis {
+  avisPublies: number;
+  avisMasques: number;
+  avisCeMois: number;
+  avisMoisPrecedent: number;
+  noteMoyenne: number;
+  nbPositifs: number;
+  nbNeutres: number;
+  nbNegatifs: number;
+  nbAvecReponse: number;
+  nbSansReponse7j: number;
+  medecinsValides: number;
+  medecinsNotes: number;
+  signalementsOuverts: number;
+}
+
+const STATS_VIDES: StatsAvis = {
+  avisPublies: 0,
+  avisMasques: 0,
+  avisCeMois: 0,
+  avisMoisPrecedent: 0,
+  noteMoyenne: 0,
+  nbPositifs: 0,
+  nbNeutres: 0,
+  nbNegatifs: 0,
+  nbAvecReponse: 0,
+  nbSansReponse7j: 0,
+  medecinsValides: 0,
+  medecinsNotes: 0,
+  signalementsOuverts: 0,
+};
+
+export function useStatsAvis(): { stats: StatsAvis; recharger: () => void } {
+  const { donnees, recharger } = utiliserRequete<StatsAvis>(STATS_VIDES, async () => {
+    const { data } = await creerClientNavigateur().rpc("avis_stats_globales");
+    const l = (data ?? [])[0];
+    if (!l) return STATS_VIDES;
+    return {
+      avisPublies: Number(l.avis_publies) || 0,
+      avisMasques: Number(l.avis_masques) || 0,
+      avisCeMois: Number(l.avis_ce_mois) || 0,
+      avisMoisPrecedent: Number(l.avis_mois_precedent) || 0,
+      noteMoyenne: Number(l.note_moyenne) || 0,
+      nbPositifs: Number(l.nb_positifs) || 0,
+      nbNeutres: Number(l.nb_neutres) || 0,
+      nbNegatifs: Number(l.nb_negatifs) || 0,
+      nbAvecReponse: Number(l.nb_avec_reponse) || 0,
+      nbSansReponse7j: Number(l.nb_sans_reponse_7j) || 0,
+      medecinsValides: Number(l.medecins_valides) || 0,
+      medecinsNotes: Number(l.medecins_notes) || 0,
+      signalementsOuverts: Number(l.signalements_ouverts) || 0,
+    };
+  });
+  return { stats: donnees, recharger };
+}
+
+/** Répartition 5★ → 1★ des avis publiés. */
+export function useRepartitionAvis(): { etoiles: number; nb: number }[] {
+  const { donnees } = utiliserRequete<{ etoiles: number; nb: number }[]>([], async () => {
+    const { data } = await creerClientNavigateur().rpc("avis_repartition");
+    return ((data ?? []) as { etoiles: number; nb: number }[]).map((l) => ({
+      etoiles: Number(l.etoiles),
+      nb: Number(l.nb),
+    }));
+  });
+  return donnees;
+}
+
+export type OrdreClassement = "meilleurs" | "moins_bons" | "plus_avis" | "sans_avis";
+
+export interface LigneClassement {
+  medecinId: string;
+  nomComplet: string;
+  specialite: string;
+  ville: string;
+  noteMoyenne: number;
+  nbAvis: number;
+  /** Moyenne bayésienne : c'est elle qui ordonne, pas la moyenne brute. */
+  scorePondere: number;
+  /** Assez d'avis pour que le classement soit défendable (seuil en base). */
+  eligibleRecompense: boolean;
+  nbSansReponse: number;
+}
+
+/**
+ * Classement des médecins. Le tri « meilleurs »/« moins_bons » s'appuie sur
+ * une moyenne bayésienne calculée en base : sans elle, un médecin noté 5,0
+ * par un seul patient devancerait un médecin noté 4,8 par quarante — et on
+ * récompenserait du bruit statistique.
+ */
+export function useClassementMedecins(
+  ordre: OrdreClassement,
+  limite: number
+): { lignes: LigneClassement[]; chargement: boolean } {
+  // La clé de la requête vit dans l'état : tant que le résultat stocké ne
+  // correspond pas à la demande courante, on est en chargement. Changer
+  // d'onglet repasse donc bien en chargement, sans setState en tête d'effet
+  // (que le linter React interdit).
+  const [resultat, setResultat] = useState<{ cle: string; lignes: LigneClassement[] } | null>(null);
+  const cle = `${ordre}#${limite}`;
+
+  useEffect(() => {
+    let actif = true;
+    creerClientNavigateur()
+      .rpc("avis_classement_medecins", { p_ordre: ordre, p_limite: limite })
+      .then(({ data }) => {
+        if (!actif) return;
+        setResultat({
+          cle,
+          lignes: ((data ?? []) as Record<string, unknown>[]).map((l) => ({
+            medecinId: String(l.medecin_id),
+            nomComplet: String(l.nom_complet ?? ""),
+            specialite: String(l.specialite ?? ""),
+            ville: String(l.ville ?? ""),
+            noteMoyenne: Number(l.note_moyenne) || 0,
+            nbAvis: Number(l.nb_avis) || 0,
+            scorePondere: Number(l.score_pondere) || 0,
+            eligibleRecompense: Boolean(l.eligible_recompense),
+            nbSansReponse: Number(l.nb_sans_reponse) || 0,
+          })),
+        });
+      });
+    return () => {
+      actif = false;
+    };
+  }, [ordre, limite, cle]);
+
+  const aJour = resultat?.cle === cle;
+  return { lignes: aJour ? resultat.lignes : [], chargement: !aJour };
+}
+
+/** Seuil d'avis à partir duquel une moyenne est jugée représentative. */
+export function useSeuilFiabilite(): number {
+  const { donnees } = utiliserRequete<number>(3, async () => {
+    const { data } = await creerClientNavigateur().rpc("avis_seuil_fiabilite");
+    return Number(data) || 3;
+  });
+  return donnees;
+}
+
 /* ===== Réglages de la plateforme ===== */
 
 export interface ReglagesPlateforme {
