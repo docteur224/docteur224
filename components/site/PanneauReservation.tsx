@@ -79,9 +79,14 @@ export default function PanneauReservation({
 
   return (
     <div className="rounded-[18px] border border-line bg-white p-[22px] shadow-[0_8px_22px_rgba(16,59,80,.06)] lg:sticky lg:top-[86px]">
-      <div className="mb-1 flex items-baseline justify-between">
+      {/* Le tarif de consultation n'apparaît pas ici : placé à côté du titre,
+          il laissait croire que la réservation elle-même est payante. Le prix
+          reste indiqué plus bas, rattaché au règlement sur place. */}
+      <div className="mb-1 flex items-baseline justify-between gap-2">
         <b className="text-[15px] font-extrabold">Réserver un rendez-vous</b>
-        <span className="text-[15px] font-extrabold text-blue">{formatGNF(tarif)}</span>
+        <span className="flex-none rounded-lg bg-green-soft px-[9px] py-1 text-[11px] font-extrabold text-green">
+          Gratuit
+        </span>
       </div>
       <div className="mb-3 flex items-center justify-between gap-2">
         <span className="text-xs text-muted">Choisissez une date et un horaire disponibles.</span>
@@ -210,6 +215,12 @@ export default function PanneauReservation({
           Sélectionnez un horaire
         </span>
       )}
+
+      {/* Le tarif est rappelé ici, explicitement rattaché au paiement sur
+          place, pour lever toute confusion avec le coût de la réservation. */}
+      <p className="mt-[10px] text-center text-[11.5px] leading-relaxed text-muted">
+        Réservation gratuite. Consultation {formatGNF(tarif)}, à régler sur place.
+      </p>
     </div>
   );
 }

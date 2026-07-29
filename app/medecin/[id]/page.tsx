@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import TopNav from "@/components/site/TopNav";
 import PanneauReservation from "@/components/site/PanneauReservation";
 import CarteLocalisation from "@/components/site/CarteLocalisation";
+import OngletsFiche from "@/components/site/OngletsFiche";
 import AppBarMobile from "@/components/mobile/AppBarMobile";
 import { formatNote } from "@/lib/format";
 import { chargerEtablissementParId, chargerMedecinParId, nomComplet } from "@/lib/donnees";
@@ -190,6 +191,19 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
           <Link href={`/medecin/${medecin.id}/creneaux`} className="btn">
             📅 Voir les disponibilités
           </Link>
+          {/* Le tarif est affiché plus haut ; on rappelle ici que la
+              réservation elle-même ne coûte rien. */}
+          <small
+            style={{
+              display: "block",
+              marginTop: 8,
+              textAlign: "center",
+              fontSize: 11.5,
+              color: "var(--muted)",
+            }}
+          >
+            Réservation gratuite · consultation à régler sur place
+          </small>
         </div>
       </div>
 
@@ -233,20 +247,14 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
             </div>
           </div>
 
-          {/* Onglets */}
-          <div className="flex gap-1 border-b border-line px-[26px]">
-            <span className="mr-[18px] border-b-[2.5px] border-teal px-1.5 py-[15px] text-[13.5px] font-bold text-blue">
-              Présentation
-            </span>
-            <span className="mr-[18px] border-b-[2.5px] border-transparent px-1.5 py-[15px] text-[13.5px] font-bold text-muted">
-              Établissement
-            </span>
-            <span className="mr-[18px] border-b-[2.5px] border-transparent px-1.5 py-[15px] text-[13.5px] font-bold text-muted">
-              Avis ({medecin.nbAvis})
-            </span>
-          </div>
-
-          {/* Corps de la fiche */}
+          {/* Onglets — le contenu est réparti en trois volets ; la sélection
+              est gérée par OngletsFiche (client), le rendu reste serveur. */}
+          <OngletsFiche
+            onglets={[
+              {
+                cle: "presentation",
+                label: "Présentation",
+                contenu: (
           <div className="px-[26px] py-6">
             <TitreSection>À propos</TitreSection>
             <p className="mb-[18px] text-[13.5px] leading-[1.65] text-[#3f5360]">
@@ -303,6 +311,25 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
               ))}
             </div>
 
+            <TitreSection>Langues parlées</TitreSection>
+            <div className="flex flex-wrap gap-2">
+              {medecin.langues.map((langue) => (
+                <span
+                  key={langue}
+                  className="rounded-full border border-[#DCE4EA] bg-[#EEF2F5] px-[14px] py-2 text-xs font-bold text-[#3A4A55]"
+                >
+                  {langue}
+                </span>
+              ))}
+            </div>
+          </div>
+                ),
+              },
+              {
+                cle: "etablissement",
+                label: "Établissement",
+                contenu: (
+          <div className="px-[26px] py-6">
             <TitreSection>Photos de l’établissement</TitreSection>
             <div className="grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] gap-3">
               {PHOTOS.map((photo) => (
@@ -343,13 +370,15 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
                   <small className="text-xs text-muted">{medecin.horaires.detail}</small>
                 </div>
               </div>
+              {/* Les langues parlées sont une information sur le médecin :
+                  elles vivent dans l'onglet Présentation, pas ici. */}
               <div className="flex items-start gap-[11px] text-[13px]">
                 <span className="w-[18px] flex-none text-teal" aria-hidden>
-                  🗣️
+                  📞
                 </span>
                 <div>
-                  <b className="block font-bold">Langues</b>
-                  <small className="text-xs text-muted">{medecin.langues.join(", ")}</small>
+                  <b className="block font-bold">{medecin.telephoneSecretariat}</b>
+                  <small className="text-xs text-muted">Secrétariat</small>
                 </div>
               </div>
               <div className="flex items-start gap-[11px] text-[13px]">
@@ -371,6 +400,41 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
               telephone={medecin.telephoneSecretariat}
             />
           </div>
+                ),
+              },
+              {
+                cle: "avis",
+                label: `Avis (${medecin.nbAvis})`,
+                contenu: (
+          <div className="px-[26px] py-6">
+            {medecin.nbAvis === 0 ? (
+              <div className="py-8 text-center">
+                <div className="text-3xl" aria-hidden>
+                  ⭐
+                </div>
+                <b className="mt-3 block text-[15px] font-extrabold">Aucun avis pour le moment</b>
+                <p className="mx-auto mt-2 max-w-[380px] text-[13px] leading-relaxed text-muted">
+                  Les avis sont publiés par les patients après une consultation
+                  honorée. Soyez le premier à partager votre expérience avec{" "}
+                  {nomComplet(medecin)}.
+                </p>
+              </div>
+            ) : (
+              <div className="py-8 text-center">
+                <b className="block text-[22px] font-extrabold text-blue">
+                  ★ {formatNote(medecin.note)}
+                </b>
+                <p className="mt-2 text-[13px] text-muted">
+                  Moyenne sur {medecin.nbAvis} avis. Le détail des avis arrive
+                  prochainement.
+                </p>
+              </div>
+            )}
+          </div>
+                ),
+              },
+            ]}
+          />
         </div>
 
         {/* ===== Panneau de réservation ===== */}
