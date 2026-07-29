@@ -8,6 +8,8 @@ import RechercheResultats, {
   RechercheResultatsMobile,
 } from "@/components/site/RechercheResultats";
 import AvatarMedecin from "@/components/site/AvatarMedecin";
+import CarteResultatMobile from "@/components/site/CarteResultatMobile";
+import PopupAvis from "@/components/site/PopupAvis";
 import {
   construireGroupes,
   construireGroupesAvances,
@@ -216,39 +218,22 @@ export default async function Resultats({
           {liste.map((m) => {
             const etab = getEtablissement(m.etablissementId);
             return (
-              <Link key={m.id} href={`/medecin/${m.id}`} className="doc">
-                {m.photoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={m.photoUrl} alt="" className="av" style={{ objectFit: "cover" }} />
-                ) : (
-                  <span className="av" aria-hidden style={{ background: m.gradient }}>
-                    {m.initiales}
-                  </span>
-                )}
-                <span className="info">
-                  <b>{nomComplet(m)}</b>
-                  <span className="spec">{m.specialite}</span>
-                  <span className="meta">
-                    📍 {etab?.nom} · {m.ville}
-                  </span>
-                  <span className="row2">
-                    <span className="stars">
-                      ★ {formatNote(m.note)} ({m.nbAvis})
-                    </span>
-                    {/* Pas de tarif : la réservation est gratuite (cf. carte web). */}
-                    <span className="price">
-                      {disponibilites.get(m.id)
-                        ? `Dès ${disponibilites.get(m.id)!.heures[0]}`
-                        : ""}
-                    </span>
-                  </span>
-                  <span className="row2">
-                    <span className={`pill ${m.disponibilite.type === "aujourdhui" ? "ok" : "soon"}`}>
-                      {m.disponibilite.label}
-                    </span>
-                  </span>
-                </span>
-              </Link>
+              <CarteResultatMobile
+                key={m.id}
+                id={m.id}
+                photoUrl={m.photoUrl}
+                initiales={m.initiales}
+                gradient={m.gradient}
+                nomComplet={nomComplet(m)}
+                specialite={m.specialite}
+                etablissementNom={etab?.nom ?? ""}
+                ville={m.ville}
+                note={m.note}
+                nbAvis={m.nbAvis}
+                dispoLabel={m.disponibilite.label}
+                dispoAujourdhui={m.disponibilite.type === "aujourdhui"}
+                premiereHeure={disponibilites.get(m.id)?.heures[0] ?? ""}
+              />
             );
           })}
         </div>
@@ -354,9 +339,13 @@ export default async function Resultats({
                     d’expérience
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-[10px]">
-                    <span className="text-[12.5px] font-bold text-amber">
+                    <PopupAvis
+                      medecinId={m.id}
+                      medecinNom={nomComplet(m)}
+                      className="border-0 bg-transparent p-0 text-[12.5px] font-bold text-amber"
+                    >
                       ★ {formatNote(m.note)} ({m.nbAvis} avis)
-                    </span>
+                    </PopupAvis>
                     <span
                       className={`rounded-lg px-[9px] py-1 text-[11px] font-bold ${
                         m.disponibilite.type === "aujourdhui"
