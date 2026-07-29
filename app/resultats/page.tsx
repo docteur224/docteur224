@@ -3,6 +3,9 @@ import Link from "next/link";
 import TopNav from "@/components/site/TopNav";
 import AppBarMobile from "@/components/mobile/AppBarMobile";
 import { FiltresMobile, FiltresWeb } from "@/components/site/FiltresResultats";
+import RechercheResultats, {
+  RechercheResultatsMobile,
+} from "@/components/site/RechercheResultats";
 import { construireGroupes } from "@/lib/filtres";
 import { formatGNF, formatNote } from "@/lib/format";
 import { prochainsJours } from "@/lib/dates";
@@ -101,6 +104,7 @@ export default async function Resultats({
             liste.length > 1 ? "s" : ""
           }`}
         />
+        <RechercheResultatsMobile specialite={specialite} ville={ville} q={q} />
         <FiltresMobile groupes={groupes} />
         <div className="pad" style={{ paddingTop: 14 }}>
           {liste.length === 0 && (
@@ -153,25 +157,23 @@ export default async function Resultats({
 
       {/* ================= VERSION WEB (inchangée) ================= */}
       <div className="hidden md:block">
-      {/* En-tête de page : fil d'Ariane + titre + pastilles de recherche */}
+      {/* En-tête : fil d'Ariane + titre + formulaire de recherche pré-rempli.
+          Il remplace les anciennes pastilles spécialité/ville, qui ne faisaient
+          que répéter la recherche sans permettre de la modifier. La pastille de
+          disponibilité reste : elle reflète un filtre de la colonne de gauche. */}
       <div className="border-b border-line bg-white px-[30px] py-[22px]">
         <div className="text-xs font-semibold text-muted">
           <Link href="/">Accueil</Link> › Recherche
         </div>
         <h2 className="mt-1 text-xl font-extrabold">{titre}</h2>
-        <div className="mt-[14px] flex flex-wrap gap-2">
-          <span className="rounded-lg bg-green-soft px-[9px] py-1 text-[11px] font-bold text-green">
-            {specialite || "Toutes spécialités"}
-          </span>
-          <span className="rounded-lg bg-teal-soft px-[9px] py-1 text-[11px] font-bold text-blue">
-            📍 {ville || "Conakry"}
-          </span>
-          {dispo && (
+        <RechercheResultats specialite={specialite} ville={ville} q={q} />
+        {dispo && (
+          <div className="mt-[10px] flex flex-wrap gap-2">
             <span className="rounded-lg bg-teal-soft px-[9px] py-1 text-[11px] font-bold text-blue">
               📅 {LIBELLES_DISPO[dispo] ?? dispo}
             </span>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       <div className="mx-auto grid max-w-[1020px] gap-6 px-[30px] py-[26px] lg:grid-cols-[244px_1fr]">
