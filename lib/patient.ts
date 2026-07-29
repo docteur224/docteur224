@@ -418,6 +418,112 @@ export function useMesRendezVous(): { rdvs: RendezVousPatient[]; chargement: boo
   return { rdvs, chargement, recharger: () => setVersion((v) => v + 1) };
 }
 
+/* ----- Détail d'un rendez-vous (écran /mes-rendez-vous/[id]) ----- */
+
+/**
+ * Tout ce que la carte ne montre pas : coordonnées du lieu de consultation,
+ * téléphone à appeler, motif. Sert uniquement à l'écran de détail.
+ */
+export interface DetailRendezVous extends RendezVousPatient {
+  etablissementType: string;
+  adresse: string;
+  quartier: string;
+  /** Téléphone à composer : secrétariat du médecin, sinon standard de l'établissement. */
+  telephone: string;
+  /** URL Google Maps du médecin, ou "lat,long" — vide si non renseigné. */
+  localisation: string;
+  civilite: string;
+}
+
+interface LigneRdvDetail extends LigneRdv {
+  medecins:
+    | (NonNullable<LigneRdv["medecins"]> & {
+        telephone_secretariat: string | null;
+        localisation: string | null;
+        quartier: string | null;
+        etablissements:
+          | {
+              nom: string;
+              type: string | null;
+              adresse: string | null;
+              quartier: string | null;
+              telephone: string | null;
+            }
+          | null;
+      })
+    | null;
+}
+
+const SELECTION_RDV_DETAIL = `
+  id, medecin_id, date, heure, motif, statut, proche_id, patient_id,
+  medecins (
+    civilite, tarif_consultation, telephone_secretariat, localisation, quartier,
+    utilisateurs ( nom, prenom ),
+    specialites ( nom ),
+    villes ( nom ),
+    etablissements ( nom, type, adresse, quartier, telephone )
+  ),
+  proches ( nom, prenom, lien )
+`;
+
+/**
+ * Un rendez-vous du patient connecté, avec les détails du lieu.
+ * `null` = introuvable ou hors périmètre RLS (rendez-vous d'un autre patient).
+ */
+export function useRendezVous(id: string): {
+  rdv: DetailRendezVous | null;
+  chargement: boolean;
+  recharger: () => void;
+} {
+  // `resultat` porte la clé de la requête qui l'a produit : tant qu'elle ne
+  // correspond pas à la demande courante, on est en chargement — pas besoin
+  // d'un setState synchrone dans l'effet (interdit par le linter React).
+  const [resultat, setResultat] = useState<{ cle: string; rdv: DetailRendezVous | null } | null>(
+    null
+  );
+  const [version, setVersion] = useState(0);
+  const cle = `${id}#${version}`;
+
+  useEffect(() => {
+    let actif = true;
+    creerClientNavigateur()
+      .from("rendez_vous")
+      .select(SELECTION_RDV_DETAIL)
+      .eq("id", id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (!actif) return;
+        const l = data as unknown as LigneRdvDetail | null;
+        const m = l?.medecins;
+        const etab = m?.etablissements ?? null;
+        setResultat({
+          cle,
+          rdv: l
+            ? {
+                ...versRdv(l),
+                etablissementType: etab?.type ?? "",
+                adresse: etab?.adresse ?? "",
+                quartier: etab?.quartier ?? m?.quartier ?? "",
+                telephone: m?.telephone_secretariat || etab?.telephone || "",
+                localisation: m?.localisation ?? "",
+                civilite: m?.civilite === "Pr" ? "Pr" : "Dr",
+              }
+            : null,
+        });
+      });
+    return () => {
+      actif = false;
+    };
+  }, [id, cle]);
+
+  const aJour = resultat?.cle === cle;
+  return {
+    rdv: aJour ? resultat.rdv : null,
+    chargement: !aJour,
+    recharger: () => setVersion((v) => v + 1),
+  };
+}
+
 export async function reserverRendezVous(d: {
   medecinId: string;
   date: string;

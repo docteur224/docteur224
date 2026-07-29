@@ -1,12 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { depuisISO, MOIS_ABREGES } from "@/lib/dates";
 import type { RendezVousPatient } from "@/lib/patient";
 
 /**
  * Carte de rendez-vous — reproduit la .appt de la maquette web
  * (pastille de date, médecin, lignes de détail, badge de statut, actions).
+ *
+ * La carte entière ouvre le détail (/mes-rendez-vous/[id]). Les boutons
+ * Modifier / Annuler restent prioritaires : `stopPropagation` sur leur
+ * conteneur empêche le clic de remonter jusqu'à la carte.
  */
 
 const LIBELLES_STATUT: Record<RendezVousPatient["statut"], string> = {
@@ -23,15 +28,36 @@ export default function CarteRdv({
   rdv: RendezVousPatient;
   onAnnuler?: (id: string) => void;
 }) {
+  const router = useRouter();
   const d = depuisISO(rdv.date);
   const annule = rdv.statut === "annule";
   const libelle = LIBELLES_STATUT[rdv.statut];
   const pourUnProche = rdv.procheId !== undefined;
+  const lienDetail = `/mes-rendez-vous/${rdv.id}`;
+
+  // La carte se comporte comme un lien : clic, Entrée et Espace l'ouvrent.
+  const ouvrir = {
+    role: "link" as const,
+    tabIndex: 0,
+    onClick: () => router.push(lienDetail),
+    onKeyDown: (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        router.push(lienDetail);
+      }
+    },
+  };
+
+  // Les actions ne doivent pas déclencher l'ouverture du détail.
+  const stopper = {
+    onClick: (e: React.MouseEvent) => e.stopPropagation(),
+    onKeyDown: (e: React.KeyboardEvent) => e.stopPropagation(),
+  };
 
   return (
     <>
     {/* ===== Version mobile : carte .appt de la maquette mobile ===== */}
-    <div className="appt md:hidden">
+    <div className="appt cliquable md:hidden" {...ouvrir} aria-label={`Voir le rendez-vous du ${d.getDate()} avec ${rdv.medecinNom}`}>
       <div className="top">
         <div className="when">
           <b>{d.getDate()}</b>
@@ -50,8 +76,12 @@ export default function CarteRdv({
         📍 {rdv.etablissementNom} · {rdv.ville}
       </div>
       {pourUnProche && <div className="det">👤 Pour : {rdv.pourQui}</div>}
+      <div className="det chevron">
+        <span>Voir le détail</span>
+        <span aria-hidden>›</span>
+      </div>
       {onAnnuler && !annule && (
-        <div className="acts">
+        <div className="acts" {...stopper}>
           <Link href={`/medecin/${rdv.medecinId}`}>Modifier</Link>
           <button type="button" className="danger" onClick={() => onAnnuler(rdv.id)}>
             Annuler
@@ -61,7 +91,11 @@ export default function CarteRdv({
     </div>
 
     {/* ===== Version web (inchangée) ===== */}
-    <div className="mb-[14px] hidden items-center gap-[18px] rounded-2xl border border-line bg-white p-[18px] sm:grid-cols-[64px_1fr] md:grid lg:grid-cols-[64px_1fr_auto]">
+    <div
+      {...ouvrir}
+      aria-label={`Voir le rendez-vous du ${d.getDate()} avec ${rdv.medecinNom}`}
+      className="mb-[14px] hidden cursor-pointer items-center gap-[18px] rounded-2xl border border-line bg-white p-[18px] transition-shadow hover:border-teal hover:shadow-[0_2px_10px_rgba(21,80,107,.08)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal sm:grid-cols-[64px_1fr] md:grid lg:grid-cols-[64px_1fr_auto]"
+    >
       <div className="rounded-[13px] bg-teal-soft py-3 text-center">
         <b className="block text-[22px] font-extrabold leading-none text-blue">{d.getDate()}</b>
         <small className="text-[10px] font-bold uppercase text-blue">
@@ -95,7 +129,7 @@ export default function CarteRdv({
           {libelle}
         </span>
         {onAnnuler && !annule && (
-          <>
+          <span className="flex flex-wrap items-center gap-[9px]" {...stopper}>
             <Link
               href={`/medecin/${rdv.medecinId}`}
               className="rounded-[10px] border-[1.5px] border-line bg-white px-[15px] py-[9px] text-[12.5px] font-bold text-blue transition-colors hover:bg-bg"
@@ -109,7 +143,7 @@ export default function CarteRdv({
             >
               Annuler
             </button>
-          </>
+          </span>
         )}
       </div>
     </div>

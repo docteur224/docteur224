@@ -54,7 +54,8 @@ export default function PatientShell({ children }: { children: React.ReactNode }
         </div>
         <nav className="flex flex-col gap-[3px]">
           {LIENS.map((lien) => {
-            const actif = pathname === lien.href;
+            // Surligné aussi sur les sous-routes (ex. /mes-rendez-vous/[id]).
+            const actif = pathname === lien.href || pathname.startsWith(`${lien.href}/`);
             return (
               <Link
                 key={lien.href}
