@@ -98,15 +98,17 @@ for (const [i, e] of etabsDef.entries()) {
 }
 
 // ---------- Médecins (8) — les 6 premiers rattachés 2 par établissement ----------
+// `genre` et `langues` varient d'un profil à l'autre pour que les filtres
+// avancés de la recherche (Sexe, Langues parlées) soient démontrables.
 const medecinsDef = [
-  { prenom: "Mamadou", nom: "Diallo", specialite: "Médecine générale", villeNom: "Conakry", tarif: 150000, etab: 0 },
-  { prenom: "Aissatou", nom: "Barry", specialite: "Cardiologie", villeNom: "Conakry", tarif: 350000, etab: 0 },
-  { prenom: "Ibrahima", nom: "Sow", specialite: "Pédiatrie", villeNom: "Conakry", tarif: 200000, etab: 1 },
-  { prenom: "Fatoumata", nom: "Camara", specialite: "Gynécologie", villeNom: "Conakry", tarif: 250000, etab: 1 },
-  { prenom: "Ousmane", nom: "Baldé", specialite: "Dermatologie", villeNom: "Kindia", tarif: 180000, etab: 2 },
-  { prenom: "Mariama", nom: "Touré", specialite: "Ophtalmologie", villeNom: "Kindia", tarif: 220000, etab: 2 },
-  { prenom: "Sékou", nom: "Kourouma", specialite: "Dentaire", villeNom: "Kankan", tarif: 160000, etab: null },
-  { prenom: "Kadiatou", nom: "Sylla", specialite: "ORL", villeNom: "Labé", tarif: 190000, etab: null },
+  { prenom: "Mamadou", nom: "Diallo", specialite: "Médecine générale", villeNom: "Conakry", tarif: 150000, etab: 0, genre: "homme", langues: ["Français", "Soussou"] },
+  { prenom: "Aissatou", nom: "Barry", specialite: "Cardiologie", villeNom: "Conakry", tarif: 350000, etab: 0, genre: "femme", langues: ["Français", "Peul", "Anglais"] },
+  { prenom: "Ibrahima", nom: "Sow", specialite: "Pédiatrie", villeNom: "Conakry", tarif: 200000, etab: 1, genre: "homme", langues: ["Français", "Peul"] },
+  { prenom: "Fatoumata", nom: "Camara", specialite: "Gynécologie", villeNom: "Conakry", tarif: 250000, etab: 1, genre: "femme", langues: ["Français", "Soussou", "Malinké"] },
+  { prenom: "Ousmane", nom: "Baldé", specialite: "Dermatologie", villeNom: "Kindia", tarif: 180000, etab: 2, genre: "homme", langues: ["Français", "Peul"] },
+  { prenom: "Mariama", nom: "Touré", specialite: "Ophtalmologie", villeNom: "Kindia", tarif: 220000, etab: 2, genre: "femme", langues: ["Français", "Soussou"] },
+  { prenom: "Sékou", nom: "Kourouma", specialite: "Dentaire", villeNom: "Kankan", tarif: 160000, etab: null, genre: "homme", langues: ["Français", "Malinké"] },
+  { prenom: "Kadiatou", nom: "Sylla", specialite: "ORL", villeNom: "Labé", tarif: 190000, etab: null, genre: "femme", langues: ["Français", "Peul", "Anglais"] },
 ];
 const medecinIds = [];
 for (const [i, m] of medecinsDef.entries()) {
@@ -122,7 +124,8 @@ for (const [i, m] of medecinsDef.entries()) {
     soins_et_actes: ["Consultation", "Suivi", "Dépistage"],
     diplomes: [{ titre: `Doctorat en médecine — ${m.specialite}`, lieu: "Université de Conakry" }],
     parcours: [{ lieu: "CHU de Conakry", duree: "5 ans" }],
-    langues: ["Français", "Soussou", "Peul"],
+    langues: m.langues,
+    genre: m.genre,
     annees_experience: 5 + i, telephone_secretariat: `+2246240000${String(i + 1).padStart(2, "0")}`,
     statut: i === 7 ? "en_attente" : "valide", // le 8e reste à valider (test admin)
   }]);

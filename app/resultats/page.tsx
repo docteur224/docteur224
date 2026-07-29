@@ -3,17 +3,28 @@ import Link from "next/link";
 import TopNav from "@/components/site/TopNav";
 import AppBarMobile from "@/components/mobile/AppBarMobile";
 import { FiltresMobile, FiltresWeb } from "@/components/site/FiltresResultats";
+import FiltresAvances from "@/components/site/FiltresAvances";
 import RechercheResultats, {
   RechercheResultatsMobile,
 } from "@/components/site/RechercheResultats";
-import { construireGroupes } from "@/lib/filtres";
+import {
+  construireGroupes,
+  construireGroupesAvances,
+  groupeDisponibilite,
+  libelleValeur,
+} from "@/lib/filtres";
 import { formatGNF, formatNote } from "@/lib/format";
 import { prochainsJours } from "@/lib/dates";
 import {
   chargerAssurances,
   chargerEtablissements,
+  chargerLangues,
   chargerMedecins,
+  chargerNomsRecherche,
+  chargerSpecialites,
   chargerTypesEtablissement,
+  chargerVilles,
+  existeGenreRenseigne,
   existeMedecinNote,
   nomComplet,
   premiersCreneauxOuverts,
@@ -29,13 +40,6 @@ export const metadata: Metadata = {
  * avec mini-créneaux réservables à droite. Alimentée par Supabase
  * (lib/donnees.ts — médecins validés uniquement, via RLS).
  */
-
-/** Libellés de la pastille de disponibilité, alignés sur les valeurs d'URL. */
-const LIBELLES_DISPO: Record<string, string> = {
-  aujourdhui: "Aujourd'hui",
-  semaine: "Cette semaine",
-  weekend: "Week-end",
-};
 
 /** Un paramètre d'URL répété (?type=a&type=b) arrive en tableau ou en chaîne. */
 function versTableau(valeur: string | string[] | undefined): string[] {
@@ -53,23 +57,43 @@ export default async function Resultats({
   const ville = typeof sp.ville === "string" ? sp.ville.trim() : "";
   const q = typeof sp.q === "string" ? sp.q.trim() : "";
   const dispo = typeof sp.dispo === "string" ? sp.dispo : "";
+  const genre = typeof sp.genre === "string" ? sp.genre : "";
   const typesEtab = versTableau(sp.type);
   const assurances = versTableau(sp.assurance);
+  const langues = versTableau(sp.langue);
   const noteMin = typeof sp.note === "string" ? Number(sp.note) : 0;
 
-  const [medecins, etablissements, refAssurances, refTypes, avecNotes] = await Promise.all([
+  const [
+    medecins,
+    etablissements,
+    refAssurances,
+    refTypes,
+    refLangues,
+    refSpecialites,
+    refVilles,
+    refNoms,
+    avecNotes,
+    avecGenre,
+  ] = await Promise.all([
     chargerMedecins({
       specialite,
       ville,
       q,
       dispo,
       assurances,
+      langues,
+      genre,
       noteMin: Number.isFinite(noteMin) ? noteMin : 0,
     }),
     chargerEtablissements(),
     chargerAssurances(),
     chargerTypesEtablissement(),
+    chargerLangues(),
+    chargerSpecialites(),
+    chargerVilles(),
+    chargerNomsRecherche(),
     existeMedecinNote(),
+    existeGenreRenseigne(),
   ]);
   const getEtablissement = (id: string) => etablissements.find((e) => e.id === id);
 
@@ -77,6 +101,9 @@ export default async function Resultats({
   // sinon un filtre qui ne renvoie rien ferait disparaître sa propre case,
   // empêchant de le désactiver.
   const groupes = construireGroupes(refTypes, refAssurances, avecNotes);
+  const groupesAvances = construireGroupesAvances(refLangues, avecGenre);
+  const groupeDispo = groupeDisponibilite();
+  const nomsSpecialites = refSpecialites.map((s) => s.nom);
 
   // Le type d'établissement vit dans la table etablissements : ce filtre-ci
   // s'applique après la jointure, une fois les deux listes chargées.
@@ -104,7 +131,18 @@ export default async function Resultats({
             liste.length > 1 ? "s" : ""
           }`}
         />
-        <RechercheResultatsMobile specialite={specialite} ville={ville} q={q} />
+        <RechercheResultatsMobile
+          specialite={specialite}
+          ville={ville}
+          q={q}
+          specialites={nomsSpecialites}
+          villes={refVilles}
+          nomsMedecins={refNoms}
+        />
+        {/* Filtres avancés (popups) puis pastilles établissement/assurance */}
+        <div className="px-[18px] pt-3">
+          <FiltresAvances groupesFiltres={groupesAvances} groupeDispo={groupeDispo} />
+        </div>
         <FiltresMobile groupes={groupes} />
         <div className="pad" style={{ paddingTop: 14 }}>
           {liste.length === 0 && (
@@ -157,23 +195,47 @@ export default async function Resultats({
 
       {/* ================= VERSION WEB (inchangée) ================= */}
       <div className="hidden md:block">
-      {/* En-tête : fil d'Ariane + titre + formulaire de recherche pré-rempli.
-          Il remplace les anciennes pastilles spécialité/ville, qui ne faisaient
-          que répéter la recherche sans permettre de la modifier. La pastille de
-          disponibilité reste : elle reflète un filtre de la colonne de gauche. */}
+      {/* En-tête : fil d'Ariane + titre + formulaire de recherche pré-rempli,
+          puis la barre de filtres avancés (popups « Filtres » et
+          « Disponibilités »). Le formulaire remplace les anciennes pastilles
+          spécialité/ville, qui répétaient la recherche sans permettre de la
+          modifier. */}
       <div className="border-b border-line bg-white px-[30px] py-[22px]">
-        <div className="text-xs font-semibold text-muted">
-          <Link href="/">Accueil</Link> › Recherche
-        </div>
-        <h2 className="mt-1 text-xl font-extrabold">{titre}</h2>
-        <RechercheResultats specialite={specialite} ville={ville} q={q} />
-        {dispo && (
-          <div className="mt-[10px] flex flex-wrap gap-2">
-            <span className="rounded-lg bg-teal-soft px-[9px] py-1 text-[11px] font-bold text-blue">
-              📅 {LIBELLES_DISPO[dispo] ?? dispo}
-            </span>
+        <div className="mx-auto max-w-[1020px]">
+          <div className="text-xs font-semibold text-muted">
+            <Link href="/">Accueil</Link> › Recherche
           </div>
-        )}
+          <h2 className="mt-1 text-xl font-extrabold">{titre}</h2>
+          <RechercheResultats
+            specialite={specialite}
+            ville={ville}
+            q={q}
+            specialites={nomsSpecialites}
+            villes={refVilles}
+            nomsMedecins={refNoms}
+          />
+          <div className="mx-auto mt-[14px] flex w-full max-w-[860px] flex-wrap items-center gap-2">
+            <FiltresAvances groupesFiltres={groupesAvances} groupeDispo={groupeDispo} />
+            {dispo && (
+              <span className="rounded-lg bg-teal-soft px-[9px] py-[6px] text-[11.5px] font-bold text-blue">
+                📅 {libelleValeur([groupeDispo], "dispo", dispo)}
+              </span>
+            )}
+            {genre && (
+              <span className="rounded-lg bg-teal-soft px-[9px] py-[6px] text-[11.5px] font-bold text-blue">
+                {libelleValeur(groupesAvances, "genre", genre)}
+              </span>
+            )}
+            {langues.map((l) => (
+              <span
+                key={l}
+                className="rounded-lg bg-teal-soft px-[9px] py-[6px] text-[11.5px] font-bold text-blue"
+              >
+                🗣 {l}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
 
       <div className="mx-auto grid max-w-[1020px] gap-6 px-[30px] py-[26px] lg:grid-cols-[244px_1fr]">

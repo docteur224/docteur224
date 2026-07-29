@@ -109,7 +109,7 @@ export function useContextePro(): ContextePro {
       const { data: ligneMedecin, error: errMedecin } = await supabase
         .from("medecins")
         .select(`
-          id, civilite, tarif_consultation, presentation, soins_et_actes, diplomes,
+          id, civilite, genre, tarif_consultation, presentation, soins_et_actes, diplomes,
           parcours, langues, annees_experience, telephone_secretariat, note_moyenne,
           nb_avis, etablissement_id, quartier,
           utilisateurs ( nom, prenom ),
@@ -126,6 +126,7 @@ export function useContextePro(): ContextePro {
         const ligne = ligneMedecin as unknown as {
           id: string;
           civilite: string;
+          genre: string | null;
           tarif_consultation: number | null;
           presentation: string | null;
           soins_et_actes: string[];
@@ -186,6 +187,10 @@ export function useContextePro(): ContextePro {
         medecin = {
           id: medecinId,
           civilite: (ligne.civilite === "Pr" ? "Pr" : "Dr") as "Dr" | "Pr",
+          genre:
+            ligne.genre === "femme" || ligne.genre === "homme"
+              ? (ligne.genre as "femme" | "homme")
+              : null,
           prenom,
           nom,
           initiales: `${prenom.charAt(0)}${nom.charAt(0)}`.toUpperCase() || "DR",
@@ -674,6 +679,8 @@ export async function enregistrerProfilMedecin(d: {
   tarifConsultation?: number;
   soins?: string[];
   langues?: string[];
+  /** « femme » | « homme » | "" pour ne pas préciser. */
+  genre?: string;
   lienMaps?: string;
   telephoneSecretariat?: string;
 }): Promise<{ erreur?: string }> {
@@ -685,6 +692,9 @@ export async function enregistrerProfilMedecin(d: {
   if (d.tarifConsultation !== undefined) maj.tarif_consultation = d.tarifConsultation;
   if (d.soins !== undefined) maj.soins_et_actes = d.soins;
   if (d.langues !== undefined) maj.langues = d.langues;
+  // Chaîne vide = « non précisé » : la colonne accepte uniquement
+  // 'femme'/'homme' ou NULL (contrainte check en base).
+  if (d.genre !== undefined) maj.genre = d.genre === "" ? null : d.genre;
   if (d.lienMaps !== undefined) maj.localisation = d.lienMaps;
   if (d.telephoneSecretariat !== undefined) maj.telephone_secretariat = d.telephoneSecretariat;
   const { error } = await supabase.from("medecins").update(maj).eq("id", auth.user.id);

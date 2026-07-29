@@ -25,6 +25,8 @@ export interface Etablissement {
 export interface Medecin {
   id: string;
   civilite: "Dr" | "Pr";
+  /** Genre du médecin (filtre « Sexe »). null tant qu'il n'est pas renseigné. */
+  genre: "femme" | "homme" | null;
   prenom: string;
   nom: string;
   initiales: string;

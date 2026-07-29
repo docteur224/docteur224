@@ -39,6 +39,7 @@ const MEDECIN_VIDE = {
   gradient: "linear-gradient(135deg,#2E9CCA,#15506B)",
   initiales: "…",
   civilite: "Dr" as const,
+  genre: null as "femme" | "homme" | null,
   prenom: "",
   nom: "",
   specialite: "",
@@ -70,6 +71,7 @@ export default function ProfilMedecin() {
   // Surcharges locales (affichage immédiat) au-dessus du profil chargé
   const [soinsLocaux, setSoinsLocaux] = useState<string[] | null>(null);
   const [languesLocales, setLanguesLocales] = useState<string[] | null>(null);
+  const [genreLocal, setGenreLocal] = useState<string | null>(null);
   const [lienMapsLocal, setLienMapsLocal] = useState<string | null>(null);
   const [geolocEnCours, setGeolocEnCours] = useState(false);
   const [erreurGeoloc, setErreurGeoloc] = useState("");
@@ -341,6 +343,35 @@ export default function ProfilMedecin() {
               <button type="button" className="chip" onClick={() => ajouterElement("langues", "Langue à ajouter :")}>
                 + Ajouter
               </button>
+            </div>
+          </div>
+
+          <div className="card2">
+            <h4>👤 Sexe</h4>
+            <p className="muted" style={{ fontSize: 11.5, margin: "-4px 0 11px" }}>
+              Alimente un filtre de recherche. Vous pouvez ne pas le préciser.
+            </p>
+            <div className="chips">
+              {[
+                { valeur: "femme", label: "Femme" },
+                { valeur: "homme", label: "Homme" },
+                { valeur: "", label: "Ne pas préciser" },
+              ].map((o) => {
+                const actif = (genreLocal ?? medecinConnecte.genre ?? "") === o.valeur;
+                return (
+                  <button
+                    key={o.valeur || "non-precise"}
+                    type="button"
+                    className={`chip${actif ? "" : " grey"}`}
+                    onClick={async () => {
+                      setGenreLocal(o.valeur);
+                      await enregistrerProfilMedecin({ genre: o.valeur });
+                    }}
+                  >
+                    {o.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -663,6 +694,41 @@ export default function ProfilMedecin() {
           >
             + Ajouter
           </button>
+        </div>
+      </div>
+
+      {/* Genre — alimente le filtre « Sexe » de la recherche patient */}
+      <div className="mb-4 rounded-2xl border border-line bg-white p-5">
+        <h3 className="mb-2 text-[15px] font-extrabold">👤 Sexe</h3>
+        <p className="mb-3 text-[12.5px] text-muted">
+          Certains patients préfèrent consulter une femme ou un homme. Cette
+          information alimente un filtre de recherche ; vous pouvez ne pas la préciser.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { valeur: "femme", label: "Femme" },
+            { valeur: "homme", label: "Homme" },
+            { valeur: "", label: "Ne pas préciser" },
+          ].map((o) => {
+            const actif = (genreLocal ?? medecinConnecte.genre ?? "") === o.valeur;
+            return (
+              <button
+                key={o.valeur || "non-precise"}
+                type="button"
+                onClick={async () => {
+                  setGenreLocal(o.valeur);
+                  await enregistrerProfilMedecin({ genre: o.valeur });
+                }}
+                className={`rounded-full border px-[14px] py-2 text-xs font-bold transition-colors ${
+                  actif
+                    ? "border-teal bg-teal-soft text-blue"
+                    : "border-[#DCE4EA] bg-[#EEF2F5] text-[#3A4A55] hover:border-teal"
+                }`}
+              >
+                {o.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 

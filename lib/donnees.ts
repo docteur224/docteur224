@@ -40,6 +40,7 @@ const JOURS_NOMS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi
 interface LigneMedecin {
   id: string;
   civilite: string;
+  genre: string | null;
   tarif_consultation: number | null;
   presentation: string | null;
   soins_et_actes: string[];
@@ -60,7 +61,7 @@ interface LigneMedecin {
 }
 
 const SELECTION_MEDECIN = `
-  id, civilite, tarif_consultation, presentation, soins_et_actes, diplomes,
+  id, civilite, genre, tarif_consultation, presentation, soins_et_actes, diplomes,
   parcours, langues, annees_experience, telephone_secretariat, note_moyenne,
   nb_avis, etablissement_id, quartier,
   utilisateurs ( nom, prenom ),
@@ -100,6 +101,7 @@ function versMedecinUI(ligne: LigneMedecin): MedecinAvecPlages {
   return {
     id: ligne.id,
     civilite: (ligne.civilite === "Pr" ? "Pr" : "Dr") as Medecin["civilite"],
+    genre: (ligne.genre === "femme" || ligne.genre === "homme" ? ligne.genre : null) as Medecin["genre"],
     prenom,
     nom,
     initiales: `${prenom.charAt(0)}${nom.charAt(0)}`.toUpperCase() || "DR",
@@ -164,12 +166,16 @@ export async function chargerMedecins(filtres?: {
   specialite?: string;
   ville?: string;
   q?: string;
-  /** « aujourdhui » | « semaine » | « weekend » */
+  /** « aujourdhui » | « 3jours » | « 7jours » | « 14jours » */
   dispo?: string;
   /** Types d'établissement retenus (« Hôpital public »…). */
   types?: string[];
   /** Libellés d'assurance retenus (« NSIA »…). */
   assurances?: string[];
+  /** Langues parlées retenues (« Peul »…). */
+  langues?: string[];
+  /** « femme » | « homme » — les médecins non renseignés sont exclus. */
+  genre?: string;
   /** Note minimale (4 ou 4.5). */
   noteMin?: number;
 }): Promise<MedecinAvecPlages[]> {
@@ -206,23 +212,36 @@ export async function chargerMedecins(filtres?: {
     const voulues = filtres.assurances.map(normaliser);
     liste = liste.filter((m) => m.assurances.some((a) => voulues.includes(normaliser(a))));
   }
+  if (filtres?.langues?.length) {
+    const voulues = filtres.langues.map(normaliser);
+    liste = liste.filter((m) => m.langues.some((l) => voulues.includes(normaliser(l))));
+  }
+  if (filtres?.genre) {
+    liste = liste.filter((m) => m.genre === filtres.genre);
+  }
   if (filtres?.noteMin) {
     liste = liste.filter((m) => m.note >= filtres.noteMin!);
   }
   return liste.sort((a, b) => b.note - a.note);
 }
 
-/**
- * Dates concernées par un filtre de disponibilité, dans l'horizon utile :
- * aujourd'hui, les 7 prochains jours, ou les samedis/dimanches à venir.
- */
+/** Horizons du filtre « Disponibilités », en jours à partir d'aujourd'hui. */
+const HORIZONS_DISPO: Record<string, number> = {
+  aujourdhui: 1,
+  "3jours": 3,
+  "7jours": 7,
+  "14jours": 14,
+};
+
+/** Dates couvertes par un horizon de disponibilité (dimanches inclus : le
+ *  filtrage réel se fait sur les plages horaires du médecin). */
 function joursCibles(dispo: string): string[] {
+  const nbJours = HORIZONS_DISPO[dispo];
+  if (!nbJours) return [];
   const dates: string[] = [];
   const curseur = new Date();
-  const nbJours = dispo === "aujourdhui" ? 1 : dispo === "weekend" ? 14 : 7;
   for (let i = 0; i < nbJours; i++) {
-    const jour = curseur.getDay();
-    if (dispo !== "weekend" || jour === 6 || jour === 0) dates.push(versISO(curseur));
+    dates.push(versISO(curseur));
     curseur.setDate(curseur.getDate() + 1);
   }
   return dates;
@@ -278,6 +297,48 @@ export async function chargerEtablissements(): Promise<Etablissement[]> {
 export async function chargerAssurances(): Promise<string[]> {
   const { data } = await clientPublic().from("assurances").select("libelle").order("libelle");
   return ((data ?? []) as { libelle: string }[]).map((a) => a.libelle).filter(Boolean);
+}
+
+/** Langues réellement parlées par les médecins validés (filtre « Langues »). */
+export async function chargerLangues(): Promise<string[]> {
+  const { data } = await clientPublic().from("medecins").select("langues").eq("statut", "valide");
+  const langues = new Set(((data ?? []) as { langues: string[] | null }[]).flatMap((m) => m.langues ?? []));
+  return [...langues].filter(Boolean).sort((a, b) => a.localeCompare(b, "fr"));
+}
+
+/** Le genre est-il renseigné pour au moins un médecin ? (filtre « Sexe ») */
+export async function existeGenreRenseigne(): Promise<boolean> {
+  const { data } = await clientPublic()
+    .from("medecins")
+    .select("genre")
+    .eq("statut", "valide")
+    .not("genre", "is", null)
+    .limit(1);
+  return (data ?? []).length > 0;
+}
+
+/**
+ * Noms de médecins et d'établissements, pour l'autocomplétion du champ
+ * « Médecin ou établissement » de la recherche.
+ */
+export async function chargerNomsRecherche(): Promise<string[]> {
+  const [med, etab] = await Promise.all([
+    clientPublic()
+      .from("medecins")
+      .select("civilite, utilisateurs ( nom, prenom )")
+      .eq("statut", "valide"),
+    clientPublic().from("etablissements").select("nom").eq("statut", "valide"),
+  ]);
+  const noms = ((med.data ?? []) as unknown as {
+    civilite: string;
+    utilisateurs: { nom: string; prenom: string } | null;
+  }[])
+    .map((m) =>
+      m.utilisateurs ? `${m.civilite} ${m.utilisateurs.prenom} ${m.utilisateurs.nom}` : ""
+    )
+    .filter(Boolean);
+  const etabs = ((etab.data ?? []) as { nom: string }[]).map((e) => e.nom).filter(Boolean);
+  return [...noms, ...etabs].sort((a, b) => a.localeCompare(b, "fr"));
 }
 
 /** Au moins un médecin validé est-il noté ? (filtre « Note » affiché ou non) */
