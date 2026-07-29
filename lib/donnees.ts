@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Etablissement, Medecin } from "@/types";
-import { creneauReservable, versISO } from "@/lib/dates";
+import { creneauReservable, depuisISO, versISO } from "@/lib/dates";
 
 /*
  * Couche de données publique (remplace lib/mock-data.ts) : lit les vraies
@@ -139,10 +139,39 @@ const ALIAS_SPECIALITES: Record<string, string> = {
 
 const normaliser = (t: string) => t.trim().toLowerCase();
 
+/**
+ * Le médecin travaille-t-il ce jour de la semaine, avec encore au moins un
+ * créneau réservable à cette date ? Sert au filtre « Disponibilité ».
+ */
+function ouvertLeJour(
+  plages: { jour_semaine: number; heure_debut: string; heure_fin: string }[],
+  dateISO: string
+): boolean {
+  const jour = depuisISO(dateISO).getDay();
+  return plages.some(
+    (p) =>
+      p.jour_semaine === jour &&
+      HEURES_JOURNEE.some(
+        (h) =>
+          h >= p.heure_debut.slice(0, 5) &&
+          h < p.heure_fin.slice(0, 5) &&
+          creneauReservable(dateISO, h)
+      )
+  );
+}
+
 export async function chargerMedecins(filtres?: {
   specialite?: string;
   ville?: string;
   q?: string;
+  /** « aujourdhui » | « semaine » | « weekend » */
+  dispo?: string;
+  /** Types d'établissement retenus (« Hôpital public »…). */
+  types?: string[];
+  /** Libellés d'assurance retenus (« NSIA »…). */
+  assurances?: string[];
+  /** Note minimale (4 ou 4.5). */
+  noteMin?: number;
 }): Promise<MedecinAvecPlages[]> {
   const { data, error } = await clientPublic()
     .from("medecins")
@@ -164,7 +193,39 @@ export async function chargerMedecins(filtres?: {
       normaliser(`${m.civilite} ${m.prenom} ${m.nom} ${m.specialite}`).includes(q)
     );
   }
+
+  // Disponibilité : on regarde les vraies plages horaires, pas la pastille
+  // affichée, pour que le filtre reste juste en fin de journée.
+  if (filtres?.dispo) {
+    const cibles = joursCibles(filtres.dispo);
+    if (cibles.length) {
+      liste = liste.filter((m) => cibles.some((iso) => ouvertLeJour(m.plages, iso)));
+    }
+  }
+  if (filtres?.assurances?.length) {
+    const voulues = filtres.assurances.map(normaliser);
+    liste = liste.filter((m) => m.assurances.some((a) => voulues.includes(normaliser(a))));
+  }
+  if (filtres?.noteMin) {
+    liste = liste.filter((m) => m.note >= filtres.noteMin!);
+  }
   return liste.sort((a, b) => b.note - a.note);
+}
+
+/**
+ * Dates concernées par un filtre de disponibilité, dans l'horizon utile :
+ * aujourd'hui, les 7 prochains jours, ou les samedis/dimanches à venir.
+ */
+function joursCibles(dispo: string): string[] {
+  const dates: string[] = [];
+  const curseur = new Date();
+  const nbJours = dispo === "aujourdhui" ? 1 : dispo === "weekend" ? 14 : 7;
+  for (let i = 0; i < nbJours; i++) {
+    const jour = curseur.getDay();
+    if (dispo !== "weekend" || jour === 6 || jour === 0) dates.push(versISO(curseur));
+    curseur.setDate(curseur.getDate() + 1);
+  }
+  return dates;
 }
 
 export async function chargerMedecinParId(id: string): Promise<MedecinAvecPlages | undefined> {
@@ -206,6 +267,35 @@ export async function chargerEtablissements(): Promise<Etablissement[]> {
     .eq("statut", "valide");
   if (error) throw new Error(`chargerEtablissements: ${error.message}`);
   return ((data ?? []) as unknown as LigneEtablissement[]).map(versEtablissementUI);
+}
+
+/**
+ * Libellés d'assurance du référentiel, pour alimenter le filtre de la page de
+ * résultats. Lus en base plutôt que codés en dur : les libellés réels
+ * (« NSIA Assurances »…) doivent correspondre exactement, sinon le filtre ne
+ * retournerait jamais rien.
+ */
+export async function chargerAssurances(): Promise<string[]> {
+  const { data } = await clientPublic().from("assurances").select("libelle").order("libelle");
+  return ((data ?? []) as { libelle: string }[]).map((a) => a.libelle).filter(Boolean);
+}
+
+/** Au moins un médecin validé est-il noté ? (filtre « Note » affiché ou non) */
+export async function existeMedecinNote(): Promise<boolean> {
+  const { data } = await clientPublic()
+    .from("medecins")
+    .select("note_moyenne")
+    .eq("statut", "valide")
+    .gt("note_moyenne", 0)
+    .limit(1);
+  return (data ?? []).length > 0;
+}
+
+/** Types d'établissement présents en base (filtre « Établissement »). */
+export async function chargerTypesEtablissement(): Promise<string[]> {
+  const { data } = await clientPublic().from("etablissements").select("type").eq("statut", "valide");
+  const types = new Set(((data ?? []) as { type: string }[]).map((e) => e.type).filter(Boolean));
+  return [...types].sort();
 }
 
 export async function chargerEtablissementParId(id: string): Promise<Etablissement | undefined> {

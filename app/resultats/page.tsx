@@ -2,11 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import TopNav from "@/components/site/TopNav";
 import AppBarMobile from "@/components/mobile/AppBarMobile";
+import { FiltresMobile, FiltresWeb } from "@/components/site/FiltresResultats";
+import { construireGroupes } from "@/lib/filtres";
 import { formatGNF, formatNote } from "@/lib/format";
 import { prochainsJours } from "@/lib/dates";
 import {
+  chargerAssurances,
   chargerEtablissements,
   chargerMedecins,
+  chargerTypesEtablissement,
+  existeMedecinNote,
   nomComplet,
   premiersCreneauxOuverts,
 } from "@/lib/donnees";
@@ -22,12 +27,18 @@ export const metadata: Metadata = {
  * (lib/donnees.ts — médecins validés uniquement, via RLS).
  */
 
-const GROUPES_FILTRES: { titre: string; options: string[] }[] = [
-  { titre: "Disponibilité", options: ["Aujourd'hui", "Cette semaine", "Week-end"] },
-  { titre: "Établissement", options: ["Hôpital public", "Clinique privée", "Centre de santé"] },
-  { titre: "Assurance acceptée", options: ["NSIA", "SUNU", "Ascoma"] },
-  { titre: "Note", options: ["4★ et plus", "4,5★ et plus"] },
-];
+/** Libellés de la pastille de disponibilité, alignés sur les valeurs d'URL. */
+const LIBELLES_DISPO: Record<string, string> = {
+  aujourdhui: "Aujourd'hui",
+  semaine: "Cette semaine",
+  weekend: "Week-end",
+};
+
+/** Un paramètre d'URL répété (?type=a&type=b) arrive en tableau ou en chaîne. */
+function versTableau(valeur: string | string[] | undefined): string[] {
+  if (Array.isArray(valeur)) return valeur;
+  return typeof valeur === "string" && valeur ? [valeur] : [];
+}
 
 export default async function Resultats({
   searchParams,
@@ -38,12 +49,40 @@ export default async function Resultats({
   const specialite = typeof sp.specialite === "string" ? sp.specialite.trim() : "";
   const ville = typeof sp.ville === "string" ? sp.ville.trim() : "";
   const q = typeof sp.q === "string" ? sp.q.trim() : "";
+  const dispo = typeof sp.dispo === "string" ? sp.dispo : "";
+  const typesEtab = versTableau(sp.type);
+  const assurances = versTableau(sp.assurance);
+  const noteMin = typeof sp.note === "string" ? Number(sp.note) : 0;
 
-  const [liste, etablissements] = await Promise.all([
-    chargerMedecins({ specialite, ville, q }),
+  const [medecins, etablissements, refAssurances, refTypes, avecNotes] = await Promise.all([
+    chargerMedecins({
+      specialite,
+      ville,
+      q,
+      dispo,
+      assurances,
+      noteMin: Number.isFinite(noteMin) ? noteMin : 0,
+    }),
     chargerEtablissements(),
+    chargerAssurances(),
+    chargerTypesEtablissement(),
+    existeMedecinNote(),
   ]);
   const getEtablissement = (id: string) => etablissements.find((e) => e.id === id);
+
+  // Options bâties sur le référentiel complet, pas sur la liste déjà filtrée :
+  // sinon un filtre qui ne renvoie rien ferait disparaître sa propre case,
+  // empêchant de le désactiver.
+  const groupes = construireGroupes(refTypes, refAssurances, avecNotes);
+
+  // Le type d'établissement vit dans la table etablissements : ce filtre-ci
+  // s'applique après la jointure, une fois les deux listes chargées.
+  const liste = typesEtab.length
+    ? medecins.filter((m) => {
+        const type = getEtablissement(m.etablissementId)?.type;
+        return type ? typesEtab.includes(type) : false;
+      })
+    : medecins;
 
   const titre = `${specialite || "Médecins"} à ${ville || "Conakry"} — ${liste.length} résultat${
     liste.length > 1 ? "s" : ""
@@ -62,12 +101,7 @@ export default async function Resultats({
             liste.length > 1 ? "s" : ""
           }`}
         />
-        <div className="filterbar">
-          <span className="fb on">Tous</span>
-          <span className="fb">Dispo aujourd&apos;hui</span>
-          <span className="fb">Mieux notés</span>
-          <span className="fb">Prix ↓</span>
-        </div>
+        <FiltresMobile groupes={groupes} />
         <div className="pad" style={{ paddingTop: 14 }}>
           {liste.length === 0 && (
             <div className="card2" style={{ textAlign: "center", padding: 24 }}>
@@ -132,37 +166,17 @@ export default async function Resultats({
           <span className="rounded-lg bg-teal-soft px-[9px] py-1 text-[11px] font-bold text-blue">
             📍 {ville || "Conakry"}
           </span>
-          <span className="rounded-lg bg-teal-soft px-[9px] py-1 text-[11px] font-bold text-blue">
-            📅 Cette semaine
-          </span>
+          {dispo && (
+            <span className="rounded-lg bg-teal-soft px-[9px] py-1 text-[11px] font-bold text-blue">
+              📅 {LIBELLES_DISPO[dispo] ?? dispo}
+            </span>
+          )}
         </div>
       </div>
 
       <div className="mx-auto grid max-w-[1020px] gap-6 px-[30px] py-[26px] lg:grid-cols-[244px_1fr]">
-        {/* Colonne de filtres (visuelle pour l'instant — la recherche passe par le bandeau d'accueil) */}
-        <aside className="hidden h-fit rounded-2xl border border-line bg-white p-5 lg:sticky lg:top-[86px] lg:block">
-          {GROUPES_FILTRES.map((groupe, i) => (
-            <div
-              key={groupe.titre}
-              className={`py-[14px] ${i === 0 ? "pt-0" : ""} ${
-                i === GROUPES_FILTRES.length - 1 ? "border-b-0 pb-0" : "border-b border-line"
-              }`}
-            >
-              <div className="mb-[10px] text-xs font-extrabold uppercase tracking-[.05em] text-ink">
-                {groupe.titre}
-              </div>
-              {groupe.options.map((option) => (
-                <div
-                  key={option}
-                  className="flex items-center gap-[9px] py-[5px] text-[13px] text-muted"
-                >
-                  <span className="h-[17px] w-[17px] rounded-[5px] border-[1.5px] border-line bg-white" />
-                  {option}
-                </div>
-              ))}
-            </div>
-          ))}
-        </aside>
+        {/* Colonne de filtres — état porté par l'URL (voir FiltresResultats) */}
+        <FiltresWeb groupes={groupes} />
 
         {/* Liste des résultats */}
         <div className="flex flex-col gap-[14px]">
