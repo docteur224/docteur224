@@ -62,6 +62,20 @@ export function formatDateLongue(iso: string): string {
   return `${JOURS_LONGS[d.getDay()]} ${d.getDate()} ${MOIS_LONGS[d.getMonth()]} ${d.getFullYear()}`;
 }
 
+/**
+ * Libellé compact d'une date pour les cartes de résultats :
+ * « Aujourd'hui », « Demain », sinon « Jeu 30 juil. ».
+ */
+export function formatDateRelative(iso: string, maintenant = new Date()): string {
+  const aujourdhui = versISO(maintenant);
+  if (iso === aujourdhui) return "Aujourd’hui";
+  const demain = new Date(maintenant);
+  demain.setDate(demain.getDate() + 1);
+  if (iso === versISO(demain)) return "Demain";
+  const d = depuisISO(iso);
+  return `${JOURS_COURTS[d.getDay()]} ${d.getDate()} ${MOIS_LONGS[d.getMonth()].slice(0, 4)}.`;
+}
+
 export function capitaliser(texte: string): string {
   return texte.charAt(0).toUpperCase() + texte.slice(1);
 }

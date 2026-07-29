@@ -459,6 +459,26 @@ export function premiersCreneauxOuverts(
   ).slice(0, nb);
 }
 
+/**
+ * Prochaine disponibilité réelle d'un médecin, pour les cartes de résultats :
+ * parcourt les jours ouverts dans l'ordre et retourne le premier qui a des
+ * créneaux encore libres. Un jour ouvert mais entièrement réservé est ignoré —
+ * sinon la carte annonce des heures que la réservation refuserait.
+ */
+export function prochaineDisponibilite(
+  horairesTypes: { jour_semaine: number; heure_debut: string; heure_fin: string }[],
+  etats: Map<string, EtatCreneau>,
+  jours: { iso: string; ferme: boolean }[],
+  nb = 4
+): { dateISO: string; heures: string[] } | null {
+  for (const jour of jours) {
+    if (jour.ferme) continue;
+    const heures = premiersCreneauxOuverts(horairesTypes, etats, jour.iso, nb);
+    if (heures.length) return { dateISO: jour.iso, heures };
+  }
+  return null;
+}
+
 /** Plages horaires-types d'un médecin (pour construire la grille de créneaux). */
 export async function chargerHorairesTypes(
   medecinId: string

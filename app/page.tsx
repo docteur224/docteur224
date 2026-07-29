@@ -2,7 +2,7 @@ import Link from "next/link";
 import TopNav from "@/components/site/TopNav";
 import Footer from "@/components/site/Footer";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
-import { formatGNF, formatNote } from "@/lib/format";
+import { formatNote } from "@/lib/format";
 import {
   chargerEtablissements,
   chargerMedecins,
@@ -124,7 +124,7 @@ export default async function Accueil() {
                     <span className={`pill ${m.disponibilite.type === "aujourdhui" ? "ok" : "soon"}`}>
                       {m.disponibilite.label}
                     </span>
-                    <span className="price">{formatGNF(m.tarifConsultation)}</span>
+                    {/* Pas de tarif : la réservation est gratuite. */}
                   </span>
                 </span>
               </Link>
@@ -354,8 +354,9 @@ export default async function Accueil() {
                   </div>
                   <div className="mt-[14px] flex items-center justify-between border-t border-line pt-[14px]">
                     <span className="text-[12.5px] font-bold text-amber">★ {formatNote(m.note)}</span>
-                    <span className="text-[13px] font-extrabold">
-                      {formatGNF(m.tarifConsultation)}
+                    {/* Pas de tarif : la réservation est gratuite. */}
+                    <span className="text-[12.5px] font-bold text-teal">
+                      {m.disponibilite.label}
                     </span>
                   </div>
                 </Link>

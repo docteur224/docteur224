@@ -13,11 +13,12 @@ import {
   groupeDisponibilite,
   libelleValeur,
 } from "@/lib/filtres";
-import { formatGNF, formatNote } from "@/lib/format";
-import { prochainsJours } from "@/lib/dates";
+import { formatNote } from "@/lib/format";
+import { formatDateRelative, prochainsJours } from "@/lib/dates";
 import {
   chargerAssurances,
   chargerEtablissements,
+  chargerIndisponibilites,
   chargerLangues,
   chargerMedecins,
   chargerNomsRecherche,
@@ -27,7 +28,8 @@ import {
   existeGenreRenseigne,
   existeMedecinNote,
   nomComplet,
-  premiersCreneauxOuverts,
+  prochaineDisponibilite,
+  type EtatCreneau,
 } from "@/lib/donnees";
 
 export const metadata: Metadata = {
@@ -137,6 +139,31 @@ export default async function Resultats({
     liste.length > 1 ? "s" : ""
   }`;
 
+  // Prochaine disponibilité réelle de chaque médecin affiché : on lit les
+  // créneaux déjà réservés (une requête par médecin, en parallèle) au lieu de
+  // supposer la journée vide — sinon toutes les cartes proposent les mêmes
+  // heures, y compris celles qui viennent d'être prises.
+  const jours = prochainsJours([], 14);
+  const disponibilites = new Map<string, { dateISO: string; heures: string[] } | null>(
+    await Promise.all(
+      liste.map(async (m) => {
+        let etats: Map<string, EtatCreneau>;
+        try {
+          etats = await chargerIndisponibilites(m.id, jours[0]?.iso, jours.at(-1)?.iso);
+        } catch {
+          // Indisponibilités illisibles : on retombe sur les horaires-types
+          // seuls plutôt que de faire échouer toute la page de résultats.
+          etats = new Map();
+        }
+        const joursMedecin = jours.map((j) => ({
+          iso: j.iso,
+          ferme: m.joursFermes.includes(new Date(`${j.iso}T00:00:00`).getDay()),
+        }));
+        return [m.id, prochaineDisponibilite(m.plages, etats, joursMedecin, 4)] as const;
+      })
+    )
+  );
+
   return (
     <div className="min-h-screen bg-bg">
       <TopNav lienActif="trouver" droite="compte" />
@@ -199,7 +226,12 @@ export default async function Resultats({
                     <span className="stars">
                       ★ {formatNote(m.note)} ({m.nbAvis})
                     </span>
-                    <span className="price">{formatGNF(m.tarifConsultation)}</span>
+                    {/* Pas de tarif : la réservation est gratuite (cf. carte web). */}
+                    <span className="price">
+                      {disponibilites.get(m.id)
+                        ? `Dès ${disponibilites.get(m.id)!.heures[0]}`
+                        : ""}
+                    </span>
                   </span>
                   <span className="row2">
                     <span className={`pill ${m.disponibilite.type === "aujourdhui" ? "ok" : "soon"}`}>
@@ -290,11 +322,8 @@ export default async function Resultats({
 
           {liste.map((m) => {
             const etab = getEtablissement(m.etablissementId);
-            const premierJourOuvert =
-              prochainsJours(m.joursFermes, 6).find((j) => !j.ferme)?.iso ?? "";
-            const minicreneaux = premierJourOuvert
-              ? premiersCreneauxOuverts(m.plages, new Map(), premierJourOuvert, 4)
-              : [];
+            const dispoMedecin = disponibilites.get(m.id) ?? null;
+            const minicreneaux = dispoMedecin?.heures ?? [];
             return (
               <div
                 key={m.id}
@@ -332,8 +361,13 @@ export default async function Resultats({
                   </div>
                 </div>
                 <div className="min-w-[168px] text-right sm:col-span-2 lg:col-span-1">
-                  <div className="mb-2 text-[13px] font-extrabold">
-                    {formatGNF(m.tarifConsultation)}
+                  {/* Pas de tarif ici : la réservation est gratuite, et un prix
+                      affiché à côté du bouton laisse croire qu'on paie en
+                      ligne. On annonce la prochaine disponibilité à la place. */}
+                  <div className="mb-2 text-[13px] font-extrabold text-blue">
+                    {dispoMedecin
+                      ? `Prochain RDV · ${formatDateRelative(dispoMedecin.dateISO)}`
+                      : "Aucun créneau en ligne"}
                   </div>
                   <div className="mb-[9px] grid grid-cols-2 gap-1.5">
                     {minicreneaux.map((heure) => (
