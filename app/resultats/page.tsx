@@ -154,8 +154,8 @@ export default async function Resultats({
                 Aucun médecin trouvé
               </b>
               <p className="muted" style={{ fontSize: 13, marginTop: 8, lineHeight: 1.5 }}>
-                Aucun médecin de démonstration ne correspond à cette recherche. Essayez «
-                Pédiatrie » ou « Médecine générale » à Conakry.
+                Essayez une autre spécialité, une autre ville, ou élargissez vos
+                filtres.
               </p>
               <Link href="/resultats" className="btn block" style={{ marginTop: 14 }}>
                 Voir tous les médecins
@@ -251,8 +251,8 @@ export default async function Resultats({
               </div>
               <b className="mt-3 block text-base font-extrabold">Aucun médecin trouvé</b>
               <p className="mt-2 text-[13px] leading-relaxed text-muted">
-                Aucun médecin de démonstration ne correspond à cette recherche. Essayez «
-                Pédiatrie » ou « Médecine générale » à Conakry.
+                Essayez une autre spécialité, une autre ville, ou élargissez vos
+                filtres.
               </p>
               <Link
                 href="/resultats"
