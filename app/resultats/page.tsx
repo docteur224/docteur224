@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import TopNav from "@/components/site/TopNav";
 import AppBarMobile from "@/components/mobile/AppBarMobile";
-import { FiltresMobile, FiltresWeb } from "@/components/site/FiltresResultats";
-import FiltresAvances from "@/components/site/FiltresAvances";
+import { FiltresWeb } from "@/components/site/FiltresResultats";
+import FiltresAvances, { type BoutonFiltre } from "@/components/site/FiltresAvances";
 import RechercheResultats, {
   RechercheResultatsMobile,
 } from "@/components/site/RechercheResultats";
@@ -105,6 +105,25 @@ export default async function Resultats({
   const groupeDispo = groupeDisponibilite();
   const nomsSpecialites = refSpecialites.map((s) => s.nom);
 
+  // Icônes par groupe, pour les boutons de la barre mobile (un bouton par
+  // groupe : avec 20 assureurs par exemple, on ouvre un popup dédié plutôt
+  // que de dérouler 20 pastilles à plat dans la barre).
+  const ICONES_GROUPE: Record<string, string> = {
+    Établissement: "🏥",
+    "Assurance acceptée": "💳",
+    Note: "⭐",
+  };
+  const boutonsMobile: BoutonFiltre[] = [
+    { cle: "filtres", icone: "⚙", label: "Filtres", groupes: groupesAvances },
+    { cle: "dispo", icone: "📅", label: "Disponibilités", groupes: [groupeDispo] },
+    ...groupes.map((g) => ({
+      cle: g.param,
+      icone: ICONES_GROUPE[g.titre] ?? "🔎",
+      label: g.titre,
+      groupes: [g],
+    })),
+  ];
+
   // Le type d'établissement vit dans la table etablissements : ce filtre-ci
   // s'applique après la jointure, une fois les deux listes chargées.
   const liste = typesEtab.length
@@ -139,11 +158,12 @@ export default async function Resultats({
           villes={refVilles}
           nomsMedecins={refNoms}
         />
-        {/* Filtres avancés (popups) puis pastilles établissement/assurance */}
+        {/* Tous les filtres en popups : chaque bouton n'ouvre que son
+            groupe, pour ne jamais dérouler une longue liste (assureurs…)
+            à plat dans la barre. */}
         <div className="px-[18px] pt-3">
-          <FiltresAvances groupesFiltres={groupesAvances} groupeDispo={groupeDispo} />
+          <FiltresAvances boutons={boutonsMobile} />
         </div>
-        <FiltresMobile groupes={groupes} />
         <div className="pad" style={{ paddingTop: 14 }}>
           {liste.length === 0 && (
             <div className="card2" style={{ textAlign: "center", padding: 24 }}>
@@ -215,7 +235,12 @@ export default async function Resultats({
             nomsMedecins={refNoms}
           />
           <div className="mx-auto mt-[14px] flex w-full max-w-[860px] flex-wrap items-center gap-2">
-            <FiltresAvances groupesFiltres={groupesAvances} groupeDispo={groupeDispo} />
+            <FiltresAvances
+              boutons={[
+                { cle: "filtres", icone: "⚙", label: "Filtres", groupes: groupesAvances },
+                { cle: "dispo", icone: "📅", label: "Disponibilités", groupes: [groupeDispo] },
+              ]}
+            />
             {dispo && (
               <span className="rounded-lg bg-teal-soft px-[9px] py-[6px] text-[11.5px] font-bold text-blue">
                 📅 {libelleValeur([groupeDispo], "dispo", dispo)}

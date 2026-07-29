@@ -174,21 +174,23 @@ function Popup({
   );
 }
 
-export default function FiltresAvances({
-  groupesFiltres,
-  groupeDispo,
-}: {
-  /** Tous les groupes du popup « Filtres ». */
-  groupesFiltres: GroupeFiltre[];
-  /** Le seul groupe du popup « Disponibilités ». */
-  groupeDispo: GroupeFiltre;
-}) {
-  const params = useSearchParams();
-  const [ouvert, setOuvert] = useState<"filtres" | "dispo" | null>(null);
-  const fermer = useCallback(() => setOuvert(null), []);
+/**
+ * Un bouton de la barre, ouvrant un popup sur un ou plusieurs groupes liés.
+ * Avec un seul groupe qui a beaucoup d'options (ex. 20 assureurs), le popup
+ * les liste dans une zone qui défile verticalement plutôt que de toutes les
+ * dérouler à plat dans la barre — c'est ce qui rendait la barre illisible.
+ */
+export interface BoutonFiltre {
+  cle: string;
+  icone: string;
+  label: string;
+  groupes: GroupeFiltre[];
+}
 
-  const nbFiltres = groupesFiltres.reduce((n, g) => n + params.getAll(g.param).length, 0);
-  const nbDispo = params.getAll(groupeDispo.param).length;
+export default function FiltresAvances({ boutons }: { boutons: BoutonFiltre[] }) {
+  const params = useSearchParams();
+  const [ouvert, setOuvert] = useState<string | null>(null);
+  const fermer = useCallback(() => setOuvert(null), []);
 
   const style = (actif: boolean) =>
     `flex-none rounded-[10px] border px-[14px] py-[9px] text-[13px] font-bold transition-colors ${
@@ -200,19 +202,27 @@ export default function FiltresAvances({
   return (
     <>
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" onClick={() => setOuvert("filtres")} className={style(nbFiltres > 0)}>
-          ⚙ Filtres{nbFiltres > 0 ? ` (${nbFiltres})` : ""}
-        </button>
-        <button type="button" onClick={() => setOuvert("dispo")} className={style(nbDispo > 0)}>
-          📅 Disponibilités{nbDispo > 0 ? " (1)" : ""}
-        </button>
+        {boutons.map((b) => {
+          const nb = b.groupes.reduce((n, g) => n + params.getAll(g.param).length, 0);
+          return (
+            <button
+              key={b.cle}
+              type="button"
+              onClick={() => setOuvert(b.cle)}
+              className={style(nb > 0)}
+            >
+              {b.icone} {b.label}
+              {nb > 0 ? ` (${nb})` : ""}
+            </button>
+          );
+        })}
       </div>
 
-      {ouvert === "filtres" && (
-        <Popup titre="Filtres" groupes={groupesFiltres} surFermer={fermer} />
-      )}
-      {ouvert === "dispo" && (
-        <Popup titre="Disponibilités" groupes={[groupeDispo]} surFermer={fermer} />
+      {boutons.map(
+        (b) =>
+          ouvert === b.cle && (
+            <Popup key={b.cle} titre={b.label} groupes={b.groupes} surFermer={fermer} />
+          )
       )}
     </>
   );

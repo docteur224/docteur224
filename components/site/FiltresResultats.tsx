@@ -112,34 +112,3 @@ export function FiltresWeb({ groupes }: { groupes: GroupeFiltre[] }) {
   );
 }
 
-/** Barre de filtres horizontale — version mobile. */
-export function FiltresMobile({ groupes }: { groupes: GroupeFiltre[] }) {
-  const { estActif, basculer, nbActifs, reinitialiser } = useFiltres(groupes);
-
-  return (
-    <div className="filterbar">
-      <button
-        type="button"
-        className={`fb${nbActifs === 0 ? " on" : ""}`}
-        onClick={reinitialiser}
-      >
-        Tous
-      </button>
-      {groupes.flatMap((groupe) =>
-        groupe.options.map((option) => {
-          const actif = estActif(groupe.param, option.valeur);
-          return (
-            <button
-              key={`${groupe.param}-${option.valeur}`}
-              type="button"
-              className={`fb${actif ? " on" : ""}`}
-              onClick={() => basculer(groupe.param, option.valeur, groupe.multiple)}
-            >
-              {option.label}
-            </button>
-          );
-        })
-      )}
-    </div>
-  );
-}
