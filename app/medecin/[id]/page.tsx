@@ -5,6 +5,7 @@ import TopNav from "@/components/site/TopNav";
 import PanneauReservation from "@/components/site/PanneauReservation";
 import CarteLocalisation from "@/components/site/CarteLocalisation";
 import OngletsFiche from "@/components/site/OngletsFiche";
+import AvatarMedecin from "@/components/site/AvatarMedecin";
 import AppBarMobile from "@/components/mobile/AppBarMobile";
 import { formatNote } from "@/lib/format";
 import { chargerEtablissementParId, chargerMedecinParId, nomComplet } from "@/lib/donnees";
@@ -25,6 +26,28 @@ const PHOTOS = [
 
 function TitreSection({ children }: { children: React.ReactNode }) {
   return <h3 className="mb-[10px] mt-[22px] text-[15px] font-extrabold first:mt-1">{children}</h3>;
+}
+
+function LigneInfo({
+  icone,
+  titre,
+  detail,
+}: {
+  icone: string;
+  titre: string;
+  detail: string;
+}) {
+  return (
+    <div className="flex items-start gap-[11px] text-[13px]">
+      <span className="w-[18px] flex-none text-teal" aria-hidden>
+        {icone}
+      </span>
+      <div>
+        <b className="block font-bold">{titre}</b>
+        <small className="text-xs text-muted">{detail}</small>
+      </div>
+    </div>
+  );
 }
 
 export async function generateMetadata({
@@ -54,9 +77,14 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
           <AppBarMobile retour="/resultats" titre="Profil du médecin" />
         </div>
         <div className="profhead">
-          <span className="av" aria-hidden style={{ background: medecin.gradient }}>
-            {medecin.initiales}
-          </span>
+          {medecin.photoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={medecin.photoUrl} alt="" className="av" style={{ objectFit: "cover" }} />
+          ) : (
+            <span className="av" aria-hidden style={{ background: medecin.gradient }}>
+              {medecin.initiales}
+            </span>
+          )}
           <h3>{nomComplet(medecin)}</h3>
           <div className="spec">{medecin.specialite}</div>
           <div className="statrow">
@@ -221,13 +249,13 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
         <div className="overflow-hidden rounded-[18px] border border-line bg-white">
           {/* En-tête d'identité */}
           <div className="flex flex-wrap items-center gap-5 border-b border-line p-[26px]">
-            <span
-              aria-hidden
-              className="grid h-[92px] w-[92px] place-items-center rounded-[22px] text-[30px] font-extrabold text-white"
-              style={{ background: medecin.gradient }}
-            >
-              {medecin.initiales}
-            </span>
+            <AvatarMedecin
+              photoUrl={medecin.photoUrl}
+              initiales={medecin.initiales}
+              gradient={medecin.gradient}
+              taille={92}
+              arrondi={22}
+            />
             <div>
               <h2 className="text-2xl font-extrabold tracking-[-0.4px]">{nomComplet(medecin)}</h2>
               <div className="mb-[9px] mt-[3px] text-[15px] font-bold text-teal">
@@ -322,6 +350,29 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
                 </span>
               ))}
             </div>
+
+            {/* Reprise volontaire des informations de l'onglet Établissement :
+                beaucoup de patients ne cliquent jamais sur un onglet, il leur
+                faut l'adresse et les horaires sans quitter la Présentation. */}
+            <TitreSection>Lieu de consultation</TitreSection>
+            <div className="mt-1.5 grid gap-[14px] sm:grid-cols-2">
+              <LigneInfo
+                icone="🏥"
+                titre={etab?.nom ?? "Établissement"}
+                detail={`Quartier ${etab?.quartier} · ${etab?.ville}`}
+              />
+              <LigneInfo
+                icone="🕐"
+                titre={medecin.horaires.jours}
+                detail={medecin.horaires.detail}
+              />
+              <LigneInfo
+                icone="📞"
+                titre={medecin.telephoneSecretariat}
+                detail="Secrétariat"
+              />
+              <LigneInfo icone="💳" titre="Paiement" detail="Sur place, chez le médecin" />
+            </div>
           </div>
                 ),
               },
@@ -350,46 +401,20 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
 
             <TitreSection>Informations pratiques</TitreSection>
             <div className="mt-1.5 grid gap-[14px] sm:grid-cols-2">
-              <div className="flex items-start gap-[11px] text-[13px]">
-                <span className="w-[18px] flex-none text-teal" aria-hidden>
-                  🏥
-                </span>
-                <div>
-                  <b className="block font-bold">{etab?.nom}</b>
-                  <small className="text-xs text-muted">
-                    Quartier {etab?.quartier} · {etab?.ville}
-                  </small>
-                </div>
-              </div>
-              <div className="flex items-start gap-[11px] text-[13px]">
-                <span className="w-[18px] flex-none text-teal" aria-hidden>
-                  🕐
-                </span>
-                <div>
-                  <b className="block font-bold">{medecin.horaires.jours}</b>
-                  <small className="text-xs text-muted">{medecin.horaires.detail}</small>
-                </div>
-              </div>
+              <LigneInfo
+                icone="🏥"
+                titre={etab?.nom ?? "Établissement"}
+                detail={`Quartier ${etab?.quartier} · ${etab?.ville}`}
+              />
+              <LigneInfo
+                icone="🕐"
+                titre={medecin.horaires.jours}
+                detail={medecin.horaires.detail}
+              />
               {/* Les langues parlées sont une information sur le médecin :
                   elles vivent dans l'onglet Présentation, pas ici. */}
-              <div className="flex items-start gap-[11px] text-[13px]">
-                <span className="w-[18px] flex-none text-teal" aria-hidden>
-                  📞
-                </span>
-                <div>
-                  <b className="block font-bold">{medecin.telephoneSecretariat}</b>
-                  <small className="text-xs text-muted">Secrétariat</small>
-                </div>
-              </div>
-              <div className="flex items-start gap-[11px] text-[13px]">
-                <span className="w-[18px] flex-none text-teal" aria-hidden>
-                  💳
-                </span>
-                <div>
-                  <b className="block font-bold">Paiement</b>
-                  <small className="text-xs text-muted">Sur place, chez le médecin</small>
-                </div>
-              </div>
+              <LigneInfo icone="📞" titre={medecin.telephoneSecretariat} detail="Secrétariat" />
+              <LigneInfo icone="💳" titre="Paiement" detail="Sur place, chez le médecin" />
             </div>
 
             <TitreSection>Localisation</TitreSection>

@@ -53,6 +53,7 @@ interface LigneMedecin {
   nb_avis: number;
   etablissement_id: string | null;
   quartier: string | null;
+  photo_url: string | null;
   utilisateurs: { nom: string | null; prenom: string | null } | null;
   specialites: { nom: string } | null;
   villes: { nom: string } | null;
@@ -63,7 +64,7 @@ interface LigneMedecin {
 const SELECTION_MEDECIN = `
   id, civilite, genre, tarif_consultation, presentation, soins_et_actes, diplomes,
   parcours, langues, annees_experience, telephone_secretariat, note_moyenne,
-  nb_avis, etablissement_id, quartier,
+  nb_avis, etablissement_id, quartier, photo_url,
   utilisateurs ( nom, prenom ),
   specialites ( nom ),
   villes ( nom ),
@@ -106,6 +107,7 @@ function versMedecinUI(ligne: LigneMedecin): MedecinAvecPlages {
     nom,
     initiales: `${prenom.charAt(0)}${nom.charAt(0)}`.toUpperCase() || "DR",
     gradient: gradientPour(ligne.id),
+    photoUrl: ligne.photo_url,
     specialite: ligne.specialites?.nom ?? "Médecine générale",
     etablissementId: ligne.etablissement_id ?? "",
     ville: ligne.villes?.nom ?? "",

@@ -7,6 +7,7 @@ import FiltresAvances, { type BoutonFiltre } from "@/components/site/FiltresAvan
 import RechercheResultats, {
   RechercheResultatsMobile,
 } from "@/components/site/RechercheResultats";
+import AvatarMedecin from "@/components/site/AvatarMedecin";
 import {
   construireGroupes,
   construireGroupesAvances,
@@ -213,9 +214,14 @@ export default async function Resultats({
             const etab = getEtablissement(m.etablissementId);
             return (
               <Link key={m.id} href={`/medecin/${m.id}`} className="doc">
-                <span className="av" aria-hidden style={{ background: m.gradient }}>
-                  {m.initiales}
-                </span>
+                {m.photoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={m.photoUrl} alt="" className="av" style={{ objectFit: "cover" }} />
+                ) : (
+                  <span className="av" aria-hidden style={{ background: m.gradient }}>
+                    {m.initiales}
+                  </span>
+                )}
                 <span className="info">
                   <b>{nomComplet(m)}</b>
                   <span className="spec">{m.specialite}</span>
@@ -329,13 +335,12 @@ export default async function Resultats({
                 key={m.id}
                 className="grid items-center gap-[18px] rounded-2xl border border-line bg-white p-[18px] transition-shadow hover:shadow-[0_10px_24px_rgba(16,59,80,.09)] sm:grid-cols-[auto_1fr] lg:grid-cols-[auto_1fr_auto]"
               >
-                <span
-                  aria-hidden
-                  className="grid h-[62px] w-[62px] place-items-center rounded-2xl text-xl font-extrabold text-white"
-                  style={{ background: m.gradient }}
-                >
-                  {m.initiales}
-                </span>
+                <AvatarMedecin
+                  photoUrl={m.photoUrl}
+                  initiales={m.initiales}
+                  gradient={m.gradient}
+                  taille={62}
+                />
                 <div>
                   <Link href={`/medecin/${m.id}`} className="block text-base font-extrabold hover:text-blue">
                     {nomComplet(m)}

@@ -2,6 +2,7 @@ import Link from "next/link";
 import TopNav from "@/components/site/TopNav";
 import Footer from "@/components/site/Footer";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
+import AvatarMedecin from "@/components/site/AvatarMedecin";
 import { formatNote } from "@/lib/format";
 import {
   chargerEtablissements,
@@ -111,9 +112,14 @@ export default async function Accueil() {
             const etab = getEtablissement(m.etablissementId);
             return (
               <Link key={m.id} href={`/medecin/${m.id}`} className="doc">
-                <span className="av" aria-hidden style={{ background: m.gradient }}>
-                  {m.initiales}
-                </span>
+                {m.photoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={m.photoUrl} alt="" className="av" style={{ objectFit: "cover" }} />
+                ) : (
+                  <span className="av" aria-hidden style={{ background: m.gradient }}>
+                    {m.initiales}
+                  </span>
+                )}
                 <span className="info">
                   <b>{nomComplet(m)}</b>
                   <span className="spec">{m.specialite}</span>
@@ -338,13 +344,14 @@ export default async function Accueil() {
                   href={`/medecin/${m.id}`}
                   className="rounded-2xl border border-line bg-white p-5 text-center transition hover:-translate-y-[3px] hover:shadow-[0_12px_26px_rgba(16,59,80,.1)]"
                 >
-                  <span
-                    aria-hidden
-                    className="mx-auto mb-3 grid h-16 w-16 place-items-center rounded-2xl text-[22px] font-extrabold text-white"
-                    style={{ background: m.gradient }}
-                  >
-                    {m.initiales}
-                  </span>
+                  <div className="mx-auto mb-3 w-16">
+                    <AvatarMedecin
+                      photoUrl={m.photoUrl}
+                      initiales={m.initiales}
+                      gradient={m.gradient}
+                      taille={64}
+                    />
+                  </div>
                   <b className="block text-base font-extrabold">{nomComplet(m)}</b>
                   <div className="mb-2 mt-0.5 text-[13px] font-bold text-teal">{m.specialite}</div>
                   <div className="text-xs leading-relaxed text-muted">

@@ -82,10 +82,10 @@ export default function PanneauReservation({
       {/* Le tarif de consultation n'apparaît pas ici : placé à côté du titre,
           il laissait croire que la réservation elle-même est payante. Le prix
           reste indiqué plus bas, rattaché au règlement sur place. */}
-      <div className="mb-1 flex items-baseline justify-between gap-2">
+      <div className="mb-1 flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
         <b className="text-[15px] font-extrabold">Réserver un rendez-vous</b>
         <span className="flex-none rounded-lg bg-green-soft px-[9px] py-1 text-[11px] font-extrabold text-green">
-          Gratuit
+          Réservation gratuite
         </span>
       </div>
       <div className="mb-3 flex items-center justify-between gap-2">

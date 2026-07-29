@@ -32,6 +32,8 @@ export interface Medecin {
   initiales: string;
   /** Dégradé CSS de l'avatar, repris des maquettes */
   gradient: string;
+  /** Photo de profil (Cloudinary). null → avatar à initiales sur le dégradé. */
+  photoUrl: string | null;
   specialite: string;
   etablissementId: string;
   ville: string;

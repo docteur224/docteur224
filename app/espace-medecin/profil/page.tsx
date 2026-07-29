@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import MedecinShell from "@/components/medecin/MedecinShell";
 import AppBarMobile from "@/components/mobile/AppBarMobile";
+import PhotoProfil from "@/components/pro/PhotoProfil";
 import { formatGNF } from "@/lib/format";
 import { chargerEtablissementParId } from "@/lib/donnees";
 import type { Etablissement } from "@/types";
@@ -38,6 +39,7 @@ const MEDECIN_VIDE = {
   id: "",
   gradient: "linear-gradient(135deg,#2E9CCA,#15506B)",
   initiales: "…",
+  photoUrl: null as string | null,
   civilite: "Dr" as const,
   genre: null as "femme" | "homme" | null,
   prenom: "",
@@ -161,13 +163,18 @@ export default function ProfilMedecin() {
         <AppBarMobile retour="/espace-medecin/compte" titre="Mon profil" />
         <div className="pad">
           <div className="acctop">
-            <span className="av" aria-hidden style={{ background: medecinConnecte.gradient }}>
-              {medecinConnecte.initiales}
-            </span>
             <div>
               <b>{`${medecinConnecte.civilite} ${medecinConnecte.prenom} ${medecinConnecte.nom}`}</b>
               <small>{medecinConnecte.specialite}</small>
             </div>
+          </div>
+          <div style={{ marginBottom: 14 }}>
+            <PhotoProfil
+              photoUrl={medecinConnecte.photoUrl}
+              initiales={medecinConnecte.initiales}
+              gradient={medecinConnecte.gradient}
+              taille={64}
+            />
           </div>
           <div className="fldm">
             <label>Spécialité</label>
@@ -438,28 +445,16 @@ export default function ProfilMedecin() {
 
       {/* Identité */}
       <div className="mb-4 rounded-2xl border border-line bg-white p-5">
-        <div className="mb-5 flex items-center gap-4">
-          <span
-            aria-hidden
-            className="grid h-[72px] w-[72px] place-items-center rounded-[20px] text-2xl font-extrabold text-white"
-            style={{ background: medecinConnecte.gradient }}
-          >
-            {medecinConnecte.initiales}
-          </span>
-          <div>
-            <b className="block text-base font-extrabold">{`${medecinConnecte.civilite} ${medecinConnecte.prenom} ${medecinConnecte.nom}`}</b>
-            <div className="text-[12.5px] text-muted">
-              {medecinConnecte.specialite} · Profil vérifié ✔
-            </div>
-            <button
-              type="button"
-              disabled
-              title="Disponible dans une phase ultérieure"
-              className="mt-2 cursor-not-allowed rounded-[9px] border-[1.5px] border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-blue opacity-50"
-            >
-              Changer la photo
-            </button>
+        <div className="mb-5">
+          <b className="block text-base font-extrabold">{`${medecinConnecte.civilite} ${medecinConnecte.prenom} ${medecinConnecte.nom}`}</b>
+          <div className="mb-3 text-[12.5px] text-muted">
+            {medecinConnecte.specialite} · Profil vérifié ✔
           </div>
+          <PhotoProfil
+            photoUrl={medecinConnecte.photoUrl}
+            initiales={medecinConnecte.initiales}
+            gradient={medecinConnecte.gradient}
+          />
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
           <div>

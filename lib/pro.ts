@@ -111,7 +111,7 @@ export function useContextePro(): ContextePro {
         .select(`
           id, civilite, genre, tarif_consultation, presentation, soins_et_actes, diplomes,
           parcours, langues, annees_experience, telephone_secretariat, note_moyenne,
-          nb_avis, etablissement_id, quartier,
+          nb_avis, etablissement_id, quartier, photo_url,
           utilisateurs ( nom, prenom ),
           specialites ( nom ),
           villes ( nom ),
@@ -139,6 +139,7 @@ export function useContextePro(): ContextePro {
           nb_avis: number;
           etablissement_id: string | null;
           quartier: string | null;
+          photo_url: string | null;
           utilisateurs: { nom: string | null; prenom: string | null } | null;
           specialites: { nom: string } | null;
           villes: { nom: string } | null;
@@ -195,6 +196,7 @@ export function useContextePro(): ContextePro {
           nom,
           initiales: `${prenom.charAt(0)}${nom.charAt(0)}`.toUpperCase() || "DR",
           gradient,
+          photoUrl: ligne.photo_url ?? null,
           specialite: ligne.specialites?.nom ?? "Médecine générale",
           etablissementId: ligne.etablissement_id ?? "",
           ville: ligne.villes?.nom ?? "",
