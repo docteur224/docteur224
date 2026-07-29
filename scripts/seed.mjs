@@ -110,6 +110,24 @@ const medecinsDef = [
   { prenom: "Sékou", nom: "Kourouma", specialite: "Dentaire", villeNom: "Kankan", tarif: 160000, etab: null, genre: "homme", langues: ["Français", "Malinké"] },
   { prenom: "Kadiatou", nom: "Sylla", specialite: "ORL", villeNom: "Labé", tarif: 190000, etab: null, genre: "femme", langues: ["Français", "Peul", "Anglais"] },
 ];
+// Rythmes de travail attribués en rotation aux médecins : matinaux,
+// tardifs, journée continue, samedi ouvert… Sans cette variété, tous les
+// médecins affichent le même « premier créneau disponible » en recherche.
+const RYTHMES = [
+  // Très matinal, finit tôt
+  { jours: [1, 2, 3, 4, 5], plages: [["07:30", "12:00"], ["13:00", "16:00"]] },
+  // Journée classique
+  { jours: [1, 2, 3, 4, 5], plages: [["08:00", "13:00"], ["14:00", "18:00"]] },
+  // Démarre tard, consulte en soirée
+  { jours: [1, 2, 3, 4, 5], plages: [["10:00", "14:00"], ["15:30", "20:00"]] },
+  // Journée continue, avec le samedi matin
+  { jours: [1, 2, 3, 4, 5, 6], plages: [["09:00", "17:00"]] },
+  // Mi-temps : uniquement les après-midis
+  { jours: [1, 2, 3, 4, 5], plages: [["14:00", "19:30"]] },
+  // Trois jours par semaine, amplitude large
+  { jours: [1, 3, 5], plages: [["08:30", "12:30"], ["14:30", "19:00"]] },
+];
+
 const medecinIds = [];
 for (const [i, m] of medecinsDef.entries()) {
   const email = `medecin${i + 1}@test.docteur224.com`;
@@ -135,11 +153,22 @@ for (const [i, m] of medecinsDef.entries()) {
     { medecin_id: id, assurance_id: assurances[i % assurances.length].id },
     { medecin_id: id, assurance_id: assurances[(i + 1) % assurances.length].id },
   ]);
-  // Horaires-types : lun-ven 08:00-13:00 et 14:00-18:00
+  // Horaires-types — volontairement différents d'un médecin à l'autre.
+  // Avec des horaires identiques partout, toutes les cartes de résultats
+  // proposent les mêmes heures : la variété rend la recherche crédible
+  // et permet de tester l'affichage « premier créneau disponible ».
   const horaires = [];
-  for (const jour of [1, 2, 3, 4, 5]) {
-    horaires.push({ medecin_id: id, jour_semaine: jour, heure_debut: "08:00", heure_fin: "13:00" });
-    horaires.push({ medecin_id: id, jour_semaine: jour, heure_debut: "14:00", heure_fin: "18:00" });
+  for (const jour of RYTHMES[i % RYTHMES.length].jours) {
+    for (const [debut, fin] of RYTHMES[i % RYTHMES.length].plages) {
+      horaires.push({ medecin_id: id, jour_semaine: jour, heure_debut: debut, heure_fin: fin });
+    }
+  }
+  // Remplacement, pas ajout : horaires_types n'a pas de contrainte d'unicité,
+  // donc un simple upsert empilerait les anciennes plages sur les nouvelles
+  // et rouvrirait le médecin sur toute la journée.
+  {
+    const { error } = await supabase.from("horaires_types").delete().eq("medecin_id", id);
+    if (error) throw new Error(`nettoyage horaires_types: ${error.message}`);
   }
   await inserer("horaires_types", horaires);
 }
@@ -197,6 +226,13 @@ await inserer("assistants", [{
 
 // ---------- Rendez-vous à différents statuts ----------
 const dans = (j) => new Date(Date.now() + j * 86400000).toISOString().slice(0, 10);
+// rendez_vous n'a pas de contrainte d'unicité : sans ce nettoyage, chaque
+// exécution du seed empilerait des doublons. On ne touche qu'aux médecins
+// de test créés ci-dessus.
+{
+  const { error } = await supabase.from("rendez_vous").delete().in("medecin_id", medecinIds);
+  if (error) throw new Error(`nettoyage rendez_vous: ${error.message}`);
+}
 await inserer("rendez_vous", [
   { medecin_id: medecinIds[0], etablissement_id: etabIds[0], date: dans(2), heure: "10:00", reserve_par: patientIds[0], reserve_par_role: "patient", patient_id: patientIds[0], motif: "Consultation générale", statut: "en_attente", source: "en_ligne" },
   { medecin_id: medecinIds[0], etablissement_id: etabIds[0], date: dans(3), heure: "11:00", reserve_par: patientIds[0], reserve_par_role: "patient", proche_id: proche.id, motif: "Vaccination", statut: "confirme", source: "en_ligne" },
@@ -205,6 +241,28 @@ await inserer("rendez_vous", [
   { medecin_id: medecinIds[3], etablissement_id: etabIds[1], date: dans(4), heure: "16:30", reserve_par: patientIds[3], reserve_par_role: "patient", patient_id: patientIds[3], motif: "Consultation gynécologique", statut: "annule", source: "en_ligne" },
   { medecin_id: medecinIds[0], etablissement_id: etabIds[0], date: dans(5), heure: "08:30", reserve_par: assistant1, reserve_par_role: "assistant", patient_id: patientIds[4], motif: "RDV pris par téléphone", statut: "confirme", source: "telephone" },
 ]);
+
+// Occupation des toutes premières heures de demain, en quantité variable
+// selon le médecin : sans cela, chaque médecin propose l'ouverture de sa
+// plage et les cartes de résultats se ressemblent toutes.
+const OCCUPES = [
+  ["07:30", "08:00", "08:30"], // Dr Diallo : matinée bien remplie
+  ["08:00"],                   // Pr Barry : un seul créneau pris
+  ["10:00", "10:30"],          // Dr Sow
+  [],                          // Dr Camara : agenda libre
+  ["14:00", "14:30", "15:00"], // Dr Baldé
+  ["08:30", "09:00"],          // Dr Touré
+  ["09:00"],                   // Dr Kourouma
+];
+await inserer("rendez_vous",
+  OCCUPES.flatMap((heures, i) =>
+    heures.map((heure) => ({
+      medecin_id: medecinIds[i], date: dans(1), heure,
+      reserve_par: patientIds[i % patientIds.length], reserve_par_role: "patient",
+      patient_id: patientIds[i % patientIds.length],
+      motif: "Consultation", statut: "confirme", source: "en_ligne",
+    }))
+  ));
 
 // ---------- Abonnements ----------
 await inserer("abonnements", [
