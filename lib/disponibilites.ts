@@ -8,7 +8,7 @@ import {
   HEURES_JOURNEE,
   type EtatCreneau,
 } from "@/lib/donnees";
-import { versISO } from "@/lib/dates";
+import { creneauReservable, versISO } from "@/lib/dates";
 
 /*
  * Disponibilités réelles côté client (spec C.4.2/C.4.3) :
@@ -74,12 +74,17 @@ export function useDisponibilites(medecinId: string, joursAvance = 60): Disponib
     };
   }, [medecinId, fenetreJours, version]);
 
+  // Les créneaux déjà passés — ou trop proches pour respecter le délai de
+  // prévenance — sont retirés : les proposer n'aurait aucun sens côté patient.
+  // Les créneaux réservés restent affichés (barrés) tant qu'ils sont à venir.
   const creneauxJour = useCallback(
     (dateISO: string): CreneauPatient[] =>
       HEURES_JOURNEE.map((heure) => ({
         heure,
         statut: statutCreneau(plages, etats, dateISO, heure),
-      })).filter((c): c is CreneauPatient => c.statut !== "ferme"),
+      }))
+        .filter((c): c is CreneauPatient => c.statut !== "ferme")
+        .filter((c) => creneauReservable(dateISO, c.heure)),
     [plages, etats]
   );
 

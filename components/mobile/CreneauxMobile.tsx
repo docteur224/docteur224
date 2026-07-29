@@ -62,6 +62,14 @@ export default function CreneauxMobile({
   const matin = creneaux.filter((c) => Number(c.heure.slice(0, 2)) < 13);
   const apresMidi = creneaux.filter((c) => Number(c.heure.slice(0, 2)) >= 13);
 
+  // En fin de journée, aucun créneau ne reste aujourd'hui : on ouvre sur le
+  // premier jour de la page qui a encore quelque chose à proposer.
+  useEffect(() => {
+    if (chargement || heure || creneaux.length > 0) return;
+    const jourUtile = jours.find((j) => !j.ferme && creneauxJour(j.iso).length > 0);
+    if (jourUtile && jourUtile.iso !== jourISO) setJourISO(jourUtile.iso);
+  }, [chargement, heure, creneaux.length, jours, creneauxJour, jourISO]);
+
   const grille = (liste: typeof creneaux) => (
     <div className="slots">
       {liste.map((c) =>

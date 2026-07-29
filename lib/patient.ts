@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { creerClientNavigateur } from "@/lib/supabase/client";
+import { creneauReservable } from "@/lib/dates";
 
 /*
  * Couche de données du parcours patient (client) : session, proches,
@@ -424,6 +425,9 @@ export async function reserverRendezVous(d: {
   motif: string;
   procheId?: string;
 }): Promise<{ erreur?: string }> {
+  if (!creneauReservable(d.date, d.heure)) {
+    return { erreur: "Ce créneau n'est plus disponible. Choisissez un autre horaire." };
+  }
   const supabase = creerClientNavigateur();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return { erreur: "non_connecte" };
@@ -459,6 +463,9 @@ export async function reprogrammerRendezVous(
   date: string,
   heure: string
 ): Promise<{ erreur?: string }> {
+  if (!creneauReservable(date, heure)) {
+    return { erreur: "Ce créneau n'est plus disponible. Choisissez un autre horaire." };
+  }
   const { error } = await creerClientNavigateur()
     .from("rendez_vous")
     .update({ date, heure, statut: "en_attente" })

@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import TopNav from "@/components/site/TopNav";
 import AppBarMobile from "@/components/mobile/AppBarMobile";
 import FormulaireReservation from "@/components/site/FormulaireReservation";
-import { capitaliser, formatDateLongue } from "@/lib/dates";
+import { capitaliser, creneauReservable, formatDateLongue } from "@/lib/dates";
 import { formatGNF } from "@/lib/format";
 import { chargerEtablissementParId, chargerMedecinParId, nomComplet } from "@/lib/donnees";
 
@@ -30,6 +30,12 @@ export default async function Reservation({
   const medecin = await chargerMedecinParId(medecinId);
   if (!medecin || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(heure)) {
     redirect("/");
+  }
+  // Masquer le créneau dans la grille ne suffit pas : l'URL peut être forgée
+  // ou simplement rouverte plus tard. On revalide le délai de prévenance ici
+  // et on renvoie vers la fiche, dont la grille ne montrera plus ce créneau.
+  if (!creneauReservable(date, heure)) {
+    redirect(`/medecin/${medecinId}`);
   }
   const etab = await chargerEtablissementParId(medecin.etablissementId);
 

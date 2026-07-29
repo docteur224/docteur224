@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Etablissement, Medecin } from "@/types";
-import { versISO } from "@/lib/dates";
+import { creneauReservable, versISO } from "@/lib/dates";
 
 /*
  * Couche de données publique (remplace lib/mock-data.ts) : lit les vraies
@@ -290,7 +290,11 @@ export function statutCreneau(
   return dansPlage ? "ouvert" : "ferme";
 }
 
-/** Premiers créneaux libres d'un jour (mini-créneaux des cartes de résultats). */
+/**
+ * Premiers créneaux libres d'un jour (mini-créneaux des cartes de résultats).
+ * Exclut les créneaux passés ou trop proches : ils mènent vers la réservation,
+ * qui les refuserait de toute façon.
+ */
 export function premiersCreneauxOuverts(
   horairesTypes: { jour_semaine: number; heure_debut: string; heure_fin: string }[],
   etats: Map<string, EtatCreneau>,
@@ -298,7 +302,9 @@ export function premiersCreneauxOuverts(
   nb = 4
 ): string[] {
   return HEURES_JOURNEE.filter(
-    (h) => statutCreneau(horairesTypes, etats, dateISO, h) === "ouvert"
+    (h) =>
+      statutCreneau(horairesTypes, etats, dateISO, h) === "ouvert" &&
+      creneauReservable(dateISO, h)
   ).slice(0, nb);
 }
 

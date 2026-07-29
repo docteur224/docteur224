@@ -68,6 +68,15 @@ export default function PanneauReservation({
 
   const creneaux = chargement ? [] : creneauxJour(jourISO);
 
+  // En fin de journée, tous les créneaux d'aujourd'hui sont écoulés : plutôt
+  // que d'ouvrir sur une grille vide, on sélectionne le premier jour de la
+  // page qui a encore quelque chose à proposer.
+  useEffect(() => {
+    if (chargement || heure || creneaux.length > 0) return;
+    const jourUtile = jours.find((j) => !j.ferme && creneauxJour(j.iso).length > 0);
+    if (jourUtile && jourUtile.iso !== jourISO) setJourISO(jourUtile.iso);
+  }, [chargement, heure, creneaux.length, jours, creneauxJour, jourISO]);
+
   return (
     <div className="rounded-[18px] border border-line bg-white p-[22px] shadow-[0_8px_22px_rgba(16,59,80,.06)] lg:sticky lg:top-[86px]">
       <div className="mb-1 flex items-baseline justify-between">

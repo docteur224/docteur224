@@ -100,6 +100,34 @@ export interface JourDispo {
 export const HORIZON_RESERVATION_JOURS = 365;
 
 /**
+ * Délai de prévenance : on ne peut pas réserver un créneau qui commence dans
+ * moins de 2 heures. Laisse une marge de préparation au médecin tout en
+ * gardant le rendez-vous le jour même possible (à 13h, 15:00 reste ouvert).
+ */
+export const DELAI_PREVENANCE_HEURES = 2;
+
+/**
+ * Un créneau est-il encore réservable ? Faux pour le passé et pour tout ce
+ * qui commence avant le délai de prévenance.
+ *
+ * Utilisé à la fois pour masquer les créneaux côté patient et pour refuser
+ * une réservation forcée par l'URL — l'affichage ne suffit pas à protéger.
+ *
+ * Fuseau : la comparaison se fait en heure locale du runtime. La Guinée est à
+ * UTC+0 toute l'année (pas d'heure d'été), donc le rendu serveur — en UTC sur
+ * Vercel — donne le même résultat qu'un navigateur à Conakry. Un patient
+ * connecté depuis un autre fuseau verra la grille filtrée selon son heure
+ * locale, mais la revalidation serveur, elle, reste alignée sur Conakry.
+ */
+export function creneauReservable(dateISO: string, heure: string, maintenant = new Date()): boolean {
+  const [h, min] = heure.split(":").map(Number);
+  const debut = depuisISO(dateISO);
+  debut.setHours(h, min, 0, 0);
+  const limite = new Date(maintenant.getTime() + DELAI_PREVENANCE_HEURES * 3600000);
+  return debut >= limite;
+}
+
+/**
  * Bandeau de dates du panneau de réservation : `nb` jours consécutifs à
  * partir d'aujourd'hui + `decalage` jours affichables. Comme dans les
  * maquettes, le dimanche n'apparaît pas dans la barre et les autres jours de
