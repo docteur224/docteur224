@@ -178,8 +178,10 @@ export async function chargerMedecins(filtres?: {
   langues?: string[];
   /** « femme » | « homme » — les médecins non renseignés sont exclus. */
   genre?: string;
-  /** Note minimale (4 ou 4.5). */
+  /** Note minimale (3, 4 ou 4.5). */
   noteMin?: number;
+  /** « note » (mieux notés) | « avis » (plus d'avis). Défaut : « note ». */
+  tri?: string;
 }): Promise<MedecinAvecPlages[]> {
   const { data, error } = await clientPublic()
     .from("medecins")
@@ -222,9 +224,19 @@ export async function chargerMedecins(filtres?: {
     liste = liste.filter((m) => m.genre === filtres.genre);
   }
   if (filtres?.noteMin) {
+    // Un médecin sans avis n'a pas « une note en dessous de 4 » : il n'a pas
+    // de note du tout. L'exclure d'un filtre « 4★ et plus » est le bon
+    // comportement, et c'est bien ce que fait la comparaison (0 < 4).
     liste = liste.filter((m) => m.note >= filtres.noteMin!);
   }
-  return liste.sort((a, b) => b.note - a.note);
+
+  if (filtres?.tri === "avis") {
+    return liste.sort((a, b) => b.nbAvis - a.nbAvis || b.note - a.note);
+  }
+  // Tri par défaut (et « Mieux notés ») : la meilleure moyenne d'abord, puis
+  // le nombre d'avis — entre deux 5,0, celui qui a 20 avis est plus fiable
+  // que celui qui en a un seul.
+  return liste.sort((a, b) => b.note - a.note || b.nbAvis - a.nbAvis);
 }
 
 /** Horizons du filtre « Disponibilités », en jours à partir d'aujourd'hui. */
@@ -494,4 +506,61 @@ export async function chargerHorairesTypes(
 
 export function nomComplet(medecin: Medecin): string {
   return `${medecin.civilite} ${medecin.prenom} ${medecin.nom}`;
+}
+
+/* ===== Avis publiés (fiche médecin publique) ===== */
+
+export interface AvisPublic {
+  id: string;
+  note: number;
+  commentaire: string;
+  /** « Mariama D. » — prénom + initiale, comme le renvoie la fonction SQL. */
+  auteur: string;
+  creeLe: string;
+  reponseMedecin: string;
+  reponseLe: string;
+}
+
+/**
+ * Avis publiés d'un médecin, via la fonction SQL `avis_publies_medecin` :
+ * l'anonyme ne peut pas lire `utilisateurs`, c'est elle qui expose le prénom
+ * de l'auteur sans ouvrir la table.
+ */
+export async function chargerAvisMedecin(medecinId: string): Promise<AvisPublic[]> {
+  const { data, error } = await clientPublic().rpc("avis_publies_medecin", {
+    p_medecin_id: medecinId,
+  });
+  if (error) return [];
+  return ((data ?? []) as {
+    id: string;
+    note: number;
+    commentaire: string | null;
+    cree_le: string;
+    auteur: string;
+    reponse_medecin: string | null;
+    reponse_le: string | null;
+  }[]).map((a) => ({
+    id: a.id,
+    note: a.note,
+    commentaire: a.commentaire ?? "",
+    auteur: a.auteur || "Patient",
+    creeLe: a.cree_le,
+    reponseMedecin: a.reponse_medecin ?? "",
+    reponseLe: a.reponse_le ?? "",
+  }));
+}
+
+/** Répartition des notes 5→1 (nombre d'avis par étoile) et moyenne. */
+export function repartitionNotes(avis: { note: number }[]): {
+  moyenne: number;
+  total: number;
+  lignes: { etoiles: number; nb: number; pourcentage: number }[];
+} {
+  const total = avis.length;
+  const lignes = [5, 4, 3, 2, 1].map((etoiles) => {
+    const nb = avis.filter((a) => a.note === etoiles).length;
+    return { etoiles, nb, pourcentage: total ? Math.round((nb / total) * 100) : 0 };
+  });
+  const moyenne = total ? avis.reduce((s, a) => s + a.note, 0) / total : 0;
+  return { moyenne, total, lignes };
 }

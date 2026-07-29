@@ -108,8 +108,21 @@ export function construireGroupes(
       param: "note",
       multiple: false,
       options: [
+        { valeur: "3", label: "3★ et plus" },
         { valeur: "4", label: "4★ et plus" },
         { valeur: "4.5", label: "4,5★ et plus" },
+      ],
+    });
+    // « Mieux notés » trie sur la moyenne ET met les médecins ayant réellement
+    // des avis devant : sans ça un profil à 0 avis, donc à 0, remonterait au
+    // même rang qu'un profil noté 5 par un seul patient.
+    groupes.push({
+      titre: "Trier par",
+      param: "tri",
+      multiple: false,
+      options: [
+        { valeur: "note", label: "Mieux notés" },
+        { valeur: "avis", label: "Plus d’avis" },
       ],
     });
   }

@@ -14,6 +14,12 @@ import { useContextePro } from "@/lib/pro";
 const ENTREES = [
   { href: "/espace-medecin/profil", icone: "👤", titre: "Mon profil", sous: "Infos affichées aux patients" },
   { href: "/espace-medecin/disponibilites", icone: "🕐", titre: "Mes disponibilités", sous: "Horaires et congés" },
+  {
+    href: "/espace-medecin/avis",
+    icone: "⭐",
+    titre: "Avis et notes",
+    sous: "Retours des patients et réponses",
+  },
   { href: "/espace-medecin/statistiques", icone: "📈", titre: "Statistiques", sous: "Performances et avis" },
   {
     href: "/espace-medecin/equipe",

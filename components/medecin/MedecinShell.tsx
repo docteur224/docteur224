@@ -10,14 +10,15 @@ import { useContextePro } from "@/lib/pro";
 /**
  * Coquille de l'espace médecin — reproduit la structure .dash / .side / .snav
  * de la maquette web. Menu conforme à la spec C.4 : Tableau de bord · Mon
- * agenda · Mes patients · Mes disponibilités · Statistiques · Mes
- * assistant(e)s · Mon abonnement · Mon profil · Déconnexion.
+ * agenda · Mes patients · Mes disponibilités · Avis et notes · Statistiques ·
+ * Mes assistant(e)s · Mon abonnement · Mon profil · Déconnexion.
  */
 const LIENS = [
   { href: "/espace-medecin", icone: "📊", label: "Tableau de bord" },
   { href: "/espace-medecin/agenda", icone: "📅", label: "Mon agenda" },
   { href: "/espace-medecin/patients", icone: "👥", label: "Mes patients" },
   { href: "/espace-medecin/disponibilites", icone: "🕐", label: "Mes disponibilités" },
+  { href: "/espace-medecin/avis", icone: "⭐", label: "Avis et notes" },
   { href: "/espace-medecin/statistiques", icone: "📈", label: "Statistiques" },
   { href: "/espace-medecin/equipe", icone: "🧑‍💼", label: "Mes assistant(e)s" },
   { href: "/espace-medecin/abonnement", icone: "💳", label: "Mon abonnement" },

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import PatientShell from "@/components/patient/PatientShell";
+import BlocAvis from "@/components/patient/BlocAvis";
 import AppBarMobile from "@/components/mobile/AppBarMobile";
 import { capitaliser, depuisISO, formatDateLongue, MOIS_ABREGES, versISO } from "@/lib/dates";
 import { formatGNF } from "@/lib/format";
@@ -149,6 +150,17 @@ export default function DetailRdv() {
     </>
   );
 
+  // Le bloc décide lui-même s'il a quelque chose à afficher (consultation
+  // honorée, ou avis déjà déposé) : on le monte dans les deux versions.
+  const blocAvis = (
+    <BlocAvis
+      rendezVousId={rdv.id}
+      medecinId={rdv.medecinId}
+      medecinNom={rdv.medecinNom}
+      honore={rdv.statut === "honore"}
+    />
+  );
+
   return (
     <PatientShell>
       {/* ===================== VERSION MOBILE ===================== */}
@@ -242,6 +254,9 @@ export default function DetailRdv() {
               </div>
             </div>
           )}
+
+          {/* Avis (consultation honorée uniquement) */}
+          <div style={{ marginBottom: 14 }}>{blocAvis}</div>
 
           {/* Actions */}
           <div style={{ display: "flex", flexDirection: "column", gap: 10, marginTop: 4 }}>
@@ -365,6 +380,9 @@ export default function DetailRdv() {
                 </a>
               )}
             </section>
+
+            {/* Avis (consultation honorée uniquement) */}
+            {blocAvis}
           </div>
 
           {/* Colonne latérale : tarif + actions */}

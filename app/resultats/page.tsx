@@ -65,6 +65,7 @@ export default async function Resultats({
   const assurances = versTableau(sp.assurance);
   const langues = versTableau(sp.langue);
   const noteMin = typeof sp.note === "string" ? Number(sp.note) : 0;
+  const tri = typeof sp.tri === "string" ? sp.tri : "";
 
   const [
     medecins,
@@ -87,6 +88,7 @@ export default async function Resultats({
       langues,
       genre,
       noteMin: Number.isFinite(noteMin) ? noteMin : 0,
+      tri,
     }),
     chargerEtablissements(),
     chargerAssurances(),
@@ -115,6 +117,7 @@ export default async function Resultats({
     Établissement: "🏥",
     "Assurance acceptée": "💳",
     Note: "⭐",
+    "Trier par": "↕",
   };
   const boutonsMobile: BoutonFiltre[] = [
     { cle: "filtres", icone: "⚙", label: "Filtres", groupes: groupesAvances },

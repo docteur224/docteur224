@@ -6,9 +6,16 @@ import PanneauReservation from "@/components/site/PanneauReservation";
 import CarteLocalisation from "@/components/site/CarteLocalisation";
 import OngletsFiche from "@/components/site/OngletsFiche";
 import AvatarMedecin from "@/components/site/AvatarMedecin";
+import BadgeNote from "@/components/site/BadgeNote";
+import PanneauAvis from "@/components/site/PanneauAvis";
 import AppBarMobile from "@/components/mobile/AppBarMobile";
 import { formatNote } from "@/lib/format";
-import { chargerEtablissementParId, chargerMedecinParId, nomComplet } from "@/lib/donnees";
+import {
+  chargerAvisMedecin,
+  chargerEtablissementParId,
+  chargerMedecinParId,
+  nomComplet,
+} from "@/lib/donnees";
 
 /*
  * Fiche médecin — reproduit l'écran « fiche » de la maquette web :
@@ -65,7 +72,10 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
   const { id } = await params;
   const medecin = await chargerMedecinParId(id);
   if (!medecin) notFound();
-  const etab = await chargerEtablissementParId(medecin.etablissementId);
+  const [etab, avis] = await Promise.all([
+    chargerEtablissementParId(medecin.etablissementId),
+    chargerAvisMedecin(medecin.id),
+  ]);
 
   // Blocs partagés par les onglets Présentation et Établissement : le patient
   // qui ne clique jamais sur un onglet doit trouver l'adresse, les photos et
@@ -259,6 +269,15 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
             ville={etab?.ville ?? medecin.ville}
             telephone={medecin.telephoneSecretariat}
           />
+
+          {/* Les avis sont une section à part entière sur mobile : la maquette
+              n'a pas d'onglets ici, tout est empilé. */}
+          <div className="section-t">Avis des patients ({avis.length})</div>
+          {/* PanneauAvis porte son propre px-[26px] pour la fiche web ; sur
+              mobile le conteneur .pad l'assure déjà, on le neutralise. */}
+          <div className="[&>div]:px-0 [&>div]:py-0">
+            <PanneauAvis avis={avis} nomMedecin={nomComplet(medecin)} />
+          </div>
         </div>
         <div className="ctafoot">
           <Link href={`/medecin/${medecin.id}/creneaux`} className="btn">
@@ -307,9 +326,7 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
                 {medecin.specialite}
               </div>
               <div className="flex flex-wrap gap-2">
-                <span className="rounded-lg bg-green-soft px-[9px] py-1 text-[11px] font-bold text-green">
-                  ★ {formatNote(medecin.note)} ({medecin.nbAvis} avis)
-                </span>
+                <BadgeNote note={medecin.note} nbAvis={medecin.nbAvis} />
                 <span className="rounded-lg bg-teal-soft px-[9px] py-1 text-[11px] font-bold text-blue">
                   ✔ Profil vérifié
                 </span>
@@ -431,34 +448,8 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
               },
               {
                 cle: "avis",
-                label: `Avis (${medecin.nbAvis})`,
-                contenu: (
-          <div className="px-[26px] py-6">
-            {medecin.nbAvis === 0 ? (
-              <div className="py-8 text-center">
-                <div className="text-3xl" aria-hidden>
-                  ⭐
-                </div>
-                <b className="mt-3 block text-[15px] font-extrabold">Aucun avis pour le moment</b>
-                <p className="mx-auto mt-2 max-w-[380px] text-[13px] leading-relaxed text-muted">
-                  Les avis sont publiés par les patients après une consultation
-                  honorée. Soyez le premier à partager votre expérience avec{" "}
-                  {nomComplet(medecin)}.
-                </p>
-              </div>
-            ) : (
-              <div className="py-8 text-center">
-                <b className="block text-[22px] font-extrabold text-blue">
-                  ★ {formatNote(medecin.note)}
-                </b>
-                <p className="mt-2 text-[13px] text-muted">
-                  Moyenne sur {medecin.nbAvis} avis. Le détail des avis arrive
-                  prochainement.
-                </p>
-              </div>
-            )}
-          </div>
-                ),
+                label: `Avis (${avis.length})`,
+                contenu: <PanneauAvis avis={avis} nomMedecin={nomComplet(medecin)} />,
               },
             ]}
           />

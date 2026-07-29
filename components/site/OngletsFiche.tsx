@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useEffect, useId, useState } from "react";
 
 /*
  * Onglets de la fiche médecin (Présentation / Établissement / Avis).
@@ -14,13 +14,34 @@ export interface Onglet {
   contenu: React.ReactNode;
 }
 
+/**
+ * Événement écouté pour ouvrir un onglet depuis l'extérieur (le badge
+ * « ★ 4,8 (12 avis) » de l'en-tête ouvre l'onglet Avis). Passer par un
+ * événement évite de rendre toute l'en-tête cliente juste pour ça.
+ */
+export const EVENEMENT_ONGLET = "docteur224:ouvrir-onglet";
+
 export default function OngletsFiche({ onglets }: { onglets: Onglet[] }) {
   const [actif, setActif] = useState(onglets[0]?.cle ?? "");
   const base = useId();
 
+  useEffect(() => {
+    const ouvrir = (e: Event) => {
+      const cle = (e as CustomEvent<string>).detail;
+      if (onglets.some((o) => o.cle === cle)) setActif(cle);
+    };
+    window.addEventListener(EVENEMENT_ONGLET, ouvrir);
+    return () => window.removeEventListener(EVENEMENT_ONGLET, ouvrir);
+  }, [onglets]);
+
   return (
     <>
-      <div role="tablist" aria-label="Sections de la fiche" className="flex gap-1 border-b border-line px-[26px]">
+      <div
+        id="onglets-fiche"
+        role="tablist"
+        aria-label="Sections de la fiche"
+        className="flex gap-1 border-b border-line px-[26px] scroll-mt-4"
+      >
         {onglets.map((o) => {
           const selectionne = o.cle === actif;
           return (

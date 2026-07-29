@@ -215,16 +215,39 @@ export interface AvisAModerer {
   extrait: string;
 }
 
+/**
+ * File de modération des avis.
+ *
+ * Les avis sont publiés dès leur dépôt (modération a posteriori) : la file
+ * n'est donc pas alimentée par le statut `en_attente` seul, mais surtout par
+ * les avis **signalés**. On remonte les deux, avec une étiquette distincte
+ * pour que l'admin sache pourquoi la ligne est là.
+ */
 export function useAvisAModerer(): { avis: AvisAModerer[]; recharger: () => void } {
   const { donnees, recharger } = utiliserRequete<AvisAModerer[]>([], async () => {
-    const { data } = await creerClientNavigateur()
+    const supabase = creerClientNavigateur();
+
+    // Avis visés par un signalement encore ouvert.
+    const { data: signales } = await supabase
+      .from("signalements")
+      .select("cible_id")
+      .eq("cible_type", "avis")
+      .in("statut", ["nouveau", "en_cours"]);
+    const idsSignales = new Set(((signales ?? []) as { cible_id: string }[]).map((s) => s.cible_id));
+
+    const { data } = await supabase
       .from("avis")
-      .select("id, note, commentaire, medecins ( civilite, utilisateurs ( nom, prenom ) )")
-      .eq("statut", "en_attente");
+      .select("id, note, commentaire, statut, medecins ( civilite, utilisateurs ( nom, prenom ) )")
+      .or(
+        idsSignales.size
+          ? `statut.eq.en_attente,id.in.(${[...idsSignales].join(",")})`
+          : "statut.eq.en_attente"
+      );
     type L = {
       id: string;
       note: number;
       commentaire: string | null;
+      statut: string;
       medecins: { civilite: string; utilisateurs: { nom: string | null; prenom: string | null } | null } | null;
     };
     return ((data ?? []) as unknown as L[]).map((a) => {
@@ -235,7 +258,7 @@ export function useAvisAModerer(): { avis: AvisAModerer[]; recharger: () => void
       return {
         id: a.id,
         titre: `${"★".repeat(a.note)}${"☆".repeat(5 - a.note)} — sur ${nomMedecin}`,
-        etiquette: "Signalé" as const,
+        etiquette: idsSignales.has(a.id) ? ("Signalé" as const) : ("Suspect" as const),
         extrait: a.commentaire ? `« ${a.commentaire} »` : "(sans commentaire)",
       };
     });
@@ -253,6 +276,14 @@ export async function modererAvis(
   } else {
     await supabase.from("avis").update({ statut: decision === "conservé" ? "publie" : "rejete" }).eq("id", avis.id);
   }
+  // La décision clôt aussi le signalement qui avait fait remonter l'avis :
+  // sinon la ligne resterait indéfiniment dans la file.
+  await supabase
+    .from("signalements")
+    .update({ statut: "traite", decision })
+    .eq("cible_type", "avis")
+    .eq("cible_id", avis.id)
+    .in("statut", ["nouveau", "en_cours"]);
   const actions = {
     conservé: "A conservé un avis",
     masqué: "A masqué un avis",
@@ -556,11 +587,20 @@ export function useCompteursAdmin(): CompteursAdmin {
       const debutMois = new Date();
       debutMois.setDate(1);
       const debutMoisISO = debutMois.toISOString().slice(0, 10);
-      const [m, e, s, a, u, mv, rdv] = await Promise.all([
+      const [m, e, s, a, avisSignales, u, mv, rdv] = await Promise.all([
         supabase.from("medecins").select("id", { count: "exact", head: true }).eq("statut", "en_attente"),
         supabase.from("etablissements").select("id", { count: "exact", head: true }).eq("statut", "en_attente"),
         supabase.from("signalements").select("id", { count: "exact", head: true }).in("statut", ["nouveau", "en_cours"]),
         supabase.from("avis").select("id", { count: "exact", head: true }).eq("statut", "en_attente"),
+        // Même règle que `useAvisAModerer` : les avis étant publiés d'emblée,
+        // la file se compose surtout des avis signalés. `signalements` n'a pas
+        // de FK vers `avis` (cible polymorphe) : pas de jointure possible, on
+        // compte les signalements ouverts qui visent un avis.
+        supabase
+          .from("signalements")
+          .select("id", { count: "exact", head: true })
+          .eq("cible_type", "avis")
+          .in("statut", ["nouveau", "en_cours"]),
         supabase.from("utilisateurs").select("id", { count: "exact", head: true }),
         supabase.from("medecins").select("id", { count: "exact", head: true }).eq("statut", "valide"),
         supabase.from("rendez_vous").select("id", { count: "exact", head: true }).gte("date", debutMoisISO),
@@ -569,7 +609,7 @@ export function useCompteursAdmin(): CompteursAdmin {
         medecinsEnAttente: m.count ?? 0,
         etablissementsEnAttente: e.count ?? 0,
         signalements: s.count ?? 0,
-        avisAModerer: a.count ?? 0,
+        avisAModerer: (a.count ?? 0) + (avisSignales.count ?? 0),
         utilisateurs: u.count ?? 0,
         medecinsValides: mv.count ?? 0,
         rdvCeMois: rdv.count ?? 0,
