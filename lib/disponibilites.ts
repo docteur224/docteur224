@@ -29,18 +29,37 @@ export interface Disponibilites {
   /** Créneaux visibles côté patient pour un jour : ouverts + réservés (jamais les fermés). */
   creneauxJour: (dateISO: string) => CreneauPatient[];
   recharger: () => void;
+  /**
+   * Étend la fenêtre chargée jusqu'à couvrir `jours` jours à partir
+   * d'aujourd'hui. Appelée quand le patient navigue au-delà de ce qui est
+   * déjà chargé ; sans effet si la fenêtre est déjà assez large.
+   */
+  etendreFenetre: (jours: number) => void;
+  /** Étendue actuellement chargée, en jours à partir d'aujourd'hui. */
+  fenetreJours: number;
 }
 
-export function useDisponibilites(medecinId: string, joursAvance = 30): Disponibilites {
+/**
+ * Chargement progressif : on ne tire au départ que `joursAvance` jours
+ * d'indisponibilités (le bandeau de dates n'en montre qu'une poignée), et la
+ * fenêtre s'élargit à la demande via etendreFenetre() quand le patient
+ * navigue plus loin dans l'horizon de réservation.
+ */
+export function useDisponibilites(medecinId: string, joursAvance = 60): Disponibilites {
   const [chargement, setChargement] = useState(true);
   const [plages, setPlages] = useState<Disponibilites["plages"]>([]);
   const [etats, setEtats] = useState<Map<string, EtatCreneau>>(new Map());
   const [version, setVersion] = useState(0);
+  const [fenetreJours, setFenetreJours] = useState(joursAvance);
+
+  const etendreFenetre = useCallback((jours: number) => {
+    setFenetreJours((actuelle) => (jours > actuelle ? jours : actuelle));
+  }, []);
 
   useEffect(() => {
     let actif = true;
     setChargement(true);
-    const fin = versISO(new Date(Date.now() + joursAvance * 86400000));
+    const fin = versISO(new Date(Date.now() + fenetreJours * 86400000));
     Promise.all([
       chargerHorairesTypes(medecinId),
       chargerIndisponibilites(medecinId, versISO(new Date()), fin),
@@ -53,7 +72,7 @@ export function useDisponibilites(medecinId: string, joursAvance = 30): Disponib
     return () => {
       actif = false;
     };
-  }, [medecinId, joursAvance, version]);
+  }, [medecinId, fenetreJours, version]);
 
   const creneauxJour = useCallback(
     (dateISO: string): CreneauPatient[] =>
@@ -64,5 +83,13 @@ export function useDisponibilites(medecinId: string, joursAvance = 30): Disponib
     [plages, etats]
   );
 
-  return { chargement, plages, etats, creneauxJour, recharger: () => setVersion((v) => v + 1) };
+  return {
+    chargement,
+    plages,
+    etats,
+    creneauxJour,
+    recharger: () => setVersion((v) => v + 1),
+    etendreFenetre,
+    fenetreJours,
+  };
 }

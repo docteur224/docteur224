@@ -1,9 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { prochainsJours } from "@/lib/dates";
+import { useEffect, useMemo, useState } from "react";
+import {
+  joursACharger,
+  moisDeLHorizon,
+  nbJoursAffichables,
+  prochainsJours,
+} from "@/lib/dates";
 import { useDisponibilites } from "@/lib/disponibilites";
+
+const JOURS_PAR_PAGE = 6;
 
 /**
  * Écran mobile « Choisir un créneau » — reproduit la scène « creneaux » de la
@@ -18,11 +25,38 @@ export default function CreneauxMobile({
   medecinId: string;
   joursFermes: number[];
 }) {
-  const { chargement, creneauxJour } = useDisponibilites(medecinId);
-  const jours = useMemo(() => prochainsJours(joursFermes, 6), [joursFermes]);
-  const premierOuvert = jours.find((j) => !j.ferme)?.iso ?? jours[0]?.iso ?? "";
+  const { chargement, creneauxJour, etendreFenetre } = useDisponibilites(medecinId);
+  const [decalage, setDecalage] = useState(0);
+  const jours = useMemo(
+    () => prochainsJours(joursFermes, JOURS_PAR_PAGE, decalage),
+    [joursFermes, decalage]
+  );
+  const total = useMemo(() => nbJoursAffichables(), []);
+  const mois = useMemo(() => moisDeLHorizon(), []);
+
+  // Chargement progressif : la fenêtre de disponibilités s'élargit seulement
+  // quand la navigation dépasse ce qui est déjà chargé.
+  useEffect(() => {
+    etendreFenetre(joursACharger(decalage, JOURS_PAR_PAGE));
+  }, [decalage, etendreFenetre]);
+  const premiereSemaine = useMemo(
+    () => prochainsJours(joursFermes, JOURS_PAR_PAGE),
+    [joursFermes]
+  );
+  const premierOuvert =
+    premiereSemaine.find((j) => !j.ferme)?.iso ?? premiereSemaine[0]?.iso ?? "";
   const [jourISO, setJourISO] = useState(premierOuvert);
   const [heure, setHeure] = useState<string | null>(null);
+
+  const peutReculer = decalage > 0;
+  const peutAvancer = decalage + JOURS_PAR_PAGE < total;
+
+  // Le sélecteur suit la navigation aux flèches.
+  const moisCourant = useMemo(() => {
+    let valeur = mois[0]?.decalage ?? 0;
+    for (const m of mois) if (m.decalage <= decalage) valeur = m.decalage;
+    return valeur;
+  }, [mois, decalage]);
 
   const creneaux = chargement ? [] : creneauxJour(jourISO);
   const matin = creneaux.filter((c) => Number(c.heure.slice(0, 2)) < 13);
@@ -57,10 +91,35 @@ export default function CreneauxMobile({
   return (
     <>
       <div className="pad" style={{ paddingTop: 6 }}>
-        <div className="section-t" style={{ marginTop: 6 }}>
-          Choisissez une date
+        <div className="daytitle">
+          <div className="section-t" style={{ marginTop: 6 }}>
+            Choisissez une date
+          </div>
+          {/* Saut direct à un mois de l'horizon (un an). */}
+          <select
+            aria-label="Aller à un mois"
+            className="moissel"
+            value={moisCourant}
+            onChange={(e) => setDecalage(Number(e.target.value))}
+          >
+            {mois.map((m) => (
+              <option key={m.decalage} value={m.decalage}>
+                {m.label}
+              </option>
+            ))}
+          </select>
         </div>
-        <div className="daysel">
+        <div className="dayrow">
+          <button
+            type="button"
+            className="daynav"
+            aria-label="Jours précédents"
+            disabled={!peutReculer}
+            onClick={() => setDecalage((d) => Math.max(0, d - JOURS_PAR_PAGE))}
+          >
+            ‹
+          </button>
+          <div className="daysel">
           {jours.map((j) => (
             <button
               key={j.iso}
@@ -77,6 +136,20 @@ export default function CreneauxMobile({
               <span className="mois">{j.mois}</span>
             </button>
           ))}
+          </div>
+          <button
+            type="button"
+            className="daynav"
+            aria-label="Jours suivants"
+            disabled={!peutAvancer}
+            onClick={() =>
+              setDecalage((d) =>
+                Math.min(d + JOURS_PAR_PAGE, Math.max(0, total - JOURS_PAR_PAGE))
+              )
+            }
+          >
+            ›
+          </button>
         </div>
         <div className="section-t">Matin</div>
         {grille(matin)}

@@ -1,10 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import { prochainsJours } from "@/lib/dates";
+import { useEffect, useMemo, useState } from "react";
+import {
+  joursACharger,
+  moisDeLHorizon,
+  nbJoursAffichables,
+  prochainsJours,
+} from "@/lib/dates";
 import { useDisponibilites } from "@/lib/disponibilites";
 import { formatGNF } from "@/lib/format";
+
+const JOURS_PAR_PAGE = 5;
 
 /**
  * Panneau « Réserver un rendez-vous » de la fiche médecin — reproduit la
@@ -25,11 +32,39 @@ export default function PanneauReservation({
   tarif: number;
   joursFermes: number[];
 }) {
-  const { chargement, creneauxJour } = useDisponibilites(medecinId);
-  const jours = useMemo(() => prochainsJours(joursFermes, 5), [joursFermes]);
-  const premierOuvert = jours.find((j) => !j.ferme)?.iso ?? jours[0]?.iso ?? "";
+  const { chargement, creneauxJour, etendreFenetre } = useDisponibilites(medecinId);
+  const [decalage, setDecalage] = useState(0);
+  const jours = useMemo(
+    () => prochainsJours(joursFermes, JOURS_PAR_PAGE, decalage),
+    [joursFermes, decalage]
+  );
+  const total = useMemo(() => nbJoursAffichables(), []);
+  const mois = useMemo(() => moisDeLHorizon(), []);
+
+  // Chargement progressif : on n'élargit la fenêtre de disponibilités que
+  // lorsque la navigation dépasse ce qui est déjà chargé.
+  useEffect(() => {
+    etendreFenetre(joursACharger(decalage, JOURS_PAR_PAGE));
+  }, [decalage, etendreFenetre]);
+  const premiereSemaine = useMemo(
+    () => prochainsJours(joursFermes, JOURS_PAR_PAGE),
+    [joursFermes]
+  );
+  const premierOuvert =
+    premiereSemaine.find((j) => !j.ferme)?.iso ?? premiereSemaine[0]?.iso ?? "";
   const [jourISO, setJourISO] = useState(premierOuvert);
   const [heure, setHeure] = useState<string | null>(null);
+
+  const peutReculer = decalage > 0;
+  const peutAvancer = decalage + JOURS_PAR_PAGE < total;
+
+  // Le sélecteur suit la navigation aux flèches : dernier mois dont le début
+  // est déjà atteint par le décalage courant.
+  const moisCourant = useMemo(() => {
+    let valeur = mois[0]?.decalage ?? 0;
+    for (const m of mois) if (m.decalage <= decalage) valeur = m.decalage;
+    return valeur;
+  }, [mois, decalage]);
 
   const creneaux = chargement ? [] : creneauxJour(jourISO);
 
@@ -39,10 +74,37 @@ export default function PanneauReservation({
         <b className="text-[15px] font-extrabold">Réserver un rendez-vous</b>
         <span className="text-[15px] font-extrabold text-blue">{formatGNF(tarif)}</span>
       </div>
-      <div className="mb-4 text-xs text-muted">Choisissez une date et un horaire disponibles.</div>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <span className="text-xs text-muted">Choisissez une date et un horaire disponibles.</span>
+        {/* Saut direct à un mois : évite d'enchaîner les clics sur « › ». */}
+        <select
+          aria-label="Aller à un mois"
+          value={moisCourant}
+          onChange={(e) => setDecalage(Number(e.target.value))}
+          className="flex-none rounded-lg border border-line bg-white px-2 py-1 text-xs font-bold text-blue"
+        >
+          {mois.map((m) => (
+            <option key={m.decalage} value={m.decalage}>
+              {m.label}
+            </option>
+          ))}
+        </select>
+      </div>
 
-      {/* Bandeau de dates */}
-      <div className="flex gap-2 overflow-auto pb-2">
+      {/* Bandeau de dates, navigable au-delà des 5 premiers jours */}
+      <div className="flex items-center gap-2 pb-2">
+        <button
+          type="button"
+          onClick={() => setDecalage((d) => Math.max(0, d - JOURS_PAR_PAGE))}
+          disabled={!peutReculer}
+          aria-label="Jours précédents"
+          className={`flex-none rounded-full border border-line bg-white px-2 py-3 text-sm font-bold text-blue transition ${
+            peutReculer ? "hover:border-teal" : "cursor-not-allowed opacity-30"
+          }`}
+        >
+          ‹
+        </button>
+        <div className="flex flex-1 gap-2 overflow-auto">
         {jours.map((j) => {
           const selectionne = j.iso === jourISO;
           return (
@@ -78,6 +140,20 @@ export default function PanneauReservation({
             </button>
           );
         })}
+        </div>
+        <button
+          type="button"
+          onClick={() =>
+            setDecalage((d) => Math.min(d + JOURS_PAR_PAGE, Math.max(0, total - JOURS_PAR_PAGE)))
+          }
+          disabled={!peutAvancer}
+          aria-label="Jours suivants"
+          className={`flex-none rounded-full border border-line bg-white px-2 py-3 text-sm font-bold text-blue transition ${
+            peutAvancer ? "hover:border-teal" : "cursor-not-allowed opacity-30"
+          }`}
+        >
+          ›
+        </button>
       </div>
 
       {/* Grille des horaires du jour sélectionné (ouverts + réservés barrés) */}

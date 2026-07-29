@@ -240,6 +240,13 @@
   .day.on { background: var(--blue); border-color: var(--blue); }
   .day.on small, .day.on b, .day.on .mois { color: #fff; }
   .day.off { opacity: 0.4; pointer-events: none; }
+  /* flèches de navigation du bandeau de dates (jours suivants / précédents) */
+  .dayrow { display: flex; align-items: center; gap: 6px; }
+  .dayrow .daysel { flex: 1; min-width: 0; }
+  .daynav { flex: none; width: 30px; padding: 14px 0; border-radius: 10px; background: #fff; border: 1px solid var(--line); color: var(--blue); font-weight: 800; font-size: 16px; line-height: 1; cursor: pointer; font-family: inherit; }
+  .daynav:disabled { opacity: 0.3; cursor: not-allowed; }
+  .daytitle { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .moissel { flex: none; border-radius: 9px; border: 1px solid var(--line); background: #fff; color: var(--blue); font-family: inherit; font-size: 12px; font-weight: 700; padding: 5px 6px; }
   .slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-top: 4px; }
   .slot { padding: 12px 0; border-radius: 11px; background: #fff; border: 1.5px solid var(--line); font-weight: 700; font-size: 13.5px; color: var(--blue); transition: transform 0.05s; cursor: pointer; font-family: inherit; }
   .slot:hover { border-color: var(--teal); }
