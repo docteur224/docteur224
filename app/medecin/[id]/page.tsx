@@ -67,6 +67,51 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
   if (!medecin) notFound();
   const etab = await chargerEtablissementParId(medecin.etablissementId);
 
+  // Blocs partagés par les onglets Présentation et Établissement : le patient
+  // qui ne clique jamais sur un onglet doit trouver l'adresse, les photos et
+  // la carte sans quitter la Présentation. Définis une fois pour que les deux
+  // volets ne divergent pas.
+  const galeriePhotos = (
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] gap-3">
+      {PHOTOS.map((photo) => (
+        <div
+          key={photo.label}
+          className="grid aspect-[4/3] place-items-center overflow-hidden rounded-xl border border-line text-center"
+          style={{ background: photo.fond }}
+        >
+          <div>
+            <div className="text-[26px]" aria-hidden>
+              {photo.emoji}
+            </div>
+            <small className="text-[11px] font-extrabold text-blue">{photo.label}</small>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const infosPratiques = (
+    <div className="mt-1.5 grid gap-[14px] sm:grid-cols-2">
+      <LigneInfo
+        icone="🏥"
+        titre={etab?.nom ?? "Établissement"}
+        detail={etab ? `Quartier ${etab.quartier} · ${etab.ville}` : medecin.ville}
+      />
+      <LigneInfo icone="🕐" titre={medecin.horaires.jours} detail={medecin.horaires.detail} />
+      <LigneInfo icone="📞" titre={medecin.telephoneSecretariat} detail="Secrétariat" />
+      <LigneInfo icone="💳" titre="Paiement" detail="Sur place, chez le médecin" />
+    </div>
+  );
+
+  const carteLocalisation = (
+    <CarteLocalisation
+      etablissementNom={etab?.nom ?? ""}
+      quartier={etab?.quartier ?? ""}
+      ville={etab?.ville ?? medecin.ville}
+      telephone={medecin.telephoneSecretariat}
+    />
+  );
+
   return (
     <div className="min-h-screen bg-bg">
       <TopNav lienActif="trouver" droite="compte" />
@@ -351,28 +396,18 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
               ))}
             </div>
 
-            {/* Reprise volontaire des informations de l'onglet Établissement :
+            {/* Reprise volontaire du contenu de l'onglet Établissement :
                 beaucoup de patients ne cliquent jamais sur un onglet, il leur
-                faut l'adresse et les horaires sans quitter la Présentation. */}
+                faut l'adresse, les photos et la carte sans quitter la
+                Présentation. */}
             <TitreSection>Lieu de consultation</TitreSection>
-            <div className="mt-1.5 grid gap-[14px] sm:grid-cols-2">
-              <LigneInfo
-                icone="🏥"
-                titre={etab?.nom ?? "Établissement"}
-                detail={`Quartier ${etab?.quartier} · ${etab?.ville}`}
-              />
-              <LigneInfo
-                icone="🕐"
-                titre={medecin.horaires.jours}
-                detail={medecin.horaires.detail}
-              />
-              <LigneInfo
-                icone="📞"
-                titre={medecin.telephoneSecretariat}
-                detail="Secrétariat"
-              />
-              <LigneInfo icone="💳" titre="Paiement" detail="Sur place, chez le médecin" />
-            </div>
+            {infosPratiques}
+
+            <TitreSection>Photos de l’établissement</TitreSection>
+            {galeriePhotos}
+
+            <TitreSection>Localisation</TitreSection>
+            {carteLocalisation}
           </div>
                 ),
               },
@@ -382,48 +417,15 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
                 contenu: (
           <div className="px-[26px] py-6">
             <TitreSection>Photos de l’établissement</TitreSection>
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] gap-3">
-              {PHOTOS.map((photo) => (
-                <div
-                  key={photo.label}
-                  className="grid aspect-[4/3] place-items-center overflow-hidden rounded-xl border border-line text-center"
-                  style={{ background: photo.fond }}
-                >
-                  <div>
-                    <div className="text-[26px]" aria-hidden>
-                      {photo.emoji}
-                    </div>
-                    <small className="text-[11px] font-extrabold text-blue">{photo.label}</small>
-                  </div>
-                </div>
-              ))}
-            </div>
+            {galeriePhotos}
 
+            {/* Les langues parlées sont une information sur le médecin :
+                elles vivent dans l'onglet Présentation, pas ici. */}
             <TitreSection>Informations pratiques</TitreSection>
-            <div className="mt-1.5 grid gap-[14px] sm:grid-cols-2">
-              <LigneInfo
-                icone="🏥"
-                titre={etab?.nom ?? "Établissement"}
-                detail={`Quartier ${etab?.quartier} · ${etab?.ville}`}
-              />
-              <LigneInfo
-                icone="🕐"
-                titre={medecin.horaires.jours}
-                detail={medecin.horaires.detail}
-              />
-              {/* Les langues parlées sont une information sur le médecin :
-                  elles vivent dans l'onglet Présentation, pas ici. */}
-              <LigneInfo icone="📞" titre={medecin.telephoneSecretariat} detail="Secrétariat" />
-              <LigneInfo icone="💳" titre="Paiement" detail="Sur place, chez le médecin" />
-            </div>
+            {infosPratiques}
 
             <TitreSection>Localisation</TitreSection>
-            <CarteLocalisation
-              etablissementNom={etab?.nom ?? ""}
-              quartier={etab?.quartier ?? ""}
-              ville={etab?.ville ?? medecin.ville}
-              telephone={medecin.telephoneSecretariat}
-            />
+            {carteLocalisation}
           </div>
                 ),
               },
