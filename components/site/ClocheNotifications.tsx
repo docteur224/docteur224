@@ -15,9 +15,19 @@ import { useProfilConnecte } from "@/lib/patient";
 export default function ClocheNotifications({ surFonce = false }: { surFonce?: boolean }) {
   const { profil } = useProfilConnecte();
   const { notifications, nonLues, marquerLue, toutMarquerLu } = useNotifications();
-  const [ouvert, setOuvert] = useState(false);
+  // `versLaDroite` : sens d'ouverture, décidé à l'ouverture d'après la place
+  // disponible. Dans une sidebar la cloche est à gauche de l'écran, le panneau
+  // doit se déployer vers la droite ; dans le TopNav c'est l'inverse.
+  const [ouvert, setOuvert] = useState<false | { versLaDroite: boolean }>(false);
   const conteneur = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  const basculer = () =>
+    setOuvert((etat) => {
+      if (etat) return false;
+      const r = conteneur.current?.getBoundingClientRect();
+      return { versLaDroite: (r?.left ?? 0) < window.innerWidth / 2 };
+    });
 
   // Un clic à l'extérieur ou Échap referme le panneau.
   useEffect(() => {
@@ -42,10 +52,10 @@ export default function ClocheNotifications({ surFonce = false }: { surFonce?: b
     <div ref={conteneur} className="relative hidden md:block">
       <button
         type="button"
-        onClick={() => setOuvert((o) => !o)}
+        onClick={basculer}
         aria-label={nonLues > 0 ? `Notifications — ${nonLues} non lue(s)` : "Notifications"}
         aria-haspopup="dialog"
-        aria-expanded={ouvert}
+        aria-expanded={ouvert !== false}
         className={`relative grid h-[38px] w-[38px] place-items-center rounded-[11px] border text-base transition-colors ${
           surFonce
             ? "border-white/25 bg-white/10 hover:bg-white/20"
@@ -60,14 +70,15 @@ export default function ClocheNotifications({ surFonce = false }: { surFonce?: b
         )}
       </button>
 
-      {/* Ancré en haut à droite de la fenêtre, et non sous le bouton : dans les
-          sidebars la cloche se trouve à gauche de l'écran, le panneau y sortait
-          du cadre et se retrouvait tronqué. */}
+      {/* Ancré sous la cloche, et déployé du côté où il y a la place : aligné
+          à gauche du bouton dans une sidebar, à droite dans le TopNav. */}
       {ouvert && (
         <div
           role="dialog"
           aria-label="Notifications"
-          className="fixed right-5 top-[72px] z-50 w-[340px] max-w-[calc(100vw-40px)] overflow-hidden rounded-2xl border border-line bg-white shadow-card"
+          className={`absolute top-[46px] z-50 w-[340px] max-w-[calc(100vw-32px)] overflow-hidden rounded-2xl border border-line bg-white shadow-card ${
+            ouvert.versLaDroite ? "left-0" : "right-0"
+          }`}
         >
           <div className="flex items-center gap-2 border-b border-line px-4 py-3">
             <b className="text-[13.5px] font-extrabold">Notifications</b>
