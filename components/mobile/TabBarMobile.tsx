@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect } from "react";
+import { useProfilConnecte } from "@/lib/patient";
 
 /**
  * Barre d'onglets basse mobile — reproduit la .tabbar de la maquette mobile.
@@ -126,8 +128,20 @@ export default function TabBarMobile({
   role: "public" | "medecin" | "assistant" | "etablissement" | "admin";
 }) {
   const pathname = usePathname();
+  const { profil, chargement } = useProfilConnecte();
   const onglets = ONGLETS[role];
   const actif = ongletActif(onglets, pathname);
+  const affichee = !chargement && profil !== null;
+
+  // La tabbar est la navigation d'un compte : un visiteur n'a ni rendez-vous
+  // ni profil à consulter. La classe posée sur <html> retire au passage les
+  // 82px que `.with-tabbar` réservait pour elle.
+  useEffect(() => {
+    document.documentElement.classList.toggle("sans-tabbar", !affichee);
+    return () => document.documentElement.classList.remove("sans-tabbar");
+  }, [affichee]);
+
+  if (!affichee) return null;
 
   return (
     <nav className="tabbar md:hidden" aria-label="Navigation principale">

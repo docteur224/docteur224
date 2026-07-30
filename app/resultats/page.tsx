@@ -173,7 +173,7 @@ export default async function Resultats({
 
   return (
     <div className="min-h-screen bg-bg">
-      <TopNav lienActif="trouver" droite="compte" />
+      <TopNav lienActif="trouver" />
 
       {/* ================= VERSION MOBILE (écran « resultats » de la maquette mobile) ================= */}
       <div className="with-tabbar md:hidden">

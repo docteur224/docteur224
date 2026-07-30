@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import CaseCocher from "@/components/site/CaseCocher";
+import Footer from "@/components/site/Footer";
+import TopNav from "@/components/site/TopNav";
 import CoteAuth from "@/components/site/CoteAuth";
 import FauxCaptcha from "@/components/site/FauxCaptcha";
 import { inscrireProfessionnel } from "@/lib/auth";
@@ -100,7 +102,8 @@ export default function InscriptionProfessionnel() {
   );
 
   return (
-    <div className="min-h-screen bg-bg md:bg-white">
+    <div className="flex min-h-screen flex-col bg-bg md:bg-white">
+      <TopNav />
       {/* ================= VERSION MOBILE ================= */}
       <div className="md:hidden">
         <EnTeteMobile retour="/inscription" titre="Compte professionnel" actions={false} />
@@ -212,7 +215,7 @@ export default function InscriptionProfessionnel() {
       </div>
 
       {/* ================= VERSION WEB ================= */}
-      <div className="hidden min-h-screen bg-white md:grid lg:grid-cols-2">
+      <div className="hidden flex-1 bg-white md:grid lg:grid-cols-2">
         <div className="flex flex-col justify-center px-6 py-10 sm:px-[50px] sm:py-[54px]">
           <div className="mx-auto w-full max-w-[520px]">
             <h3 className="text-[22px] font-extrabold tracking-[-0.3px]">
@@ -340,6 +343,8 @@ export default function InscriptionProfessionnel() {
           ]}
         />
       </div>
+
+      <Footer />
     </div>
   );
 }

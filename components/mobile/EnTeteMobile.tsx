@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import BandeauProchainRdv from "@/components/mobile/BandeauProchainRdv";
+import MenuPublic from "@/components/mobile/MenuPublic";
 import PanneauNotifications from "@/components/mobile/PanneauNotifications";
 import RechercheRapide from "@/components/mobile/RechercheRapide";
 import TiroirMobile from "@/components/mobile/TiroirMobile";
@@ -43,7 +44,12 @@ export default function EnTeteMobile({
   retour?: string;
   /** Actions standard à droite (cloche + avatar, ou « Se connecter »). */
   actions?: boolean;
-  /** Loupe ouvrant la recherche rapide — écrans publics et patient. */
+  /**
+   * Loupe ouvrant la recherche rapide — honorée seulement sur les écrans sans
+   * titre : avec le ☰, la cloche et l'avatar, une quatrième action tronquait
+   * le titre. Ailleurs, la recherche reste à un tap par le ☰ ou l'onglet
+   * Recherche.
+   */
   recherche?: boolean;
   /** Rappel du prochain rendez-vous sous la barre (patient uniquement). */
   bandeauRdv?: boolean;
@@ -85,7 +91,8 @@ export default function EnTeteMobile({
 
         <div className="tb-actions">
           {droite}
-          {recherche && (
+          <MenuPublic />
+          {recherche && !titre && (
             <button
               type="button"
               className="tb-btn"
@@ -100,7 +107,11 @@ export default function EnTeteMobile({
           {actions && <ActionsCompte />}
         </div>
       </header>
-      {recherche && (
+      {/* La barre est `fixed` : cet espaceur rend la hauteur qu'elle ne prend
+          plus dans le flux. Pas sous la variante transparente, où le héros
+          passe volontairement dessous. */}
+      {variante !== "hero" && <div className="tb-espace md:hidden" aria-hidden />}
+      {recherche && !titre && (
         <RechercheRapide ouvert={rechercheOuverte} fermer={() => setRechercheOuverte(false)} />
       )}
       {/* Jamais sous la variante hero : le héros remonte sous la barre par

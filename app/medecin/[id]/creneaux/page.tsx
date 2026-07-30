@@ -31,7 +31,7 @@ export default async function ChoixCreneau({ params }: { params: Promise<{ id: s
 
   return (
     <div className="flex min-h-screen flex-col bg-bg">
-      <TopNav lienActif="trouver" droite="compte" />
+      <TopNav lienActif="trouver" />
 
       {/* ===== VERSION MOBILE ===== */}
       <div className="flex flex-1 flex-col md:hidden">

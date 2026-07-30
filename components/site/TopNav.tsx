@@ -1,20 +1,21 @@
 import Link from "next/link";
+import BoutonsCompteWeb from "@/components/site/BoutonsCompteWeb";
 import ClocheNotifications from "@/components/site/ClocheNotifications";
 import Logo from "@/components/site/Logo";
 
 /**
  * Barre de navigation du site public — reproduit la .topnav de la maquette web
  * (hauteur 66px, fond blanc, liens gris, boutons à droite).
- * - `droite="compte"` : bouton « Mon compte » (écrans résultats / fiche médecin)
  * - `minimale` : logo + langue uniquement (écrans réservation / confirmation)
+ *
+ * Le côté droit suit la session (voir BoutonsCompteWeb) : « Mon espace » pour
+ * un compte connecté, « Se connecter / S'inscrire » sinon.
  */
 export default function TopNav({
   lienActif,
-  droite = "auth",
   minimale = false,
 }: {
   lienActif?: "trouver";
-  droite?: "auth" | "compte";
   minimale?: boolean;
 }) {
   return (
@@ -33,7 +34,12 @@ export default function TopNav({
           <Link href="/#comment-ca-marche" className="text-[13.5px] font-semibold text-muted hover:text-blue">
             Comment ça marche
           </Link>
-          <Link href="/espace-medecin" className="text-[13.5px] font-semibold text-muted hover:text-blue">
+          {/* Destination : l'inscription professionnelle. L'espace médecin
+              n'a de sens que pour un compte déjà créé et validé. */}
+          <Link
+            href="/inscription/professionnel"
+            className="text-[13.5px] font-semibold text-muted hover:text-blue"
+          >
             Pour les médecins
           </Link>
         </div>
@@ -44,27 +50,7 @@ export default function TopNav({
         <span className="hidden rounded-lg border border-line px-[10px] py-[6px] text-[12.5px] font-bold text-muted sm:inline">
           FR ⌄
         </span>
-        {!minimale &&
-          (droite === "compte" ? (
-            <Link
-              href="/mes-rendez-vous"
-              className="rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg"
-            >
-              Mon compte
-            </Link>
-          ) : (
-            <>
-              <Link href="/connexion" className="text-[13.5px] font-bold text-blue">
-                Se connecter
-              </Link>
-              <Link
-                href="/inscription"
-                className="rounded-[11px] bg-teal px-[18px] py-[11px] text-[13.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
-              >
-                S&apos;inscrire
-              </Link>
-            </>
-          ))}
+        {!minimale && <BoutonsCompteWeb />}
       </div>
     </nav>
   );

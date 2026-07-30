@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import CoteAuth from "@/components/site/CoteAuth";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
+import Footer from "@/components/site/Footer";
 import Logo from "@/components/site/Logo";
+import TopNav from "@/components/site/TopNav";
 import { seConnecter } from "@/lib/auth";
 
 /*
@@ -48,13 +50,15 @@ export default function Connexion() {
   );
 
   return (
-    <div className="min-h-screen bg-bg md:bg-white">
+    <div className="flex min-h-screen flex-col bg-bg md:bg-white">
+      <TopNav />
+
       {/* ================= VERSION MOBILE ================= */}
       {/* Barre réduite au retour : sans elle, l'écran de connexion mobile
           n'offrait aucun chemin vers l'accueil. */}
       <EnTeteMobile retour="/" actions={false} />
       <div className="authwrap md:hidden">
-        <Logo variante="compact" hauteur={66} lien={null} className="mb-4 block" />
+        <Logo variante="compact" hauteur={72} lien={null} className="mx-auto mb-5 block w-fit" />
         <div className="eyebrow2" style={{ marginTop: 8 }}>
           Je me connecte en tant que
         </div>
@@ -106,10 +110,11 @@ export default function Connexion() {
       </div>
 
       {/* ================= VERSION WEB ================= */}
-      <div className="hidden min-h-screen bg-white md:grid lg:grid-cols-2">
+      <div className="hidden flex-1 bg-white md:grid lg:grid-cols-2">
         <div className="flex flex-col justify-center px-6 py-10 sm:px-[50px] sm:py-[54px]">
           <div className="mx-auto w-full max-w-[520px]">
-            <div className="mb-[10px] text-[11px] font-extrabold uppercase tracking-[0.12em] text-muted">
+            <Logo variante="compact" hauteur={86} lien={null} className="mx-auto mb-7 block w-fit" />
+            <div className="mb-[10px] text-center text-[11px] font-extrabold uppercase tracking-[0.12em] text-muted">
               Je me connecte en tant que
             </div>
             <div className="mb-[22px] flex flex-wrap gap-2">
@@ -188,6 +193,8 @@ export default function Connexion() {
           ]}
         />
       </div>
+
+      <Footer />
     </div>
   );
 }

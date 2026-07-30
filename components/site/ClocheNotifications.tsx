@@ -60,11 +60,14 @@ export default function ClocheNotifications({ surFonce = false }: { surFonce?: b
         )}
       </button>
 
+      {/* Ancré en haut à droite de la fenêtre, et non sous le bouton : dans les
+          sidebars la cloche se trouve à gauche de l'écran, le panneau y sortait
+          du cadre et se retrouvait tronqué. */}
       {ouvert && (
         <div
           role="dialog"
           aria-label="Notifications"
-          className="absolute right-0 top-[46px] z-40 w-[340px] overflow-hidden rounded-2xl border border-line bg-white shadow-card"
+          className="fixed right-5 top-[72px] z-50 w-[340px] max-w-[calc(100vw-40px)] overflow-hidden rounded-2xl border border-line bg-white shadow-card"
         >
           <div className="flex items-center gap-2 border-b border-line px-4 py-3">
             <b className="text-[13.5px] font-extrabold">Notifications</b>

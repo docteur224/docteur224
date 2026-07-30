@@ -124,7 +124,7 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
 
   return (
     <div className="min-h-screen bg-bg">
-      <TopNav lienActif="trouver" droite="compte" />
+      <TopNav lienActif="trouver" />
 
       {/* ================= VERSION MOBILE (écran « fiche » de la maquette mobile) ================= */}
       <div className="flex flex-col md:hidden">

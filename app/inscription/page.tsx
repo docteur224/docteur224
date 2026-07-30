@@ -1,5 +1,8 @@
 import Link from "next/link";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
+import Footer from "@/components/site/Footer";
+import Logo from "@/components/site/Logo";
+import TopNav from "@/components/site/TopNav";
 
 /*
  * Inscription · choix du profil — reproduit l'écran « inscription » de la
@@ -27,11 +30,14 @@ const PROFILS = [
 
 export default function ChoixInscription() {
   return (
-    <main className="min-h-screen bg-bg md:flex md:items-center md:justify-center md:bg-white md:px-6 md:py-[54px]">
+    <div className="flex min-h-screen flex-col bg-bg md:bg-white">
+      <TopNav />
+
       {/* ================= VERSION MOBILE (écran « m-inscription » de la maquette mobile) ================= */}
       <div className="md:hidden">
         <EnTeteMobile retour="/connexion" titre="Rejoignez Docteur 224" actions={false} />
         <div className="pad">
+          <Logo variante="compact" hauteur={72} lien={null} className="mx-auto mb-4 mt-2 block w-fit" />
           <p className="muted" style={{ fontSize: 12.5, margin: "2px 0 16px", lineHeight: 1.5 }}>
             Choisissez votre profil pour créer votre compte gratuitement.
           </p>
@@ -67,8 +73,10 @@ export default function ChoixInscription() {
         </div>
       </div>
 
-      {/* ================= VERSION WEB (inchangée) ================= */}
-      <div className="hidden w-full max-w-[880px] text-center md:block">
+      {/* ================= VERSION WEB ================= */}
+      <main className="hidden flex-1 items-center justify-center px-6 py-[54px] md:flex">
+      <div className="w-full max-w-[880px] text-center">
+        <Logo variante="compact" hauteur={96} lien={null} className="mx-auto mb-6 block w-fit" />
         <h1 className="text-[30px] font-extrabold tracking-[-0.5px]">Rejoignez Docteur 224</h1>
         <p className="mt-[10px] text-muted">
           Choisissez votre profil pour créer votre compte gratuitement.
@@ -103,6 +111,9 @@ export default function ChoixInscription() {
           </Link>
         </div>
       </div>
-    </main>
+      </main>
+
+      <Footer />
+    </div>
   );
 }

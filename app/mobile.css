@@ -31,9 +31,15 @@
   /* Hauteur de référence : partagée par la barre et par le héros qui remonte
      dessous (une déclaration par élément, une variable ne se propage pas
      entre frères). Inclut l'encoche iOS. */
-  .topbar, .topbar.transparente + .hero { --tb-h: calc(56px + env(safe-area-inset-top)); }
-  .topbar { position: sticky; top: 0; z-index: 35; display: flex; align-items: center; gap: 11px; min-height: var(--tb-h); padding: 8px 14px; padding-top: calc(8px + env(safe-area-inset-top)); background: var(--bg); transition: background 0.2s, box-shadow 0.2s, border-color 0.2s; border-bottom: 1px solid transparent; }
-  .topbar.figee { background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(10px); border-bottom-color: var(--line); box-shadow: 0 2px 10px rgba(16, 59, 80, 0.06); }
+  .topbar, .tb-espace, .topbar.transparente + .hero { --tb-h: calc(56px + env(safe-area-inset-top)); }
+  /* `fixed` et non `sticky` : un simple ancêtre en overflow suffit à neutraliser
+     sticky, et c'est ce qui la laissait filer au scroll sur l'accueil.
+     L'espace correspondant est rendu par .tb-espace juste après. */
+  .topbar { position: fixed; top: 0; left: 0; right: 0; z-index: 35; display: flex; align-items: center; gap: 11px; min-height: var(--tb-h); padding: 8px 14px; padding-top: calc(8px + env(safe-area-inset-top)); background: var(--bg); transition: background 0.2s, box-shadow 0.2s, border-color 0.2s; border-bottom: 1px solid transparent; }
+  .tb-espace { height: var(--tb-h); flex: none; }
+  /* Pas de backdrop-filter : sur Chrome Android il fait sauter le rendu des
+     autres couches fixes (des icônes de la tabbar disparaissaient au scroll). */
+  .topbar.figee { background: #fff; border-bottom-color: var(--line); box-shadow: 0 2px 10px rgba(16, 59, 80, 0.06); }
   /* La variante marque part déjà du blanc : seule l'ombre apparaît au scroll. */
   .topbar.marque { background: #fff; border-bottom-color: var(--line); }
   .topbar.marque.figee { box-shadow: 0 2px 10px rgba(16, 59, 80, 0.07); }
@@ -42,7 +48,7 @@
   .topbar.transparente .tb-btn { background: rgba(255, 255, 255, 0.16); border-color: rgba(255, 255, 255, 0.28); color: #fff; }
   /* Spécificité plus forte que `.topbar.transparente`, qui suit `.topbar.figee`
      dans la cascade et écraserait sinon le fond opaque. */
-  .topbar.transparente.figee { color: var(--ink); background: rgba(255, 255, 255, 0.92); }
+  .topbar.transparente.figee { color: var(--ink); background: #fff; }
   .topbar.transparente.figee .tb-btn { background: #fff; border-color: var(--line); color: var(--blue); }
 
   /* zone centrale : titre + sous-titre, tronqués plutôt que repliés */
@@ -55,6 +61,15 @@
   .topbar .tb-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
   .topbar .tb-btn { position: relative; width: 38px; height: 38px; border-radius: 12px; background: #fff; border: 1px solid var(--line); display: grid; place-items: center; font-size: 17px; color: var(--blue); flex: none; cursor: pointer; font-family: inherit; padding: 0; }
   .topbar .tb-btn::after { content: ""; position: absolute; inset: -3px; }
+  /* Trois tirets dessinés plutôt qu'un emoji : ils doivent suivre la couleur
+     du texte de la barre, blanche sur le héros et bleue une fois figée. */
+  .tb-tirets { width: 17px; height: 2px; border-radius: 2px; background: currentColor; position: relative; display: block; }
+  .tb-tirets::before, .tb-tirets::after { content: ""; position: absolute; left: 0; width: 17px; height: 2px; border-radius: 2px; background: currentColor; }
+  .tb-tirets::before { top: -5px; }
+  .tb-tirets::after { top: 5px; }
+  .topbar .tb-btn .tb-tirets { color: var(--blue); }
+  .topbar.transparente .tb-btn .tb-tirets { color: #fff; }
+  .topbar.transparente.figee .tb-btn .tb-tirets { color: var(--blue); }
   .topbar .tb-btn:active { transform: scale(0.96); }
   .topbar .tb-connexion { font-size: 12.5px; font-weight: 800; color: var(--blue); background: #fff; border: 1px solid var(--line); border-radius: 11px; padding: 9px 13px; flex: none; }
   .topbar.transparente .tb-connexion { background: rgba(255, 255, 255, 0.16); border-color: rgba(255, 255, 255, 0.3); color: #fff; }
@@ -69,8 +84,9 @@
     .topbar .tb-btn:active { transform: none; }
   }
 
-  /* Le héros remonte sous la barre transparente, qui le prolonge. */
-  .topbar.transparente + .hero { margin-top: calc(-1 * var(--tb-h)); padding-top: calc(var(--tb-h) + 8px); }
+  /* La barre transparente flotte au-dessus du héros (aucun espaceur n'est
+     rendu sous cette variante) : le héros dégage seulement la hauteur. */
+  .topbar.transparente + .hero { padding-top: calc(var(--tb-h) + 8px); }
 
   /* ===== rappel du prochain rendez-vous, sous la barre ===== */
   .bandeau-rdv { display: flex; align-items: center; gap: 11px; margin: 10px 14px 0; padding: 10px 12px; border-radius: 13px; background: var(--teal-soft); border: 1px solid #cde6f2; }
@@ -135,6 +151,9 @@
   .tiroir-liens a.on { background: var(--teal-soft); color: var(--blue); font-weight: 800; }
   .tiroir-info { color: var(--muted); }
   .tiroir-info b { margin-left: auto; font-size: 12.5px; font-weight: 800; color: var(--ink); }
+  /* Appel à l'action du menu du site (plus fort que `.tiroir-liens a`). */
+  .tiroir-liens a.tiroir-cta { justify-content: center; margin: 12px 2px 4px; background: var(--teal); color: #fff; font-weight: 800; font-size: 14px; border-radius: 13px; min-height: 48px; }
+  .tiroir-liens a.tiroir-cta:hover { background: #2790bc; }
   .tiroir-quitter { color: var(--red); font-weight: 700; cursor: pointer; }
   .tiroir-quitter:hover { background: var(--red-soft); }
   .tiroir-separateur { height: 1px; background: var(--line); margin: 9px 12px; }
@@ -467,12 +486,19 @@
   .agitem .mini .no { background: var(--red-soft); color: var(--red); border-color: var(--red-soft); }
 
   /* ===== barre d'onglets basse ===== */
-  .tabbar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 30; display: flex; background: #fff; border-top: 1px solid var(--line); padding: 8px 6px 12px; }
-  .tabbar a, .tabbar button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; color: var(--muted); background: none; border: none; cursor: pointer; font-family: inherit; }
-  .tabbar a .i, .tabbar button .i { font-size: 19px; }
+  /* `translateZ(0)` force sa propre couche de composition : sans cela, Chrome
+     Android cessait de repeindre les derniers onglets pendant le défilement. */
+  .tabbar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 30; display: flex; background: #fff; border-top: 1px solid var(--line); padding: 6px 6px 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom)); transform: translateZ(0); will-change: transform; }
+  .tabbar a, .tabbar button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10px; font-weight: 700; color: var(--muted); background: none; border: none; cursor: pointer; font-family: inherit; }
+  /* L'icône porte la pastille de sélection : le libellé seul en couleur se
+     repérait mal d'un coup d'œil. */
+  .tabbar a .i, .tabbar button .i { font-size: 18px; line-height: 1; display: grid; place-items: center; height: 30px; width: 56px; border-radius: 999px; transition: background 0.15s; }
   .tabbar a.on, .tabbar button.on { color: var(--blue); }
+  .tabbar a.on .i, .tabbar button.on .i { background: var(--teal-soft); }
   /* dégage l'espace pour la tabbar fixe */
-  .with-tabbar { padding-bottom: 82px; }
+  .with-tabbar { padding-bottom: calc(82px + env(safe-area-inset-bottom)); }
+  /* …sauf pour un visiteur, qui n'a pas de tabbar (voir TabBarMobile). */
+  .sans-tabbar .with-tabbar { padding-bottom: 26px; }
 
   /* ===== auth ===== */
   .authwrap { padding: 20px 22px 24px; }
