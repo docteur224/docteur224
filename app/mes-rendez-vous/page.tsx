@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import PatientShell from "@/components/patient/PatientShell";
 import CarteRdv from "@/components/patient/CarteRdv";
-import AppBarMobile from "@/components/mobile/AppBarMobile";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { versISO } from "@/lib/dates";
 import {
   annulerRendezVous,
@@ -43,9 +43,7 @@ export default function MesRendezVous() {
     <PatientShell>
       {/* ===== En-tête mobile (écran « mesrdv » de la maquette mobile) ===== */}
       <div className="md:hidden">
-        <div style={{ paddingBottom: 6 }}>
-          <AppBarMobile retour="/" titre="Mes rendez-vous" />
-        </div>
+        <EnTeteMobile retour="/" titre="Mes rendez-vous" />
         <div className="tabsm">
           <button
             type="button"

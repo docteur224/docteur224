@@ -3,6 +3,7 @@
 import Link from "next/link";
 import PatientShell from "@/components/patient/PatientShell";
 import CarteRdv from "@/components/patient/CarteRdv";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { versISO } from "@/lib/dates";
 import { useMesRendezVous, useProfilConnecte } from "@/lib/patient";
 
@@ -28,6 +29,7 @@ export default function TableauDeBordPatient() {
     <PatientShell>
       {/* ===== Version mobile (présentation maquette mobile) ===== */}
       <div className="md:hidden">
+        <EnTeteMobile variante="marque" />
         <div className="greet">
           <b>Bonjour, {patient.prenom} 👋</b>
           <br />

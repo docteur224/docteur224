@@ -1,6 +1,7 @@
 import Link from "next/link";
 import TopNav from "@/components/site/TopNav";
 import Footer from "@/components/site/Footer";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
 import AvatarMedecin from "@/components/site/AvatarMedecin";
 import { formatNote } from "@/lib/format";
@@ -34,6 +35,9 @@ export default async function Accueil() {
 
       {/* ================= VERSION MOBILE (écran « accueil » de la maquette mobile) ================= */}
       <div className="with-tabbar md:hidden">
+        {/* La barre doit rester le frère immédiat du héros : c'est ce qui
+            permet au dégradé de remonter dessous (.topbar.hero + .hero). */}
+        <EnTeteMobile variante="hero" />
         <div className="hero">
           <div className="hi">Bonjour 👋</div>
           <h2>

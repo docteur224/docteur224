@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import PatientShell from "@/components/patient/PatientShell";
-import AppBarMobile from "@/components/mobile/AppBarMobile";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { calculerAge, formatDateCourte } from "@/lib/dates";
 import {
   ajouterProche,
@@ -74,7 +74,7 @@ export default function MesProches() {
     <PatientShell>
       {/* ===== Version mobile (écran « m-pat-proches » de la maquette mobile) ===== */}
       <div className="md:hidden">
-        <AppBarMobile retour="/patient/compte" titre="Mes proches" />
+        <EnTeteMobile retour="/patient/compte" titre="Mes proches" />
         <div className="pad">
           <div className="abannerm">
             <span aria-hidden>ℹ️</span>

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import TopNav from "@/components/site/TopNav";
-import AppBarMobile from "@/components/mobile/AppBarMobile";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import FormulaireReservation from "@/components/site/FormulaireReservation";
 import { capitaliser, creneauReservable, formatDateLongue } from "@/lib/dates";
 import { formatGNF } from "@/lib/format";
@@ -46,7 +46,7 @@ export default async function Reservation({
       <div className="mx-auto w-full max-w-[680px] md:px-[30px] md:py-[34px]">
         {/* ===== Mobile : appbar + récapitulatif (écran « reservation » de la maquette mobile) ===== */}
         <div className="md:hidden">
-          <AppBarMobile retour={`/medecin/${medecin.id}/creneaux`} titre="Confirmer le rendez-vous" />
+          <EnTeteMobile retour={`/medecin/${medecin.id}/creneaux`} titre="Confirmer le rendez-vous" />
           <div className="pad" style={{ paddingTop: 8, paddingBottom: 0 }}>
             <div className="recap">
               <div className="r">

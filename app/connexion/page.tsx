@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import CoteAuth from "@/components/site/CoteAuth";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
+import Logo from "@/components/site/Logo";
 import { seConnecter } from "@/lib/auth";
 
 /*
@@ -48,10 +50,11 @@ export default function Connexion() {
   return (
     <div className="min-h-screen bg-bg md:bg-white">
       {/* ================= VERSION MOBILE ================= */}
+      {/* Barre réduite au retour : sans elle, l'écran de connexion mobile
+          n'offrait aucun chemin vers l'accueil. */}
+      <EnTeteMobile retour="/" actions={false} />
       <div className="authwrap md:hidden">
-        <div className="logo-dot" aria-hidden>
-          D
-        </div>
+        <Logo variante="compact" hauteur={66} lien={null} className="mb-4 block" />
         <div className="eyebrow2" style={{ marginTop: 8 }}>
           Je me connecte en tant que
         </div>

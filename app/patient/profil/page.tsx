@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import PatientShell from "@/components/patient/PatientShell";
-import AppBarMobile from "@/components/mobile/AppBarMobile";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import {
   enregistrerProfilPatient,
   useProfilConnecte,
@@ -74,7 +74,7 @@ export default function MonProfil() {
     <PatientShell>
       {/* ===== Version mobile (écran « m-pat-profil » de la maquette mobile) ===== */}
       <div className="md:hidden">
-        <AppBarMobile retour="/patient/compte" titre="Mon profil" />
+        <EnTeteMobile retour="/patient/compte" titre="Mon profil" />
         <div className="pad">
           <div className="acctop">
             <span

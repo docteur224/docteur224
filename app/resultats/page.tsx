@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import TopNav from "@/components/site/TopNav";
-import AppBarMobile from "@/components/mobile/AppBarMobile";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
+import TabBarMobile from "@/components/mobile/TabBarMobile";
 import { FiltresWeb } from "@/components/site/FiltresResultats";
 import FiltresAvances, { type BoutonFiltre } from "@/components/site/FiltresAvances";
 import RechercheResultats, {
@@ -175,8 +176,8 @@ export default async function Resultats({
       <TopNav lienActif="trouver" droite="compte" />
 
       {/* ================= VERSION MOBILE (écran « resultats » de la maquette mobile) ================= */}
-      <div className="md:hidden">
-        <AppBarMobile
+      <div className="with-tabbar md:hidden">
+        <EnTeteMobile
           retour="/"
           titre={`${specialite || "Médecins"} · ${ville || "Conakry"}`}
           sousTitre={`${liste.length} médecin${liste.length > 1 ? "s" : ""} disponible${
@@ -237,6 +238,9 @@ export default async function Resultats({
             );
           })}
         </div>
+        {/* La tabbar manquait sur cet écran : on s'y retrouvait sans aucune
+            navigation vers l'accueil, les RDV ou le compte. */}
+        <TabBarMobile role="public" />
       </div>
 
       {/* ================= VERSION WEB (inchangée) ================= */}

@@ -2,7 +2,7 @@
 
 import PatientShell from "@/components/patient/PatientShell";
 import Interrupteur from "@/components/patient/Interrupteur";
-import AppBarMobile from "@/components/mobile/AppBarMobile";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { useParametresPatient } from "@/lib/patient";
 
 /*
@@ -17,7 +17,7 @@ export default function Parametres() {
     <PatientShell>
       {/* ===== Version mobile (écran « m-pat-params » de la maquette mobile) ===== */}
       <div className="md:hidden">
-        <AppBarMobile retour="/patient/compte" titre="Paramètres" />
+        <EnTeteMobile retour="/patient/compte" titre="Paramètres" />
         <div className="pad">
           <div className="card2">
             <h4>Notifications</h4>

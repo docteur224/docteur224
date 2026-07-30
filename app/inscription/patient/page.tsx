@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import AppBarMobile from "@/components/mobile/AppBarMobile";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import CaseCocher from "@/components/site/CaseCocher";
 import CoteAuth from "@/components/site/CoteAuth";
 import FauxCaptcha from "@/components/site/FauxCaptcha";
@@ -69,7 +69,7 @@ export default function InscriptionPatient() {
     <div className="min-h-screen bg-bg md:bg-white">
       {/* ================= VERSION MOBILE ================= */}
       <div className="md:hidden">
-        <AppBarMobile retour="/inscription" titre="Compte patient" />
+        <EnTeteMobile retour="/inscription" titre="Compte patient" actions={false} />
         <div className="pad">
           <p className="muted" style={{ fontSize: 12, margin: "0 0 14px" }}>
             Gratuit · 2 minutes · sans engagement.

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Logo from "@/components/site/Logo";
 
 /**
  * Barre de navigation du site public — reproduit la .topnav de la maquette web
@@ -17,15 +18,7 @@ export default function TopNav({
 }) {
   return (
     <nav className="sticky top-0 z-20 hidden h-[66px] items-center gap-[26px] border-b border-line bg-white px-4 md:flex md:px-[30px]">
-      <Link href="/" className="flex items-center gap-[9px] text-[17px] font-extrabold">
-        <span
-          aria-hidden
-          className="grid h-[30px] w-[30px] place-items-center rounded-[9px] bg-[linear-gradient(135deg,var(--teal),var(--blue))] text-[13px] font-extrabold text-white"
-        >
-          D
-        </span>
-        Docteur<span className="text-teal">224</span>
-      </Link>
+      <Logo hauteur={38} priority className="flex items-center" />
       {!minimale && (
         <div className="ml-2 hidden gap-[22px] md:flex">
           <Link

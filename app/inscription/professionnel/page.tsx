@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import AppBarMobile from "@/components/mobile/AppBarMobile";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import CaseCocher from "@/components/site/CaseCocher";
 import CoteAuth from "@/components/site/CoteAuth";
 import FauxCaptcha from "@/components/site/FauxCaptcha";
@@ -103,7 +103,7 @@ export default function InscriptionProfessionnel() {
     <div className="min-h-screen bg-bg md:bg-white">
       {/* ================= VERSION MOBILE ================= */}
       <div className="md:hidden">
-        <AppBarMobile retour="/inscription" titre="Compte professionnel" />
+        <EnTeteMobile retour="/inscription" titre="Compte professionnel" actions={false} />
         <div className="pad">
           <p className="muted" style={{ fontSize: 12, margin: "0 0 12px" }}>
             Sélectionnez votre profil pour commencer.

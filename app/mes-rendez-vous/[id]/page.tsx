@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import PatientShell from "@/components/patient/PatientShell";
 import BlocAvis from "@/components/patient/BlocAvis";
-import AppBarMobile from "@/components/mobile/AppBarMobile";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { capitaliser, depuisISO, formatDateLongue, MOIS_ABREGES, versISO } from "@/lib/dates";
 import { formatGNF } from "@/lib/format";
 import {
@@ -56,7 +56,7 @@ export default function DetailRdv() {
     return (
       <PatientShell>
         <div className="md:hidden">
-          <AppBarMobile retour="/mes-rendez-vous" titre="Rendez-vous" />
+          <EnTeteMobile retour="/mes-rendez-vous" titre="Rendez-vous" />
         </div>
         <div className="pad pt-4 md:pt-0">
           <div className="rounded-2xl border border-line bg-white p-8 text-center text-[13px] text-muted">
@@ -71,7 +71,7 @@ export default function DetailRdv() {
     return (
       <PatientShell>
         <div className="md:hidden">
-          <AppBarMobile retour="/mes-rendez-vous" titre="Rendez-vous" />
+          <EnTeteMobile retour="/mes-rendez-vous" titre="Rendez-vous" />
         </div>
         <div className="pad pt-4 md:pt-0">
           <div className="rounded-2xl border border-line bg-white p-8 text-center">
@@ -165,13 +165,11 @@ export default function DetailRdv() {
     <PatientShell>
       {/* ===================== VERSION MOBILE ===================== */}
       <div className="md:hidden">
-        <div style={{ paddingBottom: 6 }}>
-          <AppBarMobile
+        <EnTeteMobile
             retour="/mes-rendez-vous"
             titre="Rendez-vous"
             sousTitre={`${d.getDate()} ${MOIS_ABREGES[d.getMonth()].toLowerCase()} · ${rdv.heure}`}
           />
-        </div>
 
         <div className="pad" style={{ paddingTop: 12 }}>
           {/* Bandeau date + statut */}

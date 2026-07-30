@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import PatientShell from "@/components/patient/PatientShell";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { useProfilConnecte } from "@/lib/patient";
 
 const initialesPatient = (p: { prenom: string; nom: string }) =>
@@ -33,11 +34,9 @@ export default function ComptePatient() {
     <PatientShell>
       {/* ===== Version mobile ===== */}
       <div className="md:hidden">
-        <div style={{ paddingBottom: 0 }}>
-          <div className="appbar">
-            <h3 style={{ paddingLeft: 4 }}>Mon compte</h3>
-          </div>
-        </div>
+        {/* Écran racine de l'onglet Profil : variante « marque », sans retour
+            (la tabbar est la sortie) et sans avatar dupliqué juste dessous. */}
+        <EnTeteMobile variante="marque" actions={false} />
         <div className="pad">
           <div className="acctop">
             <span

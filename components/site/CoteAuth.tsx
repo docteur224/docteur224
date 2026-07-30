@@ -1,3 +1,5 @@
+import Logo from "@/components/site/Logo";
+
 /**
  * Panneau latéral bleu des écrans d'authentification — reproduit le .authside
  * de la maquette web : dégradé bleu, logo, points forts et statistiques.
@@ -20,12 +22,8 @@ export default function CoteAuth({
         aria-hidden
         className="absolute -bottom-[90px] -right-[90px] h-[260px] w-[260px] rounded-full bg-[rgba(46,156,202,0.2)]"
       />
-      <div
-        aria-hidden
-        className="relative mb-6 grid h-[46px] w-[46px] place-items-center rounded-[14px] bg-[linear-gradient(135deg,var(--teal),var(--blue))] text-[19px] font-extrabold"
-      >
-        D
-      </div>
+      {/* Logotype compact, inversé en blanc pour rester lisible sur le dégradé. */}
+      <Logo variante="compact" hauteur={72} surFonce lien={null} className="relative mb-6 block" />
       <h2 className="relative text-[30px] font-extrabold leading-[1.18] tracking-[-0.6px]">
         {titre}
       </h2>

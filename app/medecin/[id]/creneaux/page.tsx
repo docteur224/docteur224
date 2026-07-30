@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import TopNav from "@/components/site/TopNav";
-import AppBarMobile from "@/components/mobile/AppBarMobile";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import CreneauxMobile from "@/components/mobile/CreneauxMobile";
 import PanneauReservation from "@/components/site/PanneauReservation";
 import { chargerMedecinParId, nomComplet } from "@/lib/donnees";
@@ -35,7 +35,7 @@ export default async function ChoixCreneau({ params }: { params: Promise<{ id: s
 
       {/* ===== VERSION MOBILE ===== */}
       <div className="flex flex-1 flex-col md:hidden">
-        <AppBarMobile
+        <EnTeteMobile
           retour={`/medecin/${medecin.id}`}
           titre="Choisir un créneau"
           sousTitre={`${nomComplet(medecin)} · ${medecin.specialite}`}

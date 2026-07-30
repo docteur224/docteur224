@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Logo from "@/components/site/Logo";
 
 /** Pied de page du site public — reproduit le .footer de la maquette web. */
 export default function Footer() {
@@ -6,15 +7,8 @@ export default function Footer() {
     <footer className="mt-[10px] hidden bg-blue-deep px-[30px] py-10 text-white md:block">
       <div className="mx-auto flex max-w-[1020px] flex-wrap gap-[50px]">
         <div className="max-w-[260px]">
-          <div className="flex items-center gap-[9px] text-base font-extrabold">
-            <span
-              aria-hidden
-              className="grid h-7 w-7 place-items-center rounded-[9px] bg-[linear-gradient(135deg,var(--teal),var(--blue))] text-xs font-extrabold text-white"
-            >
-              D
-            </span>
-            Docteur 224
-          </div>
+          {/* Le logo fourni est en bleu nuit : inversé en blanc sur le fond foncé. */}
+          <Logo hauteur={40} surFonce />
           <p className="mt-[10px] text-[12.5px] leading-relaxed opacity-75">
             La plateforme guinéenne de prise de rendez-vous médicaux. Simple, rapide et accessible
             depuis votre téléphone.

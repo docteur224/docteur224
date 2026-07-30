@@ -8,7 +8,7 @@ import OngletsFiche from "@/components/site/OngletsFiche";
 import AvatarMedecin from "@/components/site/AvatarMedecin";
 import BadgeNote from "@/components/site/BadgeNote";
 import PanneauAvis from "@/components/site/PanneauAvis";
-import AppBarMobile from "@/components/mobile/AppBarMobile";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { formatNote } from "@/lib/format";
 import {
   chargerAvisMedecin,
@@ -128,9 +128,7 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
 
       {/* ================= VERSION MOBILE (écran « fiche » de la maquette mobile) ================= */}
       <div className="flex flex-col md:hidden">
-        <div style={{ paddingBottom: 6 }}>
-          <AppBarMobile retour="/resultats" titre="Profil du médecin" />
-        </div>
+        <EnTeteMobile retour="/resultats" titre="Profil du médecin" />
         <div className="profhead">
           {medecin.photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import AppBarMobile from "@/components/mobile/AppBarMobile";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 
 /*
  * Inscription · choix du profil — reproduit l'écran « inscription » de la
@@ -30,7 +30,7 @@ export default function ChoixInscription() {
     <main className="min-h-screen bg-bg md:flex md:items-center md:justify-center md:bg-white md:px-6 md:py-[54px]">
       {/* ================= VERSION MOBILE (écran « m-inscription » de la maquette mobile) ================= */}
       <div className="md:hidden">
-        <AppBarMobile retour="/connexion" titre="Rejoignez Docteur 224" />
+        <EnTeteMobile retour="/connexion" titre="Rejoignez Docteur 224" actions={false} />
         <div className="pad">
           <p className="muted" style={{ fontSize: 12.5, margin: "2px 0 16px", lineHeight: 1.5 }}>
             Choisissez votre profil pour créer votre compte gratuitement.
