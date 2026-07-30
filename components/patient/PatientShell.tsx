@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
 import { seDeconnecter } from "@/lib/auth";
 import { useProfilConnecte } from "@/lib/patient";
+import ClocheNotifications from "@/components/site/ClocheNotifications";
 
 /**
  * Coquille de l'espace patient — reproduit la structure .dash / .side / .snav
@@ -50,6 +51,11 @@ export default function PatientShell({ children }: { children: React.ReactNode }
             <small className="text-[11.5px] text-muted">
               {patient.sexe === "Masculin" ? "Patient" : "Patiente"}
             </small>
+          </div>
+          {/* La cloche vit ici sur web : la sidebar est le seul en-tête
+              permanent des espaces. */}
+          <div className="ml-auto">
+            <ClocheNotifications />
           </div>
         </div>
         <nav className="flex flex-col gap-[3px]">

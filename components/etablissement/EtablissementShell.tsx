@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
 import { seDeconnecter } from "@/lib/auth";
 import { useEtablissementConnecte } from "@/lib/etablissement";
+import ClocheNotifications from "@/components/site/ClocheNotifications";
 
 /**
  * Coquille de l'espace établissement — reproduit la structure .dash / .side /
@@ -43,6 +44,11 @@ export default function EtablissementShell({ children }: { children: React.React
               {ETABLISSEMENT_CONNECTE.nomCourt}
             </b>
             <small className="text-[11.5px] text-muted">Établissement</small>
+          </div>
+          {/* La cloche vit ici sur web : la sidebar est le seul en-tête
+              permanent des espaces. */}
+          <div className="ml-auto">
+            <ClocheNotifications />
           </div>
         </div>
         <nav className="flex flex-col gap-[3px]">

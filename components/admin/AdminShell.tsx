@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
 import { seDeconnecter } from "@/lib/auth";
+import ClocheNotifications from "@/components/site/ClocheNotifications";
 
 /**
  * Coquille de l'espace administrateur — reproduit la structure .dash / .side /
@@ -44,6 +45,11 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           <div>
             <b className="block text-[13.5px] font-extrabold">Administrateur</b>
             <small className="text-[11.5px] text-muted">Docteur 224</small>
+          </div>
+          {/* La cloche vit ici sur web : la sidebar est le seul en-tête
+              permanent des espaces. */}
+          <div className="ml-auto">
+            <ClocheNotifications />
           </div>
         </div>
         <nav className="flex flex-col gap-[3px]">

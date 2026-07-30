@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
 import { seDeconnecter } from "@/lib/auth";
 import { useContextePro } from "@/lib/pro";
+import ClocheNotifications from "@/components/site/ClocheNotifications";
 
 /**
  * Coquille de l'espace médecin — reproduit la structure .dash / .side / .snav
@@ -62,6 +63,11 @@ export default function MedecinShell({ children }: { children: React.ReactNode }
               {medecinConnecte.civilite} {medecinConnecte.prenom.charAt(0)}. {medecinConnecte.nom}
             </b>
             <small className="text-[11.5px] text-muted">{medecinConnecte.specialite}</small>
+          </div>
+          {/* La cloche vit ici sur web : la sidebar est le seul en-tête
+              permanent des espaces. */}
+          <div className="ml-auto">
+            <ClocheNotifications />
           </div>
         </div>
         <nav className="flex flex-col gap-[3px]">

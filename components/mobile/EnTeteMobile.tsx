@@ -4,9 +4,11 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import BandeauProchainRdv from "@/components/mobile/BandeauProchainRdv";
+import PanneauNotifications from "@/components/mobile/PanneauNotifications";
 import RechercheRapide from "@/components/mobile/RechercheRapide";
 import TiroirMobile from "@/components/mobile/TiroirMobile";
 import Logo from "@/components/site/Logo";
+import { useNotifications } from "@/lib/notifications";
 import { useProfilConnecte } from "@/lib/patient";
 
 /**
@@ -168,11 +170,13 @@ function BoutonRetour({ repli }: { repli: string }) {
   );
 }
 
-/** Cloche (inerte jusqu'à l'étape D) + avatar ouvrant le tiroir, ou « Se connecter ». */
+/** Cloche + avatar ouvrant le tiroir, ou « Se connecter » pour un visiteur. */
 function ActionsCompte() {
   const { profil, chargement } = useProfilConnecte();
   const [tiroirOuvert, setTiroirOuvert] = useState(false);
+  const [notifsOuvertes, setNotifsOuvertes] = useState(false);
   const fermer = useCallback(() => setTiroirOuvert(false), []);
+  const fermerNotifs = useCallback(() => setNotifsOuvertes(false), []);
 
   // Réserve la place pendant la lecture de la session : pas de sursaut.
   if (chargement) return <span className="tb-btn" style={{ opacity: 0 }} aria-hidden />;
@@ -189,11 +193,8 @@ function ActionsCompte() {
 
   return (
     <>
-      {/* La cloche sera branchée sur la table `notifications` à l'étape D ;
-          elle mène pour l'instant à la liste des rendez-vous. */}
-      <Link href="/mes-rendez-vous" className="tb-btn" aria-label="Notifications">
-        🔔
-      </Link>
+      <Cloche ouvrir={() => setNotifsOuvertes(true)} ouverte={notifsOuvertes} />
+      <PanneauNotifications ouvert={notifsOuvertes} fermer={fermerNotifs} />
       <button
         type="button"
         className="tb-avatar"
@@ -206,6 +207,24 @@ function ActionsCompte() {
       </button>
       <TiroirMobile ouvert={tiroirOuvert} fermer={fermer} profil={profil} />
     </>
+  );
+}
+
+/** Cloche avec pastille de non-lues (plafonnée à 9+ pour ne pas la déformer). */
+function Cloche({ ouvrir, ouverte }: { ouvrir: () => void; ouverte: boolean }) {
+  const { nonLues } = useNotifications();
+  return (
+    <button
+      type="button"
+      className="tb-btn"
+      aria-label={nonLues > 0 ? `Notifications — ${nonLues} non lue(s)` : "Notifications"}
+      aria-haspopup="dialog"
+      aria-expanded={ouverte}
+      onClick={ouvrir}
+    >
+      🔔
+      {nonLues > 0 && <span className="tb-pastille">{nonLues > 9 ? "9+" : nonLues}</span>}
+    </button>
   );
 }
 

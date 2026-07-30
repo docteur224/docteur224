@@ -92,6 +92,19 @@
   .recherche-tete .tb-btn { margin-left: auto; }
   .recherche-attente { padding: 22px 18px; font-size: 13px; color: var(--muted); }
 
+  /* ===== panneau des notifications (même feuille que la recherche) ===== */
+  .notif-tout-lu { margin-left: auto; margin-right: 10px; font-size: 11.5px; font-weight: 800; color: var(--teal); background: none; border: 0; font-family: inherit; cursor: pointer; padding: 6px 4px; }
+  .notif-liste { max-height: min(62vh, 460px); overflow-y: auto; overscroll-behavior: contain; padding: 8px 14px 4px; display: flex; flex-direction: column; gap: 7px; }
+  .notif { display: flex; align-items: flex-start; gap: 11px; width: 100%; text-align: left; padding: 11px 12px; border-radius: 13px; background: #fff; border: 1px solid var(--line); font-family: inherit; cursor: pointer; }
+  .notif.non-lue { background: var(--teal-soft); border-color: #cde6f2; }
+  .notif .i { font-size: 15px; flex: none; line-height: 1.4; }
+  .notif .tx { min-width: 0; flex: 1; }
+  .notif .tx b { display: block; font-size: 13px; font-weight: 800; color: var(--ink); }
+  .notif .tx small { display: block; font-size: 11.5px; color: var(--muted); line-height: 1.45; margin-top: 1px; }
+  .notif .tx time { display: block; font-size: 10.5px; color: var(--muted); font-weight: 700; margin-top: 4px; }
+  .notif .point { width: 8px; height: 8px; border-radius: 999px; background: var(--teal); flex: none; margin-top: 5px; }
+  .notif-vide { padding: 18px 18px 22px; font-size: 12.5px; line-height: 1.55; color: var(--muted); }
+
   @media (prefers-reduced-motion: reduce) {
     .recherche-feuille, .recherche-voile { transition: none; }
   }
