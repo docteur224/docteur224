@@ -2,7 +2,7 @@
 
 import AssistantShell from "@/components/assistant/AssistantShell";
 import GrilleDisponibilites from "@/components/pro/GrilleDisponibilites";
-import AppBarMobile from "@/components/mobile/AppBarMobile";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { useContextePro } from "@/lib/pro";
 
 /*
@@ -28,7 +28,7 @@ export default function CreneauxAssistant() {
     <AssistantShell>
       {/* ===== Version mobile (écran « m-asst-dispos » de la maquette mobile) ===== */}
       <div className="md:hidden">
-        <AppBarMobile retour="/espace-assistant/compte" titre="Créneaux & dispos" />
+        <EnTeteMobile retour="/espace-assistant/compte" titre="Créneaux & dispos" />
         <div className="pad">
           {permissions.gererCreneaux ? (
             <div className="abannerm">

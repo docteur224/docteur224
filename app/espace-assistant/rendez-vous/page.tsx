@@ -10,6 +10,7 @@ import {
   useAgenda,
   useContextePro,
 } from "@/lib/pro";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 
 /*
  * Rendez-vous (assistant(e)) — reproduit l'écran « asst-agenda » de la
@@ -78,6 +79,7 @@ export default function RendezVousAssistant() {
     <AssistantShell>
       {/* ===== Version mobile (écran « m-asst-agenda » de la maquette mobile) ===== */}
       <div className="md:hidden">
+        <EnTeteMobile variante="marque" />
         <div className="appbar">
           <div>
             <h3 style={{ paddingLeft: 4 }}>Rendez-vous</h3>

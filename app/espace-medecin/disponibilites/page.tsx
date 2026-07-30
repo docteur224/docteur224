@@ -2,7 +2,7 @@
 
 import MedecinShell from "@/components/medecin/MedecinShell";
 import GrilleDisponibilites from "@/components/pro/GrilleDisponibilites";
-import AppBarMobile from "@/components/mobile/AppBarMobile";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { useContextePro } from "@/lib/pro";
 
 /*
@@ -55,7 +55,7 @@ export default function Disponibilites() {
     <MedecinShell>
       {/* ===== Version mobile (écran « m-med-dispos » de la maquette mobile) ===== */}
       <div className="md:hidden">
-        <AppBarMobile retour="/espace-medecin/compte" titre="Mes disponibilités" />
+        <EnTeteMobile retour="/espace-medecin/compte" titre="Mes disponibilités" />
         <div className="pad">
           <div className="card2">
             <h4>Horaires de la semaine</h4>

@@ -5,6 +5,7 @@ import { useState } from "react";
 import MedecinShell from "@/components/medecin/MedecinShell";
 import { capitaliser, depuisISO, formatDateLongue, versISO } from "@/lib/dates";
 import { useAgenda, useContextePro } from "@/lib/pro";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 
 /*
  * Mon agenda — reproduit l'écran « med-agenda » de la maquette web :
@@ -28,6 +29,7 @@ export default function AgendaMedecin() {
     <MedecinShell>
       {/* ===== Version mobile (écran « m-med-agenda » de la maquette mobile) ===== */}
       <div className="md:hidden">
+        <EnTeteMobile variante="marque" />
         <div className="appbar">
           <div>
             <h3 style={{ paddingLeft: 4 }}>Mon agenda</h3>

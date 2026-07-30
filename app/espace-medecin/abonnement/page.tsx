@@ -1,7 +1,7 @@
 "use client";
 
 import MedecinShell from "@/components/medecin/MedecinShell";
-import AppBarMobile from "@/components/mobile/AppBarMobile";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { formatGNF } from "@/lib/format";
 import { useState } from "react";
 import { useAbonnement } from "@/lib/pro";
@@ -56,7 +56,7 @@ export default function AbonnementMedecin() {
     <MedecinShell>
       {/* ===== Version mobile (écran « m-med-abonnement » de la maquette mobile) ===== */}
       <div className="md:hidden">
-        <AppBarMobile retour="/espace-medecin/compte" titre="Mon abonnement" />
+        <EnTeteMobile retour="/espace-medecin/compte" titre="Mon abonnement" />
         <div className="pad">
           <div className="card2">
             <h4>Abonnement actuel</h4>

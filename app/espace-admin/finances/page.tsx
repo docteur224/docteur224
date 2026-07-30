@@ -1,7 +1,7 @@
 "use client";
 
 import AdminShell from "@/components/admin/AdminShell";
-import AppBarMobile from "@/components/mobile/AppBarMobile";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { useCompteursFinances, useRemboursements, validerRemboursement } from "@/lib/admin";
 
 /*
@@ -31,7 +31,7 @@ export default function FinancesAdmin() {
     <AdminShell>
       {/* ===== Version mobile ===== */}
       <div className="md:hidden">
-        <AppBarMobile retour="/espace-admin/plus" titre="Finances" />
+        <EnTeteMobile retour="/espace-admin/plus" titre="Finances" />
         <div className="pad">
           <div className="statcards inpad two">
             <div className="sc b1">

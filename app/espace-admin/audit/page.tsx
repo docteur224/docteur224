@@ -1,7 +1,7 @@
 "use client";
 
 import AdminShell from "@/components/admin/AdminShell";
-import AppBarMobile from "@/components/mobile/AppBarMobile";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { useJournalAudit } from "@/lib/admin";
 
 /*
@@ -17,7 +17,7 @@ export default function AuditAdmin() {
     <AdminShell>
       {/* ===== Version mobile (écran « m-admin-audit » de la maquette mobile) ===== */}
       <div className="md:hidden">
-        <AppBarMobile retour="/espace-admin/plus" titre="Journal d'audit" />
+        <EnTeteMobile retour="/espace-admin/plus" titre="Journal d'audit" />
         <div className="pad">
           <div className="card2">
             <h4>Actions récentes</h4>

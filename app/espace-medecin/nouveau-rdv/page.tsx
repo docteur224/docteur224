@@ -1,6 +1,7 @@
 "use client";
 
 import MedecinShell from "@/components/medecin/MedecinShell";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import NouveauRdvDelegue from "@/components/pro/NouveauRdvDelegue";
 
 /*
@@ -10,6 +11,7 @@ import NouveauRdvDelegue from "@/components/pro/NouveauRdvDelegue";
 export default function NouveauRendezVousMedecin() {
   return (
     <MedecinShell>
+      <EnTeteMobile retour="/espace-medecin/agenda" titre="Nouveau rendez-vous" />
       <NouveauRdvDelegue reservePar="medecin" lienRetour="/espace-medecin/agenda" />
     </MedecinShell>
   );

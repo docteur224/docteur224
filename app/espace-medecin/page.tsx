@@ -5,6 +5,7 @@ import MedecinShell from "@/components/medecin/MedecinShell";
 import { capitaliser, formatDateLongue, versISO } from "@/lib/dates";
 import { formatNote } from "@/lib/format";
 import { majStatutRdv, useAgenda, useContextePro } from "@/lib/pro";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 
 /*
  * Tableau de bord médecin — reproduit l'écran « medecin » de la maquette web :
@@ -42,6 +43,7 @@ export default function TableauDeBordMedecin() {
     <MedecinShell>
       {/* ===== Version mobile (écran « medecin » de la maquette mobile) ===== */}
       <div className="md:hidden">
+        <EnTeteMobile variante="marque" />
         <div className="greet">
           <b>
             Bonjour, {medecinConnecte.civilite} {medecinConnecte.nom} 👋

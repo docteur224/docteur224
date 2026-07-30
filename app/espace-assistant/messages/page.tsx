@@ -2,6 +2,7 @@
 
 import AssistantShell from "@/components/assistant/AssistantShell";
 import { useContextePro } from "@/lib/pro";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 
 /*
  * Messagerie (assistant(e)) — reproduit l'écran « asst-messages » de la
@@ -52,6 +53,7 @@ export default function MessagesAssistant() {
     <AssistantShell>
       {/* ===== Version mobile (écran « m-asst-messages » de la maquette mobile) ===== */}
       <div className="md:hidden">
+        <EnTeteMobile variante="marque" />
         <div className="appbar">
           <h3 style={{ paddingLeft: 4 }}>Messagerie</h3>
         </div>

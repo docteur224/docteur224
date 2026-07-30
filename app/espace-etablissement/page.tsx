@@ -3,6 +3,7 @@
 import Link from "next/link";
 import EtablissementShell from "@/components/etablissement/EtablissementShell";
 import { useEtablissementConnecte, useMedecinsRattaches } from "@/lib/etablissement";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 
 /*
  * Tableau de bord établissement — reproduit l'écran « etab-dash » de la
@@ -40,6 +41,7 @@ export default function TableauDeBordEtablissement() {
     <EtablissementShell>
       {/* ===== Version mobile (écran « m-etab-dash » de la maquette mobile) ===== */}
       <div className="md:hidden">
+        <EnTeteMobile variante="marque" />
         <div className="appbar">
           <h3 style={{ paddingLeft: 4 }}>{ETABLISSEMENT_CONNECTE.nomCourt}</h3>
         </div>

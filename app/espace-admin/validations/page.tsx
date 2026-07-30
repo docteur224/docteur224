@@ -9,6 +9,7 @@ import {
   useMedecinsEnAttente,
   type DossierValidation,
 } from "@/lib/admin";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 
 /*
  * Validations — reproduit l'écran « admin-validation » de la maquette web :
@@ -120,6 +121,7 @@ export default function ValidationsAdmin() {
     <AdminShell>
       {/* ===== Version mobile (écran « m-admin-validation » de la maquette mobile) ===== */}
       <div className="md:hidden">
+        <EnTeteMobile variante="marque" />
         <div className="appbar">
           <h3 style={{ paddingLeft: 4 }}>Validations</h3>
         </div>

@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
+import { seDeconnecter } from "@/lib/auth";
 
 /**
  * Coquille de l'espace administrateur — reproduit la structure .dash / .side /
@@ -27,6 +28,7 @@ const LIENS = [
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
 
   return (
     <div className="grid min-h-screen bg-bg lg:grid-cols-[236px_1fr]">
@@ -64,15 +66,22 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
               </Link>
             );
           })}
-          <Link
-            href="/"
-            className="flex items-center gap-[11px] rounded-[11px] px-3 py-[11px] text-[13.5px] font-semibold text-muted hover:bg-bg"
+          {/* Vraie déconnexion : c'était un simple lien vers l'accueil, qui
+              laissait la session ouverte (comme PatientShell/MedecinShell le
+              faisaient déjà correctement). */}
+          <button
+            type="button"
+            onClick={async () => {
+              await seDeconnecter();
+              router.push("/");
+            }}
+            className="flex items-center gap-[11px] rounded-[11px] px-3 py-[11px] text-left text-[13.5px] font-semibold text-muted hover:bg-bg"
           >
             <span className="text-base" aria-hidden>
               ↩️
             </span>
             Déconnexion
-          </Link>
+          </button>
         </nav>
       </aside>
       <main className="with-tabbar overflow-auto md:px-[30px] md:py-[26px]">{children}</main>

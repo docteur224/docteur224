@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import EtablissementShell from "@/components/etablissement/EtablissementShell";
-import AppBarMobile from "@/components/mobile/AppBarMobile";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { PALIERS, palierPour, useEtablissementConnecte, useMedecinsRattaches } from "@/lib/etablissement";
 
 /*
@@ -37,7 +37,7 @@ export default function AbonnementEtablissement() {
     <EtablissementShell>
       {/* ===== Version mobile (écran « m-etab-abonnement » de la maquette mobile) ===== */}
       <div className="md:hidden">
-        <AppBarMobile retour="/espace-etablissement/compte" titre="Abonnement" />
+        <EnTeteMobile retour="/espace-etablissement/compte" titre="Abonnement" />
         <div className="pad">
           <div className="card2">
             <h4>Plan actuel</h4>

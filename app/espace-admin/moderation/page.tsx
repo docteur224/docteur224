@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import AdminShell from "@/components/admin/AdminShell";
-import AppBarMobile from "@/components/mobile/AppBarMobile";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import IndicateursAvis from "@/components/admin/IndicateursAvis";
 import {
   modererAvis,
@@ -67,7 +67,7 @@ export default function ModerationAdmin() {
     <AdminShell>
       {/* ===== Version mobile (écran « m-admin-moderation » de la maquette mobile) ===== */}
       <div className="md:hidden">
-        <AppBarMobile retour="/espace-admin/plus" titre="Modération" />
+        <EnTeteMobile retour="/espace-admin/plus" titre="Modération" />
         <div className="pad">
           <div style={{ marginBottom: 12 }}>{bascule}</div>
 

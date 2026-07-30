@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import MedecinShell from "@/components/medecin/MedecinShell";
-import AppBarMobile from "@/components/mobile/AppBarMobile";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import Etoiles from "@/components/site/Etoiles";
 import { MOIS_LONGS } from "@/lib/dates";
 import { formatNote } from "@/lib/format";
@@ -250,7 +250,7 @@ export default function AvisMedecinPage() {
     return (
       <MedecinShell>
         <div className="md:hidden">
-          <AppBarMobile retour="/espace-medecin/compte" titre="Avis et notes" />
+          <EnTeteMobile retour="/espace-medecin/compte" titre="Avis et notes" />
         </div>
         <div className="pad md:p-0">
           <div className="rounded-2xl border border-line bg-white p-8 text-center">
@@ -272,7 +272,7 @@ export default function AvisMedecinPage() {
     <MedecinShell>
       {/* ===== Version mobile ===== */}
       <div className="md:hidden">
-        <AppBarMobile retour="/espace-medecin/compte" titre="Avis et notes" />
+        <EnTeteMobile retour="/espace-medecin/compte" titre="Avis et notes" />
         <div className="pad">
           <p className="muted" style={{ fontSize: 11.5, margin: "-2px 0 12px", lineHeight: 1.5 }}>
             Ce que vos patients retiennent de leurs consultations. Répondre montre

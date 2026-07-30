@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import AssistantShell from "@/components/assistant/AssistantShell";
-import AppBarMobile from "@/components/mobile/AppBarMobile";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 
 import { useContextePro, usePatientsCabinet } from "@/lib/pro";
 
@@ -20,7 +20,7 @@ export default function PatientsAssistant() {
     <AssistantShell>
       {/* ===== Version mobile (écran « m-asst-patients » de la maquette mobile) ===== */}
       <div className="md:hidden">
-        <AppBarMobile retour="/espace-assistant/compte" titre="Patients" />
+        <EnTeteMobile retour="/espace-assistant/compte" titre="Patients" />
         <div className="pad">
           <div className="noteboxm" style={{ marginTop: 0 }}>
             <span aria-hidden>🔒</span>

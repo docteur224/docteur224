@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import MedecinShell from "@/components/medecin/MedecinShell";
-import AppBarMobile from "@/components/mobile/AppBarMobile";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import PhotoProfil from "@/components/pro/PhotoProfil";
 import { formatGNF } from "@/lib/format";
 import { chargerEtablissementParId } from "@/lib/donnees";
@@ -160,7 +160,7 @@ export default function ProfilMedecin() {
     <MedecinShell>
       {/* ===== Version mobile (écran « m-med-profil » de la maquette mobile) ===== */}
       <div className="md:hidden">
-        <AppBarMobile retour="/espace-medecin/compte" titre="Mon profil" />
+        <EnTeteMobile retour="/espace-medecin/compte" titre="Mon profil" />
         <div className="pad">
           <div className="acctop">
             <div>

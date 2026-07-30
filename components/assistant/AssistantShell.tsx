@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
+import { seDeconnecter } from "@/lib/auth";
 import { useContextePro } from "@/lib/pro";
 
 /**
@@ -73,15 +74,22 @@ export default function AssistantShell({ children }: { children: React.ReactNode
               </Link>
             );
           })}
-          <Link
-            href="/"
-            className="flex items-center gap-[11px] rounded-[11px] px-3 py-[11px] text-[13.5px] font-semibold text-muted hover:bg-bg"
+          {/* Vraie déconnexion : c'était un simple lien vers l'accueil, qui
+              laissait la session ouverte (comme PatientShell/MedecinShell le
+              faisaient déjà correctement). */}
+          <button
+            type="button"
+            onClick={async () => {
+              await seDeconnecter();
+              router.push("/");
+            }}
+            className="flex items-center gap-[11px] rounded-[11px] px-3 py-[11px] text-left text-[13.5px] font-semibold text-muted hover:bg-bg"
           >
             <span className="text-base" aria-hidden>
               ↩️
             </span>
             Déconnexion
-          </Link>
+          </button>
         </nav>
       </aside>
       <main className="with-tabbar overflow-auto md:px-[30px] md:py-[26px]">{children}</main>

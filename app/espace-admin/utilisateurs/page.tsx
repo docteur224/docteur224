@@ -3,6 +3,7 @@
 import { useState } from "react";
 import AdminShell from "@/components/admin/AdminShell";
 import { majStatutUtilisateur, useUtilisateurs } from "@/lib/admin";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 
 /*
  * Utilisateurs — reproduit l'écran « admin-users » de la maquette web :
@@ -77,6 +78,7 @@ export default function UtilisateursAdmin() {
     <AdminShell>
       {/* ===== Version mobile (écran « m-admin-users » de la maquette mobile) ===== */}
       <div className="md:hidden">
+        <EnTeteMobile variante="marque" />
         <div className="appbar">
           <h3 style={{ paddingLeft: 4 }}>Utilisateurs</h3>
         </div>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import EtablissementShell from "@/components/etablissement/EtablissementShell";
 import Interrupteur from "@/components/patient/Interrupteur";
 import { enregistrerParametresEtablissement, useEtablissementConnecte } from "@/lib/etablissement";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 
 type ParametresEtablissement = {
   affichagePublic: boolean;
@@ -61,6 +62,7 @@ export default function CompteEtablissement() {
     <EtablissementShell>
       {/* ===== Version mobile (écran « m-etab-compte » de la maquette mobile) ===== */}
       <div className="md:hidden">
+        <EnTeteMobile variante="marque" />
         <div className="appbar">
           <h3 style={{ paddingLeft: 4 }}>Compte &amp; paramètres</h3>
         </div>

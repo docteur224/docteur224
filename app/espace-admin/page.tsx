@@ -9,6 +9,7 @@ import {
   useMedecinsEnAttente,
   useSignalements,
 } from "@/lib/admin";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 
 /*
  * Tableau de bord admin — reproduit l'écran « admin-dash » de la maquette
@@ -29,6 +30,7 @@ export default function TableauDeBordAdmin() {
     <AdminShell>
       {/* ===== Version mobile (écran « m-admin-dash » de la maquette mobile) ===== */}
       <div className="md:hidden">
+        <EnTeteMobile variante="marque" />
         <div className="appbar">
           <h3 style={{ paddingLeft: 4 }}>Administration</h3>
         </div>

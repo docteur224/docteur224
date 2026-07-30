@@ -1,7 +1,7 @@
 "use client";
 
 import AdminShell from "@/components/admin/AdminShell";
-import AppBarMobile from "@/components/mobile/AppBarMobile";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import Interrupteur from "@/components/patient/Interrupteur";
 import { majSousRoles, useEquipeAdmin } from "@/lib/admin";
 
@@ -72,7 +72,7 @@ export default function EquipeAdmin() {
     <AdminShell>
       {/* ===== Version mobile (écran « m-admin-equipe » de la maquette mobile) ===== */}
       <div className="md:hidden">
-        <AppBarMobile retour="/espace-admin/plus" titre="Équipe admin" />
+        <EnTeteMobile retour="/espace-admin/plus" titre="Équipe admin" />
         <div className="pad">
           <div className="abannerm" style={{ background: "var(--red-soft)", borderColor: "#F3C9C2", color: "var(--red)" }}>
             <span aria-hidden>🔒</span>

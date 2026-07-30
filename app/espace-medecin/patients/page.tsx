@@ -3,6 +3,7 @@
 import { useState } from "react";
 import MedecinShell from "@/components/medecin/MedecinShell";
 import { useContextePro, usePatientsCabinet } from "@/lib/pro";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 
 /*
  * Mes patients — reproduit l'écran « med-patients » de la maquette web :
@@ -25,6 +26,7 @@ export default function PatientsMedecin() {
     <MedecinShell>
       {/* ===== Version mobile (écran « m-med-patients » de la maquette mobile) ===== */}
       <div className="md:hidden">
+        <EnTeteMobile variante="marque" />
         <div className="appbar">
           <h3 style={{ paddingLeft: 4 }}>Mes patients</h3>
           <span className="sub" style={{ marginLeft: "auto", paddingRight: 6 }}>

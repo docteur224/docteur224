@@ -9,6 +9,7 @@ import {
   useInvitations,
   useMedecinsRattaches,
 } from "@/lib/etablissement";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 
 /*
  * Médecins — reproduit l'écran « etab-medecins » de la maquette web :
@@ -128,6 +129,7 @@ export default function MedecinsEtablissement() {
     <EtablissementShell>
       {/* ===== Version mobile ===== */}
       <div className="md:hidden">
+        <EnTeteMobile variante="marque" />
         <div className="appbar">
           <h3 style={{ paddingLeft: 4 }}>Médecins</h3>
         </div>

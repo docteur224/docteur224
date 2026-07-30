@@ -72,6 +72,40 @@
   /* Le héros remonte sous la barre transparente, qui le prolonge. */
   .topbar.transparente + .hero { margin-top: calc(-1 * var(--tb-h)); padding-top: calc(var(--tb-h) + 8px); }
 
+  /* =====================================================================
+     TIROIR DE NAVIGATION (.tiroir) — extension hors maquette
+     Le menu complet du rôle, ouvert par l'avatar de la barre haute. Le
+     panneau reste monté (transformé hors écran) pour que l'ouverture et la
+     fermeture soient animées ; `visibility` l'ôte du parcours de tabulation
+     et du lecteur d'écran quand il est fermé.
+     ===================================================================== */
+  .tiroir-hote { position: fixed; inset: 0; z-index: 60; visibility: hidden; }
+  .tiroir-hote.ouvert { visibility: visible; }
+  .tiroir-voile { position: absolute; inset: 0; width: 100%; border: 0; padding: 0; background: rgba(11, 46, 61, 0.45); opacity: 0; transition: opacity 0.22s; cursor: pointer; }
+  .tiroir-hote.ouvert .tiroir-voile { opacity: 1; }
+  .tiroir { position: absolute; top: 0; right: 0; bottom: 0; width: min(84vw, 320px); display: flex; flex-direction: column; background: #fff; box-shadow: -14px 0 40px rgba(16, 59, 80, 0.22); transform: translateX(100%); transition: transform 0.24s cubic-bezier(0.32, 0.72, 0, 1); padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom); overflow-y: auto; overscroll-behavior: contain; }
+  .tiroir-hote.ouvert .tiroir { transform: translateX(0); }
+
+  .tiroir-tete { display: flex; align-items: center; gap: 11px; padding: 16px 14px 14px; border-bottom: 1px solid var(--line); }
+  .tiroir-qui { min-width: 0; flex: 1; }
+  .tiroir-qui b { display: block; font-size: 13.5px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tiroir-qui small { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
+
+  .tiroir-liens { display: flex; flex-direction: column; gap: 2px; padding: 10px; }
+  .tiroir-liens a, .tiroir-quitter, .tiroir-info { display: flex; align-items: center; gap: 12px; min-height: 46px; padding: 11px 12px; border-radius: 12px; font-size: 13.5px; font-weight: 600; color: var(--muted); background: none; border: 0; font-family: inherit; text-align: left; width: 100%; }
+  .tiroir-liens a .i, .tiroir-quitter .i, .tiroir-info .i { font-size: 16px; width: 20px; text-align: center; flex: none; }
+  .tiroir-liens a:hover { background: var(--bg); }
+  .tiroir-liens a.on { background: var(--teal-soft); color: var(--blue); font-weight: 800; }
+  .tiroir-info { color: var(--muted); }
+  .tiroir-info b { margin-left: auto; font-size: 12.5px; font-weight: 800; color: var(--ink); }
+  .tiroir-quitter { color: var(--red); font-weight: 700; cursor: pointer; }
+  .tiroir-quitter:hover { background: var(--red-soft); }
+  .tiroir-separateur { height: 1px; background: var(--line); margin: 9px 12px; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .tiroir, .tiroir-voile { transition: none; }
+  }
+
   /* ===== barre d'application (retour + titre) ===== */
   .appbar { display: flex; align-items: center; gap: 12px; padding: 14px 18px 12px; }
   .appbar .back { width: 38px; height: 38px; border-radius: 12px; background: #fff; border: 1px solid var(--line); display: grid; place-items: center; font-size: 17px; color: var(--blue); flex: none; }

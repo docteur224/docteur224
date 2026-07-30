@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import TiroirMobile from "@/components/mobile/TiroirMobile";
 import Logo from "@/components/site/Logo";
 import { useProfilConnecte } from "@/lib/patient";
 
@@ -139,9 +140,11 @@ function BoutonRetour({ repli }: { repli: string }) {
   );
 }
 
-/** Cloche (inerte jusqu'à l'étape D) + avatar, ou « Se connecter » si visiteur. */
+/** Cloche (inerte jusqu'à l'étape D) + avatar ouvrant le tiroir, ou « Se connecter ». */
 function ActionsCompte() {
   const { profil, chargement } = useProfilConnecte();
+  const [tiroirOuvert, setTiroirOuvert] = useState(false);
+  const fermer = useCallback(() => setTiroirOuvert(false), []);
 
   // Réserve la place pendant la lecture de la session : pas de sursaut.
   if (chargement) return <span className="tb-btn" style={{ opacity: 0 }} aria-hidden />;
@@ -163,31 +166,19 @@ function ActionsCompte() {
       <Link href="/mes-rendez-vous" className="tb-btn" aria-label="Notifications">
         🔔
       </Link>
-      <Link
-        href={hubDuRole(profil.role)}
+      <button
+        type="button"
         className="tb-avatar"
-        aria-label={`Mon compte — ${profil.prenom} ${profil.nom}`}
+        aria-label={`Menu — ${profil.prenom} ${profil.nom}`}
+        aria-haspopup="dialog"
+        aria-expanded={tiroirOuvert}
+        onClick={() => setTiroirOuvert(true)}
       >
         {initiales}
-      </Link>
+      </button>
+      <TiroirMobile ouvert={tiroirOuvert} fermer={fermer} profil={profil} />
     </>
   );
-}
-
-/** Écran « compte » de chaque rôle (le tiroir complet arrive à l'étape B). */
-function hubDuRole(role: string): string {
-  switch (role) {
-    case "medecin":
-      return "/espace-medecin/compte";
-    case "assistant":
-      return "/espace-assistant/compte";
-    case "etablissement":
-      return "/espace-etablissement/compte";
-    case "admin":
-      return "/espace-admin/plus";
-    default:
-      return "/patient/compte";
-  }
 }
 
 /**

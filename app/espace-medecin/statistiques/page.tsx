@@ -1,7 +1,7 @@
 "use client";
 
 import MedecinShell from "@/components/medecin/MedecinShell";
-import AppBarMobile from "@/components/mobile/AppBarMobile";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { formatNote } from "@/lib/format";
 import { useContextePro } from "@/lib/pro";
 
@@ -38,7 +38,7 @@ export default function StatistiquesMedecin() {
     <MedecinShell>
       {/* ===== Version mobile (écran « m-med-stats » de la maquette mobile) ===== */}
       <div className="md:hidden">
-        <AppBarMobile retour="/espace-medecin/compte" titre="Statistiques" />
+        <EnTeteMobile retour="/espace-medecin/compte" titre="Statistiques" />
         <div className="pad">
           <div className="statcards inpad">
             <div className="sc b1">

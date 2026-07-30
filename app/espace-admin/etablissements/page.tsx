@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import AdminShell from "@/components/admin/AdminShell";
-import AppBarMobile from "@/components/mobile/AppBarMobile";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { useEtablissementsEnAttente } from "@/lib/admin";
 
 /*
@@ -37,7 +37,7 @@ export default function EtablissementsAdmin() {
     <AdminShell>
       {/* ===== Version mobile (écran « m-admin-etabs » de la maquette mobile) ===== */}
       <div className="md:hidden">
-        <AppBarMobile retour="/espace-admin/plus" titre="Établissements" />
+        <EnTeteMobile retour="/espace-admin/plus" titre="Établissements" />
         <div className="pad">
           <div className="card2">
             <h4>Structures inscrites</h4>

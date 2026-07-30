@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import AdminShell from "@/components/admin/AdminShell";
-import AppBarMobile from "@/components/mobile/AppBarMobile";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { envoyerAnnonce, useAnnonces } from "@/lib/admin";
 
 /*
@@ -55,7 +55,7 @@ export default function AnnoncesAdmin() {
     <AdminShell>
       {/* ===== Version mobile (écran « m-admin-annonces » de la maquette mobile) ===== */}
       <div className="md:hidden">
-        <AppBarMobile retour="/espace-admin/plus" titre="Annonces" />
+        <EnTeteMobile retour="/espace-admin/plus" titre="Annonces" />
         <div className="pad">
           <div className="card2">
             <h4>Nouvelle annonce</h4>

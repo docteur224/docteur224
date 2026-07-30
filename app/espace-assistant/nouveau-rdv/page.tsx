@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import AssistantShell from "@/components/assistant/AssistantShell";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import NouveauRdvDelegue from "@/components/pro/NouveauRdvDelegue";
 import { useContextePro } from "@/lib/pro";
 
@@ -50,6 +51,7 @@ export default function NouveauRendezVousAssistant() {
 
   return (
     <AssistantShell>
+      <EnTeteMobile retour="/espace-assistant/rendez-vous" titre="Nouveau rendez-vous" />
       <NouveauRdvDelegue reservePar="assistant" lienRetour="/espace-assistant/rendez-vous" />
     </AssistantShell>
   );

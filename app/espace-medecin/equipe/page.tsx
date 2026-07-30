@@ -3,7 +3,7 @@
 import { useState } from "react";
 import MedecinShell from "@/components/medecin/MedecinShell";
 import Interrupteur from "@/components/patient/Interrupteur";
-import AppBarMobile from "@/components/mobile/AppBarMobile";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import {
   majPermissionAssistant,
   useContextePro,
@@ -75,7 +75,7 @@ export default function EquipeMedecin() {
     <MedecinShell>
       {/* ===== Version mobile (écran « m-med-equipe » de la maquette mobile) ===== */}
       <div className="md:hidden">
-        <AppBarMobile retour="/espace-medecin/compte" titre="Mes assistant(e)s" />
+        <EnTeteMobile retour="/espace-medecin/compte" titre="Mes assistant(e)s" />
         <div className="pad">
           <p className="muted" style={{ fontSize: 11.5, margin: "-2px 0 12px", lineHeight: 1.5 }}>
             Choisissez précisément ce que chaque assistant(e) peut faire.

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import AssistantShell from "@/components/assistant/AssistantShell";
 import { useContextePro, type PermissionsAssistante } from "@/lib/pro";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 
 /*
  * Mon compte (assistant(e)) — reproduit l'écran « asst-compte » de la
@@ -29,6 +30,7 @@ export default function CompteAssistant() {
     <AssistantShell>
       {/* ===== Version mobile (écran « m-asst-compte » de la maquette mobile) ===== */}
       <div className="md:hidden">
+        <EnTeteMobile variante="marque" />
         <div className="appbar">
           <h3 style={{ paddingLeft: 4 }}>Mon compte</h3>
         </div>

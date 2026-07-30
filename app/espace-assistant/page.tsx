@@ -5,6 +5,7 @@ import { useState } from "react";
 import AssistantShell from "@/components/assistant/AssistantShell";
 import { versISO } from "@/lib/dates";
 import { majStatutRdv, useAgenda, useContextePro } from "@/lib/pro";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 
 /*
  * Tableau de bord assistant(e) — reproduit l'écran « asst-dash » de la
@@ -48,6 +49,7 @@ export default function TableauDeBordAssistant() {
     <AssistantShell>
       {/* ===== Version mobile (écran « m-asst-dash » de la maquette mobile) ===== */}
       <div className="md:hidden">
+        <EnTeteMobile variante="marque" />
         <div className="appbar">
           <h3 style={{ paddingLeft: 4 }}>Bonjour {prenomAssistant} 👋</h3>
         </div>

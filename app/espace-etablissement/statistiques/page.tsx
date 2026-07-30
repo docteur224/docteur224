@@ -1,7 +1,7 @@
 "use client";
 
 import EtablissementShell from "@/components/etablissement/EtablissementShell";
-import AppBarMobile from "@/components/mobile/AppBarMobile";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { useEtablissementConnecte, useMedecinsRattaches } from "@/lib/etablissement";
 
 /*
@@ -30,7 +30,7 @@ export default function StatistiquesEtablissement() {
     <EtablissementShell>
       {/* ===== Version mobile (écran « m-etab-stats » de la maquette mobile) ===== */}
       <div className="md:hidden">
-        <AppBarMobile retour="/espace-etablissement/compte" titre="Statistiques" />
+        <EnTeteMobile retour="/espace-etablissement/compte" titre="Statistiques" />
         <div className="pad">
           <div className="statcards inpad two">
             <div className="sc b1">

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import MedecinShell from "@/components/medecin/MedecinShell";
 import { useContextePro } from "@/lib/pro";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 
 /*
  * Mon compte (hub mobile) — reproduit l'écran « m-med-compte » de la maquette
@@ -38,6 +39,7 @@ export default function CompteMedecin() {
     <MedecinShell>
       {/* ===== Version mobile ===== */}
       <div className="md:hidden">
+        <EnTeteMobile variante="marque" />
         <div className="appbar">
           <h3 style={{ paddingLeft: 4 }}>Mon compte</h3>
         </div>

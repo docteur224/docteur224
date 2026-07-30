@@ -2,6 +2,7 @@
 
 import EtablissementShell from "@/components/etablissement/EtablissementShell";
 import { useEtablissementConnecte } from "@/lib/etablissement";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 
 /*
  * Informations — reproduit l'écran « etab-infos » de la maquette web :
@@ -27,6 +28,7 @@ export default function InformationsEtablissement() {
     <EtablissementShell>
       {/* ===== Version mobile (écran « m-etab-infos » de la maquette mobile) ===== */}
       <div className="md:hidden">
+        <EnTeteMobile variante="marque" />
         <div className="appbar">
           <h3 style={{ paddingLeft: 4 }}>Informations</h3>
         </div>

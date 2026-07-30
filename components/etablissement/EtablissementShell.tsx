@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
+import { seDeconnecter } from "@/lib/auth";
 import { useEtablissementConnecte } from "@/lib/etablissement";
 
 /**
@@ -22,6 +23,7 @@ const LIENS = [
 
 export default function EtablissementShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { etablissement } = useEtablissementConnecte();
   const ETABLISSEMENT_CONNECTE = etablissement ?? { id: "", nom: "…", nomCourt: "…", type: "", description: "", adresse: "", telephone: "", email: "", siteWeb: "", gradient: "linear-gradient(135deg,#16A085,#0E6655)", statut: "", parametres: {}, gestionnaire: { nom: "", role: "", email: "", telephone: "" } };
 
@@ -63,15 +65,22 @@ export default function EtablissementShell({ children }: { children: React.React
               </Link>
             );
           })}
-          <Link
-            href="/"
-            className="flex items-center gap-[11px] rounded-[11px] px-3 py-[11px] text-[13.5px] font-semibold text-muted hover:bg-bg"
+          {/* Vraie déconnexion : c'était un simple lien vers l'accueil, qui
+              laissait la session ouverte (comme PatientShell/MedecinShell le
+              faisaient déjà correctement). */}
+          <button
+            type="button"
+            onClick={async () => {
+              await seDeconnecter();
+              router.push("/");
+            }}
+            className="flex items-center gap-[11px] rounded-[11px] px-3 py-[11px] text-left text-[13.5px] font-semibold text-muted hover:bg-bg"
           >
             <span className="text-base" aria-hidden>
               ↩️
             </span>
             Déconnexion
-          </Link>
+          </button>
         </nav>
       </aside>
       <main className="with-tabbar overflow-auto md:px-[30px] md:py-[26px]">{children}</main>

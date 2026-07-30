@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import AdminShell from "@/components/admin/AdminShell";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 
 /*
  * Plus (hub mobile) — reproduit l'écran « m-admin-plus » de la maquette
@@ -28,6 +29,7 @@ export default function PlusAdmin() {
     <AdminShell>
       {/* ===== Version mobile ===== */}
       <div className="md:hidden">
+        <EnTeteMobile variante="marque" />
         <div className="appbar">
           <h3 style={{ paddingLeft: 4 }}>Plus</h3>
         </div>

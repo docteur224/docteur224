@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import AdminShell from "@/components/admin/AdminShell";
-import AppBarMobile from "@/components/mobile/AppBarMobile";
+import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import Interrupteur from "@/components/patient/Interrupteur";
 import {
   ajouterAListeContenu,
@@ -80,7 +80,7 @@ export default function ParametresAdmin() {
     <AdminShell>
       {/* En-tête mobile (écran « m-admin-params » de la maquette mobile) */}
       <div className="md:hidden">
-        <AppBarMobile retour="/espace-admin/plus" titre="Paramètres" />
+        <EnTeteMobile retour="/espace-admin/plus" titre="Paramètres" />
       </div>
       {/* En-tête web (inchangé) */}
       <div className="mb-5 hidden md:block">
