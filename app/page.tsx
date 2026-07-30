@@ -2,6 +2,7 @@ import Link from "next/link";
 import TopNav from "@/components/site/TopNav";
 import Footer from "@/components/site/Footer";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
+import PiedPageMobile from "@/components/mobile/PiedPageMobile";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
 import AvatarMedecin from "@/components/site/AvatarMedecin";
 import { formatNote } from "@/lib/format";
@@ -164,6 +165,7 @@ export default async function Accueil() {
             </Link>
           ))}
         </div>
+        <PiedPageMobile />
         <TabBarMobile role="public" />
       </div>
 

@@ -88,6 +88,19 @@
      rendu sous cette variante) : le héros dégage seulement la hauteur. */
   .topbar.transparente + .hero { padding-top: calc(var(--tb-h) + 8px); }
 
+  /* ===== bandeau de titre des pages éditoriales ===== */
+  .bandeau-edito { background: linear-gradient(160deg, var(--blue) 0%, var(--blue-deep) 100%); color: #fff; padding: 18px 18px 22px; border-radius: 0 0 22px 22px; }
+  .bandeau-edito .em { font-size: 26px; display: block; margin-bottom: 6px; }
+  .bandeau-edito h1 { font-size: 21px; font-weight: 800; line-height: 1.25; letter-spacing: -0.4px; }
+  .bandeau-edito p { font-size: 12.5px; line-height: 1.55; opacity: 0.88; margin-top: 7px; }
+
+  /* ===== pied de page mobile (accueil et pages éditoriales) ===== */
+  .pied-mobile { background: var(--blue-deep); color: #fff; padding: 24px 18px 26px; margin-top: 8px; border-radius: 22px 22px 0 0; }
+  .pied-mobile p { font-size: 12px; line-height: 1.6; opacity: 0.75; margin-top: 10px; }
+  .pied-mobile nav { display: grid; grid-template-columns: 1fr 1fr; gap: 9px 14px; margin: 16px 0 18px; }
+  .pied-mobile nav a { font-size: 12.5px; font-weight: 600; opacity: 0.9; }
+  .pied-mobile small { display: block; border-top: 1px solid rgba(255, 255, 255, 0.15); padding-top: 14px; font-size: 11px; opacity: 0.7; }
+
   /* ===== rappel du prochain rendez-vous, sous la barre ===== */
   .bandeau-rdv { display: flex; align-items: center; gap: 11px; margin: 10px 14px 0; padding: 10px 12px; border-radius: 13px; background: var(--teal-soft); border: 1px solid #cde6f2; }
   .bandeau-rdv .i { font-size: 16px; flex: none; }

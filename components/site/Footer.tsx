@@ -22,6 +22,9 @@ export default function Footer() {
           <a href="#comment-ca-marche" className="mb-2 block text-[13px] opacity-80">
             Comment ça marche
           </a>
+          <Link href="/conseils-sante" className="mb-2 block text-[13px] opacity-80">
+            Conseils santé
+          </Link>
           <Link href="/connexion" className="mb-2 block text-[13px] opacity-80">
             Mes rendez-vous
           </Link>
@@ -40,6 +43,12 @@ export default function Footer() {
         </div>
         <div>
           <b className="mb-3 block text-[13px] font-extrabold">Aide</b>
+          <Link href="/faq" className="mb-2 block text-[13px] opacity-80">
+            Questions fréquentes
+          </Link>
+          <Link href="/a-propos" className="mb-2 block text-[13px] opacity-80">
+            À propos
+          </Link>
           <a className="mb-2 block cursor-pointer text-[13px] opacity-80">Centre d&apos;assistance</a>
           <a className="mb-2 block cursor-pointer text-[13px] opacity-80">WhatsApp · Messenger</a>
           <a className="mb-2 block cursor-pointer text-[13px] opacity-80">Nous contacter</a>

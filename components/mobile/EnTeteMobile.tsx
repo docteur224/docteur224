@@ -91,7 +91,6 @@ export default function EnTeteMobile({
 
         <div className="tb-actions">
           {droite}
-          <MenuPublic />
           {recherche && !titre && (
             <button
               type="button"
@@ -105,6 +104,8 @@ export default function EnTeteMobile({
             </button>
           )}
           {actions && <ActionsCompte />}
+          {/* Le menu du site ferme la marche, à l'extrême droite. */}
+          <MenuPublic />
         </div>
       </header>
       {/* La barre est `fixed` : cet espaceur rend la hauteur qu'elle ne prend

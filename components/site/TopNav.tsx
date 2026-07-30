@@ -22,7 +22,9 @@ export default function TopNav({
     <nav className="sticky top-0 z-20 hidden h-[66px] items-center gap-[26px] border-b border-line bg-white px-4 md:flex md:px-[30px]">
       <Logo hauteur={38} priority className="flex items-center" />
       {!minimale && (
-        <div className="ml-2 hidden gap-[22px] md:flex">
+        // Six entrées : les trois éditoriales n'apparaissent qu'à partir de
+        // lg, sinon la barre déborderait sur une tablette.
+        <div className="ml-2 hidden items-center gap-[18px] md:flex">
           <Link
             href="/resultats"
             className={`text-[13.5px] font-semibold hover:text-blue ${
@@ -30,6 +32,24 @@ export default function TopNav({
             }`}
           >
             Trouver un médecin
+          </Link>
+          <Link
+            href="/a-propos"
+            className="hidden text-[13.5px] font-semibold text-muted hover:text-blue lg:inline"
+          >
+            À propos
+          </Link>
+          <Link
+            href="/conseils-sante"
+            className="hidden text-[13.5px] font-semibold text-muted hover:text-blue lg:inline"
+          >
+            Conseils santé
+          </Link>
+          <Link
+            href="/faq"
+            className="hidden text-[13.5px] font-semibold text-muted hover:text-blue lg:inline"
+          >
+            FAQ
           </Link>
           <Link href="/#comment-ca-marche" className="text-[13.5px] font-semibold text-muted hover:text-blue">
             Comment ça marche
