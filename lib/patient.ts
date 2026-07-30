@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { creerClientNavigateur } from "@/lib/supabase/client";
-import { creneauReservable } from "@/lib/dates";
+import { creneauReservable, versISO } from "@/lib/dates";
 
 /*
  * Couche de données du parcours patient (client) : session, proches,
@@ -418,6 +418,59 @@ export function useMesRendezVous(): { rdvs: RendezVousPatient[]; chargement: boo
   return { rdvs, chargement, recharger: () => setVersion((v) => v + 1) };
 }
 
+/* ----- Prochain rendez-vous (bandeau de la barre haute mobile) ----- */
+
+let cacheProchain: RendezVousPatient | null | undefined;
+const ecouteursProchain = new Set<(r: RendezVousPatient | null) => void>();
+
+/**
+ * Le seul rendez-vous à venir le plus proche, pour le bandeau de rappel.
+ * Volontairement distinct de `useMesRendezVous`, qui rapatrie tout
+ * l'historique : le bandeau est monté sur beaucoup d'écrans, il ne doit
+ * coûter qu'une ligne, et le résultat est mis en cache pour le reste de la
+ * session de navigation.
+ */
+export function useProchainRendezVous(): RendezVousPatient | null {
+  const [prochain, setProchain] = useState<RendezVousPatient | null>(cacheProchain ?? null);
+
+  useEffect(() => {
+    ecouteursProchain.add(setProchain);
+    if (cacheProchain === undefined) {
+      cacheProchain = null; // évite deux requêtes si plusieurs bandeaux montent
+      const maintenant = new Date();
+      const aujourdhui = versISO(maintenant);
+      const heure = `${String(maintenant.getHours()).padStart(2, "0")}:${String(
+        maintenant.getMinutes()
+      ).padStart(2, "0")}:00`;
+      creerClientNavigateur()
+        .from("rendez_vous")
+        .select(SELECTION_RDV)
+        .in("statut", ["confirme", "en_attente"])
+        // « À venir » se juge à l'heure près, pas à la journée : les premiers
+        // rendez-vous du jour sont souvent déjà passés quand on ouvre l'app.
+        .or(`date.gt.${aujourdhui},and(date.eq.${aujourdhui},heure.gt.${heure})`)
+        .order("date", { ascending: true })
+        .order("heure", { ascending: true })
+        .limit(1)
+        .then(({ data }) => {
+          const lignes = ((data ?? []) as unknown as LigneRdv[]).map(versRdv);
+          cacheProchain = lignes[0] ?? null;
+          ecouteursProchain.forEach((e) => e(cacheProchain ?? null));
+        });
+    }
+    return () => {
+      ecouteursProchain.delete(setProchain);
+    };
+  }, []);
+
+  return prochain;
+}
+
+/** À appeler après une réservation, une annulation ou une reprogrammation. */
+export function oublierProchainRendezVous() {
+  cacheProchain = undefined;
+}
+
 /* ----- Détail d'un rendez-vous (écran /mes-rendez-vous/[id]) ----- */
 
 /**
@@ -553,6 +606,7 @@ export async function reserverRendezVous(d: {
     if (error.code === "23505") return { erreur: "Ce créneau vient d'être réservé. Choisissez-en un autre." };
     return { erreur: error.message };
   }
+  oublierProchainRendezVous();
   return {};
 }
 
@@ -561,6 +615,7 @@ export async function annulerRendezVous(id: string): Promise<{ erreur?: string }
     .from("rendez_vous")
     .update({ statut: "annule" })
     .eq("id", id);
+  oublierProchainRendezVous();
   return error ? { erreur: error.message } : {};
 }
 
@@ -576,5 +631,6 @@ export async function reprogrammerRendezVous(
     .from("rendez_vous")
     .update({ date, heure, statut: "en_attente" })
     .eq("id", id);
+  oublierProchainRendezVous();
   return error ? { erreur: error.message } : {};
 }

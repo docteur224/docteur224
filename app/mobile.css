@@ -72,6 +72,30 @@
   /* Le héros remonte sous la barre transparente, qui le prolonge. */
   .topbar.transparente + .hero { margin-top: calc(-1 * var(--tb-h)); padding-top: calc(var(--tb-h) + 8px); }
 
+  /* ===== rappel du prochain rendez-vous, sous la barre ===== */
+  .bandeau-rdv { display: flex; align-items: center; gap: 11px; margin: 10px 14px 0; padding: 10px 12px; border-radius: 13px; background: var(--teal-soft); border: 1px solid #cde6f2; }
+  .bandeau-rdv .i { font-size: 16px; flex: none; }
+  .bandeau-rdv .tx { min-width: 0; flex: 1; }
+  .bandeau-rdv b { display: block; font-size: 12.5px; font-weight: 800; color: var(--blue); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bandeau-rdv small { display: block; font-size: 11px; color: var(--muted); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .bandeau-rdv .ch { color: var(--teal); font-size: 17px; font-weight: 800; flex: none; }
+
+  /* ===== recherche rapide (feuille descendant de la barre) ===== */
+  .recherche-hote { position: fixed; inset: 0; z-index: 55; visibility: hidden; }
+  .recherche-hote.ouvert { visibility: visible; }
+  .recherche-voile { position: absolute; inset: 0; width: 100%; border: 0; padding: 0; background: rgba(11, 46, 61, 0.45); opacity: 0; transition: opacity 0.2s; cursor: pointer; }
+  .recherche-hote.ouvert .recherche-voile { opacity: 1; }
+  .recherche-feuille { position: absolute; top: 0; left: 0; right: 0; background: var(--bg); border-radius: 0 0 22px 22px; padding: 0 0 18px; padding-top: env(safe-area-inset-top); transform: translateY(-100%); transition: transform 0.24s cubic-bezier(0.32, 0.72, 0, 1); box-shadow: 0 14px 40px rgba(16, 59, 80, 0.22); }
+  .recherche-hote.ouvert .recherche-feuille { transform: translateY(0); }
+  .recherche-tete { display: flex; align-items: center; padding: 14px 18px 2px; }
+  .recherche-tete b { font-size: 16px; font-weight: 800; letter-spacing: -0.2px; }
+  .recherche-tete .tb-btn { margin-left: auto; }
+  .recherche-attente { padding: 22px 18px; font-size: 13px; color: var(--muted); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .recherche-feuille, .recherche-voile { transition: none; }
+  }
+
   /* =====================================================================
      TIROIR DE NAVIGATION (.tiroir) — extension hors maquette
      Le menu complet du rôle, ouvert par l'avatar de la barre haute. Le

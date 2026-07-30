@@ -36,7 +36,7 @@ export default function ComptePatient() {
       <div className="md:hidden">
         {/* Écran racine de l'onglet Profil : variante « marque », sans retour
             (la tabbar est la sortie) et sans avatar dupliqué juste dessous. */}
-        <EnTeteMobile variante="marque" actions={false} />
+        <EnTeteMobile variante="marque" actions={false} recherche bandeauRdv />
         <div className="pad">
           <div className="acctop">
             <span

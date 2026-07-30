@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import BandeauProchainRdv from "@/components/mobile/BandeauProchainRdv";
+import RechercheRapide from "@/components/mobile/RechercheRapide";
 import TiroirMobile from "@/components/mobile/TiroirMobile";
 import Logo from "@/components/site/Logo";
 import { useProfilConnecte } from "@/lib/patient";
@@ -28,6 +30,8 @@ export default function EnTeteMobile({
   sousTitre,
   retour,
   actions = true,
+  recherche = false,
+  bandeauRdv = false,
   droite,
 }: {
   variante?: "marque" | "page" | "hero";
@@ -37,10 +41,15 @@ export default function EnTeteMobile({
   retour?: string;
   /** Actions standard à droite (cloche + avatar, ou « Se connecter »). */
   actions?: boolean;
+  /** Loupe ouvrant la recherche rapide — écrans publics et patient. */
+  recherche?: boolean;
+  /** Rappel du prochain rendez-vous sous la barre (patient uniquement). */
+  bandeauRdv?: boolean;
   /** Action supplémentaire, insérée avant les actions standard. */
   droite?: React.ReactNode;
 }) {
   const { figee, sentinelle } = useBarreFigee();
+  const [rechercheOuverte, setRechercheOuverte] = useState(false);
   useTraceNavigation();
   const classes = ["topbar", "md:hidden"];
   // « hero » côté API, `.transparente` côté CSS : la classe `.hero` appartient
@@ -74,9 +83,28 @@ export default function EnTeteMobile({
 
         <div className="tb-actions">
           {droite}
+          {recherche && (
+            <button
+              type="button"
+              className="tb-btn"
+              aria-label="Rechercher un médecin"
+              aria-haspopup="dialog"
+              aria-expanded={rechercheOuverte}
+              onClick={() => setRechercheOuverte(true)}
+            >
+              🔎
+            </button>
+          )}
           {actions && <ActionsCompte />}
         </div>
       </header>
+      {recherche && (
+        <RechercheRapide ouvert={rechercheOuverte} fermer={() => setRechercheOuverte(false)} />
+      )}
+      {/* Jamais sous la variante hero : le héros remonte sous la barre par
+          `.topbar.transparente + .hero`, un élément intercalé casserait la
+          règle (et le bandeau se retrouverait sous le dégradé). */}
+      {bandeauRdv && variante !== "hero" && <BandeauProchainRdv />}
     </>
   );
 }

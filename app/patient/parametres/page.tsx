@@ -17,7 +17,7 @@ export default function Parametres() {
     <PatientShell>
       {/* ===== Version mobile (écran « m-pat-params » de la maquette mobile) ===== */}
       <div className="md:hidden">
-        <EnTeteMobile retour="/patient/compte" titre="Paramètres" />
+        <EnTeteMobile retour="/patient/compte" titre="Paramètres" recherche />
         <div className="pad">
           <div className="card2">
             <h4>Notifications</h4>

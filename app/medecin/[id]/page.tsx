@@ -128,7 +128,7 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
 
       {/* ================= VERSION MOBILE (écran « fiche » de la maquette mobile) ================= */}
       <div className="flex flex-col md:hidden">
-        <EnTeteMobile retour="/resultats" titre="Profil du médecin" />
+        <EnTeteMobile retour="/resultats" titre="Profil du médecin" recherche bandeauRdv />
         <div className="profhead">
           {medecin.photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element

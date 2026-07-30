@@ -74,7 +74,7 @@ export default function MonProfil() {
     <PatientShell>
       {/* ===== Version mobile (écran « m-pat-profil » de la maquette mobile) ===== */}
       <div className="md:hidden">
-        <EnTeteMobile retour="/patient/compte" titre="Mon profil" />
+        <EnTeteMobile retour="/patient/compte" titre="Mon profil" recherche />
         <div className="pad">
           <div className="acctop">
             <span

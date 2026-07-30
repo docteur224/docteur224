@@ -74,7 +74,7 @@ export default function MesProches() {
     <PatientShell>
       {/* ===== Version mobile (écran « m-pat-proches » de la maquette mobile) ===== */}
       <div className="md:hidden">
-        <EnTeteMobile retour="/patient/compte" titre="Mes proches" />
+        <EnTeteMobile retour="/patient/compte" titre="Mes proches" recherche />
         <div className="pad">
           <div className="abannerm">
             <span aria-hidden>ℹ️</span>

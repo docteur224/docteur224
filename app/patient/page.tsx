@@ -29,7 +29,7 @@ export default function TableauDeBordPatient() {
     <PatientShell>
       {/* ===== Version mobile (présentation maquette mobile) ===== */}
       <div className="md:hidden">
-        <EnTeteMobile variante="marque" />
+        <EnTeteMobile variante="marque" recherche />
         <div className="greet">
           <b>Bonjour, {patient.prenom} 👋</b>
           <br />

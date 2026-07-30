@@ -43,7 +43,7 @@ export default function MesRendezVous() {
     <PatientShell>
       {/* ===== En-tête mobile (écran « mesrdv » de la maquette mobile) ===== */}
       <div className="md:hidden">
-        <EnTeteMobile retour="/" titre="Mes rendez-vous" />
+        <EnTeteMobile retour="/" titre="Mes rendez-vous" recherche />
         <div className="tabsm">
           <button
             type="button"

@@ -39,6 +39,7 @@ export default async function ChoixCreneau({ params }: { params: Promise<{ id: s
           retour={`/medecin/${medecin.id}`}
           titre="Choisir un créneau"
           sousTitre={`${nomComplet(medecin)} · ${medecin.specialite}`}
+          bandeauRdv
         />
         <CreneauxMobile medecinId={medecin.id} joursFermes={medecin.joursFermes} />
       </div>
