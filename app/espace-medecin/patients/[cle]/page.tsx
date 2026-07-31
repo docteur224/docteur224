@@ -3,6 +3,7 @@
 import { use, useState } from "react";
 import Link from "next/link";
 import MedecinShell from "@/components/medecin/MedecinShell";
+import AdresserConfrere from "@/components/medecin/AdresserConfrere";
 import DeposerDocument from "@/components/medecin/DeposerDocument";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { calculerAge, formatDateCourte } from "@/lib/dates";
@@ -165,7 +166,17 @@ export default function DossierPatientMedecin({
             <span className="text-[12px] font-semibold text-muted">({remis.length})</span>
           </h3>
           {pour && (
-            <DeposerDocument cle={cle} nomPatient={nomComplet} apres={recharger} />
+            <div className="flex flex-wrap gap-2">
+              <DeposerDocument cle={cle} nomPatient={nomComplet} apres={recharger} />
+              {/* Les pièces proposées sont celles que ce médecin a le droit de
+                  joindre : ses dépôts et ce que le patient lui a adressé. */}
+              <AdresserConfrere
+                cle={cle}
+                nomPatient={nomComplet}
+                documents={[...remis, ...recus]}
+                apres={recharger}
+              />
+            </div>
           )}
         </div>
         {!pour && (

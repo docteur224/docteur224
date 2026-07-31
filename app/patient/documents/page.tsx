@@ -4,6 +4,7 @@ import { useState } from "react";
 import PatientShell from "@/components/patient/PatientShell";
 import EnvoyerDocument from "@/components/patient/EnvoyerDocument";
 import PartagerDocument from "@/components/patient/PartagerDocument";
+import TransmissionsEntreMedecins from "@/components/patient/TransmissionsEntreMedecins";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { formatDateCourte } from "@/lib/dates";
 import {
@@ -30,6 +31,8 @@ const ONGLETS = [
   { cle: "tous", libelle: "Tous" },
   { cle: "recus", libelle: "Reçus" },
   { cle: "envoyes", libelle: "Envoyés" },
+  // Vue de contrôle : ce que les médecins se sont transmis à votre sujet.
+  { cle: "entre-medecins", libelle: "Entre médecins" },
 ] as const;
 
 export default function MesDocuments() {
@@ -40,9 +43,16 @@ export default function MesDocuments() {
   const [aSupprimer, setASupprimer] = useState<string | null>(null);
   const [message, setMessage] = useState("");
 
-  const parOnglet = documents.filter((d) =>
-    onglet === "tous" ? true : onglet === "recus" ? d.origine === "medecin" : d.origine === "patient"
-  );
+  const surTransmissions = onglet === "entre-medecins";
+  const parOnglet = surTransmissions
+    ? []
+    : documents.filter((d) =>
+        onglet === "tous"
+          ? true
+          : onglet === "recus"
+            ? d.origine === "medecin"
+            : d.origine === "patient"
+      );
   const types = [TOUS, ...new Set(parOnglet.map((d) => d.type))];
   const visibles = filtre === TOUS ? parOnglet : parOnglet.filter((d) => d.type === filtre);
 
@@ -145,12 +155,16 @@ export default function MesDocuments() {
   const onglets = (
     <div className="flex flex-wrap gap-2">
       {ONGLETS.map((o) => {
+        // L'onglet des transmissions a sa propre source (RPC dédiée) : pas de
+        // compteur ici, il ne se déduit pas de la liste des documents.
         const n =
-          o.cle === "tous"
-            ? documents.length
-            : documents.filter((d) =>
-                o.cle === "recus" ? d.origine === "medecin" : d.origine === "patient"
-              ).length;
+          o.cle === "entre-medecins"
+            ? null
+            : o.cle === "tous"
+              ? documents.length
+              : documents.filter((d) =>
+                  o.cle === "recus" ? d.origine === "medecin" : d.origine === "patient"
+                ).length;
         return (
           <button
             key={o.cle}
@@ -165,7 +179,8 @@ export default function MesDocuments() {
                 : "border-line bg-white text-muted hover:bg-bg"
             }`}
           >
-            {o.libelle} ({n})
+            {o.libelle}
+            {n !== null ? ` (${n})` : ""}
           </button>
         );
       })}
@@ -218,13 +233,19 @@ export default function MesDocuments() {
             {onglets}
             {filtresType}
           </div>
-          {chargement && (
-            <p className="muted" style={{ fontSize: 13 }}>
-              Chargement…
-            </p>
+          {surTransmissions ? (
+            <TransmissionsEntreMedecins />
+          ) : (
+            <>
+              {chargement && (
+                <p className="muted" style={{ fontSize: 13 }}>
+                  Chargement…
+                </p>
+              )}
+              {vide && etatVide}
+              <div className="grid gap-3">{visibles.map(carte)}</div>
+            </>
           )}
-          {vide && etatVide}
-          <div className="grid gap-3">{visibles.map(carte)}</div>
           {message && (
             <p
               style={{
@@ -257,10 +278,15 @@ export default function MesDocuments() {
           {filtresType}
         </div>
 
-        {chargement && <p className="text-[13px] text-muted">Chargement…</p>}
-        {vide && etatVide}
-
-        <div className="grid gap-3">{visibles.map(carte)}</div>
+        {surTransmissions ? (
+          <TransmissionsEntreMedecins />
+        ) : (
+          <>
+            {chargement && <p className="text-[13px] text-muted">Chargement…</p>}
+            {vide && etatVide}
+            <div className="grid gap-3">{visibles.map(carte)}</div>
+          </>
+        )}
 
         {message && (
           <p
