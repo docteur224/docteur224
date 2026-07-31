@@ -1,9 +1,10 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
-import { seDeconnecter } from "@/lib/auth";
+import { ESPACE_PAR_ROLE, seDeconnecter, type Role } from "@/lib/auth";
 import { useProfilConnecte } from "@/lib/patient";
 import ClocheNotifications from "@/components/site/ClocheNotifications";
 
@@ -24,7 +25,20 @@ const LIENS = [
 export default function PatientShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { profil } = useProfilConnecte();
+  const { profil, chargement } = useProfilConnecte();
+
+  // Garde d'accès : l'espace patient exige un compte patient. Sans ça, un
+  // médecin (ou un établissement) pouvait ouvrir /patient/* et se voir refuser
+  // l'écriture par la base : « violates foreign key constraint
+  // proches_patient_id_fkey », parce qu'il n'a pas de fiche dans `patients`.
+  useEffect(() => {
+    if (chargement) return;
+    if (!profil) router.replace("/connexion");
+    else if (profil.role !== "patient") {
+      router.replace(ESPACE_PAR_ROLE[profil.role as Role] ?? "/connexion");
+    }
+  }, [chargement, profil, router]);
+
   const patient = {
     prenom: profil?.prenom ?? "",
     nom: profil?.nom ?? "",
@@ -32,6 +46,16 @@ export default function PatientShell({ children }: { children: React.ReactNode }
   };
   const initiales =
     `${patient.prenom.charAt(0)}${patient.nom.charAt(0)}`.toUpperCase() || "?";
+
+  // Tant que la redirection n'a pas eu lieu, ne pas monter les écrans : leurs
+  // formulaires écriraient dans des tables où l'intrus n'a pas de fiche.
+  if (!chargement && profil?.role !== "patient") {
+    return (
+      <div className="grid min-h-screen place-items-center bg-bg text-[13.5px] text-muted">
+        Redirection…
+      </div>
+    );
+  }
 
   return (
     <div className="grid min-h-screen bg-bg lg:grid-cols-[236px_1fr]">

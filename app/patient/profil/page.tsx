@@ -117,11 +117,8 @@ export default function MonProfil() {
           </div>
           <div className="fldm">
             <label>E-mail</label>
-            <input
-              className="v"
-              value={patient.email}
-              onChange={(e) => setPatient({ ...patient, email: e.target.value })}
-            />
+            {/* Lecture seule : identifiant de connexion (voir version web). */}
+            <input className="v" readOnly value={patient.email} style={{ color: "var(--muted)" }} />
           </div>
           <div className="fldm">
             <label>Date de naissance</label>
@@ -158,7 +155,14 @@ export default function MonProfil() {
             </select>
           </div>
           {message && (
-            <div style={{ color: "var(--green)", fontSize: 12.5, fontWeight: 700, marginBottom: 10 }}>
+            <div
+              style={{
+                color: message.startsWith("⚠️") ? "var(--red)" : "var(--green)",
+                fontSize: 12.5,
+                fontWeight: 700,
+                marginBottom: 10,
+              }}
+            >
               {message}
             </div>
           )}
@@ -170,21 +174,9 @@ export default function MonProfil() {
 
       {/* ===== Version web (inchangée) ===== */}
       <div className="hidden md:block">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Mon profil</h2>
-          <small className="text-[13px] text-muted">Vos informations personnelles</small>
-        </div>
-        <div className="flex items-center gap-3">
-          {message && <span className="text-[12.5px] font-bold text-green">{message}</span>}
-          <button
-            type="button"
-            onClick={enregistrer}
-            className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
-          >
-            💾 Enregistrer
-          </button>
-        </div>
+      <div className="mb-5">
+        <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Mon profil</h2>
+        <small className="text-[13px] text-muted">Vos informations personnelles</small>
       </div>
 
       <div className="rounded-2xl border border-line bg-white p-5">
@@ -241,10 +233,13 @@ export default function MonProfil() {
           </div>
           <div>
             <label className="mb-1.5 block text-xs font-bold text-muted">E-mail</label>
+            {/* Lecture seule : l'e-mail est l'identifiant de connexion, il se
+                change dans Supabase Auth avec une confirmation par lien. */}
             <input
-              className={classeChamp}
+              readOnly
+              title="L’e-mail de connexion se change depuis le support"
+              className={`${classeChamp} cursor-not-allowed bg-bg text-muted`}
               value={patient.email}
-              onChange={(e) => setPatient({ ...patient, email: e.target.value })}
             />
           </div>
           <div>
@@ -281,6 +276,27 @@ export default function MonProfil() {
               ))}
             </select>
           </div>
+        </div>
+
+        {/* Comme sur « Mes proches » : l'action d'enregistrement clôt le
+            formulaire, elle n'est pas reléguée dans l'en-tête de page. */}
+        <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-line pt-4">
+          <button
+            type="button"
+            onClick={enregistrer}
+            className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+          >
+            💾 Enregistrer
+          </button>
+          {message && (
+            <span
+              className={`text-[12.5px] font-bold ${
+                message.startsWith("⚠️") ? "text-red" : "text-green"
+              }`}
+            >
+              {message}
+            </span>
+          )}
         </div>
       </div>
       </div>

@@ -8,6 +8,7 @@ import {
   ajouterProche,
   LIENS_PROCHE,
   modifierProche,
+  supprimerProche,
   useProches,
   type Proche,
 } from "@/lib/patient";
@@ -35,6 +36,10 @@ export default function MesProches() {
   const [formulaire, setFormulaire] = useState(FORMULAIRE_VIDE);
   const [enEdition, setEnEdition] = useState<Proche | null>(null);
   const [message, setMessage] = useState("");
+  // Le retour s'affiche là où le patient vient d'agir : la liste ou le formulaire.
+  const [zoneMessage, setZoneMessage] = useState<"liste" | "formulaire">("formulaire");
+  // Proche dont on attend la confirmation de suppression (le second clic).
+  const [aSupprimer, setASupprimer] = useState<string | null>(null);
 
   const valide =
     formulaire.nom.trim() !== "" &&
@@ -55,6 +60,7 @@ export default function MesProches() {
 
   async function enregistrer() {
     if (!valide) return;
+    setZoneMessage("formulaire");
     if (enEdition) {
       const res = await modifierProche(enEdition.id, formulaire);
       setMessage(res.erreur ? `⚠️ ${res.erreur}` : `✓ ${formulaire.prenom} ${formulaire.nom} a été mis à jour.`);
@@ -65,6 +71,27 @@ export default function MesProches() {
     recharger();
     setFormulaire(FORMULAIRE_VIDE);
     setEnEdition(null);
+  }
+
+  /* Suppression en deux temps : le premier clic arme, le second exécute —
+     pas de confirm() natif, qui casse le rendu mobile. */
+  async function supprimer(proche: Proche) {
+    if (aSupprimer !== proche.id) {
+      setASupprimer(proche.id);
+      setMessage("");
+      return;
+    }
+    const res = await supprimerProche(proche.id);
+    setZoneMessage("liste");
+    setMessage(
+      res.erreur ? `⚠️ ${res.erreur}` : `✓ ${proche.prenom} ${proche.nom} a été retiré de vos proches.`
+    );
+    setASupprimer(null);
+    if (enEdition?.id === proche.id) {
+      setEnEdition(null);
+      setFormulaire(FORMULAIRE_VIDE);
+    }
+    recharger();
   }
 
   const classeChamp =
@@ -101,15 +128,32 @@ export default function MesProches() {
                     {formatDateCourte(proche.dateNaissance)}
                   </small>
                 </span>
-                <button type="button" className="btnm gh" onClick={() => commencerEdition(proche)}>
-                  Modifier
-                </button>
+                <span style={{ display: "flex", gap: 6, flex: "none" }}>
+                  <button type="button" className="btnm gh" onClick={() => commencerEdition(proche)}>
+                    Modifier
+                  </button>
+                  <button type="button" className="btnm dg" onClick={() => supprimer(proche)}>
+                    {aSupprimer === proche.id ? "Confirmer" : "Supprimer"}
+                  </button>
+                </span>
               </div>
             ))}
             {proches.length === 0 && (
               <p className="muted" style={{ fontSize: 13 }}>
                 Aucun proche enregistré pour le moment.
               </p>
+            )}
+            {message && zoneMessage === "liste" && (
+              <div
+                style={{
+                  color: message.startsWith("⚠️") ? "var(--red)" : "var(--green)",
+                  fontSize: 12.5,
+                  fontWeight: 700,
+                  paddingTop: 10,
+                }}
+              >
+                {message}
+              </div>
             )}
           </div>
           <div className="card2">
@@ -168,8 +212,15 @@ export default function MesProches() {
               <option>Femme</option>
               <option>Homme</option>
             </select>
-            {message && (
-              <div style={{ color: "var(--green)", fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>
+            {message && zoneMessage === "formulaire" && (
+              <div
+                style={{
+                  color: message.startsWith("⚠️") ? "var(--red)" : "var(--green)",
+                  fontSize: 12.5,
+                  fontWeight: 700,
+                  marginBottom: 8,
+                }}
+              >
                 {message}
               </div>
             )}
@@ -241,17 +292,35 @@ export default function MesProches() {
                 {formatDateCourte(proche.dateNaissance)}
               </small>
             </div>
-            <button
-              type="button"
-              onClick={() => commencerEdition(proche)}
-              className="rounded-[9px] border-[1.5px] border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-blue transition-colors hover:bg-bg"
-            >
-              Modifier
-            </button>
+            <div className="flex flex-none gap-2">
+              <button
+                type="button"
+                onClick={() => commencerEdition(proche)}
+                className="rounded-[9px] border-[1.5px] border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-blue transition-colors hover:bg-bg"
+              >
+                Modifier
+              </button>
+              <button
+                type="button"
+                onClick={() => supprimer(proche)}
+                className="rounded-[9px] border-[1.5px] border-[#F3C9C2] bg-white px-3 py-1.5 text-[11.5px] font-bold text-red transition-colors hover:bg-red-soft"
+              >
+                {aSupprimer === proche.id ? "Confirmer" : "Supprimer"}
+              </button>
+            </div>
           </div>
         ))}
         {proches.length === 0 && (
           <p className="text-[13px] text-muted">Aucun proche enregistré pour le moment.</p>
+        )}
+        {message && zoneMessage === "liste" && (
+          <p
+            className={`pt-3 text-[12.5px] font-bold ${
+              message.startsWith("⚠️") ? "text-red" : "text-green"
+            }`}
+          >
+            {message}
+          </p>
         )}
       </div>
 
@@ -334,7 +403,15 @@ export default function MesProches() {
               Annuler la modification
             </button>
           )}
-          {message && <span className="text-[12.5px] font-bold text-green">{message}</span>}
+          {message && zoneMessage === "formulaire" && (
+            <span
+              className={`text-[12.5px] font-bold ${
+                message.startsWith("⚠️") ? "text-red" : "text-green"
+              }`}
+            >
+              {message}
+            </span>
+          )}
         </div>
       </div>
       </div>

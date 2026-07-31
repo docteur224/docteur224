@@ -2,13 +2,16 @@
 
 import PatientShell from "@/components/patient/PatientShell";
 import Interrupteur from "@/components/patient/Interrupteur";
+import ChangerMotDePasse from "@/components/patient/ChangerMotDePasse";
+import SupprimerCompte from "@/components/patient/SupprimerCompte";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { useParametresPatient } from "@/lib/patient";
 
 /*
  * Paramètres — reproduit l'écran « pat-params » de la maquette web :
  * notifications, langue et sécurité. Les interrupteurs sont persistés
- * dans la table `patients` (colonnes pref_*).
+ * dans la table `patients` (colonnes pref_*). La sécurité couvre le
+ * changement de mot de passe et la suppression du compte.
  */
 export default function Parametres() {
   const { parametres, basculer } = useParametresPatient();
@@ -75,33 +78,18 @@ export default function Parametres() {
           </div>
           <div className="card2">
             <h4>Sécurité</h4>
+            <ChangerMotDePasse mobile />
             <div className="setrow">
               <div>
                 <b>Double authentification</b>
                 <small>Code par SMS</small>
               </div>
-              <Interrupteur
-                actif={parametres.deuxFacteurs}
-                onChange={(v) => basculer("deuxFacteurs", v)}
-                label="Authentification à deux facteurs"
-              />
-            </div>
-            <div className="setrow">
-              <div>
-                <b>Mot de passe</b>
-                <small>Sera activé avec l&apos;authentification</small>
-              </div>
-              <button
-                type="button"
-                disabled
-                title="Disponible avec l'authentification (Phase 3)"
-                className="btnm gh"
-                style={{ opacity: 0.5, cursor: "not-allowed" }}
-              >
-                Modifier
-              </button>
+              <span style={{ fontSize: 10.5, fontWeight: 700, color: "var(--muted)" }}>
+                Bientôt
+              </span>
             </div>
           </div>
+          <SupprimerCompte mobile />
         </div>
       </div>
 
@@ -167,38 +155,23 @@ export default function Parametres() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-line bg-white p-5">
+      <div className="mb-4 rounded-2xl border border-line bg-white p-5">
         <h3 className="mb-1 text-[15px] font-extrabold">Sécurité</h3>
-        <div className="flex items-center justify-between gap-[14px] border-b border-line py-[15px]">
+        <div className="border-b border-line">
+          <ChangerMotDePasse />
+        </div>
+        <div className="flex items-center justify-between gap-[14px] py-[15px]">
           <div>
             <b className="block text-[13.5px] font-bold">
               Authentification à deux facteurs (2FA)
             </b>
             <small className="text-xs text-muted">Sécuriser la connexion par code SMS</small>
           </div>
-          <Interrupteur
-            actif={parametres.deuxFacteurs}
-            onChange={(v) => basculer("deuxFacteurs", v)}
-            label="Authentification à deux facteurs"
-          />
-        </div>
-        <div className="flex items-center justify-between gap-[14px] py-[15px]">
-          <div>
-            <b className="block text-[13.5px] font-bold">Mot de passe</b>
-            <small className="text-xs text-muted">
-              Sera activé avec l’authentification (Phase 3)
-            </small>
-          </div>
-          <button
-            type="button"
-            disabled
-            title="Disponible avec l’authentification (Phase 3)"
-            className="cursor-not-allowed rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue opacity-50"
-          >
-            Modifier
-          </button>
+          <span className="text-[11.5px] font-bold text-muted">Bientôt disponible</span>
         </div>
       </div>
+
+      <SupprimerCompte />
       </div>
     </PatientShell>
   );

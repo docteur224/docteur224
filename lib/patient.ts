@@ -128,16 +128,70 @@ export async function enregistrerProfilPatient(d: {
     .update({ nom: d.nom, prenom: d.prenom, telephone: d.telephone })
     .eq("id", auth.user.id);
   if (e1) return { erreur: e1.message };
-  const { error: e2 } = await supabase
+  const { data: lignes, error: e2 } = await supabase
     .from("patients")
     .update({
       date_naissance: d.dateNaissance || null,
       genre: d.genre === "Masculin" ? "M" : "F",
       ville_id: d.villeId,
     })
-    .eq("id", auth.user.id);
+    .eq("id", auth.user.id)
+    .select("id");
   if (e2) return { erreur: e2.message };
+  // Un update qui ne touche aucune ligne ne remonte pas d'erreur : sans ce
+  // contrôle, un compte sans fiche patient croyait avoir tout enregistré.
+  if (!lignes?.length) {
+    return { erreur: "Aucune fiche patient n'est rattachée à ce compte." };
+  }
   cacheProfil = undefined; // le prochain useProfilConnecte relira la base
+  return {};
+}
+
+/* ===== Sécurité du compte ===== */
+
+/**
+ * Change le mot de passe du compte connecté.
+ * Supabase n'exige pas l'ancien mot de passe : on le vérifie nous-mêmes en
+ * rejouant une connexion (même utilisateur, la session reste donc valide).
+ */
+export async function changerMotDePasse(
+  actuel: string,
+  nouveau: string
+): Promise<{ erreur?: string }> {
+  if (nouveau.length < 8) {
+    return { erreur: "Le nouveau mot de passe doit contenir au moins 8 caractères." };
+  }
+  if (nouveau === actuel) {
+    return { erreur: "Le nouveau mot de passe doit être différent de l'actuel." };
+  }
+  const supabase = creerClientNavigateur();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user?.email) return { erreur: "Session expirée — reconnectez-vous." };
+  const { error: eVerification } = await supabase.auth.signInWithPassword({
+    email: auth.user.email,
+    password: actuel,
+  });
+  if (eVerification) return { erreur: "Mot de passe actuel incorrect." };
+  const { error } = await supabase.auth.updateUser({ password: nouveau });
+  return error ? { erreur: error.message } : {};
+}
+
+/**
+ * Suppression du compte patient : anonymisation côté serveur (les
+ * consultations passées appartiennent au dossier du médecin) puis
+ * déconnexion. Voir app/api/compte/supprimer/route.ts.
+ */
+export async function supprimerMonCompte(): Promise<{ erreur?: string }> {
+  const reponse = await fetch("/api/compte/supprimer", { method: "POST" });
+  if (!reponse.ok) {
+    const { erreur } = await reponse
+      .json()
+      .catch(() => ({ erreur: "La suppression a échoué. Réessayez." }));
+    return { erreur };
+  }
+  await creerClientNavigateur().auth.signOut();
+  cacheProfil = undefined;
+  oublierProchainRendezVous();
   return {};
 }
 
@@ -147,14 +201,12 @@ export interface ParametresPatient {
   rappelsSms: boolean;
   rappelsEmail: boolean;
   offres: boolean;
-  deuxFacteurs: boolean; // pas encore fonctionnel côté auth — non persisté
 }
 
 const PARAMETRES_DEFAUT: ParametresPatient = {
   rappelsSms: true,
   rappelsEmail: true,
   offres: false,
-  deuxFacteurs: false,
 };
 
 export function useParametresPatient(): {
@@ -190,7 +242,6 @@ export function useParametresPatient(): {
 
   function basculer(cle: keyof ParametresPatient, valeur: boolean) {
     setParametres((p) => ({ ...p, [cle]: valeur }));
-    if (cle === "deuxFacteurs") return; // pas de persistance pour l'instant
     const colonne =
       cle === "rappelsSms" ? "pref_rappels_sms" : cle === "rappelsEmail" ? "pref_rappels_email" : "pref_offres";
     (async () => {
@@ -277,6 +328,17 @@ export function useProches(): { proches: Proche[]; recharger: () => void } {
   return { proches, recharger: () => setVersion((v) => v + 1) };
 }
 
+/** Traduit les erreurs Postgres en message compréhensible par le patient. */
+function messageErreurProche(message: string): string {
+  if (message.includes("proches_patient_id_fkey")) {
+    return "Ce compte n'est pas un compte patient : un proche ne peut être rattaché qu'à un compte patient.";
+  }
+  if (message.includes("rendez_vous_proche_id_fkey")) {
+    return "Ce proche a déjà des rendez-vous : il ne peut plus être supprimé.";
+  }
+  return message;
+}
+
 export async function ajouterProche(d: {
   nom: string;
   prenom: string;
@@ -299,7 +361,7 @@ export async function ajouterProche(d: {
     })
     .select("id, nom, prenom, lien, date_naissance, genre")
     .single();
-  if (error) return { erreur: error.message };
+  if (error) return { erreur: messageErreurProche(error.message) };
   return { proche: versProche(data as LigneProche) };
 }
 
@@ -319,7 +381,7 @@ export async function modifierProche(id: string, d: Partial<{ nom: string; preno
 
 export async function supprimerProche(id: string): Promise<{ erreur?: string }> {
   const { error } = await creerClientNavigateur().from("proches").delete().eq("id", id);
-  return error ? { erreur: error.message } : {};
+  return error ? { erreur: messageErreurProche(error.message) } : {};
 }
 
 /* ===== Rendez-vous ===== */

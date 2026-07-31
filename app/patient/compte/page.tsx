@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import PatientShell from "@/components/patient/PatientShell";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
+import { seDeconnecter } from "@/lib/auth";
 import { useProfilConnecte } from "@/lib/patient";
 
 const initialesPatient = (p: { prenom: string; nom: string }) =>
@@ -22,11 +24,11 @@ const ENTREES = [
   { href: "/patient/profil", icone: "👤", titre: "Mon profil", sous: "Informations personnelles" },
   { href: "/mes-rendez-vous", icone: "📅", titre: "Mes rendez-vous", sous: "À venir et passés" },
   { href: "/patient/proches", icone: "👨‍👩‍👧", titre: "Mes proches", sous: "Enfants, conjoint… sans compte" },
-  { href: "/patient/parametres", icone: "⚙️", titre: "Paramètres", sous: "Notifications, langue, sécurité" },
-  { href: "/", icone: "↩️", titre: "Déconnexion", sous: "" },
+  { href: "/patient/parametres", icone: "⚙️", titre: "Paramètres", sous: "Notifications, mot de passe, compte" },
 ];
 
 export default function ComptePatient() {
+  const router = useRouter();
   const { profil } = useProfilConnecte();
   const patient = { prenom: profil?.prenom ?? "", nom: profil?.nom ?? "", sexe: profil?.genre === "M" ? "Masculin" : "Féminin", telephone: profil?.telephone ?? "" };
 
@@ -70,6 +72,26 @@ export default function ComptePatient() {
                 </span>
               </Link>
             ))}
+            {/* Bouton et non lien : un href="/" laissait la session ouverte. */}
+            <button
+              type="button"
+              className="mrow"
+              style={{ width: "100%", textAlign: "left" }}
+              onClick={async () => {
+                await seDeconnecter();
+                router.push("/");
+              }}
+            >
+              <span className="mi" aria-hidden>
+                ↩️
+              </span>
+              <span>
+                <b>Déconnexion</b>
+              </span>
+              <span className="ch" aria-hidden>
+                ›
+              </span>
+            </button>
           </div>
         </div>
       </div>
@@ -96,6 +118,22 @@ export default function ComptePatient() {
               </span>
             </Link>
           ))}
+          <button
+            type="button"
+            onClick={async () => {
+              await seDeconnecter();
+              router.push("/");
+            }}
+            className="flex w-full items-center gap-3 px-4 py-[14px] text-left hover:bg-bg"
+          >
+            <span className="grid h-[34px] w-[34px] flex-none place-items-center rounded-[10px] bg-teal-soft text-[15px]" aria-hidden>
+              ↩️
+            </span>
+            <b className="text-sm font-bold">Déconnexion</b>
+            <span className="ml-auto text-lg text-[#B9C7D0]" aria-hidden>
+              ›
+            </span>
+          </button>
         </div>
       </div>
     </PatientShell>
