@@ -136,6 +136,36 @@ export interface NouveauDocument {
   rendezVousId?: string;
 }
 
+/**
+ * Demande au serveur le PDF composé à partir du type et du texte saisis.
+ *
+ * La mise en page n'est pas faite ici : l'en-tête engage l'identité du
+ * praticien, elle doit être relue en base à partir de la session et non
+ * fournie par le navigateur (voir app/api/document-pdf/route.ts).
+ */
+export async function genererPdf(d: {
+  patientId?: string;
+  procheId?: string;
+  type: TypeDocument;
+  titre: string;
+  contenu: string;
+}): Promise<{ fichier?: File; erreur?: string }> {
+  const reponse = await fetch("/api/document-pdf", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(d),
+  });
+  if (!reponse.ok) {
+    const { erreur } = await reponse
+      .json()
+      .catch(() => ({ erreur: "La génération du document a échoué." }));
+    return { erreur };
+  }
+  const octets = await reponse.blob();
+  const nom = `${d.titre.replace(/[^\w\s.\-]+/g, "").trim() || d.type}.pdf`.replace(/\s+/g, "-");
+  return { fichier: new File([octets], nom, { type: "application/pdf" }) };
+}
+
 const TAILLE_MAX = 8 * 1024 * 1024; // 8 Mo
 const EXTENSIONS = /\.(pdf|jpe?g|png|webp)$/i;
 

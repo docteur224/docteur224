@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import {
   deposerDocument,
+  genererPdf,
   TYPES_DOCUMENT,
   type TypeDocument,
 } from "@/lib/documents";
@@ -10,11 +11,20 @@ import {
 /*
  * Remise d'un document à un patient, depuis l'espace médecin.
  *
+ * Deux façons de produire la pièce jointe :
+ *  - « Générer » (défaut) : le serveur compose un PDF à partir du type et du
+ *    texte saisis, avec l'en-tête du praticien relu en base. C'est le cas
+ *    courant — une ordonnance se tape, elle ne se scanne pas ;
+ *  - « Joindre un fichier » : un PDF ou une image déjà produits ailleurs
+ *    (résultat de laboratoire, imagerie, ordonnance manuscrite scannée).
+ *
  * Le destinataire est identifié par la clé préfixée de `usePatientsCabinet`
  * (« c-<uuid> » = compte patient, « p-<uuid> » = proche) : un patient créé au
  * cabinet sans compte n'a nulle part où lire, le bouton lui est refusé en
  * amont par la page appelante.
  */
+
+type Mode = "generer" | "fichier";
 
 const VIDE = { type: "ordonnance" as TypeDocument, titre: "", contenu: "" };
 
@@ -31,31 +41,76 @@ export default function DeposerDocument({
   apres?: () => void;
 }) {
   const [ouvert, setOuvert] = useState(false);
+  const [mode, setMode] = useState<Mode>("generer");
   const [champs, setChamps] = useState(VIDE);
   const [enCours, setEnCours] = useState(false);
+  const [apercuEnCours, setApercuEnCours] = useState(false);
   const [message, setMessage] = useState<{ texte: string; erreur: boolean } | null>(null);
   const fichierRef = useRef<HTMLInputElement>(null);
 
   const [prefixe, id] = [cle.slice(0, 1), cle.slice(2)];
-  const valide = champs.titre.trim() !== "";
+  const destinataire =
+    prefixe === "c" ? { patientId: id } : { procheId: id };
+
+  const valide =
+    champs.titre.trim() !== "" &&
+    (mode === "generer" ? champs.contenu.trim() !== "" : true);
 
   function basculer() {
     setOuvert((o) => !o);
     setChamps(VIDE);
+    setMode("generer");
     setMessage(null);
     if (fichierRef.current) fichierRef.current.value = "";
+  }
+
+  function changerMode(nouveau: Mode) {
+    setMode(nouveau);
+    setMessage(null);
+    if (nouveau === "generer" && fichierRef.current) fichierRef.current.value = "";
+  }
+
+  /** Ouvre le PDF composé sans rien enregistrer : le médecin se relit. */
+  async function apercu() {
+    if (!valide || apercuEnCours) return;
+    // L'onglet est ouvert AVANT l'attente réseau : ouvert après, le navigateur
+    // le prendrait pour une fenêtre surgissante et le bloquerait.
+    const onglet = window.open("", "_blank", "noopener");
+    setApercuEnCours(true);
+    const res = await genererPdf({ ...destinataire, ...champs });
+    setApercuEnCours(false);
+    if (res.erreur || !res.fichier) {
+      onglet?.close();
+      setMessage({ texte: `⚠️ ${res.erreur ?? "Aperçu impossible."}`, erreur: true });
+      return;
+    }
+    const url = URL.createObjectURL(res.fichier);
+    if (onglet) onglet.location.href = url;
+    else window.open(url, "_blank", "noopener");
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
   }
 
   async function envoyer() {
     if (!valide || enCours) return;
     setEnCours(true);
+
+    let fichier: File | null = fichierRef.current?.files?.[0] ?? null;
+    if (mode === "generer") {
+      const res = await genererPdf({ ...destinataire, ...champs });
+      if (res.erreur || !res.fichier) {
+        setEnCours(false);
+        setMessage({ texte: `⚠️ ${res.erreur ?? "Génération impossible."}`, erreur: true });
+        return;
+      }
+      fichier = res.fichier;
+    }
+
     const res = await deposerDocument({
-      patientId: prefixe === "c" ? id : undefined,
-      procheId: prefixe === "p" ? id : undefined,
+      ...destinataire,
       type: champs.type,
       titre: champs.titre,
       contenu: champs.contenu,
-      fichier: fichierRef.current?.files?.[0] ?? null,
+      fichier,
     });
     setEnCours(false);
     if (res.erreur) {
@@ -70,15 +125,54 @@ export default function DeposerDocument({
     apres?.();
   }
 
+  const etiquette = mobile ? "flabel" : "mb-1.5 text-[12.5px] font-bold";
+  const champ = mobile
+    ? "inp"
+    : "mb-3 w-full rounded-[11px] border border-line bg-white px-[13px] py-2.5 text-[13.5px] outline-none focus:border-teal";
+
+  /* Sélecteur de mode, commun aux deux rendus. */
+  const selecteurMode = (
+    <div
+      role="radiogroup"
+      aria-label="Comment produire le document"
+      className={mobile ? undefined : "mb-3 flex gap-2"}
+      style={mobile ? { display: "flex", gap: 6, marginBottom: 11 } : undefined}
+    >
+      {(
+        [
+          ["generer", "🖨️ Générer le document"],
+          ["fichier", "📎 Joindre un fichier"],
+        ] as [Mode, string][]
+      ).map(([valeur, libelle]) => (
+        <button
+          key={valeur}
+          type="button"
+          role="radio"
+          aria-checked={mode === valeur}
+          onClick={() => changerMode(valeur)}
+          className={
+            mobile
+              ? `btnm${mode === valeur ? "" : " gh"}`
+              : `flex-1 rounded-[11px] border-[1.5px] px-3 py-2 text-[12px] font-bold transition-colors ${
+                  mode === valeur
+                    ? "border-teal bg-teal-soft text-blue"
+                    : "border-line bg-white text-muted hover:bg-bg"
+                }`
+          }
+        >
+          {libelle}
+        </button>
+      ))}
+    </div>
+  );
+
   const formulaire = (
     <>
-      <div className={mobile ? "flabel" : "mb-1.5 text-[12.5px] font-bold"}>Type</div>
+      {selecteurMode}
+
+      <div className={etiquette}>Type</div>
       <select
-        className={
-          mobile
-            ? "selm"
-            : "mb-3 w-full rounded-[11px] border border-line bg-white px-[13px] py-2.5 text-[13.5px] outline-none focus:border-teal"
-        }
+        className={mobile ? "selm" : champ}
         value={champs.type}
         onChange={(e) => setChamps({ ...champs, type: e.target.value as TypeDocument })}
       >
@@ -89,48 +183,73 @@ export default function DeposerDocument({
         ))}
       </select>
 
-      <div className={mobile ? "flabel" : "mb-1.5 text-[12.5px] font-bold"}>Titre *</div>
+      <div className={etiquette}>Titre *</div>
       <input
-        className={
-          mobile
-            ? "inp"
-            : "mb-3 w-full rounded-[11px] border border-line bg-white px-[13px] py-2.5 text-[13.5px] outline-none focus:border-teal"
-        }
+        className={champ}
         placeholder="Ordonnance du 31 juillet"
         value={champs.titre}
         onChange={(e) => setChamps({ ...champs, titre: e.target.value })}
       />
 
-      <div className={mobile ? "flabel" : "mb-1.5 text-[12.5px] font-bold"}>
-        Contenu (visible par le patient)
+      <div className={etiquette}>
+        Contenu {mode === "generer" ? "*" : "(visible par le patient)"}
       </div>
       <textarea
-        rows={mobile ? 5 : 6}
-        className={
-          mobile
-            ? "inp"
-            : "mb-3 w-full rounded-[11px] border border-line bg-white px-[13px] py-2.5 text-[13.5px] leading-relaxed outline-none focus:border-teal"
+        rows={mobile ? 5 : 7}
+        className={champ}
+        placeholder={
+          "LIDOCAINE 2,5 % + PRILOCAINE 2,5 % patch\n2 boîtes — à poser 1 h avant le vaccin\n\nPARACETAMOL 24 mg/ml suspension buvable\n1 dose-poids toutes les 6 h si douleur ou fièvre"
         }
-        placeholder={"Paracétamol 500 mg — 1 comprimé matin, midi et soir pendant 5 jours\n…"}
         value={champs.contenu}
         onChange={(e) => setChamps({ ...champs, contenu: e.target.value })}
       />
 
-      <div className={mobile ? "flabel" : "mb-1.5 text-[12.5px] font-bold"}>
-        Fichier joint (PDF ou image, 8 Mo max)
-      </div>
-      <input
-        ref={fichierRef}
-        type="file"
-        accept=".pdf,.jpg,.jpeg,.png,.webp"
-        className={mobile ? "inp" : "mb-3 w-full text-[12.5px]"}
-      />
+      {mode === "generer" ? (
+        <p
+          className={mobile ? undefined : "mb-3 text-[11.5px] leading-relaxed text-muted"}
+          style={mobile ? { fontSize: 11.5, color: "var(--muted)", marginBottom: 10 } : undefined}
+        >
+          🖨️ Un PDF sera composé à votre en-tête (nom, spécialité, établissement) et joint au
+          document. Il porte la mention « généré électroniquement » et n’est pas signé de votre
+          main.
+        </p>
+      ) : (
+        <>
+          <div className={etiquette}>Fichier joint (PDF ou image, 8 Mo max)</div>
+          <input
+            ref={fichierRef}
+            type="file"
+            accept=".pdf,.jpg,.jpeg,.png,.webp"
+            className={mobile ? "inp" : "mb-3 w-full text-[12.5px]"}
+          />
+        </>
+      )}
 
-      <p className={mobile ? "muted" : "mb-3 text-[11.5px] text-muted"} style={mobile ? { fontSize: 11.5, marginBottom: 10 } : undefined}>
+      <p
+        className={mobile ? undefined : "mb-3 text-[11.5px] text-muted"}
+        style={mobile ? { fontSize: 11.5, color: "var(--muted)", marginBottom: 10 } : undefined}
+      >
         🔒 Le fichier est déposé dans un espace privé : seuls {nomPatient} et vous pourrez
         l’ouvrir, par un lien temporaire.
       </p>
     </>
+  );
+
+  const boutonApercu = mode === "generer" && (
+    <button
+      type="button"
+      onClick={apercu}
+      disabled={!valide || apercuEnCours}
+      className={
+        mobile
+          ? "btn ghost block"
+          : "rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg disabled:cursor-not-allowed disabled:opacity-50"
+      }
+      style={mobile ? { opacity: valide && !apercuEnCours ? 1 : 0.5 } : undefined}
+      title={valide ? "Ouvrir le PDF sans l’enregistrer" : "Renseignez un titre et un contenu"}
+    >
+      {apercuEnCours ? "Composition…" : "Aperçu du PDF"}
+    </button>
   );
 
   /* ---------- Mobile ---------- */
@@ -153,6 +272,7 @@ export default function DeposerDocument({
             >
               {enCours ? "Envoi…" : "Remettre le document"}
             </button>
+            {boutonApercu}
           </div>
         )}
         {message && (
@@ -183,6 +303,7 @@ export default function DeposerDocument({
       >
         + Document
       </button>
+
       {ouvert && (
         <div
           role="dialog"
@@ -217,6 +338,7 @@ export default function DeposerDocument({
               >
                 {enCours ? "Envoi…" : "Remettre le document"}
               </button>
+              {boutonApercu}
               <button
                 type="button"
                 onClick={basculer}
