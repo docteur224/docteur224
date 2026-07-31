@@ -37,6 +37,7 @@ export const MENUS: Record<RoleMenu, EntreeMenu[]> = {
     { href: "/espace-medecin", icone: "📊", label: "Tableau de bord" },
     { href: "/espace-medecin/agenda", icone: "📅", label: "Mon agenda" },
     { href: "/espace-medecin/patients", icone: "👥", label: "Mes patients" },
+    { href: "/espace-medecin/documents-partages", icone: "📤", label: "Documents partagés" },
     { href: "/espace-medecin/disponibilites", icone: "🕐", label: "Mes disponibilités" },
     { href: "/espace-medecin/avis", icone: "⭐", label: "Avis et notes" },
     { href: "/espace-medecin/statistiques", icone: "📈", label: "Statistiques" },

@@ -53,8 +53,15 @@ export default function DossierPatientMedecin({
   const [message, setMessage] = useState("");
 
   const nomComplet = dossier ? `${dossier.prenom} ${dossier.nom}` : "";
-  const remis = documents.filter((d) => d.origine === "medecin");
-  const recus = documents.filter((d) => d.origine === "patient");
+  // `useMesDocuments` filtre par patient/proche, pas par auteur : la RLS peut
+  // aussi renvoyer un document rédigé par un CONFRÈRE et simplement partagé
+  // avec ce médecin (table partages_document). Sans cette distinction, un tel
+  // document apparaissait comme « le vôtre », avec Corriger/Retirer qui
+  // échouaient silencieusement (RLS bloque, depose_par ≠ vous).
+  const estMoi = (d: DocumentPatient) => d.medecinId === medecin?.id;
+  const remis = documents.filter((d) => d.origine === "medecin" && estMoi(d));
+  const recus = documents.filter((d) => d.origine === "patient" && estMoi(d));
+  const partagesParConfrere = documents.filter((d) => !estMoi(d));
 
   async function ouvrir(doc: DocumentPatient) {
     if (!doc.fichierPath) return;
@@ -80,7 +87,7 @@ export default function DossierPatientMedecin({
     recharger();
   }
 
-  /** Une carte de document, identique dans les deux colonnes. */
+  /** Une carte de document, identique dans les trois colonnes. */
   const carteDocument = (d: DocumentPatient, sien: boolean) => (
     <div key={d.id} className="rounded-xl border border-line bg-white p-3">
       <div className="flex items-start gap-3">
@@ -95,6 +102,7 @@ export default function DossierPatientMedecin({
           <div className="text-[11px] text-muted">
             {libelleType(d.type)} · {formatDateCourte(d.creeLe.slice(0, 10))}
             {d.origine === "patient" && " · envoyé par le patient"}
+            {d.origine === "medecin" && !sien && ` · rédigé par ${d.medecinNom}`}
           </div>
         </div>
         {d.fichierPath && (
@@ -174,7 +182,7 @@ export default function DossierPatientMedecin({
         <div className="grid gap-2">{remis.map((d) => carteDocument(d, true))}</div>
       </div>
 
-      <div className="rounded-2xl border border-line bg-white p-4">
+      <div className="mb-4 rounded-2xl border border-line bg-white p-4">
         <h3 className="mb-3 text-[15px] font-extrabold">
           Reçus du patient{" "}
           <span className="text-[12px] font-semibold text-muted">({recus.length})</span>
@@ -188,6 +196,21 @@ export default function DossierPatientMedecin({
           <div className="grid gap-2">{recus.map((d) => carteDocument(d, false))}</div>
         )}
       </div>
+
+      {partagesParConfrere.length > 0 && (
+        <div className="rounded-2xl border border-line bg-white p-4">
+          <h3 className="mb-3 text-[15px] font-extrabold">
+            Partagés par un confrère{" "}
+            <span className="text-[12px] font-semibold text-muted">
+              ({partagesParConfrere.length})
+            </span>
+          </h3>
+          <p className="mb-3 text-[11.5px] text-muted">
+            Le patient a donné accès à des documents rédigés ou reçus par un autre médecin.
+          </p>
+          <div className="grid gap-2">{partagesParConfrere.map((d) => carteDocument(d, false))}</div>
+        </div>
+      )}
     </>
   );
 

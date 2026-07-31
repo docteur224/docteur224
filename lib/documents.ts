@@ -420,6 +420,86 @@ export async function supprimerDocument(
   return {};
 }
 
+/* ===== Documents partagés avec le médecin connecté ===== */
+
+export interface DocumentPartage {
+  documentId: string;
+  titre: string;
+  type: string;
+  contenu: string | null;
+  fichierPath: string | null;
+  fichierNom: string | null;
+  creeLe: string;
+  origine: "medecin" | "patient";
+  redigePar: string | null;
+  patientNom: string;
+  pourQui: string;
+  partageLe: string;
+}
+
+interface LigneDocumentPartage {
+  document_id: string;
+  titre: string;
+  type: string;
+  contenu: string | null;
+  fichier_path: string | null;
+  fichier_nom: string | null;
+  cree_le: string;
+  origine: "medecin" | "patient";
+  redige_par: string | null;
+  patient_nom: string;
+  pour_qui: string;
+  partage_le: string;
+}
+
+/**
+ * Documents partagés avec le médecin connecté, quel que soit le patient —
+ * y compris ceux avec qui il n'a jamais eu de rendez-vous. Un patient peut
+ * partager un document qui concerne un proche (ex. son enfant) : sans cette
+ * liste dédiée, la RLS autorisait la lecture mais rien n'y menait, faute de
+ * fiche patient où l'afficher (RPC patients_du_medecin).
+ */
+export function useDocumentsPartagesAvecMoi(): {
+  documents: DocumentPartage[];
+  chargement: boolean;
+  recharger: () => void;
+} {
+  const [documents, setDocuments] = useState<DocumentPartage[]>([]);
+  const [chargement, setChargement] = useState(true);
+  const [version, setVersion] = useState(0);
+
+  useEffect(() => {
+    let actif = true;
+    creerClientNavigateur()
+      .rpc("documents_partages_medecin")
+      .then(({ data }) => {
+        if (!actif) return;
+        setDocuments(
+          ((data ?? []) as LigneDocumentPartage[]).map((l) => ({
+            documentId: l.document_id,
+            titre: l.titre,
+            type: l.type,
+            contenu: l.contenu,
+            fichierPath: l.fichier_path,
+            fichierNom: l.fichier_nom,
+            creeLe: l.cree_le,
+            origine: l.origine,
+            redigePar: l.redige_par,
+            patientNom: l.patient_nom,
+            pourQui: l.pour_qui,
+            partageLe: l.partage_le,
+          }))
+        );
+        setChargement(false);
+      });
+    return () => {
+      actif = false;
+    };
+  }, [version]);
+
+  return { documents, chargement, recharger: () => setVersion((v) => v + 1) };
+}
+
 /* ===== Partage avec un autre médecin (décidé par le patient seul) ===== */
 
 export async function partagerDocument(
