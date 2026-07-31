@@ -3,6 +3,7 @@
 import PatientShell from "@/components/patient/PatientShell";
 import Interrupteur from "@/components/patient/Interrupteur";
 import ChangerMotDePasse from "@/components/patient/ChangerMotDePasse";
+import ExporterMesDonnees from "@/components/patient/ExporterMesDonnees";
 import SupprimerCompte from "@/components/patient/SupprimerCompte";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { useParametresPatient } from "@/lib/patient";
@@ -89,6 +90,10 @@ export default function Parametres() {
               </span>
             </div>
           </div>
+          <div className="card2">
+            <h4>Mes données</h4>
+            <ExporterMesDonnees mobile />
+          </div>
           <SupprimerCompte mobile />
         </div>
       </div>
@@ -169,6 +174,11 @@ export default function Parametres() {
           </div>
           <span className="text-[11.5px] font-bold text-muted">Bientôt disponible</span>
         </div>
+      </div>
+
+      <div className="mb-4 rounded-2xl border border-line bg-white p-5">
+        <h3 className="mb-1 text-[15px] font-extrabold">Mes données</h3>
+        <ExporterMesDonnees />
       </div>
 
       <SupprimerCompte />

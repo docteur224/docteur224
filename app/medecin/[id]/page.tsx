@@ -7,6 +7,7 @@ import CarteLocalisation from "@/components/site/CarteLocalisation";
 import OngletsFiche from "@/components/site/OngletsFiche";
 import AvatarMedecin from "@/components/site/AvatarMedecin";
 import BadgeNote from "@/components/site/BadgeNote";
+import BoutonFavori from "@/components/site/BoutonFavori";
 import PanneauAvis from "@/components/site/PanneauAvis";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { formatNote } from "@/lib/format";
@@ -140,6 +141,9 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
           )}
           <h3>{nomComplet(medecin)}</h3>
           <div className="spec">{medecin.specialite}</div>
+          <div style={{ marginBottom: 10 }}>
+            <BoutonFavori mobile medecinId={medecin.id} nom={nomComplet(medecin)} />
+          </div>
           <div className="statrow">
             <div className="s">
               <b>★ {formatNote(medecin.note)}</b>
@@ -331,6 +335,9 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
                 <span className="rounded-lg bg-teal-soft px-[9px] py-1 text-[11px] font-bold text-blue">
                   {medecin.anneesExperience} ans d’expérience
                 </span>
+              </div>
+              <div className="mt-[10px]">
+                <BoutonFavori medecinId={medecin.id} nom={nomComplet(medecin)} />
               </div>
             </div>
           </div>

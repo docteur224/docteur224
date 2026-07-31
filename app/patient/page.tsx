@@ -96,6 +96,28 @@ export default function TableauDeBordPatient() {
                 ›
               </span>
             </Link>
+            <Link href="/patient/favoris" className="mrow">
+              <span className="mi" aria-hidden>
+                ♥
+              </span>
+              <span>
+                <b>Mes favoris</b>
+              </span>
+              <span className="ch" aria-hidden>
+                ›
+              </span>
+            </Link>
+            <Link href="/patient/documents" className="mrow">
+              <span className="mi" aria-hidden>
+                📄
+              </span>
+              <span>
+                <b>Mes documents</b>
+              </span>
+              <span className="ch" aria-hidden>
+                ›
+              </span>
+            </Link>
           </div>
         </div>
       </div>
@@ -181,6 +203,18 @@ export default function TableauDeBordPatient() {
             className="rounded-[11px] border-[1.5px] border-line bg-white px-[18px] py-[11px] text-[13.5px] font-bold text-blue transition-colors hover:bg-bg"
           >
             👨‍👩‍👧 Mes proches
+          </Link>
+          <Link
+            href="/patient/favoris"
+            className="rounded-[11px] border-[1.5px] border-line bg-white px-[18px] py-[11px] text-[13.5px] font-bold text-blue transition-colors hover:bg-bg"
+          >
+            ♥ Mes favoris
+          </Link>
+          <Link
+            href="/patient/documents"
+            className="rounded-[11px] border-[1.5px] border-line bg-white px-[18px] py-[11px] text-[13.5px] font-bold text-blue transition-colors hover:bg-bg"
+          >
+            📄 Mes documents
           </Link>
         </div>
       </div>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { ilYA, iconeNotification, useNotifications } from "@/lib/notifications";
+import { useProfilConnecte } from "@/lib/patient";
 
 /**
  * Panneau des notifications — ouvert par la cloche de la barre haute.
@@ -24,6 +25,8 @@ export default function PanneauNotifications({
   const router = useRouter();
   const pathname = usePathname();
   const { notifications, nonLues, marquerLue, toutMarquerLu } = useNotifications();
+  // Seul l'espace patient a un écran d'historique complet.
+  const estPatient = useProfilConnecte().profil?.role === "patient";
 
   useEffect(() => {
     if (ouvert) fermer();
@@ -131,6 +134,18 @@ export default function PanneauNotifications({
                 </button>
               );
             })
+          )}
+          {/* La feuille ne montre que les 30 dernières : l'écran complet est
+              la seule sortie pour remonter plus loin dans l'historique. */}
+          {estPatient && (
+            <Link
+              href="/patient/notifications"
+              className="notif-tout-voir"
+              tabIndex={ouvert ? 0 : -1}
+              onClick={fermer}
+            >
+              Voir toutes mes notifications
+            </Link>
           )}
         </div>
       </div>

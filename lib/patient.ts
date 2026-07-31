@@ -177,6 +177,41 @@ export async function changerMotDePasse(
 }
 
 /**
+ * Demande le changement de l'adresse de connexion.
+ *
+ * Supabase envoie un lien de confirmation ; l'adresse ne bouge qu'une fois
+ * celui-ci ouvert (et, si « Secure email change » est actif, après
+ * confirmation des DEUX adresses). Rien n'est donc à jour immédiatement :
+ * l'écran doit annoncer une demande, pas un changement. La table
+ * `utilisateurs` est réalignée par le trigger `trg_synchroniser_email`
+ * (migration 0014), sans quoi le profil afficherait l'ancienne adresse.
+ */
+export async function changerEmail(nouveau: string): Promise<{ erreur?: string; ancien?: string }> {
+  const adresse = nouveau.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(adresse)) {
+    return { erreur: "Cette adresse e-mail n'est pas valide." };
+  }
+  const supabase = creerClientNavigateur();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return { erreur: "Session expirée — reconnectez-vous." };
+  if (auth.user.email?.toLowerCase() === adresse) {
+    return { erreur: "C'est déjà votre adresse actuelle." };
+  }
+  const { error } = await supabase.auth.updateUser(
+    { email: adresse },
+    { emailRedirectTo: `${window.location.origin}/patient/profil` }
+  );
+  if (error) {
+    return {
+      erreur: error.message.includes("already registered")
+        ? "Un compte utilise déjà cette adresse."
+        : error.message,
+    };
+  }
+  return { ancien: auth.user.email ?? "" };
+}
+
+/**
  * Suppression du compte patient : anonymisation côté serveur (les
  * consultations passées appartiennent au dossier du médecin) puis
  * déconnexion. Voir app/api/compte/supprimer/route.ts.

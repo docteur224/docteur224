@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import PatientShell from "@/components/patient/PatientShell";
+import ChangerEmail from "@/components/patient/ChangerEmail";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import {
   enregistrerProfilPatient,
@@ -117,9 +118,11 @@ export default function MonProfil() {
           </div>
           <div className="fldm">
             <label>E-mail</label>
-            {/* Lecture seule : identifiant de connexion (voir version web). */}
+            {/* Lecture seule : le changement passe par un lien de
+                confirmation, il ne suit pas le bouton Enregistrer. */}
             <input className="v" readOnly value={patient.email} style={{ color: "var(--muted)" }} />
           </div>
+          <ChangerEmail mobile emailActuel={patient.email} />
           <div className="fldm">
             <label>Date de naissance</label>
             <input
@@ -233,14 +236,15 @@ export default function MonProfil() {
           </div>
           <div>
             <label className="mb-1.5 block text-xs font-bold text-muted">E-mail</label>
-            {/* Lecture seule : l'e-mail est l'identifiant de connexion, il se
-                change dans Supabase Auth avec une confirmation par lien. */}
+            {/* Lecture seule ici : l'e-mail est l'identifiant de connexion,
+                son changement passe par un lien de confirmation et ne suit
+                donc pas le bouton Enregistrer du formulaire. */}
             <input
               readOnly
-              title="L’e-mail de connexion se change depuis le support"
               className={`${classeChamp} cursor-not-allowed bg-bg text-muted`}
               value={patient.email}
             />
+            <ChangerEmail emailActuel={patient.email} />
           </div>
           <div>
             <label className="mb-1.5 block text-xs font-bold text-muted">Date de naissance</label>

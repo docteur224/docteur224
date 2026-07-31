@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 import CoteAuth from "@/components/site/CoteAuth";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import Footer from "@/components/site/Footer";
@@ -18,7 +18,24 @@ import { seConnecter } from "@/lib/auth";
 
 const ROLES = ["Patient", "Médecin", "Clinique", "Hôpital", "Cabinet"];
 
+/** `?retour=…` : l'écran d'où l'on venait, pour y revenir après connexion. */
+function CibleRetour({ children }: { children: (retour: string | null) => React.ReactNode }) {
+  const parametres = useSearchParams();
+  const retour = parametres.get("retour");
+  // Uniquement un chemin interne : un `retour` absolu servirait de rebond
+  // vers un site tiers depuis notre page de connexion.
+  return <>{children(retour?.startsWith("/") && !retour.startsWith("//") ? retour : null)}</>;
+}
+
 export default function Connexion() {
+  return (
+    <Suspense fallback={<EcranConnexion retour={null} />}>
+      <CibleRetour>{(retour) => <EcranConnexion retour={retour} />}</CibleRetour>
+    </Suspense>
+  );
+}
+
+function EcranConnexion({ retour }: { retour: string | null }) {
   const router = useRouter();
   const [role, setRole] = useState(ROLES[0]);
   const [email, setEmail] = useState("");
@@ -37,7 +54,7 @@ export default function Connexion() {
     const res = await seConnecter(email.trim(), motDePasse);
     setEnCours(false);
     if (res.erreur) setErreur(res.erreur);
-    else router.push(res.cible!);
+    else router.push(retour ?? res.cible!);
   }
 
   const champ =

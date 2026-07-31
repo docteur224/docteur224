@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import MedecinShell from "@/components/medecin/MedecinShell";
+import DeposerDocument from "@/components/medecin/DeposerDocument";
 import { useContextePro, usePatientsCabinet } from "@/lib/pro";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 
@@ -58,9 +59,17 @@ export default function PatientsMedecin() {
                   dernière visite {patient.derniereVisite}
                 </small>
               </span>
-              <span className="ch" aria-hidden>
-                ›
-              </span>
+              {patient.type === "sans_compte" ? (
+                <span className="ch" aria-hidden title="Fiche sans compte : pas d’espace où lire">
+                  ›
+                </span>
+              ) : (
+                <DeposerDocument
+                  mobile
+                  cle={patient.id}
+                  nomPatient={`${patient.prenom} ${patient.nom}`}
+                />
+              )}
             </div>
           ))}
           {liste.length === 0 && (
@@ -94,23 +103,37 @@ export default function PatientsMedecin() {
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-line bg-white">
-        <div className="grid grid-cols-[1fr_90px_130px] items-center gap-3 bg-[#F3F7FA] px-[18px] py-[13px] text-[11px] font-extrabold uppercase tracking-[.04em] text-muted sm:grid-cols-[1fr_110px_150px_140px]">
+        <div className="grid grid-cols-[1fr_130px_130px] items-center gap-3 bg-[#F3F7FA] px-[18px] py-[13px] text-[11px] font-extrabold uppercase tracking-[.04em] text-muted sm:grid-cols-[1fr_150px_150px_130px]">
           <span>Patient</span>
           <span>Téléphone</span>
           <span>Dernière visite</span>
-          <span className="hidden sm:block">Téléphone</span>
+          <span className="hidden sm:block">Documents</span>
         </div>
         {liste.map((patient) => (
           <div
             key={patient.id}
-            className="grid grid-cols-[1fr_90px_130px] items-center gap-3 border-t border-line px-[18px] py-[13px] text-[13px] sm:grid-cols-[1fr_110px_150px_140px]"
+            className="grid grid-cols-[1fr_130px_130px] items-center gap-3 border-t border-line px-[18px] py-[13px] text-[13px] sm:grid-cols-[1fr_150px_150px_130px]"
           >
             <b className="font-extrabold">
               {patient.prenom} {patient.nom}
             </b>
             <span>{patient.telephone || "—"}</span>
             <span>{patient.derniereVisite}</span>
-            <span className="hidden text-muted sm:block">{patient.telephone}</span>
+            <span className="hidden sm:block">
+              {patient.type === "sans_compte" ? (
+                <span
+                  className="text-[11.5px] text-muted"
+                  title="Fiche créée au cabinet : aucun espace où le patient pourrait lire"
+                >
+                  sans compte
+                </span>
+              ) : (
+                <DeposerDocument
+                  cle={patient.id}
+                  nomPatient={`${patient.prenom} ${patient.nom}`}
+                />
+              )}
+            </span>
           </div>
         ))}
         {liste.length === 0 && (

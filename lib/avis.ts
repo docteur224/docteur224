@@ -211,6 +211,76 @@ export async function deposerAvis(d: {
   return {};
 }
 
+/** Un avis déposé par le patient, augmenté du médecin concerné. */
+export interface MonAvis extends AvisMedecin {
+  medecinId: string;
+  medecinNom: string;
+  specialite: string;
+}
+
+interface LigneMonAvis extends LigneAvis {
+  medecin_id: string;
+  medecins: {
+    civilite: string | null;
+    utilisateurs: { nom: string | null; prenom: string | null } | null;
+    specialites: { nom: string } | null;
+  } | null;
+}
+
+/**
+ * Tous les avis déposés par le patient connecté.
+ *
+ * Le filtre `patient_id` est indispensable et non décoratif : les policies se
+ * combinent en OR et `sel_avis_publies` rend tout avis publié lisible par
+ * n'importe quel connecté — sans lui, le patient verrait ceux des autres.
+ */
+export function useMesAvis(): {
+  avis: MonAvis[];
+  chargement: boolean;
+  recharger: () => void;
+} {
+  const [avis, setAvis] = useState<MonAvis[]>([]);
+  const [chargement, setChargement] = useState(true);
+  const [version, setVersion] = useState(0);
+
+  useEffect(() => {
+    let actif = true;
+    (async () => {
+      const supabase = creerClientNavigateur();
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) {
+        if (actif) setChargement(false);
+        return;
+      }
+      const { data } = await supabase
+        .from("avis")
+        .select(
+          `${SELECTION_AVIS}, medecin_id,
+           medecins ( civilite, utilisateurs ( nom, prenom ), specialites ( nom ) )`
+        )
+        .eq("patient_id", auth.user.id)
+        .order("cree_le", { ascending: false });
+      if (!actif) return;
+      setAvis(
+        ((data ?? []) as unknown as LigneMonAvis[]).map((l) => ({
+          ...versAvis(l),
+          medecinId: l.medecin_id,
+          medecinNom: `${l.medecins?.civilite === "Pr" ? "Pr" : "Dr"} ${
+            l.medecins?.utilisateurs?.prenom ?? ""
+          } ${l.medecins?.utilisateurs?.nom ?? ""}`.trim(),
+          specialite: l.medecins?.specialites?.nom ?? "",
+        }))
+      );
+      setChargement(false);
+    })();
+    return () => {
+      actif = false;
+    };
+  }, [version]);
+
+  return { avis, chargement, recharger: () => setVersion((v) => v + 1) };
+}
+
 /** Modifie son propre avis (note et commentaire). */
 export async function modifierMonAvis(
   avisId: string,

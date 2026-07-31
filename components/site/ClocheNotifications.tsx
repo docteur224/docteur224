@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ilYA, iconeNotification, useNotifications } from "@/lib/notifications";
@@ -134,6 +135,20 @@ export default function ClocheNotifications({ surFonce = false }: { surFonce?: b
               ))
             )}
           </div>
+
+          {/* Le panneau ne montre que les 30 dernières : l'écran complet est
+              la seule sortie pour remonter plus loin. */}
+          {profil.role === "patient" && (
+            <div className="border-t border-line p-2">
+              <Link
+                href="/patient/notifications"
+                onClick={() => setOuvert(false)}
+                className="block rounded-xl px-3 py-2 text-center text-[12px] font-bold text-teal hover:bg-bg"
+              >
+                Voir toutes mes notifications
+              </Link>
+            </div>
+          )}
         </div>
       )}
     </div>

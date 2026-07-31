@@ -23,7 +23,11 @@ const ENTREES = [
   { href: "/patient", icone: "📊", titre: "Tableau de bord", sous: "Aperçu de vos rendez-vous" },
   { href: "/patient/profil", icone: "👤", titre: "Mon profil", sous: "Informations personnelles" },
   { href: "/mes-rendez-vous", icone: "📅", titre: "Mes rendez-vous", sous: "À venir et passés" },
+  { href: "/patient/documents", icone: "📄", titre: "Mes documents", sous: "Ordonnances et comptes rendus" },
+  { href: "/patient/favoris", icone: "♥", titre: "Mes favoris", sous: "Vos médecins mis de côté" },
   { href: "/patient/proches", icone: "👨‍👩‍👧", titre: "Mes proches", sous: "Enfants, conjoint… sans compte" },
+  { href: "/patient/avis", icone: "⭐", titre: "Mes avis", sous: "Relire ou corriger vos notes" },
+  { href: "/patient/notifications", icone: "🔔", titre: "Notifications", sous: "Tout votre historique" },
   { href: "/patient/parametres", icone: "⚙️", titre: "Paramètres", sous: "Notifications, mot de passe, compte" },
 ];
 

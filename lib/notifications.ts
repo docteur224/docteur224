@@ -125,6 +125,7 @@ export function iconeNotification(type: string): string {
   if (type.startsWith("invitation_")) return "✉️";
   if (type === "compte_valide") return "🎉";
   if (type === "compte_refuse") return "⚠️";
+  if (type === "document") return "📄";
   return "🔔";
 }
 
