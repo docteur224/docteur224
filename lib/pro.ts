@@ -451,6 +451,248 @@ export function usePatientsCabinet(medecinId: string | undefined): { patients: P
   return { patients, recharger: () => setVersion((v) => v + 1) };
 }
 
+/* ===== Recherche paginée des patients (RPC patients_du_medecin) ===== */
+
+export interface PatientListe {
+  /** Clé préfixée : « c-… » compte, « p-… » proche, « s-… » sans compte. */
+  cle: string;
+  type: PatientCabinet["type"];
+  nom: string;
+  prenom: string;
+  telephone: string;
+  dateNaissance: string | null;
+  derniereVisite: string | null;
+  prochaineVisite: string | null;
+  nbRdv: number;
+  gradient: string;
+}
+
+interface LignePatientRpc {
+  cle: string;
+  type_fiche: PatientCabinet["type"];
+  nom: string;
+  prenom: string;
+  telephone: string;
+  date_naissance: string | null;
+  derniere_visite: string | null;
+  prochaine_visite: string | null;
+  nb_rdv: number;
+  total: number;
+}
+
+export const PAR_PAGE = 20;
+
+/**
+ * Patients du médecin connecté : filtre, tri et pagination côté SQL.
+ *
+ * `usePatientsCabinet` ramenait TOUS les rendez-vous pour reconstruire la
+ * liste dans le navigateur ; au-delà de quelques dizaines de patients, la
+ * requête devient lourde et la recherche impossible à faire porter sur la
+ * date de naissance. La RPC répond avec le total sur chaque ligne, une seule
+ * requête suffit donc pour la page et le compteur.
+ */
+export function useRecherchePatients(
+  recherche: string,
+  page: number
+): { patients: PatientListe[]; total: number; chargement: boolean; recharger: () => void } {
+  // La clé de requête vit dans l'état : `chargement` s'en déduit, sans
+  // setState en tête d'effet (interdit par le linter React).
+  const [resultat, setResultat] = useState<{
+    cle: string;
+    patients: PatientListe[];
+    total: number;
+  } | null>(null);
+  const [version, setVersion] = useState(0);
+  const cle = `${recherche}#${page}#${version}`;
+
+  useEffect(() => {
+    let actif = true;
+    creerClientNavigateur()
+      .rpc("patients_du_medecin", {
+        p_recherche: recherche,
+        p_limite: PAR_PAGE,
+        p_decalage: page * PAR_PAGE,
+      })
+      .then(({ data }) => {
+        if (!actif) return;
+        const lignes = (data ?? []) as LignePatientRpc[];
+        setResultat({
+          cle,
+          total: lignes[0]?.total ?? 0,
+          patients: lignes.map((l) => ({
+            cle: l.cle,
+            type: l.type_fiche,
+            nom: l.nom,
+            prenom: l.prenom,
+            telephone: l.telephone,
+            dateNaissance: l.date_naissance,
+            derniereVisite: l.derniere_visite,
+            prochaineVisite: l.prochaine_visite,
+            nbRdv: Number(l.nb_rdv),
+            gradient: gradientPour(l.cle),
+          })),
+        });
+      });
+    return () => {
+      actif = false;
+    };
+  }, [cle, recherche, page]);
+
+  const aJour = resultat?.cle === cle;
+  return {
+    patients: aJour ? resultat.patients : [],
+    total: aJour ? resultat.total : 0,
+    chargement: !aJour,
+    recharger: () => setVersion((v) => v + 1),
+  };
+}
+
+/* ===== Dossier d'un patient ===== */
+
+export interface RdvDossier {
+  id: string;
+  date: string;
+  heure: string;
+  motif: string;
+  statut: string;
+}
+
+export interface DossierPatient {
+  cle: string;
+  type: PatientCabinet["type"];
+  nom: string;
+  prenom: string;
+  telephone: string;
+  email: string;
+  dateNaissance: string | null;
+  genre: string | null;
+  ville: string;
+  /** Titulaire du compte, quand la fiche est celle d'un proche. */
+  titulaire: string;
+  lien: string;
+  gradient: string;
+  rdvs: RdvDossier[];
+}
+
+/** Découpe une clé « c-<uuid> » en son type et son identifiant. */
+export function lirePatientCle(cle: string): {
+  type: PatientCabinet["type"];
+  id: string;
+} {
+  const prefixe = cle.slice(0, 1);
+  return {
+    type: prefixe === "c" ? "compte" : prefixe === "p" ? "proche" : "sans_compte",
+    id: cle.slice(2),
+  };
+}
+
+export function useDossierPatient(
+  cle: string,
+  medecinId: string | undefined
+): { dossier: DossierPatient | null; chargement: boolean; recharger: () => void } {
+  const [resultat, setResultat] = useState<{ cle: string; dossier: DossierPatient | null } | null>(
+    null
+  );
+  const [version, setVersion] = useState(0);
+  const cleRequete = `${cle}#${medecinId}#${version}`;
+
+  useEffect(() => {
+    if (!medecinId) return;
+    let actif = true;
+    (async () => {
+      const supabase = creerClientNavigateur();
+      const { type, id } = lirePatientCle(cle);
+
+      let base: Omit<DossierPatient, "rdvs"> | null = null;
+      if (type === "compte") {
+        const { data } = await supabase
+          .from("patients")
+          .select("id, date_naissance, genre, quartier, utilisateurs ( nom, prenom, telephone, email ), villes ( nom )")
+          .eq("id", id)
+          .maybeSingle();
+        const u = data?.utilisateurs as unknown as
+          | { nom: string | null; prenom: string | null; telephone: string | null; email: string }
+          | null;
+        if (data) {
+          base = {
+            cle, type, nom: u?.nom ?? "", prenom: u?.prenom ?? "",
+            telephone: u?.telephone ?? "", email: u?.email ?? "",
+            dateNaissance: data.date_naissance, genre: data.genre,
+            ville: (data.villes as unknown as { nom: string } | null)?.nom ?? "",
+            titulaire: "", lien: "", gradient: gradientPour(cle),
+          };
+        }
+      } else if (type === "proche") {
+        const { data } = await supabase
+          .from("proches")
+          .select("id, nom, prenom, lien, date_naissance, genre, patients ( utilisateurs ( nom, prenom, telephone, email ) )")
+          .eq("id", id)
+          .maybeSingle();
+        const t = (data?.patients as unknown as { utilisateurs: { nom: string | null; prenom: string | null; telephone: string | null; email: string } | null } | null)?.utilisateurs;
+        if (data) {
+          base = {
+            cle, type, nom: data.nom, prenom: data.prenom,
+            telephone: t?.telephone ?? "", email: t?.email ?? "",
+            dateNaissance: data.date_naissance, genre: data.genre, ville: "",
+            titulaire: `${t?.prenom ?? ""} ${t?.nom ?? ""}`.trim(),
+            lien: data.lien, gradient: gradientPour(cle),
+          };
+        }
+      } else {
+        const { data } = await supabase
+          .from("patients_sans_compte")
+          .select("id, nom, prenom, telephone")
+          .eq("id", id)
+          .maybeSingle();
+        if (data) {
+          base = {
+            cle, type, nom: data.nom, prenom: data.prenom,
+            telephone: data.telephone ?? "", email: "", dateNaissance: null,
+            genre: null, ville: "", titulaire: "", lien: "", gradient: gradientPour(cle),
+          };
+        }
+      }
+
+      const colonne =
+        type === "compte" ? "patient_id" : type === "proche" ? "proche_id" : "patient_sans_compte_id";
+      const { data: rdvs } = await supabase
+        .from("rendez_vous")
+        .select("id, date, heure, motif, statut")
+        .eq("medecin_id", medecinId)
+        .eq(colonne, id)
+        .order("date", { ascending: false })
+        .order("heure", { ascending: false });
+
+      if (!actif) return;
+      setResultat({
+        cle: cleRequete,
+        dossier: base
+          ? {
+              ...base,
+              rdvs: (rdvs ?? []).map((r) => ({
+                id: r.id,
+                date: r.date,
+                heure: String(r.heure).slice(0, 5),
+                motif: r.motif ?? "",
+                statut: r.statut,
+              })),
+            }
+          : null,
+      });
+    })();
+    return () => {
+      actif = false;
+    };
+  }, [cle, cleRequete, medecinId]);
+
+  const aJour = resultat?.cle === cleRequete;
+  return {
+    dossier: aJour ? resultat.dossier : null,
+    chargement: !aJour,
+    recharger: () => setVersion((v) => v + 1),
+  };
+}
+
 /* ===== Réservation déléguée (spec C.2.3) ===== */
 
 export async function creerRdvDelegue(d: {

@@ -46,7 +46,11 @@ export async function GET() {
         .eq("patient_id", id),
       supabase
         .from("documents_patient")
-        .select("type, titre, contenu, fichier_nom, cree_le, medecins ( utilisateurs ( nom, prenom ) )"),
+        // Chemin de jointure explicite : `partages_document` crée un second
+        // lien documents_patient → medecins, PostgREST refuse d'arbitrer.
+        .select(
+          "type, titre, contenu, fichier_nom, cree_le, origine, medecins!documents_patient_medecin_id_fkey ( utilisateurs ( nom, prenom ) )"
+        ),
       supabase.from("favoris").select("cree_le, medecins ( utilisateurs ( nom, prenom ), specialites ( nom ) )"),
       supabase.from("notifications").select("type, titre, corps, cree_le, lu_le").order("cree_le", { ascending: false }),
     ]);
