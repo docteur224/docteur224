@@ -29,8 +29,9 @@ const LIBELLES_STATUT = {
 export default function MedecinsEtablissement() {
   const { etablissement } = useEtablissementConnecte();
   const { rattaches } = useMedecinsRattaches(etablissement?.id);
-  const pagi = usePagination(rattaches, 12);
   const { invitations, recharger } = useInvitations(etablissement?.id);
+  const pagi = usePagination(rattaches, 12);
+  const pagiInvitations = usePagination(invitations, 10);
   const [recherche, setRecherche] = useState("");
   const [resultats, setResultats] = useState<{ id: string; nom: string; specialite: string }[]>([]);
   const [message, setMessage] = useState("");
@@ -149,12 +150,21 @@ export default function MedecinsEtablissement() {
           </div>
           <div className="card2">
             <h4>Invitations · {invitations.length}</h4>
-            {invitations.map(ligneInvitation)}
+            {pagiInvitations.tranche.map(ligneInvitation)}
             {invitations.length === 0 && (
               <p className="muted" style={{ fontSize: 13 }}>
                 Aucune invitation envoyée.
               </p>
             )}
+            <Pagination
+              page={pagiInvitations.page}
+              pages={pagiInvitations.pages}
+              total={pagiInvitations.total}
+              premier={pagiInvitations.premier}
+              dernier={pagiInvitations.dernier}
+              onPage={pagiInvitations.setPage}
+              libelle="invitations"
+            />
           </div>
           <div className="card2">
             <h4>{rattaches.length} médecins rattachés</h4>
@@ -203,10 +213,19 @@ export default function MedecinsEtablissement() {
 
         <div className="mb-4 rounded-2xl border border-line bg-white p-5">
           <h3 className="mb-1 text-[15px] font-extrabold">Invitations ({invitations.length})</h3>
-          {invitations.map(ligneInvitation)}
+          {pagiInvitations.tranche.map(ligneInvitation)}
           {invitations.length === 0 && (
             <p className="py-2 text-[13px] text-muted">Aucune invitation envoyée.</p>
           )}
+          <Pagination
+            page={pagiInvitations.page}
+            pages={pagiInvitations.pages}
+            total={pagiInvitations.total}
+            premier={pagiInvitations.premier}
+            dernier={pagiInvitations.dernier}
+            onPage={pagiInvitations.setPage}
+            libelle="invitations"
+          />
         </div>
 
         <div className="rounded-2xl border border-line bg-white p-5">

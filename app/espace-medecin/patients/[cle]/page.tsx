@@ -6,6 +6,7 @@ import MedecinShell from "@/components/medecin/MedecinShell";
 import AdresserConfrere from "@/components/medecin/AdresserConfrere";
 import DeposerDocument from "@/components/medecin/DeposerDocument";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
+import Pagination, { usePagination } from "@/components/site/Pagination";
 import { calculerAge, formatDateCourte } from "@/lib/dates";
 import { lirePatientCle, useContextePro, useDossierPatient } from "@/lib/pro";
 import {
@@ -63,6 +64,13 @@ export default function DossierPatientMedecin({
   const remis = documents.filter((d) => d.origine === "medecin" && estMoi(d));
   const recus = documents.filter((d) => d.origine === "patient" && estMoi(d));
   const partagesParConfrere = documents.filter((d) => !estMoi(d));
+
+  /* Une pagination par section : chacune se remplit à son propre rythme, et
+     un dossier suivi de longue date accumule surtout des rendez-vous. */
+  const pagiRemis = usePagination(remis, 8);
+  const pagiRecus = usePagination(recus, 8);
+  const pagiPartages = usePagination(partagesParConfrere, 8);
+  const pagiRdvs = usePagination(dossier?.rdvs ?? [], 10);
 
   async function ouvrir(doc: DocumentPatient) {
     if (!doc.fichierPath) return;
@@ -190,7 +198,16 @@ export default function DossierPatientMedecin({
             ordonnance ou joindre une pièce.
           </p>
         )}
-        <div className="grid gap-2">{remis.map((d) => carteDocument(d, true))}</div>
+        <div className="grid gap-2">{pagiRemis.tranche.map((d) => carteDocument(d, true))}</div>
+        <Pagination
+          page={pagiRemis.page}
+          pages={pagiRemis.pages}
+          total={pagiRemis.total}
+          premier={pagiRemis.premier}
+          dernier={pagiRemis.dernier}
+          onPage={pagiRemis.setPage}
+          libelle="documents"
+        />
       </div>
 
       <div className="mb-4 rounded-2xl border border-line bg-white p-4">
@@ -204,7 +221,18 @@ export default function DossierPatientMedecin({
             partager un document depuis son espace.
           </p>
         ) : (
-          <div className="grid gap-2">{recus.map((d) => carteDocument(d, false))}</div>
+          <>
+            <div className="grid gap-2">{pagiRecus.tranche.map((d) => carteDocument(d, false))}</div>
+            <Pagination
+              page={pagiRecus.page}
+              pages={pagiRecus.pages}
+              total={pagiRecus.total}
+              premier={pagiRecus.premier}
+              dernier={pagiRecus.dernier}
+              onPage={pagiRecus.setPage}
+              libelle="documents"
+            />
+          </>
         )}
       </div>
 
@@ -219,7 +247,18 @@ export default function DossierPatientMedecin({
           <p className="mb-3 text-[11.5px] text-muted">
             Le patient a donné accès à des documents rédigés ou reçus par un autre médecin.
           </p>
-          <div className="grid gap-2">{partagesParConfrere.map((d) => carteDocument(d, false))}</div>
+          <div className="grid gap-2">
+            {pagiPartages.tranche.map((d) => carteDocument(d, false))}
+          </div>
+          <Pagination
+            page={pagiPartages.page}
+            pages={pagiPartages.pages}
+            total={pagiPartages.total}
+            premier={pagiPartages.premier}
+            dernier={pagiPartages.dernier}
+            onPage={pagiPartages.setPage}
+            libelle="documents"
+          />
         </div>
       )}
     </>
@@ -277,7 +316,7 @@ export default function DossierPatientMedecin({
           <p className="text-[12.5px] text-muted">Aucun rendez-vous avec vous pour l’instant.</p>
         )}
         <div className="grid gap-2">
-          {dossier?.rdvs.map((r) => (
+          {pagiRdvs.tranche.map((r) => (
             <div
               key={r.id}
               className="flex flex-wrap items-center gap-2 border-b border-line pb-2 text-[12.5px] last:border-b-0 last:pb-0"
@@ -295,6 +334,15 @@ export default function DossierPatientMedecin({
             </div>
           ))}
         </div>
+        <Pagination
+          page={pagiRdvs.page}
+          pages={pagiRdvs.pages}
+          total={pagiRdvs.total}
+          premier={pagiRdvs.premier}
+          dernier={pagiRdvs.dernier}
+          onPage={pagiRdvs.setPage}
+          libelle="rendez-vous"
+        />
       </div>
     </>
   );
