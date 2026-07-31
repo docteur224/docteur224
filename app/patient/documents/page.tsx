@@ -5,6 +5,7 @@ import PatientShell from "@/components/patient/PatientShell";
 import EnvoyerDocument from "@/components/patient/EnvoyerDocument";
 import PartagerDocument from "@/components/patient/PartagerDocument";
 import TransmissionsEntreMedecins from "@/components/patient/TransmissionsEntreMedecins";
+import Pagination, { usePagination } from "@/components/site/Pagination";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { formatDateCourte } from "@/lib/dates";
 import {
@@ -55,6 +56,7 @@ export default function MesDocuments() {
       );
   const types = [TOUS, ...new Set(parOnglet.map((d) => d.type))];
   const visibles = filtre === TOUS ? parOnglet : parOnglet.filter((d) => d.type === filtre);
+  const p = usePagination(visibles, 10);
 
   /* Le fichier vit dans un bucket privé : on signe une URL au clic, puis on
      l'ouvre. Pas de <a href> possible, l'URL n'existe pas avant. */
@@ -172,6 +174,7 @@ export default function MesDocuments() {
             onClick={() => {
               setOnglet(o.cle);
               setFiltre(TOUS);
+              p.setPage(0);
             }}
             className={`rounded-[9px] border-[1.5px] px-3 py-1.5 text-[11.5px] font-bold transition-colors ${
               onglet === o.cle
@@ -193,7 +196,10 @@ export default function MesDocuments() {
         <button
           key={t}
           type="button"
-          onClick={() => setFiltre(t)}
+          onClick={() => {
+            setFiltre(t);
+            p.setPage(0);
+          }}
           className={`rounded-[9px] border px-2.5 py-1 text-[11px] font-bold transition-colors ${
             filtre === t ? "border-teal text-blue" : "border-line text-muted hover:bg-bg"
           }`}
@@ -243,7 +249,16 @@ export default function MesDocuments() {
                 </p>
               )}
               {vide && etatVide}
-              <div className="grid gap-3">{visibles.map(carte)}</div>
+              <div className="grid gap-3">{p.tranche.map(carte)}</div>
+              <Pagination
+                page={p.page}
+                pages={p.pages}
+                total={p.total}
+                premier={p.premier}
+                dernier={p.dernier}
+                onPage={p.setPage}
+                libelle="documents"
+              />
             </>
           )}
           {message && (
@@ -284,7 +299,16 @@ export default function MesDocuments() {
           <>
             {chargement && <p className="text-[13px] text-muted">Chargement…</p>}
             {vide && etatVide}
-            <div className="grid gap-3">{visibles.map(carte)}</div>
+            <div className="grid gap-3">{p.tranche.map(carte)}</div>
+            <Pagination
+              page={p.page}
+              pages={p.pages}
+              total={p.total}
+              premier={p.premier}
+              dernier={p.dernier}
+              onPage={p.setPage}
+              libelle="documents"
+            />
           </>
         )}
 

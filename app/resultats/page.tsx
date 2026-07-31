@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import TopNav from "@/components/site/TopNav";
+import PaginationLiens from "@/components/site/PaginationLiens";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
 import { FiltresWeb } from "@/components/site/FiltresResultats";
@@ -146,6 +147,25 @@ export default async function Resultats({
     liste.length > 1 ? "s" : ""
   }`;
 
+  /* Pagination portée par l'URL. Elle ne sert pas qu'au confort de lecture :
+     les disponibilités sont chargées médecin par médecin juste en dessous, et
+     découper ici ramène ces requêtes au nombre de cartes réellement
+     affichées au lieu de toute la liste filtrée. */
+  const PAR_PAGE = 12;
+  const pages = Math.max(1, Math.ceil(liste.length / PAR_PAGE));
+  const pageDemandee = Number(typeof sp.page === "string" ? sp.page : 1);
+  const page = Math.min(Math.max(Number.isFinite(pageDemandee) ? pageDemandee : 1, 1), pages);
+  const listePage = liste.slice((page - 1) * PAR_PAGE, page * PAR_PAGE);
+
+  // Les paramètres courants, sans `page` : les liens de pagination doivent
+  // conserver les filtres, les perdre serait le défaut le plus visible.
+  const parametresCourants = new URLSearchParams();
+  for (const [cle, valeur] of Object.entries(sp)) {
+    if (cle === "page" || valeur === undefined) continue;
+    if (Array.isArray(valeur)) valeur.forEach((v) => parametresCourants.append(cle, v));
+    else parametresCourants.set(cle, valeur);
+  }
+
   // Prochaine disponibilité réelle de chaque médecin affiché : on lit les
   // créneaux déjà réservés (une requête par médecin, en parallèle) au lieu de
   // supposer la journée vide — sinon toutes les cartes proposent les mêmes
@@ -153,7 +173,7 @@ export default async function Resultats({
   const jours = prochainsJours([], 14);
   const disponibilites = new Map<string, { dateISO: string; heures: string[] } | null>(
     await Promise.all(
-      liste.map(async (m) => {
+      listePage.map(async (m) => {
         let etats: Map<string, EtatCreneau>;
         try {
           etats = await chargerIndisponibilites(m.id, jours[0]?.iso, jours.at(-1)?.iso);
@@ -216,7 +236,7 @@ export default async function Resultats({
               </Link>
             </div>
           )}
-          {liste.map((m) => {
+          {listePage.map((m) => {
             const etab = getEtablissement(m.etablissementId);
             return (
               <CarteResultatMobile
@@ -237,6 +257,15 @@ export default async function Resultats({
               />
             );
           })}
+          <PaginationLiens
+            page={page}
+            pages={pages}
+            total={liste.length}
+            premier={liste.length === 0 ? 0 : (page - 1) * PAR_PAGE + 1}
+            dernier={Math.min(liste.length, page * PAR_PAGE)}
+            parametres={parametresCourants}
+            libelle="médecins"
+          />
         </div>
         {/* La tabbar manquait sur cet écran : on s'y retrouvait sans aucune
             navigation vers l'accueil, les RDV ou le compte. */}
@@ -318,7 +347,7 @@ export default async function Resultats({
             </div>
           )}
 
-          {liste.map((m) => {
+          {listePage.map((m) => {
             const etab = getEtablissement(m.etablissementId);
             const dispoMedecin = disponibilites.get(m.id) ?? null;
             const minicreneaux = dispoMedecin?.heures ?? [];
@@ -391,6 +420,15 @@ export default async function Resultats({
               </div>
             );
           })}
+          <PaginationLiens
+            page={page}
+            pages={pages}
+            total={liste.length}
+            premier={liste.length === 0 ? 0 : (page - 1) * PAR_PAGE + 1}
+            dernier={Math.min(liste.length, page * PAR_PAGE)}
+            parametres={parametresCourants}
+            libelle="médecins"
+          />
         </div>
       </div>
       </div>

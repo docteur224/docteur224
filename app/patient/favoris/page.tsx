@@ -5,6 +5,7 @@ import PatientShell from "@/components/patient/PatientShell";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import AvatarMedecin from "@/components/site/AvatarMedecin";
 import Etoiles from "@/components/site/Etoiles";
+import Pagination, { usePagination } from "@/components/site/Pagination";
 import { useFavori, useMesFavoris, type MedecinFavori } from "@/lib/favoris";
 import { formatGNF } from "@/lib/format";
 
@@ -56,6 +57,7 @@ function BoutonRetirer({
 
 export default function MesFavoris() {
   const { favoris, chargement, recharger } = useMesFavoris();
+  const p = usePagination(favoris, 10);
 
   const vide = !chargement && favoris.length === 0;
 
@@ -77,7 +79,7 @@ export default function MesFavoris() {
                 Aucun favori pour l’instant. Ouvrez la fiche d’un médecin et touchez « ♡ Favori ».
               </p>
             )}
-            {favoris.map((m) => (
+            {p.tranche.map((m) => (
               <div key={m.id} className="asstrowm">
                 <Link href={`/medecin/${m.id}`} className="meta" style={{ flex: 1 }}>
                   <b>
@@ -91,6 +93,15 @@ export default function MesFavoris() {
                 <BoutonRetirer mobile medecin={m} apres={recharger} />
               </div>
             ))}
+            <Pagination
+              page={p.page}
+              pages={p.pages}
+              total={p.total}
+              premier={p.premier}
+              dernier={p.dernier}
+              onPage={p.setPage}
+              libelle="favoris"
+            />
           </div>
           {!vide && (
             <Link href="/resultats" className="btn ghost block">
@@ -131,7 +142,7 @@ export default function MesFavoris() {
         )}
 
         <div className="grid gap-3 lg:grid-cols-2">
-          {favoris.map((m) => (
+          {p.tranche.map((m) => (
             <div
               key={m.id}
               className="flex items-start gap-[13px] rounded-2xl border border-line bg-white p-4"
@@ -179,6 +190,15 @@ export default function MesFavoris() {
             </div>
           ))}
         </div>
+        <Pagination
+          page={p.page}
+          pages={p.pages}
+          total={p.total}
+          premier={p.premier}
+          dernier={p.dernier}
+          onPage={p.setPage}
+          libelle="favoris"
+        />
       </div>
     </PatientShell>
   );

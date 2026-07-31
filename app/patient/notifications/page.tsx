@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import PatientShell from "@/components/patient/PatientShell";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
+import Pagination, { usePagination } from "@/components/site/Pagination";
 import { ilYA, iconeNotification, useNotifications } from "@/lib/notifications";
 
 /*
@@ -17,12 +18,13 @@ export default function NotificationsPatient() {
   const [seulementNonLues, setSeulementNonLues] = useState(false);
 
   const visibles = seulementNonLues ? notifications.filter((n) => !n.lu) : notifications;
+  const p = usePagination(visibles, 15);
   const vide = visibles.length === 0;
 
   /* Une notification porte souvent un lien : on la marque lue au clic, sans
      attendre le réseau (le hook le fait de façon optimiste). */
   const ligne = (mobile: boolean) =>
-    visibles.map((n) => {
+    p.tranche.map((n) => {
       const corps = (
         <>
           <span
@@ -91,14 +93,14 @@ export default function NotificationsPatient() {
             <button
               type="button"
               className={`tabm${seulementNonLues ? "" : " on"}`}
-              onClick={() => setSeulementNonLues(false)}
+              onClick={() => { setSeulementNonLues(false); p.setPage(0); }}
             >
               Toutes
             </button>
             <button
               type="button"
               className={`tabm${seulementNonLues ? " on" : ""}`}
-              onClick={() => setSeulementNonLues(true)}
+              onClick={() => { setSeulementNonLues(true); p.setPage(0); }}
             >
               Non lues {nonLues > 0 ? `(${nonLues})` : ""}
             </button>
@@ -110,6 +112,15 @@ export default function NotificationsPatient() {
               </p>
             )}
             {ligne(true)}
+            <Pagination
+              page={p.page}
+              pages={p.pages}
+              total={p.total}
+              premier={p.premier}
+              dernier={p.dernier}
+              onPage={p.setPage}
+              libelle="notifications"
+            />
           </div>
           {nonLues > 0 && (
             <button type="button" className="btn ghost block" onClick={toutMarquerLu}>
@@ -133,7 +144,7 @@ export default function NotificationsPatient() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => setSeulementNonLues(!seulementNonLues)}
+              onClick={() => { setSeulementNonLues(!seulementNonLues); p.setPage(0); }}
               className={`rounded-[9px] border-[1.5px] px-3 py-1.5 text-[11.5px] font-bold transition-colors ${
                 seulementNonLues
                   ? "border-teal bg-teal-soft text-blue"
@@ -163,6 +174,16 @@ export default function NotificationsPatient() {
             ligne(false)
           )}
         </div>
+        <Pagination
+          page={p.page}
+          pages={p.pages}
+          total={p.total}
+          premier={p.premier}
+          dernier={p.dernier}
+          onPage={p.setPage}
+          libelle="notifications"
+        />
+
 
         <p className="mt-3 text-[11.5px] text-muted">
           Les rappels par SMS et e-mail se règlent dans{" "}

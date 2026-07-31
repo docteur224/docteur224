@@ -3,6 +3,7 @@
 import { useState } from "react";
 import AdminShell from "@/components/admin/AdminShell";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
+import Pagination, { usePagination } from "@/components/site/Pagination";
 import IndicateursAvis from "@/components/admin/IndicateursAvis";
 import {
   modererAvis,
@@ -35,6 +36,8 @@ export default function ModerationAdmin() {
   const boutonDanger =
     "rounded-[9px] border-[1.5px] border-[#F3CDC8] bg-white px-[14px] py-2 text-[12.5px] font-bold text-red transition-colors hover:bg-[#FBE9E7]";
 
+  const pagiSignalements = usePagination(signalements, 10);
+  const pagiAvis = usePagination(avis, 10);
   const aTraiter = signalements.length + avis.length;
 
   const bascule = (
@@ -89,7 +92,7 @@ export default function ModerationAdmin() {
                     ✅ Tous les signalements ont été traités.
                   </p>
                 )}
-                {signalements.map((signalement) => (
+                {pagiSignalements.tranche.map((signalement) => (
                   <div key={signalement.id} className="asstrowm">
                     <span
                       className="av"
@@ -127,6 +130,15 @@ export default function ModerationAdmin() {
                     </span>
                   </div>
                 ))}
+                <Pagination
+                  page={pagiSignalements.page}
+                  pages={pagiSignalements.pages}
+                  total={pagiSignalements.total}
+                  premier={pagiSignalements.premier}
+                  dernier={pagiSignalements.dernier}
+                  onPage={pagiSignalements.setPage}
+                  libelle="signalements"
+                />
               </div>
               <div className="card2">
                 <h4>Avis à modérer · {avis.length}</h4>
@@ -135,7 +147,7 @@ export default function ModerationAdmin() {
                     ✅ Tous les avis ont été modérés.
                   </p>
                 )}
-                {avis.map((a) => (
+                {pagiAvis.tranche.map((a) => (
                   <div key={a.id} className="reviewmod">
                     <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
                       <b style={{ fontSize: 12.5 }}>{a.titre}</b>
@@ -169,6 +181,15 @@ export default function ModerationAdmin() {
                     </div>
                   </div>
                 ))}
+                <Pagination
+                  page={pagiAvis.page}
+                  pages={pagiAvis.pages}
+                  total={pagiAvis.total}
+                  premier={pagiAvis.premier}
+                  dernier={pagiAvis.dernier}
+                  onPage={pagiAvis.setPage}
+                  libelle="avis"
+                />
               </div>
             </>
           )}
@@ -207,7 +228,7 @@ export default function ModerationAdmin() {
                   ✅ Tous les signalements ont été traités.
                 </p>
               )}
-              {signalements.map((signalement) => (
+              {pagiSignalements.tranche.map((signalement) => (
                 <div
                   key={signalement.id}
                   className="flex flex-wrap items-center gap-[13px] border-b border-line py-[14px] last:border-b-0"
@@ -246,6 +267,15 @@ export default function ModerationAdmin() {
                   </button>
                 </div>
               ))}
+              <Pagination
+                page={pagiSignalements.page}
+                pages={pagiSignalements.pages}
+                total={pagiSignalements.total}
+                premier={pagiSignalements.premier}
+                dernier={pagiSignalements.dernier}
+                onPage={pagiSignalements.setPage}
+                libelle="signalements"
+              />
               <p className="mt-3 text-[11.5px] text-muted">
                 « Examiner » classe le signalement après examen. Chaque décision est tracée dans le
                 journal d’audit.
@@ -257,7 +287,7 @@ export default function ModerationAdmin() {
               {avis.length === 0 && (
                 <p className="py-3 text-[12.5px] text-muted">✅ Tous les avis ont été modérés.</p>
               )}
-              {avis.map((a) => (
+              {pagiAvis.tranche.map((a) => (
                 <div key={a.id} className="mt-[10px] rounded-xl border border-line p-[13px]">
                   <div className="flex flex-wrap items-center justify-between gap-[10px]">
                     <b className="text-[13.5px]">{a.titre}</b>
@@ -291,6 +321,15 @@ export default function ModerationAdmin() {
                   </div>
                 </div>
               ))}
+              <Pagination
+                page={pagiAvis.page}
+                pages={pagiAvis.pages}
+                total={pagiAvis.total}
+                premier={pagiAvis.premier}
+                dernier={pagiAvis.dernier}
+                onPage={pagiAvis.setPage}
+                libelle="avis"
+              />
             </div>
           </>
         )}

@@ -4,6 +4,7 @@ import { useState } from "react";
 import MedecinShell from "@/components/medecin/MedecinShell";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import Etoiles from "@/components/site/Etoiles";
+import Pagination, { usePagination } from "@/components/site/Pagination";
 import { MOIS_LONGS } from "@/lib/dates";
 import { formatNote } from "@/lib/format";
 import { repartitionNotes } from "@/lib/donnees";
@@ -166,6 +167,7 @@ export default function AvisMedecinPage() {
     if (filtre === "negatifs") return a.note <= 3;
     return true;
   });
+  const p = usePagination(listeFiltree, 10);
 
   const estAssistant = !chargementRole && role === "assistant";
 
@@ -205,7 +207,10 @@ export default function AvisMedecinPage() {
         <button
           key={f.cle}
           type="button"
-          onClick={() => setFiltre(f.cle)}
+          onClick={() => {
+            setFiltre(f.cle);
+            p.setPage(0);
+          }}
           aria-pressed={filtre === f.cle}
           className={`rounded-full border-[1.5px] px-[14px] py-[7px] text-[12.5px] font-bold transition-colors ${
             filtre === f.cle
@@ -239,11 +244,22 @@ export default function AvisMedecinPage() {
       </p>
     </div>
   ) : (
-    <ul className="flex flex-col gap-[14px]">
-      {listeFiltree.map((a) => (
-        <CarteAvis key={a.id} avis={a} onRepondu={recharger} />
-      ))}
-    </ul>
+    <>
+      <ul className="flex flex-col gap-[14px]">
+        {p.tranche.map((a) => (
+          <CarteAvis key={a.id} avis={a} onRepondu={recharger} />
+        ))}
+      </ul>
+      <Pagination
+        page={p.page}
+        pages={p.pages}
+        total={p.total}
+        premier={p.premier}
+        dernier={p.dernier}
+        onPage={p.setPage}
+        libelle="avis"
+      />
+    </>
   );
 
   if (estAssistant) {

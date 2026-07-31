@@ -5,6 +5,7 @@ import { useState } from "react";
 import PatientShell from "@/components/patient/PatientShell";
 import CarteRdv from "@/components/patient/CarteRdv";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
+import Pagination, { usePagination } from "@/components/site/Pagination";
 import { versISO } from "@/lib/dates";
 import {
   annulerRendezVous,
@@ -31,6 +32,7 @@ export default function MesRendezVous() {
     .filter((r) => r.statut === "annule" || r.date < aujourdhui)
     .sort((a, b) => cle(b).localeCompare(cle(a)));
   const liste = onglet === "avenir" ? aVenir : passes;
+  const p = usePagination(liste, 10);
 
   async function annuler(id: string) {
     if (window.confirm("Voulez-vous vraiment annuler ce rendez-vous ?")) {
@@ -48,14 +50,14 @@ export default function MesRendezVous() {
           <button
             type="button"
             className={`tabm${onglet === "avenir" ? " on" : ""}`}
-            onClick={() => setOnglet("avenir")}
+            onClick={() => { setOnglet("avenir"); p.setPage(0); }}
           >
             À venir ({aVenir.length})
           </button>
           <button
             type="button"
             className={`tabm${onglet === "passes" ? " on" : ""}`}
-            onClick={() => setOnglet("passes")}
+            onClick={() => { setOnglet("passes"); p.setPage(0); }}
           >
             Passés ({passes.length})
           </button>
@@ -82,7 +84,7 @@ export default function MesRendezVous() {
       <div className="mb-[18px] inline-flex gap-[5px] rounded-xl border border-line bg-white p-[5px]">
         <button
           type="button"
-          onClick={() => setOnglet("avenir")}
+          onClick={() => { setOnglet("avenir"); p.setPage(0); }}
           className={`rounded-lg px-[18px] py-[9px] text-[13px] font-bold ${
             onglet === "avenir" ? "bg-blue text-white" : "text-muted"
           }`}
@@ -91,7 +93,7 @@ export default function MesRendezVous() {
         </button>
         <button
           type="button"
-          onClick={() => setOnglet("passes")}
+          onClick={() => { setOnglet("passes"); p.setPage(0); }}
           className={`rounded-lg px-[18px] py-[9px] text-[13px] font-bold ${
             onglet === "passes" ? "bg-blue text-white" : "text-muted"
           }`}
@@ -102,9 +104,18 @@ export default function MesRendezVous() {
       </div>
 
       <div className="pad pt-4 md:pt-0">
-        {liste.map((rdv) => (
+        {p.tranche.map((rdv) => (
           <CarteRdv key={rdv.id} rdv={rdv} onAnnuler={onglet === "avenir" ? annuler : undefined} />
         ))}
+        <Pagination
+          page={p.page}
+          pages={p.pages}
+          total={p.total}
+          premier={p.premier}
+          dernier={p.dernier}
+          onPage={p.setPage}
+          libelle="rendez-vous"
+        />
 
         {liste.length === 0 && (
           <div className="rounded-2xl border border-line bg-white p-8 text-center">

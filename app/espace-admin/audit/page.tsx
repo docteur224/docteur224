@@ -2,6 +2,7 @@
 
 import AdminShell from "@/components/admin/AdminShell";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
+import Pagination, { usePagination } from "@/components/site/Pagination";
 import { useJournalAudit } from "@/lib/admin";
 
 /*
@@ -12,6 +13,7 @@ import { useJournalAudit } from "@/lib/admin";
 
 export default function AuditAdmin() {
   const journal = useJournalAudit();
+  const pagi = usePagination(journal, 20);
 
   return (
     <AdminShell>
@@ -31,7 +33,7 @@ export default function AuditAdmin() {
                   </tr>
                 </thead>
                 <tbody>
-                  {journal.map((entree) => (
+                  {pagi.tranche.map((entree) => (
                     <tr key={entree.id}>
                       <td style={{ whiteSpace: "nowrap" }}>{entree.date}</td>
                       <td>{entree.acteur}</td>
@@ -43,6 +45,17 @@ export default function AuditAdmin() {
                 </tbody>
               </table>
             </div>
+            {/* Hors du <table> : un <div> dans un <tbody> est du HTML invalide,
+                que TypeScript ne signale pas. */}
+            <Pagination
+              page={pagi.page}
+              pages={pagi.pages}
+              total={pagi.total}
+              premier={pagi.premier}
+              dernier={pagi.dernier}
+              onPage={pagi.setPage}
+              libelle="entrées"
+            />
             <div className="privnote info">
               <span aria-hidden>🔒</span>
               <div>
@@ -78,7 +91,7 @@ export default function AuditAdmin() {
               </tr>
             </thead>
             <tbody>
-              {journal.map((entree) => (
+              {pagi.tranche.map((entree) => (
                 <tr key={entree.id}>
                   <td className="whitespace-nowrap border-b border-line px-[10px] py-[9px]">
                     {entree.date}
@@ -93,6 +106,16 @@ export default function AuditAdmin() {
             </tbody>
           </table>
         </div>
+        {/* Hors du <table>, comme sur le rendu mobile. */}
+        <Pagination
+          page={pagi.page}
+          pages={pagi.pages}
+          total={pagi.total}
+          premier={pagi.premier}
+          dernier={pagi.dernier}
+          onPage={pagi.setPage}
+          libelle="entrées"
+        />
         <div className="mt-[14px] flex items-start gap-[9px] rounded-[11px] bg-teal-soft px-[13px] py-[11px] text-[12.5px] font-semibold leading-relaxed text-blue">
           <span aria-hidden>🔒</span>
           <div>

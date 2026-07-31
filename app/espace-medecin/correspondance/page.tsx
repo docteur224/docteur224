@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import MedecinShell from "@/components/medecin/MedecinShell";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
+import Pagination, { usePagination } from "@/components/site/Pagination";
 import { formatDateCourte } from "@/lib/dates";
 import {
   iconeType,
@@ -300,14 +301,23 @@ function EcranCorrespondance({ vue }: { vue: Vue }) {
   const chargement =
     vue === "recues" ? recues.chargement : vue === "envoyees" ? envoyees.chargement : partages.chargement;
 
+  /* Une pagination par onglet plutôt qu'une seule sur un tableau uni : les
+     types diffèrent (transmissions et documents), et chaque vue garde ainsi
+     sa page en changeant d'onglet. La variable ne s'appelle pas `p`, déjà
+     pris comme paramètre par `pieceJointe`. */
+  const pagiRecues = usePagination(recues.transmissions, 10);
+  const pagiEnvoyees = usePagination(envoyees.transmissions, 10);
+  const pagiPartages = usePagination(partages.documents, 10);
+  const pagi = vue === "recues" ? pagiRecues : vue === "envoyees" ? pagiEnvoyees : pagiPartages;
+
   const contenu =
     vue === "recues"
-      ? recues.transmissions.map(carteTransmission)
+      ? pagiRecues.tranche.map(carteTransmission)
       : vue === "envoyees"
-        ? envoyees.transmissions.map(carteTransmission)
-        : partages.documents.map(cartePartage);
+        ? pagiEnvoyees.tranche.map(carteTransmission)
+        : pagiPartages.tranche.map(cartePartage);
 
-  const vide = !chargement && contenu.length === 0;
+  const vide = !chargement && pagi.total === 0;
 
   const messageVide =
     vue === "recues"
@@ -357,6 +367,26 @@ function EcranCorrespondance({ vue }: { vue: Vue }) {
             </div>
           )}
           <div className="grid gap-3">{contenu}</div>
+        <Pagination
+          page={pagi.page}
+          pages={pagi.pages}
+          total={pagi.total}
+          premier={pagi.premier}
+          dernier={pagi.dernier}
+          onPage={pagi.setPage}
+          libelle={vue === "partages" ? "documents" : "transmissions"}
+        />
+
+          <Pagination
+            page={pagi.page}
+            pages={pagi.pages}
+            total={pagi.total}
+            premier={pagi.premier}
+            dernier={pagi.dernier}
+            onPage={pagi.setPage}
+            libelle={vue === "partages" ? "documents" : "transmissions"}
+          />
+
           {message && (
             <p
               style={{

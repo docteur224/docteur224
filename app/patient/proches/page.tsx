@@ -3,6 +3,7 @@
 import { useState } from "react";
 import PatientShell from "@/components/patient/PatientShell";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
+import Pagination, { usePagination } from "@/components/site/Pagination";
 import { calculerAge, formatDateCourte } from "@/lib/dates";
 import {
   ajouterProche,
@@ -33,6 +34,7 @@ const initialesProche = (p: { prenom: string; nom: string }) =>
 
 export default function MesProches() {
   const { proches, recharger } = useProches();
+  const p = usePagination(proches, 10);
   const [formulaire, setFormulaire] = useState(FORMULAIRE_VIDE);
   const [enEdition, setEnEdition] = useState<Proche | null>(null);
   const [message, setMessage] = useState("");
@@ -112,7 +114,7 @@ export default function MesProches() {
           </div>
           <div className="card2">
             <h4>Proches enregistrés</h4>
-            {proches.map((proche) => (
+            {p.tranche.map((proche) => (
               <div key={proche.id} className="asstrowm">
                 <span className="av" aria-hidden style={{ background: proche.gradient }}>
                   {initialesProche(proche)}
@@ -143,6 +145,8 @@ export default function MesProches() {
                 Aucun proche enregistré pour le moment.
               </p>
             )}
+            <Pagination page={p.page} pages={p.pages} total={p.total} premier={p.premier} dernier={p.dernier} onPage={p.setPage} libelle="proches" />
+
             {message && zoneMessage === "liste" && (
               <div
                 style={{
@@ -269,7 +273,7 @@ export default function MesProches() {
 
       <div className="mb-4 rounded-2xl border border-line bg-white p-5">
         <h3 className="mb-[14px] text-[15px] font-extrabold">Proches enregistrés</h3>
-        {proches.map((proche) => (
+        {p.tranche.map((proche) => (
           <div
             key={proche.id}
             className="flex items-center gap-[13px] border-b border-line py-[14px] last:border-b-0 last:pb-0"
@@ -313,6 +317,15 @@ export default function MesProches() {
         {proches.length === 0 && (
           <p className="text-[13px] text-muted">Aucun proche enregistré pour le moment.</p>
         )}
+        <Pagination
+          page={p.page}
+          pages={p.pages}
+          total={p.total}
+          premier={p.premier}
+          dernier={p.dernier}
+          onPage={p.setPage}
+          libelle="proches"
+        />
         {message && zoneMessage === "liste" && (
           <p
             className={`pt-3 text-[12.5px] font-bold ${

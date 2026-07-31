@@ -4,6 +4,7 @@ import { useState } from "react";
 import AdminShell from "@/components/admin/AdminShell";
 import { majStatutUtilisateur, useUtilisateurs } from "@/lib/admin";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
+import Pagination, { usePagination } from "@/components/site/Pagination";
 
 /*
  * Utilisateurs — reproduit l'écran « admin-users » de la maquette web :
@@ -68,6 +69,7 @@ export default function UtilisateursAdmin() {
       gradient: gradientPour(u.id),
       actif: u.statut === "actif",
     }));
+  const pagi = usePagination(comptes, 20);
 
   async function basculerStatut(id: string, actif: boolean) {
     await majStatutUtilisateur(id, actif ? "suspendu" : "actif");
@@ -108,7 +110,7 @@ export default function UtilisateursAdmin() {
                 Aucun compte ne correspond à la recherche.
               </p>
             )}
-            {comptes.map((compte) => (
+            {pagi.tranche.map((compte) => (
               <div key={compte.id} className="asstrowm">
                 <span className="av" aria-hidden style={{ background: compte.gradient }}>
                   {compte.initiales}
@@ -122,6 +124,15 @@ export default function UtilisateursAdmin() {
                 </span>
               </div>
             ))}
+            <Pagination
+              page={pagi.page}
+              pages={pagi.pages}
+              total={pagi.total}
+              premier={pagi.premier}
+              dernier={pagi.dernier}
+              onPage={pagi.setPage}
+              libelle="comptes"
+            />
           </div>
         </div>
       </div>
@@ -165,7 +176,7 @@ export default function UtilisateursAdmin() {
             Aucun compte ne correspond à la recherche.
           </p>
         )}
-        {comptes.map((compte) => (
+        {pagi.tranche.map((compte) => (
           <div
             key={compte.id}
             className="flex flex-wrap items-center gap-[13px] border-b border-line py-[14px] last:border-b-0"
@@ -197,6 +208,15 @@ export default function UtilisateursAdmin() {
             </button>
           </div>
         ))}
+        <Pagination
+          page={pagi.page}
+          pages={pagi.pages}
+          total={pagi.total}
+          premier={pagi.premier}
+          dernier={pagi.dernier}
+          onPage={pagi.setPage}
+          libelle="comptes"
+        />
       </div>
       </div>
     </AdminShell>

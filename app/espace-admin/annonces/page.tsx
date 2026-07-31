@@ -3,6 +3,7 @@
 import { useState } from "react";
 import AdminShell from "@/components/admin/AdminShell";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
+import Pagination, { usePagination } from "@/components/site/Pagination";
 import { envoyerAnnonce, useAnnonces } from "@/lib/admin";
 
 /*
@@ -29,6 +30,7 @@ const MESSAGE_DEFAUT =
 
 export default function AnnoncesAdmin() {
   const { annonces, recharger } = useAnnonces();
+  const pagi = usePagination(annonces, 10);
   const [segment, setSegment] = useState(SEGMENTS[0]);
   const [ville, setVille] = useState(VILLES[0]);
   const [canaux, setCanaux] = useState<string[]>(["SMS", "E-mail"]);
@@ -115,7 +117,7 @@ export default function AnnoncesAdmin() {
           </div>
           <div className="card2">
             <h4>Historique</h4>
-            {annonces.map((annonce) => (
+            {pagi.tranche.map((annonce) => (
               <div key={annonce.id} className="asstrowm">
                 <span
                   className="av"
@@ -131,6 +133,15 @@ export default function AnnoncesAdmin() {
                 <span className="pill ok">Envoyée</span>
               </div>
             ))}
+            <Pagination
+              page={pagi.page}
+              pages={pagi.pages}
+              total={pagi.total}
+              premier={pagi.premier}
+              dernier={pagi.dernier}
+              onPage={pagi.setPage}
+              libelle="annonces"
+            />
           </div>
         </div>
       </div>
@@ -208,7 +219,7 @@ export default function AnnoncesAdmin() {
 
       <div className="rounded-2xl border border-line bg-white p-5">
         <h3 className="mb-1 text-[15px] font-extrabold">Historique des annonces</h3>
-        {annonces.map((annonce) => (
+        {pagi.tranche.map((annonce) => (
           <div
             key={annonce.id}
             className="flex flex-wrap items-center gap-[13px] border-b border-line py-[14px] last:border-b-0"
@@ -229,6 +240,15 @@ export default function AnnoncesAdmin() {
             </span>
           </div>
         ))}
+        <Pagination
+          page={pagi.page}
+          pages={pagi.pages}
+          total={pagi.total}
+          premier={pagi.premier}
+          dernier={pagi.dernier}
+          onPage={pagi.setPage}
+          libelle="annonces"
+        />
         <p className="mt-3 text-[11.5px] text-muted">
           Mode démonstration : l’annonce est ajoutée à l’historique et les envois simulés
           apparaissent dans le centre de notifications (🔔). L’envoi réel sera branché avec la

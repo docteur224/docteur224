@@ -10,6 +10,7 @@ import {
   useMedecinsRattaches,
 } from "@/lib/etablissement";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
+import Pagination, { usePagination } from "@/components/site/Pagination";
 
 /*
  * Médecins — reproduit l'écran « etab-medecins » de la maquette web :
@@ -28,6 +29,7 @@ const LIBELLES_STATUT = {
 export default function MedecinsEtablissement() {
   const { etablissement } = useEtablissementConnecte();
   const { rattaches } = useMedecinsRattaches(etablissement?.id);
+  const pagi = usePagination(rattaches, 12);
   const { invitations, recharger } = useInvitations(etablissement?.id);
   const [recherche, setRecherche] = useState("");
   const [resultats, setResultats] = useState<{ id: string; nom: string; specialite: string }[]>([]);
@@ -156,7 +158,7 @@ export default function MedecinsEtablissement() {
           </div>
           <div className="card2">
             <h4>{rattaches.length} médecins rattachés</h4>
-            {rattaches.map((medecin) => (
+            {pagi.tranche.map((medecin) => (
               <div key={medecin.id} className="asstrowm">
                 <span className="av" aria-hidden style={{ background: medecin.gradient }}>
                   {medecin.initiales}
@@ -168,6 +170,15 @@ export default function MedecinsEtablissement() {
                 <span className="pill ok">Actif</span>
               </div>
             ))}
+            <Pagination
+              page={pagi.page}
+              pages={pagi.pages}
+              total={pagi.total}
+              premier={pagi.premier}
+              dernier={pagi.dernier}
+              onPage={pagi.setPage}
+              libelle="médecins"
+            />
           </div>
         </div>
       </div>
@@ -202,7 +213,7 @@ export default function MedecinsEtablissement() {
           <h3 className="mb-1 text-[15px] font-extrabold">
             Médecins rattachés ({rattaches.length})
           </h3>
-          {rattaches.map((medecin) => (
+          {pagi.tranche.map((medecin) => (
             <div
               key={medecin.id}
               className="flex flex-wrap items-center gap-[13px] border-b border-line py-[14px] last:border-b-0"
@@ -223,6 +234,15 @@ export default function MedecinsEtablissement() {
               </span>
             </div>
           ))}
+          <Pagination
+            page={pagi.page}
+            pages={pagi.pages}
+            total={pagi.total}
+            premier={pagi.premier}
+            dernier={pagi.dernier}
+            onPage={pagi.setPage}
+            libelle="médecins"
+          />
         </div>
       </div>
     </EtablissementShell>

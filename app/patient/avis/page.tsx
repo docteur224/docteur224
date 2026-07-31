@@ -6,6 +6,7 @@ import PatientShell from "@/components/patient/PatientShell";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import Etoiles from "@/components/site/Etoiles";
 import EtoilesSaisie from "@/components/site/EtoilesSaisie";
+import Pagination, { usePagination } from "@/components/site/Pagination";
 import { formatDateCourte } from "@/lib/dates";
 import { modifierMonAvis, supprimerMonAvis, useMesAvis, type MonAvis } from "@/lib/avis";
 
@@ -17,6 +18,7 @@ import { modifierMonAvis, supprimerMonAvis, useMesAvis, type MonAvis } from "@/l
 
 export default function MesAvis() {
   const { avis, chargement, recharger } = useMesAvis();
+  const p = usePagination(avis, 10);
   const [enEdition, setEnEdition] = useState<string | null>(null);
   const [brouillon, setBrouillon] = useState({ note: 5, commentaire: "" });
   const [aSupprimer, setASupprimer] = useState<string | null>(null);
@@ -214,11 +216,20 @@ export default function MesAvis() {
               </p>
             </div>
           )}
-          {avis.map((a) => (
+          {p.tranche.map((a) => (
             <div key={a.id} className="card2">
               {contenu(a, true)}
             </div>
           ))}
+          <Pagination
+            page={p.page}
+            pages={p.pages}
+            total={p.total}
+            premier={p.premier}
+            dernier={p.dernier}
+            onPage={p.setPage}
+            libelle="avis"
+          />
           {message && (
             <div
               style={{
@@ -264,12 +275,21 @@ export default function MesAvis() {
         )}
 
         <div className="grid gap-3">
-          {avis.map((a) => (
+          {p.tranche.map((a) => (
             <div key={a.id} className="rounded-2xl border border-line bg-white p-4">
               {contenu(a, false)}
             </div>
           ))}
         </div>
+        <Pagination
+          page={p.page}
+          pages={p.pages}
+          total={p.total}
+          premier={p.premier}
+          dernier={p.dernier}
+          onPage={p.setPage}
+          libelle="avis"
+        />
 
         {message && <p className={`mt-3 text-[12.5px] font-bold ${couleurMessage}`}>{message}</p>}
       </div>

@@ -10,6 +10,7 @@ import {
   type DossierValidation,
 } from "@/lib/admin";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
+import Pagination, { usePagination } from "@/components/site/Pagination";
 
 /*
  * Validations — reproduit l'écran « admin-validation » de la maquette web :
@@ -105,6 +106,8 @@ function LigneDossier({ dossier, decider }: { dossier: DossierValidation; decide
 export default function ValidationsAdmin() {
   const { dossiers: medecins, recharger: rechargerMedecins } = useMedecinsEnAttente();
   const { dossiers: etablissements, recharger: rechargerEtabs } = useEtablissementsEnAttente();
+  const pagiMedecins = usePagination(medecins, 10);
+  const pagiEtabs = usePagination(etablissements, 10);
   const [motif, setMotif] = useState(MOTIFS[0]);
 
   function decider(d: DossierValidation, decision: "valide" | "refuse", motifRejet?: string) {
@@ -188,9 +191,18 @@ export default function ValidationsAdmin() {
                 Aucun médecin en attente.
               </p>
             )}
-            {medecins.map((dossier) => (
+            {pagiMedecins.tranche.map((dossier) => (
               <LigneDossierMobile key={dossier.id} dossier={dossier} decider={decider} />
             ))}
+            <Pagination
+              page={pagiMedecins.page}
+              pages={pagiMedecins.pages}
+              total={pagiMedecins.total}
+              premier={pagiMedecins.premier}
+              dernier={pagiMedecins.dernier}
+              onPage={pagiMedecins.setPage}
+              libelle="dossiers"
+            />
           </div>
           <div className="card2">
             <h4>Établissements en attente · {etablissements.length}</h4>
@@ -199,9 +211,18 @@ export default function ValidationsAdmin() {
                 Aucun établissement en attente.
               </p>
             )}
-            {etablissements.map((dossier) => (
+            {pagiEtabs.tranche.map((dossier) => (
               <LigneDossierMobile key={dossier.id} dossier={dossier} decider={decider} />
             ))}
+            <Pagination
+              page={pagiEtabs.page}
+              pages={pagiEtabs.pages}
+              total={pagiEtabs.total}
+              premier={pagiEtabs.premier}
+              dernier={pagiEtabs.dernier}
+              onPage={pagiEtabs.setPage}
+              libelle="dossiers"
+            />
           </div>
         </div>
       </div>
@@ -308,9 +329,18 @@ export default function ValidationsAdmin() {
         {medecins.length === 0 && (
           <p className="py-3 text-[12.5px] text-muted">Aucun médecin en attente.</p>
         )}
-        {medecins.map((dossier) => (
+        {pagiMedecins.tranche.map((dossier) => (
           <LigneDossier key={dossier.id} dossier={dossier} decider={decider} />
         ))}
+        <Pagination
+          page={pagiMedecins.page}
+          pages={pagiMedecins.pages}
+          total={pagiMedecins.total}
+          premier={pagiMedecins.premier}
+          dernier={pagiMedecins.dernier}
+          onPage={pagiMedecins.setPage}
+          libelle="dossiers"
+        />
       </div>
 
       <div className="rounded-2xl border border-line bg-white p-5">
@@ -320,9 +350,18 @@ export default function ValidationsAdmin() {
         {etablissements.length === 0 && (
           <p className="py-3 text-[12.5px] text-muted">Aucun établissement en attente.</p>
         )}
-        {etablissements.map((dossier) => (
+        {pagiEtabs.tranche.map((dossier) => (
           <LigneDossier key={dossier.id} dossier={dossier} decider={decider} />
         ))}
+        <Pagination
+          page={pagiEtabs.page}
+          pages={pagiEtabs.pages}
+          total={pagiEtabs.total}
+          premier={pagiEtabs.premier}
+          dernier={pagiEtabs.dernier}
+          onPage={pagiEtabs.setPage}
+          libelle="dossiers"
+        />
       </div>
       </div>
     </AdminShell>

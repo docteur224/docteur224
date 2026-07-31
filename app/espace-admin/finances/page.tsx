@@ -2,6 +2,7 @@
 
 import AdminShell from "@/components/admin/AdminShell";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
+import Pagination, { usePagination } from "@/components/site/Pagination";
 import { useCompteursFinances, useRemboursements, validerRemboursement } from "@/lib/admin";
 
 /*
@@ -14,6 +15,7 @@ import { useCompteursFinances, useRemboursements, validerRemboursement } from "@
 
 export default function FinancesAdmin() {
   const remboursements = useRemboursements();
+  const pagi = usePagination(remboursements, 20);
   const compteurs = useCompteursFinances();
 
   const blocPaiementAVenir = (
@@ -46,7 +48,7 @@ export default function FinancesAdmin() {
                 ✅ Aucun remboursement en attente.
               </p>
             )}
-            {remboursements.map((remboursement) => (
+            {pagi.tranche.map((remboursement) => (
               <div key={remboursement.id} className="asstrowm">
                 <span className="av" aria-hidden style={{ background: remboursement.gradient }}>
                   {remboursement.initiales}
@@ -60,6 +62,15 @@ export default function FinancesAdmin() {
                 </button>
               </div>
             ))}
+            <Pagination
+              page={pagi.page}
+              pages={pagi.pages}
+              total={pagi.total}
+              premier={pagi.premier}
+              dernier={pagi.dernier}
+              onPage={pagi.setPage}
+              libelle="remboursements"
+            />
           </div>
           <div className="card2">
             <h4>Paiement en ligne</h4>
@@ -103,7 +114,7 @@ export default function FinancesAdmin() {
             ✅ Aucun remboursement en attente.
           </p>
         )}
-        {remboursements.map((remboursement) => (
+        {pagi.tranche.map((remboursement) => (
           <div
             key={remboursement.id}
             className="flex flex-wrap items-center gap-[13px] border-b border-line py-[14px] last:border-b-0"
@@ -128,6 +139,15 @@ export default function FinancesAdmin() {
             </button>
           </div>
         ))}
+        <Pagination
+          page={pagi.page}
+          pages={pagi.pages}
+          total={pagi.total}
+          premier={pagi.premier}
+          dernier={pagi.dernier}
+          onPage={pagi.setPage}
+          libelle="remboursements"
+        />
       </div>
 
       {blocPaiementAVenir}
