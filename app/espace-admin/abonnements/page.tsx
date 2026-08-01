@@ -28,6 +28,9 @@ interface ConfigAbonnements {
 const fmt = (n: number) => n.toLocaleString("fr-FR").replace(/ | /g, " ");
 const parseGNF = (t: string) => Number(t.replace(/[^0-9]/g, "")) || 0;
 
+/** Clés des réglages booléens de l'écran, dans `parametres_plateforme`. */
+const CLES_REGLAGES = ["periode_gratuite", "essai_gratuit", "orange_money", "mtn_momo"];
+
 /*
  * Abonnements — reproduit l'écran « admin-abonnements » de la maquette web
  * (spec C.10.2) : tarifs des formules médecin, paliers établissement,
@@ -50,7 +53,7 @@ export default function AbonnementsAdmin() {
   const { tarifs, enregistrer: enregistrerTarif } = useConfigAbonnements();
   const [reglagesExtra, setReglagesExtra] = useState<Record<string, boolean>>({});
   useEffect(() => {
-    lireReglagesBool(["periode_gratuite", "essai_gratuit", "orange_money", "mtn_momo"]).then(setReglagesExtra);
+    lireReglagesBool(CLES_REGLAGES).then(setReglagesExtra);
   }, []);
 
   const tarif = (f: string) => tarifs.find((t) => t.formule === f);
@@ -68,15 +71,20 @@ export default function AbonnementsAdmin() {
   };
   const [brouillon, setBrouillon] = useState<ConfigAbonnements | null>(null);
   const [enregistre, setEnregistre] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [envoi, setEnvoi] = useState(false);
   const valeurs = brouillon ?? config;
 
   function modifier(cle: keyof ConfigAbonnements, valeur: string | boolean) {
     setEnregistre(false);
+    setErreur(null);
     setBrouillon({ ...valeurs, [cle]: valeur });
   }
 
   async function enregistrer() {
-    await Promise.all([
+    setEnvoi(true);
+    setErreur(null);
+    const resultats = await Promise.all([
       enregistrerTarif("standard", { prixMensuel: parseGNF(valeurs.standardMensuel), prixAnnuel: parseGNF(valeurs.standardAnnuel) }),
       enregistrerTarif("premium", { prixMensuel: parseGNF(valeurs.premiumMensuel), prixAnnuel: parseGNF(valeurs.premiumAnnuel) }),
       enregistrerTarif("cabinet", { prixMensuel: parseGNF(valeurs.palierCabinet) }),
@@ -86,7 +94,26 @@ export default function AbonnementsAdmin() {
       ecrireReglageBool("orange_money", valeurs.orangeMoney),
       ecrireReglageBool("mtn_momo", valeurs.mtnMomo),
     ]);
-    await tracerAudit("A modifié la configuration des abonnements", "Formules médecin · paliers");
+    const messages = [...new Set(resultats.map((r) => r.erreur).filter(Boolean))] as string[];
+    if (!messages.length) {
+      await tracerAudit(
+        "A modifié la configuration des abonnements",
+        `Standard ${valeurs.standardMensuel} · Premium ${valeurs.premiumMensuel} · Cabinet ${valeurs.palierCabinet} · Clinique ${valeurs.palierClinique}`
+      );
+    }
+    // Les interrupteurs sont dérivés de `reglagesExtra`, lu une seule fois au
+    // montage : sans cette relecture, abandonner le brouillon les ramenait à
+    // leur ancienne valeur alors que la base avait bien été mise à jour.
+    const reglagesFrais = await lireReglagesBool(CLES_REGLAGES);
+    setReglagesExtra(reglagesFrais);
+    setEnvoi(false);
+    if (messages.length) {
+      // Le brouillon est conservé : la saisie de l'admin ne doit pas être
+      // perdue quand une partie seulement de l'enregistrement a échoué.
+      setErreur(messages.join(" "));
+      setEnregistre(false);
+      return;
+    }
     setBrouillon(null);
     setEnregistre(true);
   }
@@ -234,14 +261,19 @@ export default function AbonnementsAdmin() {
                 ✓ Enregistré
               </div>
             )}
+            {erreur && (
+              <div role="alert" style={{ color: "var(--red)", fontSize: 12.5, fontWeight: 700, marginTop: 8 }}>
+                {erreur}
+              </div>
+            )}
             <button
               type="button"
               className="btn block"
-              style={{ marginTop: 10, opacity: brouillon ? 1 : 0.5 }}
-              disabled={!brouillon}
+              style={{ marginTop: 10, opacity: brouillon && !envoi ? 1 : 0.5 }}
+              disabled={!brouillon || envoi}
               onClick={enregistrer}
             >
-              💾 Enregistrer
+              {envoi ? "Enregistrement…" : "💾 Enregistrer"}
             </button>
           </div>
         </div>
@@ -261,13 +293,22 @@ export default function AbonnementsAdmin() {
           <button
             type="button"
             onClick={enregistrer}
-            disabled={!brouillon}
+            disabled={!brouillon || envoi}
             className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            💾 Enregistrer
+            {envoi ? "Enregistrement…" : "💾 Enregistrer"}
           </button>
         </span>
       </div>
+
+      {erreur && (
+        <div
+          role="alert"
+          className="mb-4 rounded-[11px] bg-red-soft px-[13px] py-[11px] text-[12.5px] font-semibold leading-relaxed text-red"
+        >
+          {erreur}
+        </div>
+      )}
 
       <div className="mb-4 rounded-2xl border border-line bg-white p-5">
         <h3 className="mb-[14px] text-[15px] font-extrabold">Formules médecin</h3>

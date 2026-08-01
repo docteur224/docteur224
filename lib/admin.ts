@@ -625,6 +625,10 @@ export async function majSousRoles(adminId: string, sousRoles: string[]): Promis
 
 /* ===== Configuration des abonnements (tarifs_plateforme) ===== */
 
+/** Message rendu à l'écran quand la RLS refuse l'écriture sans lever d'erreur. */
+export const ERREUR_DROIT_FINANCE =
+  "Tarifs non enregistrés : leur modification est réservée aux administrateurs disposant du sous-rôle « Finance ».";
+
 export interface LigneTarif {
   formule: string;
   prixMensuel: number;
@@ -652,12 +656,18 @@ export function useConfigAbonnements(): {
     if (d.prixMensuel !== undefined) maj.prix_mensuel = d.prixMensuel;
     if (d.prixAnnuel !== undefined) maj.prix_annuel = d.prixAnnuel;
     if (d.essaiJours !== undefined) maj.essai_jours = d.essaiJours;
-    const { error } = await creerClientNavigateur().from("tarifs_plateforme").update(maj).eq("formule", formule);
-    if (!error) {
-      await tracerAudit("A modifié la configuration des abonnements", `Formule ${formule}`);
-      recharger();
-    }
-    return error ? { erreur: error.message } : {};
+    const { data, error } = await creerClientNavigateur()
+      .from("tarifs_plateforme")
+      .update(maj)
+      .eq("formule", formule)
+      .select("formule");
+    if (error) return { erreur: error.message };
+    // La policy `mod_tarifs` exige le sous-rôle Finance : pour un admin qui ne
+    // l'a pas, l'UPDATE touche 0 ligne SANS remonter d'erreur. Sans ce
+    // contrôle l'écran annonçait « ✓ Enregistré » alors que rien n'était écrit.
+    if (!data?.length) return { erreur: ERREUR_DROIT_FINANCE };
+    recharger();
+    return {};
   }
 
   return { tarifs: donnees, enregistrer, recharger };
@@ -711,8 +721,16 @@ export async function lireReglagesBool(cles: string[]): Promise<Record<string, b
   return Object.fromEntries((data ?? []).map((r) => [r.cle, r.valeur]));
 }
 
-export async function ecrireReglageBool(cle: string, valeur: boolean): Promise<void> {
-  await creerClientNavigateur().from("parametres_plateforme").upsert({ cle, valeur });
+export async function ecrireReglageBool(cle: string, valeur: boolean): Promise<{ erreur?: string }> {
+  const { data, error } = await creerClientNavigateur()
+    .from("parametres_plateforme")
+    .upsert({ cle, valeur })
+    .select("cle");
+  if (error) return { erreur: error.message };
+  // Même piège que les tarifs : un upsert qui retombe sur l'UPDATE et se fait
+  // refuser par la RLS ne renvoie ni erreur ni ligne.
+  if (!data?.length) return { erreur: `Réglage « ${cle} » non enregistré (droits insuffisants).` };
+  return {};
 }
 
 /* ===== Compteurs du tableau de bord ===== */
