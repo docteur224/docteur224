@@ -5,9 +5,8 @@ import { useEffect } from "react";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import Footer from "@/components/site/Footer";
 import TopNav from "@/components/site/TopNav";
-import Stepper from "@/components/inscription/Stepper";
 import { FournisseurInscription } from "@/components/inscription/ContexteInscription";
-import { etapesPour, useParcoursInscription } from "@/lib/inscription-pro";
+import { useParcoursInscription } from "@/lib/inscription-pro";
 import { ESPACE_PAR_ROLE } from "@/lib/auth";
 
 /*
@@ -46,21 +45,18 @@ export default function LayoutEtapes({ children }: { children: React.ReactNode }
         <EnTeteMobile retour="/inscription" titre="Inscription professionnelle" actions={false} />
       </div>
       {pret && parcours.role ? (
-        <>
-          <Stepper etapes={etapesPour(parcours.role)} courante={segment} />
-          <main className="flex-1">
-            <FournisseurInscription
-              value={{
-                role: parcours.role,
-                etape: parcours.etape,
-                etabId: parcours.etabId,
-                recharger: parcours.recharger,
-              }}
-            >
-              {children}
-            </FournisseurInscription>
-          </main>
-        </>
+        <main className="flex-1">
+          <FournisseurInscription
+            value={{
+              role: parcours.role,
+              etape: parcours.etape,
+              etabId: parcours.etabId,
+              recharger: parcours.recharger,
+            }}
+          >
+            {children}
+          </FournisseurInscription>
+        </main>
       ) : (
         <main className="flex-1">
           <p className="py-16 text-center text-[13px] text-muted">Chargement…</p>

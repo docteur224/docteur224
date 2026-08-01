@@ -1,17 +1,24 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
+import Stepper from "@/components/inscription/Stepper";
+import { useInscription } from "@/components/inscription/ContexteInscription";
+import { etapesPour } from "@/lib/inscription-pro";
 
 /**
- * Carte commune à toutes les étapes du parcours : retour, barre de
- * progression, titre, contenu, bouton principal et action secondaire
- * (« fournir plus tard »). Une seule mise en page, responsive.
+ * Carte commune à toutes les étapes du parcours : retour, fil d'Ariane,
+ * titre, contenu, bouton principal et action secondaire (« fournir plus
+ * tard »). Une seule mise en page, responsive.
+ *
+ * L'étape courante est déduite de l'URL et la liste des étapes du rôle :
+ * aucune fraction de progression à tenir à jour dans chaque page (elles
+ * divergeaient du parcours réel au moindre ajout d'étape).
  */
 export default function CadreEtape({
   titre,
   sousTitre,
   retour,
-  progression,
   children,
   boutonTexte = "Continuer",
   boutonEnCours = false,
@@ -23,8 +30,6 @@ export default function CadreEtape({
   sousTitre?: string;
   /** Lien « Étape précédente » ; absent sur la première étape. */
   retour?: string;
-  /** Avancement 0..1 de la barre fine sous le retour. */
-  progression: number;
   children: React.ReactNode;
   boutonTexte?: string;
   boutonEnCours?: boolean;
@@ -33,6 +38,8 @@ export default function CadreEtape({
   secondaire?: { texte: string; action: () => void };
   erreur?: string | null;
 }) {
+  const { role } = useInscription();
+  const segment = usePathname().split("/").filter(Boolean).pop() ?? "";
   return (
     <div className="mx-auto w-full max-w-[600px] px-4 py-6 md:py-10">
       <div className="rounded-2xl border border-line bg-white p-5 md:p-8">
@@ -44,12 +51,7 @@ export default function CadreEtape({
             ‹ Étape précédente
           </Link>
         )}
-        <div className="mb-5 h-1 overflow-hidden rounded-full bg-line" aria-hidden>
-          <div
-            className="h-full rounded-full bg-teal transition-all"
-            style={{ width: `${Math.round(progression * 100)}%` }}
-          />
-        </div>
+        <Stepper etapes={etapesPour(role)} courante={segment} className="mb-5" />
         <h1 className="text-[20px] font-extrabold tracking-[-0.3px]">{titre}</h1>
         {sousTitre && <p className="mt-1.5 text-[13px] text-muted">{sousTitre}</p>}
         <div className="mt-5">{children}</div>

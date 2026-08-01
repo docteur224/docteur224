@@ -198,7 +198,6 @@ export default function EtapeRecap() {
       titre="Récapitulatif de votre dossier"
       sousTitre="Vérifiez vos informations : votre dossier part ensuite en validation auprès de notre équipe."
       retour={`${base}/${medecinRole ? "horaires" : "documents"}`}
-      progression={medecinRole ? 6 / 7 : 4 / 5}
       onContinuer={confirmer}
       boutonTexte="Confirmer mon inscription →"
       boutonEnCours={enCours}

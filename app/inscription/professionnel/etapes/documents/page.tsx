@@ -77,7 +77,6 @@ export default function EtapeDocuments() {
       titre="Documents de vérification"
       sousTitre="Ils permettent à notre équipe de valider votre compte sous 24–48 h. Privés : jamais affichés aux patients."
       retour={`/inscription/professionnel/etapes/${medecin ? "lieu" : "fiche"}`}
-      progression={medecin ? 4 / 7 : 3 / 5}
       onContinuer={regleOk ? avancer : undefined}
       boutonTexte={etape === "recap" ? "Revenir au récap" : "Continuer"}
       boutonEnCours={enCours}

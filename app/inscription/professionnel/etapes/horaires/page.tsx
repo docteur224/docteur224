@@ -101,7 +101,6 @@ export default function EtapeHoraires() {
       titre="Vos jours et heures de consultation"
       sousTitre="Ils déterminent les créneaux réservables par les patients. Vous pourrez ajouter pauses et exceptions depuis votre espace."
       retour="/inscription/professionnel/etapes/documents"
-      progression={5 / 7}
       onContinuer={continuer}
       boutonTexte={etape === "recap" ? "Enregistrer et revenir au récap" : "Continuer"}
       boutonEnCours={enCours}

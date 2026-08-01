@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Stepper from "@/components/inscription/Stepper";
 import { useInscription } from "@/components/inscription/ContexteInscription";
 import { ESPACE_PAR_ROLE } from "@/lib/auth";
+import { etapesPour } from "@/lib/inscription-pro";
 
 /*
  * Écran terminal du parcours : le dossier est transmis (statut en_attente),
@@ -15,7 +17,9 @@ export default function EtapeConfirmation() {
 
   return (
     <div className="mx-auto w-full max-w-[600px] px-4 py-6 md:py-10">
-      <div className="rounded-2xl border border-line bg-white p-6 text-center md:p-10">
+      <div className="rounded-2xl border border-line bg-white p-6 md:p-10">
+        <Stepper etapes={etapesPour(role)} courante="confirmation" className="mb-6" />
+        <div className="text-center">
         <div
           aria-hidden
           className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-green-soft text-3xl"
@@ -69,6 +73,7 @@ export default function EtapeConfirmation() {
         >
           Accéder à mon espace →
         </Link>
+        </div>
       </div>
     </div>
   );

@@ -110,7 +110,6 @@ export default function EtapeFiche() {
     <CadreEtape
       titre="Fiche de votre établissement"
       sousTitre="Ces informations composent votre fiche publique visible par les patients."
-      progression={2 / 5}
       onContinuer={continuer}
       boutonTexte={etape === "recap" ? "Enregistrer et revenir au récap" : "Continuer"}
       boutonEnCours={enCours}

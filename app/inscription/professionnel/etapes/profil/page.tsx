@@ -112,7 +112,6 @@ export default function EtapeProfilMedical() {
     <CadreEtape
       titre="Votre profil médical"
       sousTitre="Ces informations sont affichées sur votre fiche publique et aident les patients à vous choisir."
-      progression={2 / 7}
       onContinuer={continuer}
       boutonTexte={etape === "recap" ? "Enregistrer et revenir au récap" : "Continuer"}
       boutonEnCours={enCours}

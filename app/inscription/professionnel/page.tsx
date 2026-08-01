@@ -118,7 +118,6 @@ export default function InscriptionProfessionnel() {
   return (
     <div className="flex min-h-screen flex-col bg-bg md:bg-white">
       <TopNav />
-      <Stepper etapes={etapesPour(praticien ? "medecin" : "etablissement")} courante="compte" />
       {/* ================= VERSION MOBILE ================= */}
       <div className="md:hidden">
         <EnTeteMobile retour="/inscription" titre="Compte professionnel" actions={false} />
@@ -138,6 +137,11 @@ export default function InscriptionProfessionnel() {
               </button>
             ))}
           </div>
+          <Stepper
+            etapes={etapesPour(praticien ? "medecin" : "etablissement")}
+            courante="compte"
+            className="mb-4 mt-1"
+          />
           <FauxCaptcha />
           {messageErreur}
           {praticien ? (
@@ -256,6 +260,11 @@ export default function InscriptionProfessionnel() {
                 </button>
               ))}
             </div>
+            <Stepper
+              etapes={etapesPour(praticien ? "medecin" : "etablissement")}
+              courante="compte"
+              className="mb-5 -mt-3"
+            />
             <FauxCaptcha />
             {messageErreur}
             {praticien ? (

@@ -101,7 +101,6 @@ export default function EtapeLieu() {
       titre="Votre lieu d’exercice"
       sousTitre="Ces informations permettent aux patients de vous trouver et de vous joindre."
       retour="/inscription/professionnel/etapes/profil"
-      progression={3 / 7}
       onContinuer={continuer}
       boutonTexte={etape === "recap" ? "Enregistrer et revenir au récap" : "Continuer"}
       boutonEnCours={enCours}
