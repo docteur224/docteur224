@@ -40,9 +40,11 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   // écritures), mais l'écran offrait des boutons qui ne pouvaient qu'échouer.
   useEffect(() => {
     if (chargement) return;
-    if (!profil) router.replace("/connexion");
+    // Sans session : la porte dédiée, pas /connexion — cet écran-là ne propose
+    // aucun onglet « Admin » et ne dit donc rien à un administrateur égaré.
+    if (!profil) router.replace("/espace-admin/connexion");
     else if (profil.role !== "admin") {
-      router.replace(ESPACE_PAR_ROLE[profil.role as Role] ?? "/connexion");
+      router.replace(ESPACE_PAR_ROLE[profil.role as Role] ?? "/espace-admin/connexion");
     }
   }, [chargement, profil, router]);
 
