@@ -1,0 +1,13 @@
+-- Suppression d'un compte par l'administrateur (/espace-admin/utilisateurs).
+--
+-- Comme pour la suppression de compte patient (voir
+-- app/api/compte/supprimer/route.ts), ce n'est pas un DELETE : les
+-- rendez-vous honorés appartiennent au dossier du médecin et plusieurs
+-- clés étrangères ne cascadent pas. On anonymise, on bannit, on marque.
+--
+-- Un professionnel supprimé doit toutefois disparaître des écrans publics,
+-- qui filtrent sur `statut = 'valide'`. Le basculer en 'refuse' le ferait
+-- réapparaître dans les files de validation de l'admin comme un dossier
+-- rejeté, en attente d'un arbitrage qui n'a pas lieu d'être : on ajoute
+-- donc une valeur qui dit ce qui s'est réellement passé.
+alter type statut_validation add value if not exists 'supprime';

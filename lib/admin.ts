@@ -838,3 +838,23 @@ export async function majStatutUtilisateur(id: string, statut: "actif" | "suspen
   if (!error) await tracerAudit(statut === "suspendu" ? "A suspendu un compte" : "A réactivé un compte", id);
   return error ? { erreur: error.message } : {};
 }
+
+/**
+ * Ferme définitivement un compte. Passe par le serveur : l'opération
+ * bannit le compte d'authentification, ce qu'aucune clé navigateur ne
+ * permet. Les refus (son propre compte, un autre administrateur) sont
+ * décidés là-bas, la vérification ne pouvant pas vivre dans le client.
+ */
+export async function supprimerCompteUtilisateur(id: string): Promise<{ erreur?: string }> {
+  try {
+    const reponse = await fetch("/api/admin/utilisateurs/supprimer", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    const corps = await reponse.json().catch(() => ({}));
+    return reponse.ok ? {} : { erreur: corps.erreur ?? "La suppression a échoué." };
+  } catch {
+    return { erreur: "Connexion impossible. Vérifiez votre réseau, puis réessayez." };
+  }
+}
