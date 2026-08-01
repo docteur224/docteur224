@@ -27,7 +27,7 @@ export default function Stepper({
       aria-label="Étapes de l'inscription"
       className={`-mx-1 overflow-x-auto px-1 ${className}`}
     >
-      <ol className="flex w-max items-center gap-1">
+      <ol className="mx-auto flex w-max items-center gap-1">
         {etapes.map((etape, i) => {
           const fait = i < indexCourant;
           const actif = i === indexCourant;

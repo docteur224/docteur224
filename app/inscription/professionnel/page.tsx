@@ -140,7 +140,7 @@ export default function InscriptionProfessionnel() {
           <Stepper
             etapes={etapesPour(praticien ? "medecin" : "etablissement")}
             courante="compte"
-            className="mb-4 mt-1"
+            className="mb-6 mt-5"
           />
           {messageErreur}
           {praticien ? (
@@ -263,7 +263,7 @@ export default function InscriptionProfessionnel() {
             <Stepper
               etapes={etapesPour(praticien ? "medecin" : "etablissement")}
               courante="compte"
-              className="mb-5 -mt-3"
+              className="mb-7 mt-1"
             />
             {messageErreur}
             {praticien ? (
