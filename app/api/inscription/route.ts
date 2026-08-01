@@ -65,6 +65,7 @@ export async function POST(request: Request) {
       specialite_id: corps.specialiteId || null,
       ville_id: corps.villeId || null,
       statut: "en_attente",
+      etape_inscription: "profil",
     });
     if (e2) return annuler(e2.message);
   } else {
@@ -74,6 +75,7 @@ export async function POST(request: Request) {
       type: corps.typeEtablissement || "Clinique privée",
       ville_id: corps.villeId || null,
       statut: "en_attente",
+      etape_inscription: "fiche",
     });
     if (e2) return annuler(e2.message);
   }

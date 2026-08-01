@@ -1,0 +1,284 @@
+"use client";
+
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import CadreEtape from "@/components/inscription/CadreEtape";
+import { useInscription } from "@/components/inscription/ContexteInscription";
+import { poserEtape, terminerInscription } from "@/lib/inscription-pro";
+import { useDocumentsValidation } from "@/lib/pro";
+import { formatGNF } from "@/lib/format";
+import { creerClientNavigateur } from "@/lib/supabase/client";
+
+/*
+ * Avant-dernière étape — récapitulatif du dossier, relu depuis la base
+ * (aucun état local à resynchroniser). « Confirmer » active l'essai
+ * gratuit puis clôt le parcours (etape_inscription = null).
+ */
+
+const JOURS_NOMS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+const LIBELLES_DOC: Record<string, string> = {
+  identite: "Pièce d’identité",
+  diplome: "Diplôme",
+  carte_ordre: "Carte de l’Ordre",
+  autorisation_exercice: "Autorisation d’exercice",
+};
+
+interface RecapMedecin {
+  specialite: string;
+  tarif: number | null;
+  experience: number | null;
+  presentation: string;
+  langues: string[];
+  soins: string[];
+  quartier: string;
+  ville: string;
+  localisation: string;
+  telephoneSecretariat: string;
+  horaires: { jour: number; debut: string; fin: string }[];
+}
+
+interface RecapEtab {
+  nom: string;
+  type: string;
+  description: string;
+  adresse: string;
+  quartier: string;
+  ville: string;
+  telephone: string;
+  email: string;
+  services: string[];
+}
+
+function Section({
+  titre,
+  modifier,
+  children,
+}: {
+  titre: string;
+  modifier: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="mt-4 rounded-xl border border-line">
+      <div className="flex items-center justify-between border-b border-line px-4 py-3">
+        <b className="text-[13.5px]">{titre}</b>
+        <Link
+          href={modifier}
+          className="rounded-lg border border-line px-3 py-1 text-[11.5px] font-bold text-blue hover:border-teal"
+        >
+          ✏️ Modifier
+        </Link>
+      </div>
+      <div className="px-4 py-3">{children}</div>
+    </div>
+  );
+}
+
+function Ligne({ label, valeur }: { label: string; valeur: React.ReactNode }) {
+  return (
+    <div className="flex gap-3 py-1 text-[12.5px]">
+      <span className="w-[130px] flex-none font-bold text-muted">{label}</span>
+      <span className="min-w-0 flex-1">{valeur || <span className="text-muted">—</span>}</span>
+    </div>
+  );
+}
+
+export default function EtapeRecap() {
+  const router = useRouter();
+  const { role, etabId, etape, recharger } = useInscription();
+  const { documents } = useDocumentsValidation();
+  const [compte, setCompte] = useState<{ nom: string; prenom: string; email: string; telephone: string } | null>(null);
+  const [medecin, setMedecin] = useState<RecapMedecin | null>(null);
+  const [etab, setEtab] = useState<RecapEtab | null>(null);
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [enCours, setEnCours] = useState(false);
+
+  useEffect(() => {
+    let actif = true;
+    (async () => {
+      const supabase = creerClientNavigateur();
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) return;
+      // Le parcours a pu être quitté avant d'atteindre le récap : on aligne
+      // l'étape mémorisée pour que la reprise ramène bien ici, et on
+      // rafraîchit le contexte du layout (les étapes rouvertes via
+      // « Modifier » affichent alors « revenir au récap »).
+      if (etape !== "recap") {
+        await poserEtape(role, etabId, "recap");
+        recharger();
+      }
+      const { data: u } = await supabase
+        .from("utilisateurs")
+        .select("nom, prenom, email, telephone")
+        .eq("id", auth.user.id)
+        .single();
+      if (actif && u) setCompte({ nom: u.nom ?? "", prenom: u.prenom ?? "", email: u.email, telephone: u.telephone ?? "" });
+
+      if (role === "medecin") {
+        const { data: m } = await supabase
+          .from("medecins")
+          .select(
+            "tarif_consultation, annees_experience, presentation, langues, soins_et_actes, quartier, localisation, telephone_secretariat, specialites ( nom ), villes ( nom ), horaires_types ( jour_semaine, heure_debut, heure_fin )"
+          )
+          .eq("id", auth.user.id)
+          .maybeSingle();
+        if (actif && m) {
+          const ligne = m as unknown as {
+            tarif_consultation: number | null;
+            annees_experience: number | null;
+            presentation: string | null;
+            langues: string[];
+            soins_et_actes: string[];
+            quartier: string | null;
+            localisation: string | null;
+            telephone_secretariat: string | null;
+            specialites: { nom: string } | null;
+            villes: { nom: string } | null;
+            horaires_types: { jour_semaine: number; heure_debut: string; heure_fin: string }[];
+          };
+          setMedecin({
+            specialite: ligne.specialites?.nom ?? "",
+            tarif: ligne.tarif_consultation,
+            experience: ligne.annees_experience,
+            presentation: ligne.presentation ?? "",
+            langues: ligne.langues ?? [],
+            soins: ligne.soins_et_actes ?? [],
+            quartier: ligne.quartier ?? "",
+            ville: ligne.villes?.nom ?? "",
+            localisation: ligne.localisation ?? "",
+            telephoneSecretariat: ligne.telephone_secretariat ?? "",
+            horaires: (ligne.horaires_types ?? [])
+              .map((h) => ({ jour: h.jour_semaine, debut: h.heure_debut.slice(0, 5), fin: h.heure_fin.slice(0, 5) }))
+              .sort((a, b) => ((a.jour + 6) % 7) - ((b.jour + 6) % 7)),
+          });
+        }
+      } else if (etabId) {
+        const { data: e } = await supabase
+          .from("etablissements")
+          .select("nom, type, description, adresse, quartier, telephone, email, services, villes ( nom )")
+          .eq("id", etabId)
+          .maybeSingle();
+        if (actif && e) {
+          setEtab({
+            nom: e.nom,
+            type: e.type,
+            description: e.description ?? "",
+            adresse: e.adresse ?? "",
+            quartier: e.quartier ?? "",
+            ville: (e as unknown as { villes: { nom: string } | null }).villes?.nom ?? "",
+            telephone: e.telephone ?? "",
+            email: e.email ?? "",
+            services: e.services ?? [],
+          });
+        }
+      }
+    })();
+    return () => {
+      actif = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [role, etabId]);
+
+  async function confirmer() {
+    if (enCours) return;
+    setErreur(null);
+    setEnCours(true);
+    const res = await terminerInscription(role, etabId, etab?.type);
+    setEnCours(false);
+    if (res.erreur) setErreur(res.erreur);
+    else router.push("/inscription/professionnel/etapes/confirmation");
+  }
+
+  const base = "/inscription/professionnel/etapes";
+  const medecinRole = role === "medecin";
+
+  return (
+    <CadreEtape
+      titre="Récapitulatif de votre dossier"
+      sousTitre="Vérifiez vos informations : votre dossier part ensuite en validation auprès de notre équipe."
+      retour={`${base}/${medecinRole ? "horaires" : "documents"}`}
+      progression={medecinRole ? 6 / 7 : 4 / 5}
+      onContinuer={confirmer}
+      boutonTexte="Confirmer mon inscription →"
+      boutonEnCours={enCours}
+      erreur={erreur}
+    >
+      <Section titre="👤 Compte" modifier={medecinRole ? `${base}/profil` : `${base}/fiche`}>
+        <Ligne label="Nom" valeur={`${compte?.prenom ?? ""} ${compte?.nom ?? ""}`.trim()} />
+        <Ligne label="E-mail" valeur={compte?.email} />
+        <Ligne label="Téléphone" valeur={compte?.telephone} />
+      </Section>
+
+      {medecinRole && medecin && (
+        <>
+          <Section titre="🩺 Profil médical" modifier={`${base}/profil`}>
+            <Ligne label="Spécialité" valeur={medecin.specialite} />
+            <Ligne label="Tarif" valeur={medecin.tarif ? formatGNF(medecin.tarif) : ""} />
+            <Ligne label="Expérience" valeur={medecin.experience ? `${medecin.experience} ans` : ""} />
+            <Ligne label="Langues" valeur={medecin.langues.join(", ")} />
+            <Ligne label="Soins et actes" valeur={medecin.soins.join(", ")} />
+            <Ligne label="Présentation" valeur={medecin.presentation} />
+          </Section>
+          <Section titre="📍 Lieu d’exercice" modifier={`${base}/lieu`}>
+            <Ligne label="Ville" valeur={medecin.ville} />
+            <Ligne label="Quartier" valeur={medecin.quartier} />
+            <Ligne label="Secrétariat" valeur={medecin.telephoneSecretariat} />
+            <Ligne
+              label="Position GPS"
+              valeur={medecin.localisation ? "Enregistrée ✓" : "Non renseignée"}
+            />
+          </Section>
+        </>
+      )}
+
+      {!medecinRole && etab && (
+        <Section titre="🏥 Fiche établissement" modifier={`${base}/fiche`}>
+          <Ligne label="Nom" valeur={`${etab.nom} · ${etab.type}`} />
+          <Ligne label="Adresse" valeur={[etab.adresse, etab.quartier, etab.ville].filter(Boolean).join(", ")} />
+          <Ligne label="Téléphone" valeur={etab.telephone} />
+          <Ligne label="E-mail" valeur={etab.email} />
+          <Ligne label="Services" valeur={etab.services.join(", ")} />
+          <Ligne label="Description" valeur={etab.description} />
+        </Section>
+      )}
+
+      <Section titre="📄 Documents" modifier={`${base}/documents`}>
+        {documents.length === 0 ? (
+          <p className="text-[12.5px] text-amber">
+            ⚠️ Aucun document fourni — la validation de votre compte ne pourra pas démarrer.
+          </p>
+        ) : (
+          documents.map((doc) => (
+            <Ligne
+              key={doc.id}
+              label={LIBELLES_DOC[doc.type] ?? doc.type}
+              valeur={
+                <span className="font-bold text-green">
+                  Fourni ✓ <span className="font-semibold text-muted">(vérification sous 24–48 h)</span>
+                </span>
+              }
+            />
+          ))
+        )}
+      </Section>
+
+      {medecinRole && medecin && (
+        <Section titre="🕐 Horaires de consultation" modifier={`${base}/horaires`}>
+          {medecin.horaires.length === 0 ? (
+            <p className="text-[12.5px] text-muted">Aucun horaire défini.</p>
+          ) : (
+            medecin.horaires.map((h) => (
+              <Ligne key={h.jour} label={JOURS_NOMS[h.jour]} valeur={`${h.debut} – ${h.fin}`} />
+            ))
+          )}
+        </Section>
+      )}
+
+      <div className="mt-4 rounded-xl bg-teal-soft px-4 py-3 text-[12.5px] font-semibold leading-relaxed text-blue">
+        ℹ️ En confirmant, votre essai gratuit démarre et votre dossier est transmis à notre équipe.
+        Votre fiche sera visible des patients après validation (24–48 h).
+      </div>
+    </CadreEtape>
+  );
+}

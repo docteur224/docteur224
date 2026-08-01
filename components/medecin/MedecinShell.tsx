@@ -6,6 +6,7 @@ import { useEffect } from "react";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
 import { seDeconnecter } from "@/lib/auth";
 import { useContextePro } from "@/lib/pro";
+import { useParcoursInscription } from "@/lib/inscription-pro";
 import ClocheNotifications from "@/components/site/ClocheNotifications";
 
 /**
@@ -39,6 +40,15 @@ export default function MedecinShell({ children }: { children: React.ReactNode }
       router.replace("/connexion");
     }
   }, [chargement, role, router]);
+
+  // Parcours d'inscription inachevé → retour à l'étape courante du wizard.
+  const parcours = useParcoursInscription();
+  const enParcours = parcours.role === "medecin" && parcours.etape !== null;
+  useEffect(() => {
+    if (!parcours.chargement && enParcours) {
+      router.replace(`/inscription/professionnel/etapes/${parcours.etape}`);
+    }
+  }, [parcours.chargement, enParcours, parcours.etape, router]);
   const medecinConnecte = medecin ?? {
     gradient: "linear-gradient(135deg,#2E9CCA,#15506B)",
     initiales: "…",
@@ -106,7 +116,13 @@ export default function MedecinShell({ children }: { children: React.ReactNode }
           </button>
         </nav>
       </aside>
-      <main className="with-tabbar overflow-auto md:px-[30px] md:py-[26px]">{children}</main>
+      <main className="with-tabbar overflow-auto md:px-[30px] md:py-[26px]">
+        {enParcours ? (
+          <p className="py-16 text-center text-[13px] text-muted">Redirection…</p>
+        ) : (
+          children
+        )}
+      </main>
       <TabBarMobile role="medecin" />
     </div>
   );

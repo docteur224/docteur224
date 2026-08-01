@@ -11,12 +11,17 @@ import CoteAuth from "@/components/site/CoteAuth";
 import FauxCaptcha from "@/components/site/FauxCaptcha";
 import { inscrireProfessionnel } from "@/lib/auth";
 import { creerClientNavigateur } from "@/lib/supabase/client";
+import Stepper from "@/components/inscription/Stepper";
+import { etapesPour, useParcoursInscription } from "@/lib/inscription-pro";
 
 /*
- * Inscription professionnel — création réelle du compte : praticien →
- * `utilisateurs` + `medecins` (statut en_attente, validé par l'admin) ;
- * clinique/hôpital/cabinet → `utilisateurs` + `etablissements`.
- * Spécialités et villes chargées depuis les référentiels Supabase.
+ * Inscription professionnel — étape 1 (« Compte ») du parcours multi-étapes :
+ * praticien → `utilisateurs` + `medecins` (statut en_attente, validé par
+ * l'admin) ; clinique/hôpital/cabinet → `utilisateurs` + `etablissements`.
+ * Le compte est créé immédiatement puis les étapes suivantes
+ * (/inscription/professionnel/etapes/…) complètent le dossier — le parcours
+ * est donc reprenable à tout moment. Un pro connecté en cours de parcours
+ * est renvoyé directement à son étape courante.
  */
 
 type Profil = "praticien" | "clinique" | "hopital" | "cabinet";
@@ -46,6 +51,15 @@ export default function InscriptionProfessionnel() {
   const router = useRouter();
   const [profil, setProfil] = useState<Profil>("praticien");
   const praticien = profil === "praticien";
+
+  // Reprise : un professionnel connecté dont le parcours n'est pas terminé
+  // est renvoyé directement à son étape courante.
+  const parcours = useParcoursInscription();
+  useEffect(() => {
+    if (!parcours.chargement && parcours.role && parcours.etape) {
+      router.replace(`/inscription/professionnel/etapes/${parcours.etape}`);
+    }
+  }, [parcours.chargement, parcours.role, parcours.etape, router]);
 
   const [specialites, setSpecialites] = useState<Reference[]>([]);
   const [villes, setVilles] = useState<Reference[]>([]);
@@ -88,7 +102,7 @@ export default function InscriptionProfessionnel() {
     });
     setEnCours(false);
     if (res.erreur) setErreur(res.erreur);
-    else router.push(praticien ? "/espace-medecin" : "/espace-etablissement");
+    else router.push(`/inscription/professionnel/etapes/${praticien ? "profil" : "fiche"}`);
   }
 
   const champ =
@@ -104,6 +118,7 @@ export default function InscriptionProfessionnel() {
   return (
     <div className="flex min-h-screen flex-col bg-bg md:bg-white">
       <TopNav />
+      <Stepper etapes={etapesPour(praticien ? "medecin" : "etablissement")} courante="compte" />
       {/* ================= VERSION MOBILE ================= */}
       <div className="md:hidden">
         <EnTeteMobile retour="/inscription" titre="Compte professionnel" actions={false} />
@@ -222,7 +237,8 @@ export default function InscriptionProfessionnel() {
               Créer mon compte professionnel
             </h3>
             <p className="mb-6 mt-1.5 text-[13.5px] text-muted">
-              Sélectionnez votre profil pour commencer.
+              Sélectionnez votre profil pour commencer. Vous compléterez ensuite votre dossier
+              étape par étape — reprenable à tout moment.
             </p>
             <div className="mb-[22px] flex flex-wrap gap-2">
               {ONGLETS.map((onglet) => (
