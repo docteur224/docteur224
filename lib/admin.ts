@@ -629,6 +629,24 @@ export async function majSousRoles(adminId: string, sousRoles: string[]): Promis
 export const ERREUR_DROIT_FINANCE =
   "Tarifs non enregistrés : leur modification est réservée aux administrateurs disposant du sous-rôle « Finance ».";
 
+/**
+ * Explique un refus de la RLS en français. Sans ça, un visiteur qui n'est pas
+ * administrateur lisait « réservé au sous-rôle Finance » (faux : il lui manque
+ * le rôle admin tout court) suivi du message brut de PostgreSQL.
+ * Appelée seulement sur le chemin d'erreur : deux allers-retours de plus, mais
+ * uniquement quand l'enregistrement a déjà échoué.
+ */
+async function messageRefus(): Promise<string> {
+  const supabase = creerClientNavigateur();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return "Session expirée — reconnectez-vous pour enregistrer.";
+  const { data: admin } = await supabase.rpc("est_admin");
+  if (!admin) {
+    return "Enregistrement refusé : ce compte n'est pas un compte administrateur.";
+  }
+  return ERREUR_DROIT_FINANCE;
+}
+
 export interface LigneTarif {
   formule: string;
   prixMensuel: number;
@@ -665,7 +683,7 @@ export function useConfigAbonnements(): {
     // La policy `mod_tarifs` exige le sous-rôle Finance : pour un admin qui ne
     // l'a pas, l'UPDATE touche 0 ligne SANS remonter d'erreur. Sans ce
     // contrôle l'écran annonçait « ✓ Enregistré » alors que rien n'était écrit.
-    if (!data?.length) return { erreur: ERREUR_DROIT_FINANCE };
+    if (!data?.length) return { erreur: await messageRefus() };
     recharger();
     return {};
   }
@@ -726,10 +744,15 @@ export async function ecrireReglageBool(cle: string, valeur: boolean): Promise<{
     .from("parametres_plateforme")
     .upsert({ cle, valeur })
     .select("cle");
-  if (error) return { erreur: error.message };
+  // Un refus de la RLS remonte ici en clair (code 42501, « new row violates
+  // row-level security policy ») : on le traduit plutôt que de l'afficher brut.
+  if (error) {
+    const refus = error.code === "42501" || /row-level security/i.test(error.message);
+    return { erreur: refus ? await messageRefus() : error.message };
+  }
   // Même piège que les tarifs : un upsert qui retombe sur l'UPDATE et se fait
   // refuser par la RLS ne renvoie ni erreur ni ligne.
-  if (!data?.length) return { erreur: `Réglage « ${cle} » non enregistré (droits insuffisants).` };
+  if (!data?.length) return { erreur: await messageRefus() };
   return {};
 }
 

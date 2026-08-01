@@ -1,9 +1,11 @@
 "use client";
 
+import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
-import { seDeconnecter } from "@/lib/auth";
+import { ESPACE_PAR_ROLE, seDeconnecter, type Role } from "@/lib/auth";
+import { useProfilConnecte } from "@/lib/patient";
 import ClocheNotifications from "@/components/site/ClocheNotifications";
 
 /**
@@ -30,6 +32,29 @@ const LIENS = [
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { profil, chargement } = useProfilConnecte();
+
+  // Garde d'accès : l'espace admin exige un compte admin. Elle manquait — comme
+  // elle manquait à PatientShell — et TOUT visiteur, y compris anonyme, ouvrait
+  // la console d'administration. La base tenait bon (la RLS refusait les
+  // écritures), mais l'écran offrait des boutons qui ne pouvaient qu'échouer.
+  useEffect(() => {
+    if (chargement) return;
+    if (!profil) router.replace("/connexion");
+    else if (profil.role !== "admin") {
+      router.replace(ESPACE_PAR_ROLE[profil.role as Role] ?? "/connexion");
+    }
+  }, [chargement, profil, router]);
+
+  // Tant que la redirection n'a pas eu lieu, ne pas monter les écrans : ils
+  // interrogeraient les tables d'administration pour n'afficher que du vide.
+  if (!chargement && profil?.role !== "admin") {
+    return (
+      <div className="grid min-h-screen place-items-center bg-bg text-[13.5px] text-muted">
+        Redirection…
+      </div>
+    );
+  }
 
   return (
     <div className="grid min-h-screen bg-bg lg:grid-cols-[236px_1fr]">
