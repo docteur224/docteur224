@@ -142,7 +142,6 @@ export default function InscriptionProfessionnel() {
             courante="compte"
             className="mb-4 mt-1"
           />
-          <FauxCaptcha />
           {messageErreur}
           {praticien ? (
             <>
@@ -206,6 +205,7 @@ export default function InscriptionProfessionnel() {
           <div className="flabel">Mot de passe *</div>
           <input className="inp" type="password" placeholder="••••••••" value={motDePasse} onChange={(e) => setMotDePasse(e.target.value)} />
           <CaseCocher texte="J'accepte les conditions d'utilisation et la politique de confidentialité." />
+          <FauxCaptcha />
           <button type="button" className="btn block w-full" onClick={creerCompte} disabled={enCours}>
             {enCours ? "Création…" : "Continuer"}
           </button>
@@ -265,7 +265,6 @@ export default function InscriptionProfessionnel() {
               courante="compte"
               className="mb-5 -mt-3"
             />
-            <FauxCaptcha />
             {messageErreur}
             {praticien ? (
               <>
@@ -331,6 +330,7 @@ export default function InscriptionProfessionnel() {
             <label className={etiquette}>Mot de passe *</label>
             <input className={champ} type="password" placeholder="••••••••" value={motDePasse} onChange={(e) => setMotDePasse(e.target.value)} />
             <CaseCocher texte="J'accepte les conditions d'utilisation et la politique de confidentialité." />
+            <FauxCaptcha />
             <button
               type="button"
               onClick={creerCompte}
