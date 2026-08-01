@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { creerClientNavigateur } from "@/lib/supabase/client";
-import { versISO } from "@/lib/dates";
 
 /*
  * Parcours d'inscription professionnel multi-étapes.
@@ -274,51 +273,22 @@ export async function enregistrerEtapeFiche(
 /* ===== Confirmation ===== */
 
 /**
- * Clôt le parcours : active l'essai gratuit (si aucun abonnement) puis
- * efface `etape_inscription`. La formule d'essai découle du type de compte.
+ * Clôt le parcours : ouverture de l'abonnement puis effacement de
+ * `etape_inscription`.
+ *
+ * Tout est décidé par /api/inscription/finaliser, jamais ici : la
+ * migration 0019 retire l'écriture client sur `abonnements`, parce que le
+ * statut et la date de fin déterminent ce qui a été payé et ne peuvent
+ * donc pas dépendre de ce que poste le navigateur. La route ne prend
+ * aucun paramètre — elle relit le rôle et l'établissement en base à
+ * partir de la session.
  */
-export async function terminerInscription(
-  role: RoleInscription,
-  etabId: string | null,
-  typeEtablissement?: string
-): Promise<{ erreur?: string }> {
-  const supabase = creerClientNavigateur();
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) return { erreur: "Session expirée." };
-
-  let formule = "standard";
-  if (role === "etablissement") {
-    const type = (typeEtablissement ?? "").toLowerCase();
-    formule = type.includes("hôpital") || type.includes("hopital")
-      ? "hopital"
-      : type.includes("clinique")
-        ? "clinique"
-        : "cabinet";
+export async function terminerInscription(): Promise<{ erreur?: string }> {
+  try {
+    const reponse = await fetch("/api/inscription/finaliser", { method: "POST" });
+    const corps = await reponse.json().catch(() => ({}));
+    return reponse.ok ? {} : { erreur: corps.erreur ?? "La finalisation a échoué." };
+  } catch {
+    return { erreur: "Connexion impossible. Vérifiez votre réseau, puis réessayez." };
   }
-
-  const { data: existants } = await supabase
-    .from("abonnements")
-    .select("id")
-    .eq("titulaire_id", auth.user.id)
-    .limit(1);
-  if (!existants || existants.length === 0) {
-    const { data: tarif } = await supabase
-      .from("tarifs_plateforme")
-      .select("essai_jours, quota_sms")
-      .eq("formule", formule)
-      .maybeSingle();
-    const essaiJours = tarif?.essai_jours ?? 30;
-    const { error: eAbo } = await supabase.from("abonnements").insert({
-      titulaire_id: auth.user.id,
-      type_titulaire: role,
-      formule,
-      periode: "mensuel",
-      statut: "essai",
-      date_fin: versISO(new Date(Date.now() + essaiJours * 86400000)),
-      quota_sms: tarif?.quota_sms ?? 0,
-    });
-    if (eAbo) return { erreur: eAbo.message };
-  }
-
-  return poserEtape(role, etabId, null);
 }

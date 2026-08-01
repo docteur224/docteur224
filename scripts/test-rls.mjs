@@ -129,6 +129,40 @@ const admin = await clientPour("admin@docteur224.com", "alpha2308");
   test("Patient → réserver puis annuler son RDV : autorisé", !error && annule?.length === 1);
   if (rdv) await admin.from("rendez_vous").delete().eq("id", rdv.id);
 }
+// 18. Un professionnel ne s'octroie pas son propre abonnement (migration 0019).
+//     Les policies autorisaient titulaire_id = auth.uid() en insert ET en
+//     update : n'importe quel médecin pouvait se passer un abonnement actif
+//     expirant en 2099 depuis la console de son navigateur, soit le
+//     contournement complet du paiement. Seul le service_role écrit
+//     désormais, via /api/inscription/finaliser.
+{
+  const uid = (await medecin.auth.getUser()).data.user.id;
+  const { error } = await medecin.from("abonnements").insert({
+    titulaire_id: uid, type_titulaire: "medecin", formule: "premium",
+    periode: "annuel", statut: "actif", date_fin: "2099-12-31", quota_sms: 99999,
+  });
+  test("Médecin → INSERT son propre abonnement : refusé", !!error, error?.code);
+  if (!error) await admin.from("abonnements").delete().eq("titulaire_id", uid).eq("formule", "premium");
+}
+// 19. Ni ne prolonge celui que le serveur lui a posé. L'abonnement est
+//     créé ici par l'admin finance : sans ligne à modifier, l'UPDATE ne
+//     porterait sur rien et le test passerait à vide.
+{
+  const uid = (await medecin.auth.getUser()).data.user.id;
+  const { data: pose } = await admin.from("abonnements").insert({
+    titulaire_id: uid, type_titulaire: "medecin", formule: "standard",
+    periode: "mensuel", statut: "essai", date_fin: "2030-01-01", quota_sms: 0,
+  }).select().single();
+  await medecin.from("abonnements").update({ statut: "actif", date_fin: "2099-12-31" }).eq("id", pose.id);
+  const { data: apres } = await admin
+    .from("abonnements").select("statut, date_fin").eq("id", pose.id).single();
+  test(
+    "Médecin → UPDATE son abonnement : sans effet",
+    apres.statut === "essai" && apres.date_fin === "2030-01-01",
+    `essai/2030-01-01 → ${apres.statut}/${apres.date_fin}`
+  );
+  await admin.from("abonnements").delete().eq("id", pose.id);
+}
 
 const echecs = resultats.filter((r) => !r.ok).length;
 console.log(`\n${resultats.length - echecs}/${resultats.length} tests réussis${echecs ? ` — ${echecs} ÉCHEC(S)` : ""}`);

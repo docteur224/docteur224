@@ -184,7 +184,7 @@ export default function EtapeRecap() {
     if (enCours) return;
     setErreur(null);
     setEnCours(true);
-    const res = await terminerInscription(role, etabId, etab?.type);
+    const res = await terminerInscription();
     setEnCours(false);
     if (res.erreur) setErreur(res.erreur);
     else router.push("/inscription/professionnel/etapes/confirmation");
