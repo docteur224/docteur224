@@ -15,7 +15,16 @@ export const ESPACE_PAR_ROLE: Record<Role, string> = {
   admin: "/espace-admin",
 };
 
-export async function seConnecter(email: string, motDePasse: string): Promise<{ cible?: string; erreur?: string }> {
+/**
+ * Le rôle n'est lisible qu'APRÈS authentification (il vit dans `utilisateurs`,
+ * pas dans le jeton) : chaque porte d'entrée doit donc ouvrir la session, lire
+ * le rôle, puis refermer si le rôle n'est pas le sien. D'où le `role` rendu
+ * ici, et `refuserSession()` pour annuler proprement.
+ */
+export async function seConnecter(
+  email: string,
+  motDePasse: string
+): Promise<{ role?: Role; cible?: string; erreur?: string }> {
   const supabase = creerClientNavigateur();
   const { data, error } = await supabase.auth.signInWithPassword({ email, password: motDePasse });
   if (error) {
@@ -30,7 +39,13 @@ export async function seConnecter(email: string, motDePasse: string): Promise<{ 
     await supabase.auth.signOut();
     return { erreur: "Profil introuvable. Contactez le support." };
   }
-  return { cible: ESPACE_PAR_ROLE[profil.role as Role] };
+  const role = profil.role as Role;
+  return { role, cible: ESPACE_PAR_ROLE[role] };
+}
+
+/** Referme une session ouverte par la mauvaise porte. */
+export async function refuserSession(): Promise<void> {
+  await creerClientNavigateur().auth.signOut();
 }
 
 export async function seDeconnecter(): Promise<void> {

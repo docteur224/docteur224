@@ -8,12 +8,16 @@ import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import Footer from "@/components/site/Footer";
 import Logo from "@/components/site/Logo";
 import TopNav from "@/components/site/TopNav";
-import { seConnecter } from "@/lib/auth";
+import { refuserSession, seConnecter } from "@/lib/auth";
 
 /*
  * Connexion — authentification réelle Supabase. Les onglets de rôle sont
  * conservés visuellement (maquette), mais la redirection suit le rôle réel
  * du compte, lu dans la table `utilisateurs`.
+ *
+ * Cet écran est la porte du public : il ne délivre PAS de session
+ * administrateur. Un compte admin qui s'y identifie voit sa session refermée
+ * aussitôt et se fait renvoyer vers /espace-admin/connexion.
  */
 
 const ROLES = ["Patient", "Médecin", "Clinique", "Hôpital", "Cabinet"];
@@ -41,28 +45,51 @@ function EcranConnexion({ retour }: { retour: string | null }) {
   const [email, setEmail] = useState("");
   const [motDePasse, setMotDePasse] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);
+  const [renvoiAdmin, setRenvoiAdmin] = useState(false);
   const [enCours, setEnCours] = useState(false);
 
   async function connecter() {
     if (enCours) return;
     setErreur(null);
+    setRenvoiAdmin(false);
     if (!email || !motDePasse) {
       setErreur("Renseignez votre e-mail et votre mot de passe.");
       return;
     }
     setEnCours(true);
     const res = await seConnecter(email.trim(), motDePasse);
+    if (res.erreur) {
+      setEnCours(false);
+      setErreur(res.erreur);
+      return;
+    }
+    // Un administrateur n'obtient pas de session par la porte du public : la
+    // session tout juste ouverte est refermée avant toute navigation.
+    if (res.role === "admin") {
+      await refuserSession();
+      setEnCours(false);
+      setErreur("Les comptes administrateurs se connectent depuis la console d’administration.");
+      setRenvoiAdmin(true);
+      return;
+    }
     setEnCours(false);
-    if (res.erreur) setErreur(res.erreur);
-    else router.push(retour ?? res.cible!);
+    router.push(retour ?? res.cible!);
   }
 
   const champ =
     "mb-3 w-full rounded-xl border border-line bg-white p-[14px] text-sm outline-none focus:border-teal";
 
   const messageErreur = erreur && (
-    <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-[12.5px] font-semibold text-red-600">
+    <p role="alert" className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-[12.5px] font-semibold text-red-600">
       {erreur}
+      {renvoiAdmin && (
+        <>
+          {" "}
+          <Link href="/espace-admin/connexion" className="underline">
+            Aller à la console d’administration
+          </Link>
+        </>
+      )}
     </p>
   );
 

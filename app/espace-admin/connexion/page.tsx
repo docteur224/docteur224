@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Logo from "@/components/site/Logo";
-import { ESPACE_PAR_ROLE, seConnecter, type Role } from "@/lib/auth";
+import { seConnecter } from "@/lib/auth";
 
 /*
  * Porte d'entrée de la console d'administration.
@@ -43,8 +43,9 @@ export default function ConnexionAdmin() {
     }
     // Le compte est valide mais n'est pas administrateur : on le dit, et on
     // propose son espace. Pas de déconnexion forcée — la session obtenue est
-    // légitime, elle n'a simplement rien à faire ici.
-    if (res.cible !== ESPACE_PAR_ROLE["admin" as Role]) {
+    // légitime, elle n'a simplement rien à faire ici (symétrique du refus
+    // opposé aux administrateurs sur /connexion).
+    if (res.role !== "admin") {
       setEnCours(false);
       setErreur("Ce compte n'est pas un compte administrateur.");
       setEspacePropose(res.cible ?? null);
