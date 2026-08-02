@@ -49,6 +49,14 @@ const LANCEMENT: { cle: keyof ConfigAbonnements; titre: string; detail?: string 
   { cle: "mtnMomo", titre: "Paiement MTN MoMo" },
 ];
 
+/*
+ * La période gratuite de lancement l'emporte sur l'essai (voir l'ordre de
+ * précédence de /api/inscription/finaliser). Tant qu'elle est active,
+ * basculer l'essai ne change rien pour personne — l'écran le disait nulle
+ * part, et on pouvait croire le réglage cassé.
+ */
+const NOTE_NEUTRALISE = "Sans effet tant que la période gratuite de lancement est active.";
+
 export default function AbonnementsAdmin() {
   const { tarifs, enregistrer: enregistrerTarif } = useConfigAbonnements();
   const [reglagesExtra, setReglagesExtra] = useState<Record<string, boolean>>({});
@@ -248,6 +256,9 @@ export default function AbonnementsAdmin() {
                 <div>
                   <b>{ligne.titre}</b>
                   {ligne.detail && <small>{ligne.detail}</small>}
+                  {ligne.cle === "essaiGratuit" && valeurs.periodeGratuite && (
+                    <small style={{ color: "var(--red)" }}>{NOTE_NEUTRALISE}</small>
+                  )}
                 </div>
                 <Interrupteur
                   actif={valeurs[ligne.cle] as boolean}
@@ -450,6 +461,9 @@ export default function AbonnementsAdmin() {
             <div>
               <b className="block text-[13.5px] font-bold">{ligne.titre}</b>
               {ligne.detail && <small className="text-xs text-muted">{ligne.detail}</small>}
+              {ligne.cle === "essaiGratuit" && valeurs.periodeGratuite && (
+                <small className="block text-xs font-semibold text-red">{NOTE_NEUTRALISE}</small>
+              )}
             </div>
             <Interrupteur
               actif={valeurs[ligne.cle] as boolean}

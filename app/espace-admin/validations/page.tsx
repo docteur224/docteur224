@@ -40,7 +40,82 @@ const MOTIFS = [
   "Diplôme non conforme",
   "Pièce d'identité expirée",
   "Informations incohérentes",
+  "Autre motif (à préciser)",
 ];
+const MOTIF_VIDE = MOTIFS[0];
+const MOTIF_LIBRE = MOTIFS[MOTIFS.length - 1];
+
+/**
+ * Demande le motif d'un rejet lancé depuis une ligne de file : ces lignes
+ * n'ont pas le sélecteur de la carte d'examen, et aucun rejet ne doit partir
+ * sans motif. Dialogue unique, responsive (feuille en bas sous md).
+ */
+function DialogueMotif({
+  dossier,
+  onFermer,
+  onConfirmer,
+}: {
+  dossier: DossierValidation;
+  onFermer: () => void;
+  onConfirmer: (motif: string) => void;
+}) {
+  const [choix, setChoix] = useState(MOTIF_VIDE);
+  const [libre, setLibre] = useState("");
+  const retenu = choix === MOTIF_VIDE ? "" : choix === MOTIF_LIBRE ? libre.trim() : choix;
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`Rejeter ${dossier.nom}`}
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 md:items-center md:p-4"
+    >
+      <div className="w-full max-w-[440px] rounded-t-2xl bg-white p-5 md:rounded-2xl">
+        <h3 className="text-[15px] font-extrabold">Rejeter — {dossier.nom}</h3>
+        <p className="mb-3 mt-1 text-[12.5px] text-muted">
+          Le motif est transmis au professionnel et tracé dans le journal d’audit.
+        </p>
+        <select
+          value={choix}
+          onChange={(e) => setChoix(e.target.value)}
+          aria-label="Motif du rejet"
+          className="w-full rounded-[11px] border border-line bg-white px-[13px] py-3 text-[13.5px] outline-none focus:border-teal"
+        >
+          {MOTIFS.map((m) => (
+            <option key={m}>{m}</option>
+          ))}
+        </select>
+        {choix === MOTIF_LIBRE && (
+          <textarea
+            rows={3}
+            value={libre}
+            onChange={(e) => setLibre(e.target.value)}
+            placeholder="Expliquez ce qui pose problème…"
+            aria-label="Motif libre du rejet"
+            className="mt-2 w-full rounded-[11px] border border-line bg-white px-[13px] py-3 text-[13.5px] outline-none focus:border-teal"
+          />
+        )}
+        <div className="mt-4 flex justify-end gap-[9px]">
+          <button
+            type="button"
+            onClick={onFermer}
+            className="rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg"
+          >
+            Annuler
+          </button>
+          <button
+            type="button"
+            onClick={() => onConfirmer(retenu)}
+            disabled={!retenu}
+            className="rounded-[9px] border-[1.5px] border-[#F3CDC8] bg-white px-[14px] py-2 text-[12.5px] font-bold text-red transition-colors hover:bg-[#FBE9E7] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            ✕ Confirmer le rejet
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /** Vignette d'une pièce réellement déposée : ouvre le fichier en URL signée. */
 function Vignette({ piece, mobile = false }: { piece: PieceDossier; mobile?: boolean }) {
@@ -80,7 +155,7 @@ function Vignette({ piece, mobile = false }: { piece: PieceDossier; mobile?: boo
 }
 
 /** Ligne mobile de la file (mêmes actions que la version web). */
-function LigneDossierMobile({ dossier, decider }: { dossier: DossierValidation; decider: (d: DossierValidation, decision: "valide" | "refuse") => void }) {
+function LigneDossierMobile({ dossier, approuver, demanderRejet }: { dossier: DossierValidation; approuver: (d: DossierValidation) => void; demanderRejet: (d: DossierValidation) => void }) {
   return (
     <div className="asstrowm">
       <span
@@ -102,10 +177,10 @@ function LigneDossierMobile({ dossier, decider }: { dossier: DossierValidation; 
         </small>
       </span>
       <span style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-        <button type="button" className="btnm" onClick={() => decider(dossier, "valide")}>
+        <button type="button" className="btnm" onClick={() => approuver(dossier)}>
           Approuver
         </button>
-        <button type="button" className="btnm dg" onClick={() => decider(dossier, "refuse")}>
+        <button type="button" className="btnm dg" onClick={() => demanderRejet(dossier)}>
           Rejeter
         </button>
       </span>
@@ -113,7 +188,7 @@ function LigneDossierMobile({ dossier, decider }: { dossier: DossierValidation; 
   );
 }
 
-function LigneDossier({ dossier, decider }: { dossier: DossierValidation; decider: (d: DossierValidation, decision: "valide" | "refuse") => void }) {
+function LigneDossier({ dossier, approuver, demanderRejet }: { dossier: DossierValidation; approuver: (d: DossierValidation) => void; demanderRejet: (d: DossierValidation) => void }) {
   return (
     <div className="flex flex-wrap items-center gap-[13px] border-b border-line py-[14px] last:border-b-0">
       <span
@@ -138,14 +213,14 @@ function LigneDossier({ dossier, decider }: { dossier: DossierValidation; decide
       </div>
       <button
         type="button"
-        onClick={() => decider(dossier, "valide")}
+        onClick={() => approuver(dossier)}
         className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
       >
         Approuver
       </button>
       <button
         type="button"
-        onClick={() => decider(dossier, "refuse")}
+        onClick={() => demanderRejet(dossier)}
         className="rounded-[9px] border-[1.5px] border-[#F3CDC8] bg-white px-[14px] py-2 text-[12.5px] font-bold text-red transition-colors hover:bg-[#FBE9E7]"
       >
         Rejeter
@@ -159,12 +234,23 @@ export default function ValidationsAdmin() {
   const { dossiers: etablissements, recharger: rechargerEtabs } = useEtablissementsEnAttente();
   const pagiMedecins = usePagination(medecins, 10);
   const pagiEtabs = usePagination(etablissements, 10);
-  const [motif, setMotif] = useState(MOTIFS[0]);
+  const [motif, setMotif] = useState(MOTIF_VIDE);
+  const [motifLibre, setMotifLibre] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);
   const [succes, setSucces] = useState<string | null>(null);
   const [enCours, setEnCours] = useState(false);
+  /** Dossier dont le rejet est en cours de motivation (lignes de file). */
+  const [rejetEnCours, setRejetEnCours] = useState<DossierValidation | null>(null);
 
-  const motifChoisi = motif === MOTIFS[0] ? undefined : motif;
+  // Motif retenu : la saisie libre quand « Autre motif » est choisi, sinon
+  // l'intitulé de la liste. `undefined` = rien de motivé.
+  const motifChoisi =
+    motif === MOTIF_VIDE ? undefined : motif === MOTIF_LIBRE ? motifLibre.trim() || undefined : motif;
+
+  function reinitialiserMotif() {
+    setMotif(MOTIF_VIDE);
+    setMotifLibre("");
+  }
 
   async function decider(
     d: DossierValidation,
@@ -184,23 +270,37 @@ export default function ValidationsAdmin() {
     setSucces(
       decision === "valide" ? `${d.nom} a été approuvé.` : `${d.nom} a été rejeté.`
     );
-    setMotif(MOTIFS[0]); // sinon le motif du rejet précédent collait au dossier suivant
+    reinitialiserMotif(); // sinon le motif précédent collait au dossier suivant
     rechargerMedecins();
     rechargerEtabs();
   }
 
-  /** Rejet depuis la carte de détail : le motif y est obligatoire. */
+  /**
+   * Rien de négatif ne part sans motif : le professionnel doit savoir ce
+   * qu'on lui reproche, et la décision doit rester justifiable dans l'audit.
+   */
+  function motifManquant(action: string): boolean {
+    if (motifChoisi) return false;
+    setSucces(null);
+    setErreur(
+      motif === MOTIF_LIBRE
+        ? `Précisez le motif avant de ${action}.`
+        : `Choisissez ou saisissez un motif avant de ${action}.`
+    );
+    return true;
+  }
+
   async function rejeterAvecMotif(d: DossierValidation) {
-    if (!motifChoisi) {
-      setSucces(null);
-      setErreur("Choisissez un motif avant de rejeter le dossier.");
-      return;
-    }
+    if (motifManquant("rejeter le dossier")) return;
     await decider(d, "refuse", motifChoisi);
   }
 
+  /** Approbation : la seule décision qui n'a pas à être motivée. */
+  const approuver = (d: DossierValidation) => decider(d, "valide");
+
   async function complement(d: DossierValidation) {
     if (enCours) return;
+    if (motifManquant("demander un complément")) return;
     setErreur(null);
     setSucces(null);
     setEnCours(true);
@@ -211,6 +311,7 @@ export default function ValidationsAdmin() {
       return;
     }
     setSucces(`Complément demandé à ${d.nom} — le dossier reste en attente.`);
+    reinitialiserMotif();
   }
 
   // Le dossier « en cours d'examen » est le premier médecin de la file.
@@ -239,6 +340,18 @@ export default function ValidationsAdmin() {
 
   return (
     <AdminShell>
+      {rejetEnCours && (
+        <DialogueMotif
+          dossier={rejetEnCours}
+          onFermer={() => setRejetEnCours(null)}
+          onConfirmer={(m) => {
+            const d = rejetEnCours;
+            setRejetEnCours(null);
+            decider(d, "refuse", m);
+          }}
+        />
+      )}
+
       {/* ===== Version mobile (écran « m-admin-validation » de la maquette mobile) ===== */}
       <div className="md:hidden">
         <EnTeteMobile variante="marque" />
@@ -273,13 +386,31 @@ export default function ValidationsAdmin() {
                 </div>
               )}
               <div className="fldm" style={{ marginTop: 6 }}>
-                <label>Motif (si rejet ou complément)</label>
-                <select className="v" value={motif} onChange={(e) => setMotif(e.target.value)}>
+                <label>Motif — obligatoire pour rejeter ou demander un complément</label>
+                <select
+                  className="v"
+                  value={motif}
+                  onChange={(e) => setMotif(e.target.value)}
+                  aria-label="Motif"
+                >
                   {MOTIFS.map((m) => (
                     <option key={m}>{m}</option>
                   ))}
                 </select>
               </div>
+              {motif === MOTIF_LIBRE && (
+                <div className="fldm">
+                  <label>Précisez le motif</label>
+                  <textarea
+                    className="inp"
+                    rows={3}
+                    value={motifLibre}
+                    onChange={(e) => setMotifLibre(e.target.value)}
+                    placeholder="Expliquez ce qui manque ou ce qui pose problème…"
+                    aria-label="Motif libre"
+                  />
+                </div>
+              )}
               <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginTop: 8 }}>
                 <button
                   type="button"
@@ -326,7 +457,7 @@ export default function ValidationsAdmin() {
               </p>
             )}
             {pagiMedecins.tranche.map((dossier) => (
-              <LigneDossierMobile key={dossier.id} dossier={dossier} decider={decider} />
+              <LigneDossierMobile key={dossier.id} dossier={dossier} approuver={approuver} demanderRejet={setRejetEnCours} />
             ))}
             <Pagination
               page={pagiMedecins.page}
@@ -346,7 +477,7 @@ export default function ValidationsAdmin() {
               </p>
             )}
             {pagiEtabs.tranche.map((dossier) => (
-              <LigneDossierMobile key={dossier.id} dossier={dossier} decider={decider} />
+              <LigneDossierMobile key={dossier.id} dossier={dossier} approuver={approuver} demanderRejet={setRejetEnCours} />
             ))}
             <Pagination
               page={pagiEtabs.page}
@@ -410,17 +541,28 @@ export default function ValidationsAdmin() {
             </div>
             <div>
               <label className="mb-1.5 block text-xs font-bold text-muted">
-                Motif (si rejet ou complément)
+                Motif — obligatoire pour rejeter ou demander un complément
               </label>
               <select
                 value={motif}
                 onChange={(e) => setMotif(e.target.value)}
+                aria-label="Motif"
                 className="w-full rounded-[11px] border border-line bg-white px-[13px] py-3 text-[13.5px] outline-none focus:border-teal"
               >
                 {MOTIFS.map((m) => (
                   <option key={m}>{m}</option>
                 ))}
               </select>
+              {motif === MOTIF_LIBRE && (
+                <textarea
+                  rows={3}
+                  value={motifLibre}
+                  onChange={(e) => setMotifLibre(e.target.value)}
+                  placeholder="Expliquez ce qui manque ou ce qui pose problème…"
+                  aria-label="Motif libre"
+                  className="mt-2 w-full rounded-[11px] border border-line bg-white px-[13px] py-3 text-[13.5px] outline-none focus:border-teal"
+                />
+              )}
             </div>
           </div>
           <div className="mt-[14px] flex flex-wrap gap-[9px]">
@@ -471,7 +613,7 @@ export default function ValidationsAdmin() {
           <p className="py-3 text-[12.5px] text-muted">Aucun médecin en attente.</p>
         )}
         {pagiMedecins.tranche.map((dossier) => (
-          <LigneDossier key={dossier.id} dossier={dossier} decider={decider} />
+          <LigneDossier key={dossier.id} dossier={dossier} approuver={approuver} demanderRejet={setRejetEnCours} />
         ))}
         <Pagination
           page={pagiMedecins.page}
@@ -492,7 +634,7 @@ export default function ValidationsAdmin() {
           <p className="py-3 text-[12.5px] text-muted">Aucun établissement en attente.</p>
         )}
         {pagiEtabs.tranche.map((dossier) => (
-          <LigneDossier key={dossier.id} dossier={dossier} decider={decider} />
+          <LigneDossier key={dossier.id} dossier={dossier} approuver={approuver} demanderRejet={setRejetEnCours} />
         ))}
         <Pagination
           page={pagiEtabs.page}
