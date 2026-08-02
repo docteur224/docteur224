@@ -73,14 +73,40 @@ export function useJournalAudit(): EntreeAudit[] {
 
 /* ===== Validations ===== */
 
+export interface PieceDossier {
+  id: string;
+  type: string;
+  statut: string;
+  fichierPath: string;
+}
+
 export interface DossierValidation {
   id: string;
   nom: string;
   detail: string;
   initiales: string;
   etablissement: boolean;
-  /** Documents fournis (médecins) */
-  documents?: { id: string; type: string; statut: string }[];
+  /** Dépôt du dossier — pour afficher l'ancienneté réelle, pas une date écrite en dur. */
+  depotLe: string | null;
+  /** Documents réellement fournis (médecins) */
+  documents: PieceDossier[];
+}
+
+/** Libellés des `type_document` de la base. */
+export const LIBELLE_PIECE: Record<string, string> = {
+  diplome: "Diplôme",
+  carte_ordre: "Carte de l’ordre",
+  autorisation_exercice: "Autorisation",
+  identite: "Identité",
+};
+
+/** « il y a 3 jours » à partir d'une date de dépôt. */
+export function ancienneteDossier(depotLe: string | null): string {
+  if (!depotLe) return "date de dépôt inconnue";
+  const jours = Math.floor((Date.now() - new Date(depotLe).getTime()) / 86_400_000);
+  if (jours <= 0) return "déposé aujourd’hui";
+  if (jours === 1) return "en attente depuis 1 jour";
+  return `en attente depuis ${jours} jours`;
 }
 
 export function useMedecinsEnAttente(): { dossiers: DossierValidation[]; recharger: () => void } {
@@ -88,19 +114,25 @@ export function useMedecinsEnAttente(): { dossiers: DossierValidation[]; recharg
     const supabase = creerClientNavigateur();
     const { data } = await supabase
       .from("medecins")
-      .select("id, civilite, utilisateurs ( nom, prenom ), specialites ( nom ), villes ( nom )")
-      .eq("statut", "en_attente");
+      .select(
+        "id, civilite, etape_inscription, utilisateurs ( nom, prenom, cree_le ), specialites ( nom ), villes ( nom )"
+      )
+      .eq("statut", "en_attente")
+      // Un parcours d'inscription inachevé n'est pas un dossier à examiner :
+      // le professionnel n'a pas fini de le déposer (ni profil ni pièces).
+      .is("etape_inscription", null);
     type L = {
       id: string;
       civilite: string;
-      utilisateurs: { nom: string | null; prenom: string | null } | null;
+      utilisateurs: { nom: string | null; prenom: string | null; cree_le: string } | null;
       specialites: { nom: string } | null;
       villes: { nom: string } | null;
     };
     const medecins = (data ?? []) as unknown as L[];
+    if (medecins.length === 0) return [];
     const { data: docs } = await supabase
       .from("documents_validation")
-      .select("id, professionnel_id, type, statut")
+      .select("id, professionnel_id, type, statut, fichier_path")
       .in("professionnel_id", medecins.map((m) => m.id));
     return medecins.map((m) => {
       const prenom = m.utilisateurs?.prenom ?? "";
@@ -111,7 +143,10 @@ export function useMedecinsEnAttente(): { dossiers: DossierValidation[]; recharg
         detail: [m.specialites?.nom, m.villes?.nom].filter(Boolean).join(" · "),
         initiales: `${prenom.charAt(0)}${nom.charAt(0)}`.toUpperCase() || "DR",
         etablissement: false,
-        documents: (docs ?? []).filter((d) => d.professionnel_id === m.id),
+        depotLe: m.utilisateurs?.cree_le ?? null,
+        documents: (docs ?? [])
+          .filter((d) => d.professionnel_id === m.id)
+          .map((d) => ({ id: d.id, type: d.type, statut: d.statut, fichierPath: d.fichier_path })),
       };
     });
   });
@@ -120,20 +155,51 @@ export function useMedecinsEnAttente(): { dossiers: DossierValidation[]; recharg
 
 export function useEtablissementsEnAttente(): { dossiers: DossierValidation[]; recharger: () => void } {
   const { donnees, recharger } = utiliserRequete<DossierValidation[]>([], async () => {
-    const { data } = await creerClientNavigateur()
+    const supabase = creerClientNavigateur();
+    const { data } = await supabase
       .from("etablissements")
-      .select("id, nom, type, villes ( nom )")
-      .eq("statut", "en_attente");
-    type L = { id: string; nom: string; type: string; villes: { nom: string } | null };
-    return ((data ?? []) as unknown as L[]).map((e) => ({
+      .select("id, nom, type, cree_le, gestionnaire_id, villes ( nom )")
+      .eq("statut", "en_attente")
+      .is("etape_inscription", null);
+    type L = {
+      id: string;
+      nom: string;
+      type: string;
+      cree_le: string;
+      gestionnaire_id: string | null;
+      villes: { nom: string } | null;
+    };
+    const etabs = (data ?? []) as unknown as L[];
+    if (etabs.length === 0) return [];
+    // Les pièces d'un établissement sont déposées par son gestionnaire.
+    const gestionnaires = etabs.map((e) => e.gestionnaire_id).filter((g): g is string => !!g);
+    const { data: docs } = gestionnaires.length
+      ? await supabase
+          .from("documents_validation")
+          .select("id, professionnel_id, type, statut, fichier_path")
+          .in("professionnel_id", gestionnaires)
+      : { data: [] };
+    return etabs.map((e) => ({
       id: e.id,
       nom: e.nom,
       detail: [e.type, e.villes?.nom].filter(Boolean).join(" · "),
       initiales: "🏥",
       etablissement: true,
+      depotLe: e.cree_le,
+      documents: (docs ?? [])
+        .filter((d) => d.professionnel_id === e.gestionnaire_id)
+        .map((d) => ({ id: d.id, type: d.type, statut: d.statut, fichierPath: d.fichier_path })),
     }));
   });
   return { dossiers: donnees, recharger };
+}
+
+/** URL signée (5 min) vers une pièce du bucket privé `validation`. */
+export async function urlPieceValidation(fichierPath: string): Promise<string | null> {
+  const { data } = await creerClientNavigateur()
+    .storage.from("validation")
+    .createSignedUrl(fichierPath, 300);
+  return data?.signedUrl ?? null;
 }
 
 export async function deciderDossier(
@@ -143,8 +209,18 @@ export async function deciderDossier(
 ): Promise<{ erreur?: string }> {
   const supabase = creerClientNavigateur();
   const table = dossier.etablissement ? "etablissements" : "medecins";
-  const { error } = await supabase.from(table).update({ statut: decision }).eq("id", dossier.id);
+  const { data: lignes, error } = await supabase
+    .from(table)
+    .update({ statut: decision })
+    .eq("id", dossier.id)
+    .select("id");
   if (error) return { erreur: error.message };
+  // Un update refusé par la RLS ne lève pas d'erreur : il ne touche aucune
+  // ligne. Sans ce contrôle, la file se rechargeait à l'identique et l'écran
+  // laissait croire que la décision était prise.
+  if (!lignes?.length) {
+    return { erreur: "Décision non enregistrée : droits insuffisants sur ce dossier." };
+  }
   if (!dossier.etablissement) {
     // La décision couvre aussi les documents fournis
     await supabase
@@ -162,8 +238,39 @@ export async function deciderDossier(
   return {};
 }
 
-export async function demanderComplement(dossier: DossierValidation): Promise<void> {
-  await tracerAudit("A demandé un complément de dossier", dossier.nom);
+/**
+ * Prévient le professionnel qu'il manque une pièce. Le dossier reste en
+ * attente : c'est une relance, pas une décision. Avant, cette fonction
+ * n'écrivait qu'une ligne d'audit — l'intéressé n'était prévenu de rien.
+ */
+export async function demanderComplement(
+  dossier: DossierValidation,
+  motif?: string
+): Promise<{ erreur?: string }> {
+  const supabase = creerClientNavigateur();
+  // Pour un établissement, le destinataire est son gestionnaire.
+  let destinataire = dossier.id;
+  if (dossier.etablissement) {
+    const { data } = await supabase
+      .from("etablissements")
+      .select("gestionnaire_id")
+      .eq("id", dossier.id)
+      .single();
+    if (!data?.gestionnaire_id) {
+      return { erreur: "Cet établissement n’a pas de gestionnaire à prévenir." };
+    }
+    destinataire = data.gestionnaire_id;
+  }
+  const { error } = await supabase.rpc("demander_complement_dossier", {
+    p_professionnel_id: destinataire,
+    p_motif: motif ?? null,
+  });
+  if (error) return { erreur: error.message };
+  await tracerAudit(
+    "A demandé un complément de dossier",
+    motif ? `${dossier.nom} · ${motif}` : dossier.nom
+  );
+  return {};
 }
 
 /* ===== Modération ===== */

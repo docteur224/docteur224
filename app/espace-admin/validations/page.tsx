@@ -3,11 +3,15 @@
 import { useState } from "react";
 import AdminShell from "@/components/admin/AdminShell";
 import {
+  ancienneteDossier,
   deciderDossier,
   demanderComplement,
+  LIBELLE_PIECE,
+  urlPieceValidation,
   useEtablissementsEnAttente,
   useMedecinsEnAttente,
   type DossierValidation,
+  type PieceDossier,
 } from "@/lib/admin";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import Pagination, { usePagination } from "@/components/site/Pagination";
@@ -17,14 +21,18 @@ import Pagination, { usePagination } from "@/components/site/Pagination";
  * dossier en cours d'examen (pièces, motif, décision), files des médecins et
  * établissements en attente. Chaque décision retire le dossier de la file et
  * est tracée en direct dans le journal d'audit (spec).
+ *
+ * Les pièces affichées sont celles réellement déposées : la maquette en
+ * montrait quatre en dur, ce qui laissait croire qu'un dossier vide était
+ * complet. Un dossier sans pièce se voit désormais comme tel.
  */
 
-const PIECES = [
-  { icone: "📄", label: "Diplôme" },
-  { icone: "📄", label: "Carte de l'ordre" },
-  { icone: "📄", label: "Autorisation" },
-  { icone: "🪪", label: "Identité" },
-];
+const ICONE_PIECE: Record<string, string> = {
+  identite: "🪪",
+  diplome: "🎓",
+  carte_ordre: "🏥",
+  autorisation_exercice: "📜",
+};
 
 const MOTIFS = [
   "Sélectionner un motif…",
@@ -33,6 +41,43 @@ const MOTIFS = [
   "Pièce d'identité expirée",
   "Informations incohérentes",
 ];
+
+/** Vignette d'une pièce réellement déposée : ouvre le fichier en URL signée. */
+function Vignette({ piece, mobile = false }: { piece: PieceDossier; mobile?: boolean }) {
+  const [ouverture, setOuverture] = useState(false);
+
+  async function ouvrir() {
+    setOuverture(true);
+    // L'onglet doit être ouvert AVANT l'attente réseau, sinon Chrome le
+    // bloque comme fenêtre surgissante.
+    const onglet = window.open("", "_blank");
+    const url = await urlPieceValidation(piece.fichierPath);
+    setOuverture(false);
+    if (!url) {
+      onglet?.close();
+      return;
+    }
+    if (onglet) onglet.location.href = url;
+  }
+
+  const libelle = LIBELLE_PIECE[piece.type] ?? piece.type;
+  return (
+    <button
+      type="button"
+      onClick={ouvrir}
+      title={`Ouvrir : ${libelle}`}
+      aria-label={`Ouvrir la pièce ${libelle}`}
+      className={
+        mobile
+          ? "docthumb"
+          : "flex h-[104px] w-[82px] flex-col items-center justify-center gap-1.5 rounded-[9px] border border-line bg-[#F6FAFC] text-2xl text-muted transition-colors hover:border-teal hover:bg-teal-soft"
+      }
+    >
+      <span aria-hidden>{ouverture ? "⏳" : ICONE_PIECE[piece.type] ?? "📄"}</span>
+      <small className={mobile ? undefined : "text-[9.5px] font-extrabold text-blue"}>{libelle}</small>
+    </button>
+  );
+}
 
 /** Ligne mobile de la file (mêmes actions que la version web). */
 function LigneDossierMobile({ dossier, decider }: { dossier: DossierValidation; decider: (d: DossierValidation, decision: "valide" | "refuse") => void }) {
@@ -47,7 +92,14 @@ function LigneDossierMobile({ dossier, decider }: { dossier: DossierValidation; 
       </span>
       <span className="meta">
         <b>{dossier.nom}</b>
-        <small>{dossier.detail}</small>
+        <small>
+          {[dossier.detail, ancienneteDossier(dossier.depotLe)].filter(Boolean).join(" · ")}
+        </small>
+        <small style={{ color: dossier.documents.length ? undefined : "var(--red)" }}>
+          {dossier.documents.length > 0
+            ? `📄 ${dossier.documents.length} pièce${dossier.documents.length > 1 ? "s" : ""}`
+            : "⚠ aucune pièce"}
+        </small>
       </span>
       <span style={{ display: "flex", flexDirection: "column", gap: 5 }}>
         <button type="button" className="btnm" onClick={() => decider(dossier, "valide")}>
@@ -74,15 +126,14 @@ function LigneDossier({ dossier, decider }: { dossier: DossierValidation; decide
       <div className="min-w-0 flex-1">
         <b className="block text-sm font-extrabold">{dossier.nom}</b>
         <small className="text-xs text-muted">
-          {dossier.detail} ·{" "}
-          <button
-            type="button"
-            disabled
-            title="Disponible avec le stockage de fichiers"
-            className="cursor-not-allowed font-bold text-teal opacity-60"
-          >
-            📄 Voir les documents
-          </button>
+          {[dossier.detail, ancienneteDossier(dossier.depotLe)].filter(Boolean).join(" · ")} ·{" "}
+          {dossier.documents.length > 0 ? (
+            <span className="font-bold text-teal">
+              📄 {dossier.documents.length} pièce{dossier.documents.length > 1 ? "s" : ""}
+            </span>
+          ) : (
+            <span className="font-bold text-red">⚠ aucune pièce</span>
+          )}
         </small>
       </div>
       <button
@@ -109,16 +160,82 @@ export default function ValidationsAdmin() {
   const pagiMedecins = usePagination(medecins, 10);
   const pagiEtabs = usePagination(etablissements, 10);
   const [motif, setMotif] = useState(MOTIFS[0]);
+  const [erreur, setErreur] = useState<string | null>(null);
+  const [succes, setSucces] = useState<string | null>(null);
+  const [enCours, setEnCours] = useState(false);
 
-  function decider(d: DossierValidation, decision: "valide" | "refuse", motifRejet?: string) {
-    deciderDossier(d, decision, motifRejet).then(() => {
-      rechargerMedecins();
-      rechargerEtabs();
-    });
+  const motifChoisi = motif === MOTIFS[0] ? undefined : motif;
+
+  async function decider(
+    d: DossierValidation,
+    decision: "valide" | "refuse",
+    motifRejet?: string
+  ) {
+    if (enCours) return;
+    setErreur(null);
+    setSucces(null);
+    setEnCours(true);
+    const res = await deciderDossier(d, decision, motifRejet);
+    setEnCours(false);
+    if (res.erreur) {
+      setErreur(res.erreur);
+      return;
+    }
+    setSucces(
+      decision === "valide" ? `${d.nom} a été approuvé.` : `${d.nom} a été rejeté.`
+    );
+    setMotif(MOTIFS[0]); // sinon le motif du rejet précédent collait au dossier suivant
+    rechargerMedecins();
+    rechargerEtabs();
+  }
+
+  /** Rejet depuis la carte de détail : le motif y est obligatoire. */
+  async function rejeterAvecMotif(d: DossierValidation) {
+    if (!motifChoisi) {
+      setSucces(null);
+      setErreur("Choisissez un motif avant de rejeter le dossier.");
+      return;
+    }
+    await decider(d, "refuse", motifChoisi);
+  }
+
+  async function complement(d: DossierValidation) {
+    if (enCours) return;
+    setErreur(null);
+    setSucces(null);
+    setEnCours(true);
+    const res = await demanderComplement(d, motifChoisi);
+    setEnCours(false);
+    if (res.erreur) {
+      setErreur(res.erreur);
+      return;
+    }
+    setSucces(`Complément demandé à ${d.nom} — le dossier reste en attente.`);
   }
 
   // Le dossier « en cours d'examen » est le premier médecin de la file.
   const dossierEnCours = medecins[0];
+
+  const messages = (
+    <>
+      {erreur && (
+        <div
+          role="alert"
+          className="mb-3 rounded-[11px] bg-red-soft px-[13px] py-[11px] text-[12.5px] font-semibold text-red"
+        >
+          {erreur}
+        </div>
+      )}
+      {succes && (
+        <div
+          role="status"
+          className="mb-3 rounded-[11px] bg-green-soft px-[13px] py-[11px] text-[12.5px] font-semibold text-green"
+        >
+          ✓ {succes}
+        </div>
+      )}
+    </>
+  );
 
   return (
     <AdminShell>
@@ -136,17 +253,25 @@ export default function ValidationsAdmin() {
               d&apos;identité avant d&apos;approuver.
             </div>
           </div>
+          {messages}
           {dossierEnCours ? (
             <div className="card2">
               <h4>Dossier en examen — {dossierEnCours.nom}</h4>
-              <div className="docthumbs">
-                {PIECES.map((piece) => (
-                  <div key={piece.label} className="docthumb">
-                    <span aria-hidden>{piece.icone}</span>
-                    <small>{piece.label}</small>
-                  </div>
-                ))}
-              </div>
+              <p className="muted" style={{ fontSize: 12 }}>
+                {ancienneteDossier(dossierEnCours.depotLe)}
+              </p>
+              {dossierEnCours.documents.length > 0 ? (
+                <div className="docthumbs">
+                  {dossierEnCours.documents.map((piece) => (
+                    <Vignette key={piece.id} piece={piece} mobile />
+                  ))}
+                </div>
+              ) : (
+                <div className="privnote">
+                  <span aria-hidden>⚠️</span>
+                  <div>Aucune pièce déposée — demandez un complément avant d&apos;approuver.</div>
+                </div>
+              )}
               <div className="fldm" style={{ marginTop: 6 }}>
                 <label>Motif (si rejet ou complément)</label>
                 <select className="v" value={motif} onChange={(e) => setMotif(e.target.value)}>
@@ -156,18 +281,27 @@ export default function ValidationsAdmin() {
                 </select>
               </div>
               <div style={{ display: "flex", gap: 7, flexWrap: "wrap", marginTop: 8 }}>
-                <button type="button" className="btnm" onClick={() => decider(dossierEnCours, "valide")}>
+                <button
+                  type="button"
+                  className="btnm"
+                  disabled={enCours}
+                  onClick={() => decider(dossierEnCours, "valide")}
+                >
                   ✔ Approuver
                 </button>
-                <button type="button" className="btnm gh" onClick={() => demanderComplement(dossierEnCours)}>
+                <button
+                  type="button"
+                  className="btnm gh"
+                  disabled={enCours}
+                  onClick={() => complement(dossierEnCours)}
+                >
                   📩 Complément
                 </button>
                 <button
                   type="button"
                   className="btnm dg"
-                  onClick={() =>
-                    decider(dossierEnCours, "refuse", motif === MOTIFS[0] ? undefined : motif)
-                  }
+                  disabled={enCours}
+                  onClick={() => rejeterAvecMotif(dossierEnCours)}
                 >
                   ✕ Rejeter
                 </button>
@@ -245,27 +379,33 @@ export default function ValidationsAdmin() {
         </div>
       </div>
 
+      {messages}
+
       {dossierEnCours ? (
         <div className="mb-4 rounded-2xl border border-line bg-white p-5">
           <h3 className="mb-[14px] text-[15px] font-extrabold">
             Dossier en cours d’examen — {dossierEnCours.nom}
           </h3>
-          <div className="mb-1 mt-2 flex flex-wrap gap-[10px]">
-            {PIECES.map((piece) => (
-              <div
-                key={piece.label}
-                className="flex h-[104px] w-[82px] flex-col items-center justify-center gap-1.5 rounded-[9px] border border-line bg-[#F6FAFC] text-2xl text-muted"
-              >
-                <span aria-hidden>{piece.icone}</span>
-                <small className="text-[9.5px] font-extrabold text-blue">{piece.label}</small>
+          {dossierEnCours.documents.length > 0 ? (
+            <div className="mb-1 mt-2 flex flex-wrap gap-[10px]">
+              {dossierEnCours.documents.map((piece) => (
+                <Vignette key={piece.id} piece={piece} />
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-start gap-[9px] rounded-[11px] bg-red-soft px-[13px] py-[11px] text-[12.5px] font-semibold text-red">
+              <span aria-hidden>⚠️</span>
+              <div>
+                Aucune pièce déposée pour ce dossier — demandez un complément avant
+                d’approuver.
               </div>
-            ))}
-          </div>
+            </div>
+          )}
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1.5 block text-xs font-bold text-muted">Statut</label>
               <div className="rounded-[11px] border border-line bg-white px-[13px] py-3 text-[13.5px]">
-                En attente · reçu le 9 juin
+                En attente · {ancienneteDossier(dossierEnCours.depotLe)}
               </div>
             </div>
             <div>
@@ -287,23 +427,24 @@ export default function ValidationsAdmin() {
             <button
               type="button"
               onClick={() => decider(dossierEnCours, "valide")}
-              className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+              disabled={enCours}
+              className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:cursor-not-allowed disabled:opacity-50"
             >
               ✔ Approuver
             </button>
             <button
               type="button"
-              onClick={() => demanderComplement(dossierEnCours)}
-              className="rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg"
+              onClick={() => complement(dossierEnCours)}
+              disabled={enCours}
+              className="rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg disabled:cursor-not-allowed disabled:opacity-50"
             >
               📩 Demander un complément
             </button>
             <button
               type="button"
-              onClick={() =>
-                decider(dossierEnCours, "refuse", motif === MOTIFS[0] ? undefined : motif)
-              }
-              className="rounded-[9px] border-[1.5px] border-[#F3CDC8] bg-white px-[14px] py-2 text-[12.5px] font-bold text-red transition-colors hover:bg-[#FBE9E7]"
+              onClick={() => rejeterAvecMotif(dossierEnCours)}
+              disabled={enCours}
+              className="rounded-[9px] border-[1.5px] border-[#F3CDC8] bg-white px-[14px] py-2 text-[12.5px] font-bold text-red transition-colors hover:bg-[#FBE9E7] disabled:cursor-not-allowed disabled:opacity-50"
             >
               ✕ Rejeter avec motif
             </button>
@@ -311,8 +452,8 @@ export default function ValidationsAdmin() {
           <div className="mt-[14px] flex items-start gap-[9px] rounded-[11px] bg-teal-soft px-[13px] py-[11px] text-[12.5px] font-semibold leading-relaxed text-blue">
             <span aria-hidden>📜</span>
             <div>
-              En attente depuis 4 jours. Chaque décision (approbation, rejet, demande de
-              complément) est horodatée et tracée dans le <b>journal d’audit</b>.
+              Chaque décision (approbation, rejet, demande de complément) est horodatée et
+              tracée dans le <b>journal d’audit</b>.
             </div>
           </div>
         </div>
