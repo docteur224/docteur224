@@ -1,39 +1,33 @@
 import { NextResponse } from "next/server";
 import cloudinary from "@/lib/cloudinary";
-import { creerClientServeur } from "@/lib/supabase/server";
+import { proprietaireConnecte } from "@/lib/proprietaire-pro";
 
 /*
- * Photo de profil du médecin — téléversement et suppression.
+ * Photo de profil d'un professionnel — téléversement et suppression.
+ *
+ * Le chemin reste /api/photo-medecin (déjà appelé par PhotoProfil), mais la
+ * route sert désormais les DEUX rôles : un établissement n'avait aucune
+ * photo, alors que sa fiche en montrait l'emplacement.
  *
  * L'upload passe par le serveur (et non en direct depuis le navigateur)
  * pour deux raisons : le secret Cloudinary ne doit jamais être exposé, et
- * c'est ici qu'on vérifie que l'appelant est bien le médecin concerné.
+ * c'est ici qu'on vérifie que l'appelant est bien le professionnel concerné.
  * L'ancienne image est détruite après chaque remplacement, sinon chaque
  * changement de photo laisserait un fichier facturé derrière lui.
  */
 
 const TAILLE_MAX = 5 * 1024 * 1024; // 5 Mo
 const TYPES_ACCEPTES = new Set(["image/jpeg", "image/png", "image/webp"]);
-const DOSSIER = "docteur224/medecins";
 
-/** Le médecin connecté, ou null si la session n'en est pas un. */
-async function medecinConnecte() {
-  const supabase = await creerClientServeur();
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) return null;
-  const { data } = await supabase
-    .from("utilisateurs")
-    .select("role")
-    .eq("id", auth.user.id)
-    .single();
-  return data?.role === "medecin" ? { supabase, id: auth.user.id } : null;
-}
+const refus = () =>
+  NextResponse.json(
+    { erreur: "Connectez-vous avec un compte médecin ou établissement." },
+    { status: 401 }
+  );
 
 export async function POST(request: Request) {
-  const session = await medecinConnecte();
-  if (!session) {
-    return NextResponse.json({ erreur: "Connectez-vous en tant que médecin." }, { status: 401 });
-  }
+  const pro = await proprietaireConnecte();
+  if (!pro) return refus();
 
   const formulaire = await request.formData();
   const fichier = formulaire.get("photo");
@@ -52,11 +46,11 @@ export async function POST(request: Request) {
 
   // On lit l'ancienne photo avant d'écrire la nouvelle : c'est le seul
   // moment où l'on connaît encore son public_id.
-  const { data: avant } = await session.supabase
-    .from("medecins")
+  const { data: avant } = await pro.supabase
+    .from(pro.table)
     .select("photo_id")
-    .eq("id", session.id)
-    .single();
+    .eq("id", pro.id)
+    .maybeSingle();
 
   const octets = Buffer.from(await fichier.arrayBuffer());
   let envoi;
@@ -65,12 +59,14 @@ export async function POST(request: Request) {
       cloudinary.uploader
         .upload_stream(
           {
-            folder: DOSSIER,
+            folder: `docteur224/${pro.type === "medecin" ? "medecins" : "etablissements"}`,
             resource_type: "image",
-            // Cadrage centré sur le visage : les photos de profil arrivent
-            // dans tous les formats, la fiche les affiche en rond.
+            // Un portrait se recadre sur le visage ; la façade d'une clinique
+            // n'en a pas, on se contente d'un carré centré.
             transformation: [
-              { width: 400, height: 400, crop: "fill", gravity: "face" },
+              pro.type === "medecin"
+                ? { width: 400, height: 400, crop: "fill", gravity: "face" }
+                : { width: 400, height: 400, crop: "fill" },
               { quality: "auto", fetch_format: "auto" },
             ],
           },
@@ -82,26 +78,24 @@ export async function POST(request: Request) {
         .end(octets);
     });
   } catch {
-    return NextResponse.json(
-      { erreur: "L'envoi de l'image a échoué. Réessayez." },
-      { status: 502 }
-    );
+    return NextResponse.json({ erreur: "L'envoi de l'image a échoué. Réessayez." }, { status: 502 });
   }
 
-  const { error } = await session.supabase
-    .from("medecins")
+  const { data: majees, error } = await pro.supabase
+    .from(pro.table)
     .update({ photo_url: envoi.secure_url, photo_id: envoi.public_id })
-    .eq("id", session.id);
+    .eq("id", pro.id)
+    .select("id");
 
-  if (error) {
+  if (error || !majees?.length) {
     // La base n'a pas retenu la photo : on retire celle qu'on vient
     // d'envoyer pour ne pas laisser d'orphelin sur Cloudinary.
     await cloudinary.uploader.destroy(envoi.public_id).catch(() => {});
-    return NextResponse.json({ erreur: error.message }, { status: 500 });
+    return NextResponse.json({ erreur: error?.message ?? "Enregistrement refusé." }, { status: 500 });
   }
 
   // Suppression de l'ancienne image seulement une fois la nouvelle
-  // enregistrée : en cas d'échec ci-dessus, le médecin garde sa photo.
+  // enregistrée : en cas d'échec ci-dessus, le professionnel garde sa photo.
   if (avant?.photo_id && avant.photo_id !== envoi.public_id) {
     await cloudinary.uploader.destroy(avant.photo_id).catch(() => {});
   }
@@ -110,21 +104,19 @@ export async function POST(request: Request) {
 }
 
 export async function DELETE() {
-  const session = await medecinConnecte();
-  if (!session) {
-    return NextResponse.json({ erreur: "Connectez-vous en tant que médecin." }, { status: 401 });
-  }
+  const pro = await proprietaireConnecte();
+  if (!pro) return refus();
 
-  const { data: avant } = await session.supabase
-    .from("medecins")
+  const { data: avant } = await pro.supabase
+    .from(pro.table)
     .select("photo_id")
-    .eq("id", session.id)
-    .single();
+    .eq("id", pro.id)
+    .maybeSingle();
 
-  const { error } = await session.supabase
-    .from("medecins")
+  const { error } = await pro.supabase
+    .from(pro.table)
     .update({ photo_url: null, photo_id: null })
-    .eq("id", session.id);
+    .eq("id", pro.id);
   if (error) return NextResponse.json({ erreur: error.message }, { status: 500 });
 
   if (avant?.photo_id) {

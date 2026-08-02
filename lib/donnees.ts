@@ -313,6 +313,28 @@ export async function chargerAssurances(): Promise<string[]> {
   return ((data ?? []) as { libelle: string }[]).map((a) => a.libelle).filter(Boolean);
 }
 
+/**
+ * Photos publiques d'un professionnel. La policy `sel_photos_publiques` ne
+ * les rend visibles que si le propriétaire est validé : un dossier en
+ * attente ne montre rien, même en connaissant son identifiant.
+ */
+export async function chargerPhotosPro(
+  id: string,
+  type: "medecin" | "etablissement"
+): Promise<{ id: string; url: string; legende: string }[]> {
+  const { data } = await clientPublic()
+    .from("photos_pro")
+    .select("id, url, legende")
+    .eq(type === "medecin" ? "medecin_id" : "etablissement_id", id)
+    .order("position")
+    .order("cree_le");
+  return ((data ?? []) as { id: string; url: string; legende: string | null }[]).map((p) => ({
+    id: p.id,
+    url: p.url,
+    legende: p.legende ?? "",
+  }));
+}
+
 /** Langues réellement parlées par les médecins validés (filtre « Langues »). */
 export async function chargerLangues(): Promise<string[]> {
   const { data } = await clientPublic().from("medecins").select("langues").eq("statut", "valide");

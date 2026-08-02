@@ -15,6 +15,7 @@ import {
   chargerAvisMedecin,
   chargerEtablissementParId,
   chargerMedecinParId,
+  chargerPhotosPro,
   nomComplet,
 } from "@/lib/donnees";
 
@@ -24,13 +25,6 @@ import {
  * diplômes, parcours, assurances, photos, infos pratiques, localisation)
  * et panneau de réservation collant à droite.
  */
-
-/** Photos factices de l'établissement (identiques à la maquette). */
-const PHOTOS = [
-  { emoji: "🛋️", label: "Salle d’attente", fond: "linear-gradient(135deg,#DCE9F0,#C9DDE8)" },
-  { emoji: "🛏️", label: "Salle de soins", fond: "linear-gradient(135deg,#E2EEE6,#CDE4D6)" },
-  { emoji: "🩺", label: "Consultation", fond: "linear-gradient(135deg,#EAE6F1,#D9D2E8)" },
-];
 
 function TitreSection({ children }: { children: React.ReactNode }) {
   return <h3 className="mb-[10px] mt-[22px] text-[15px] font-extrabold first:mt-1">{children}</h3>;
@@ -73,33 +67,43 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
   const { id } = await params;
   const medecin = await chargerMedecinParId(id);
   if (!medecin) notFound();
-  const [etab, avis] = await Promise.all([
+  const [etab, avis, photos] = await Promise.all([
     chargerEtablissementParId(medecin.etablissementId),
     chargerAvisMedecin(medecin.id),
+    chargerPhotosPro(medecin.id, "medecin"),
   ]);
 
   // Blocs partagés par les onglets Présentation et Établissement : le patient
   // qui ne clique jamais sur un onglet doit trouver l'adresse, les photos et
   // la carte sans quitter la Présentation. Définis une fois pour que les deux
   // volets ne divergent pas.
-  const galeriePhotos = (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] gap-3">
-      {PHOTOS.map((photo) => (
-        <div
-          key={photo.label}
-          className="grid aspect-[4/3] place-items-center overflow-hidden rounded-xl border border-line text-center"
-          style={{ background: photo.fond }}
-        >
-          <div>
-            <div className="text-[26px]" aria-hidden>
-              {photo.emoji}
-            </div>
-            <small className="text-[11px] font-extrabold text-blue">{photo.label}</small>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
+  //
+  // La galerie disparaît quand le médecin n'a rien déposé : les trois
+  // vignettes décoratives affichées jusqu'ici étaient identiques pour tout le
+  // monde et n'apprenaient rien au patient.
+  const galeriePhotos =
+    photos.length > 0 ? (
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] gap-3">
+        {photos.map((photo) => (
+          <figure
+            key={photo.id}
+            className="relative aspect-[4/3] overflow-hidden rounded-xl border border-line"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={photo.url}
+              alt={photo.legende || "Photo du cabinet"}
+              className="h-full w-full object-cover"
+            />
+            {photo.legende && (
+              <figcaption className="absolute inset-x-0 bottom-0 truncate bg-black/45 px-2 py-1 text-[11px] font-semibold text-white">
+                {photo.legende}
+              </figcaption>
+            )}
+          </figure>
+        ))}
+      </div>
+    ) : null;
 
   const infosPratiques = (
     <div className="mt-1.5 grid gap-[14px] sm:grid-cols-2">
@@ -248,21 +252,23 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
             ))}
           </div>
 
-          <div className="section-t">Photos de l&apos;établissement</div>
-          <div className="gallery">
-            {PHOTOS.map((photo) => (
-              <div key={photo.label} className="gphoto">
-                <div className="inner" style={{ background: photo.fond }}>
-                  <div style={{ fontSize: 23 }} aria-hidden>
-                    {photo.emoji}
+          {photos.length > 0 && (
+            <>
+              <div className="section-t">Photos du cabinet</div>
+              <div className="gallery">
+                {photos.map((photo) => (
+                  <div key={photo.id} className="gphoto">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={photo.url}
+                      alt={photo.legende || "Photo du cabinet"}
+                      style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                    />
                   </div>
-                  <small style={{ fontSize: 10.5, color: "var(--blue)", fontWeight: 800 }}>
-                    {photo.label}
-                  </small>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </>
+          )}
 
           <div className="section-t">Lieu de consultation</div>
           <CarteLocalisation
@@ -425,8 +431,12 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
             <TitreSection>Lieu de consultation</TitreSection>
             {infosPratiques}
 
-            <TitreSection>Photos de l’établissement</TitreSection>
-            {galeriePhotos}
+            {galeriePhotos && (
+              <>
+                <TitreSection>Photos du cabinet</TitreSection>
+                {galeriePhotos}
+              </>
+            )}
 
             <TitreSection>Localisation</TitreSection>
             {carteLocalisation}
@@ -438,8 +448,12 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
                 label: "Établissement",
                 contenu: (
           <div className="px-[26px] py-6">
-            <TitreSection>Photos de l’établissement</TitreSection>
-            {galeriePhotos}
+            {galeriePhotos && (
+              <>
+                <TitreSection>Photos du cabinet</TitreSection>
+                {galeriePhotos}
+              </>
+            )}
 
             {/* Les langues parlées sont une information sur le médecin :
                 elles vivent dans l'onglet Présentation, pas ici. */}

@@ -3,23 +3,19 @@
 import EtablissementShell from "@/components/etablissement/EtablissementShell";
 import { useEtablissementConnecte } from "@/lib/etablissement";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
+import GaleriePhotos from "@/components/pro/GaleriePhotos";
+import PhotoProfil from "@/components/pro/PhotoProfil";
 
 /*
  * Informations — reproduit l'écran « etab-infos » de la maquette web :
  * fiche publique de l'établissement (identité, coordonnées, photos) telle
- * qu'affichée aux patients. Champs statiques en démonstration — l'édition
- * complète arrivera avec la base de données.
+ * qu'affichée aux patients. Les photos sont réelles (Cloudinary) ; les
+ * autres champs restent en lecture pour l'instant.
  */
-
-const PHOTOS = [
-  { emoji: "🏥", label: "Façade", fond: "linear-gradient(135deg,#DCE9F0,#C9DDE8)" },
-  { emoji: "🛋️", label: "Accueil", fond: "linear-gradient(135deg,#E2EEE6,#CDE4D6)" },
-  { emoji: "🔬", label: "Plateau technique", fond: "linear-gradient(135deg,#EAE6F1,#D9D2E8)" },
-];
 
 export default function InformationsEtablissement() {
   const { etablissement } = useEtablissementConnecte();
-  const ETABLISSEMENT_CONNECTE = etablissement ?? { id: "", nom: "…", nomCourt: "…", type: "", description: "", adresse: "", telephone: "", email: "", siteWeb: "", gradient: "linear-gradient(135deg,#16A085,#0E6655)", statut: "", parametres: {}, gestionnaire: { nom: "", role: "", email: "", telephone: "" } };
+  const ETABLISSEMENT_CONNECTE = etablissement ?? { id: "", nom: "…", nomCourt: "…", type: "", description: "", adresse: "", telephone: "", email: "", siteWeb: "", photoUrl: null, gradient: "linear-gradient(135deg,#16A085,#0E6655)", statut: "", parametres: {}, gestionnaire: { nom: "", role: "", email: "", telephone: "" } };
   const etab = ETABLISSEMENT_CONNECTE;
   const champStatique = "rounded-[11px] border border-line bg-white px-[13px] py-3 text-[13.5px]";
   const labelChamp = "mb-1.5 block text-xs font-bold text-muted";
@@ -102,24 +98,17 @@ export default function InformationsEtablissement() {
             </div>
           </div>
           <div className="card2">
+            <h4>📸 Photo de l&apos;établissement</h4>
+            <PhotoProfil
+              photoUrl={etab.photoUrl ?? null}
+              initiales={(etab.nomCourt || etab.nom || "?").slice(0, 2).toUpperCase()}
+              gradient={etab.gradient}
+              taille={80}
+            />
+          </div>
+          <div className="card2">
             <h4>🖼️ Photos de l&apos;établissement</h4>
-            <div className="gallery">
-              {PHOTOS.map((photo) => (
-                <div key={photo.label} className="gphoto">
-                  <div className="inner" style={{ background: photo.fond }}>
-                    <div style={{ fontSize: 23 }} aria-hidden>
-                      {photo.emoji}
-                    </div>
-                    <small style={{ fontSize: 10.5, color: "var(--blue)", fontWeight: 800 }}>
-                      {photo.label}
-                    </small>
-                  </div>
-                </div>
-              ))}
-              <div className="gadd" title="Disponible avec le stockage de fichiers" style={{ opacity: 0.6 }}>
-                ＋ Ajouter
-              </div>
-            </div>
+            <GaleriePhotos proprietaireId={etab.id || undefined} type="etablissement" mobile />
           </div>
         </div>
       </div>
@@ -195,31 +184,24 @@ export default function InformationsEtablissement() {
         </div>
       </div>
 
+      {/* Photo principale */}
+      <div className="mb-4 rounded-2xl border border-line bg-white p-5">
+        <h3 className="mb-1 text-[15px] font-extrabold">📸 Photo de l’établissement</h3>
+        <p className="mb-3 text-[12.5px] text-muted">
+          Elle illustre votre fiche dans les résultats de recherche.
+        </p>
+        <PhotoProfil
+          photoUrl={etab.photoUrl ?? null}
+          initiales={(etab.nomCourt || etab.nom || "?").slice(0, 2).toUpperCase()}
+          gradient={etab.gradient}
+          taille={96}
+        />
+      </div>
+
       {/* Photos */}
       <div className="rounded-2xl border border-line bg-white p-5">
-        <h3 className="mb-3 text-[15px] font-extrabold">🖼️ Photos de l’établissement</h3>
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] gap-3">
-          {PHOTOS.map((photo) => (
-            <div
-              key={photo.label}
-              className="relative grid aspect-[4/3] place-items-center overflow-hidden rounded-xl border border-line text-center"
-              style={{ background: photo.fond }}
-            >
-              <div>
-                <div className="text-[26px]" aria-hidden>
-                  {photo.emoji}
-                </div>
-                <small className="text-[11px] font-extrabold text-blue">{photo.label}</small>
-              </div>
-            </div>
-          ))}
-          <div
-            title="Disponible avec le stockage de fichiers"
-            className="grid aspect-[4/3] cursor-not-allowed place-items-center rounded-xl border-[1.5px] border-dashed border-[#BCD3E0] bg-[#F6FAFC] p-2 text-center text-[12.5px] font-extrabold text-teal opacity-60"
-          >
-            ＋ Ajouter une photo
-          </div>
-        </div>
+        <h3 className="mb-1 text-[15px] font-extrabold">🖼️ Photos de l’établissement</h3>
+        <GaleriePhotos proprietaireId={etab.id || undefined} type="etablissement" />
       </div>
       </div>
     </EtablissementShell>

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import MedecinShell from "@/components/medecin/MedecinShell";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import PhotoProfil from "@/components/pro/PhotoProfil";
+import GaleriePhotos from "@/components/pro/GaleriePhotos";
 import { formatGNF } from "@/lib/format";
 import { chargerEtablissementParId } from "@/lib/donnees";
 import type { Etablissement } from "@/types";
@@ -22,12 +23,6 @@ import {
  * documents_validation), soins et actes, langues, assurances — tout est
  * écrit dans la table `medecins`.
  */
-
-const PHOTOS = [
-  { emoji: "🛋️", label: "Salle d’attente", fond: "linear-gradient(135deg,#DCE9F0,#C9DDE8)" },
-  { emoji: "🛏️", label: "Salle de soins", fond: "linear-gradient(135deg,#E2EEE6,#CDE4D6)" },
-  { emoji: "🩺", label: "Consultation", fond: "linear-gradient(135deg,#EAE6F1,#D9D2E8)" },
-];
 
 const LIBELLES_STATUT_DOC: Record<string, string> = {
   en_attente: "En vérification",
@@ -73,6 +68,8 @@ export default function ProfilMedecin() {
   // Surcharges locales (affichage immédiat) au-dessus du profil chargé
   const [soinsLocaux, setSoinsLocaux] = useState<string[] | null>(null);
   const [languesLocales, setLanguesLocales] = useState<string[] | null>(null);
+  const [diplomesLocaux, setDiplomesLocaux] = useState<{ titre: string; lieu: string }[] | null>(null);
+  const [parcoursLocal, setParcoursLocal] = useState<{ lieu: string; duree: string }[] | null>(null);
   const [genreLocal, setGenreLocal] = useState<string | null>(null);
   const [lienMapsLocal, setLienMapsLocal] = useState<string | null>(null);
   const [geolocEnCours, setGeolocEnCours] = useState(false);
@@ -84,6 +81,8 @@ export default function ProfilMedecin() {
   const profil = {
     soins: soinsLocaux ?? medecinConnecte.soinsEtActes,
     langues: languesLocales ?? medecinConnecte.langues,
+    diplomes: diplomesLocaux ?? medecinConnecte.diplomes,
+    parcours: parcoursLocal ?? medecinConnecte.parcours,
     lienMaps: estCoordonnees ? "" : localisation,
     positionTexte: estCoordonnees ? localisation : "",
     documents: docsBase.map((d) => ({
@@ -137,6 +136,42 @@ export default function ProfilMedecin() {
       setLanguesLocales(nouvelle);
       await enregistrerProfilMedecin({ langues: nouvelle });
     }
+  }
+
+  /*
+   * Diplômes et parcours : les deux cartes n'affichaient que l'existant,
+   * sans aucun moyen d'ajouter ni de retirer une ligne — un médecin ne
+   * pouvait donc pas renseigner sa formation depuis son espace, alors que
+   * la fiche publique la met en avant.
+   */
+  async function ajouterDiplome() {
+    const titre = window.prompt("Intitulé du diplôme :")?.trim();
+    if (!titre) return;
+    const lieu = window.prompt("Établissement et année (ex. Université de Conakry — 2014) :")?.trim() ?? "";
+    const nouvelle = [...profil.diplomes, { titre, lieu }];
+    setDiplomesLocaux(nouvelle);
+    await enregistrerProfilMedecin({ diplomes: nouvelle });
+  }
+
+  async function retirerDiplome(index: number) {
+    const nouvelle = profil.diplomes.filter((_, i) => i !== index);
+    setDiplomesLocaux(nouvelle);
+    await enregistrerProfilMedecin({ diplomes: nouvelle });
+  }
+
+  async function ajouterEtape() {
+    const lieu = window.prompt("Établissement ou service :")?.trim();
+    if (!lieu) return;
+    const duree = window.prompt("Période (ex. 2018 – 2024) :")?.trim() ?? "";
+    const nouvelle = [...profil.parcours, { lieu, duree }];
+    setParcoursLocal(nouvelle);
+    await enregistrerProfilMedecin({ parcours: nouvelle });
+  }
+
+  async function retirerEtape(index: number) {
+    const nouvelle = profil.parcours.filter((_, i) => i !== index);
+    setParcoursLocal(nouvelle);
+    await enregistrerProfilMedecin({ parcours: nouvelle });
   }
 
   async function basculerAssurance(nom: string) {
@@ -319,24 +354,60 @@ export default function ProfilMedecin() {
 
           <div className="card2">
             <h4>🎓 Diplôme et formation</h4>
-            {medecinConnecte.diplomes.map((diplome) => (
-              <div key={diplome.titre} className="docrow">
+            {profil.diplomes.length === 0 && (
+              <p className="muted" style={{ fontSize: 12.5 }}>
+                Aucun diplôme renseigné.
+              </p>
+            )}
+            {profil.diplomes.map((diplome, index) => (
+              <div key={`${diplome.titre}-${index}`} className="docrow">
                 <span aria-hidden>🎓</span>
-                <span className="nm">{diplome.titre}</span>
+                <span className="nm">
+                  {diplome.titre}
+                  {diplome.lieu ? ` · ${diplome.lieu}` : ""}
+                </span>
+                <button
+                  type="button"
+                  className="chip"
+                  onClick={() => retirerDiplome(index)}
+                  aria-label={`Retirer le diplôme ${diplome.titre}`}
+                >
+                  Retirer
+                </button>
               </div>
             ))}
+            <button type="button" className="chip" onClick={ajouterDiplome} style={{ marginTop: 8 }}>
+              + Ajouter un diplôme
+            </button>
           </div>
 
           <div className="card2">
             <h4>💼 Parcours professionnel</h4>
-            {medecinConnecte.parcours.map((etape) => (
-              <div key={etape.lieu} className="docrow">
+            {profil.parcours.length === 0 && (
+              <p className="muted" style={{ fontSize: 12.5 }}>
+                Aucune étape renseignée.
+              </p>
+            )}
+            {profil.parcours.map((etape, index) => (
+              <div key={`${etape.lieu}-${index}`} className="docrow">
                 <span aria-hidden>🏥</span>
                 <span className="nm">
-                  {etape.lieu} · {etape.duree}
+                  {etape.lieu}
+                  {etape.duree ? ` · ${etape.duree}` : ""}
                 </span>
+                <button
+                  type="button"
+                  className="chip"
+                  onClick={() => retirerEtape(index)}
+                  aria-label={`Retirer l’étape ${etape.lieu}`}
+                >
+                  Retirer
+                </button>
               </div>
             ))}
+            <button type="button" className="chip" onClick={ajouterEtape} style={{ marginTop: 8 }}>
+              + Ajouter une étape
+            </button>
           </div>
 
           <div className="card2">
@@ -406,24 +477,8 @@ export default function ProfilMedecin() {
           </div>
 
           <div className="card2">
-            <h4>🖼️ Photos de l&apos;établissement</h4>
-            <div className="gallery">
-              {PHOTOS.map((photo) => (
-                <div key={photo.label} className="gphoto">
-                  <div className="inner" style={{ background: photo.fond }}>
-                    <div style={{ fontSize: 23 }} aria-hidden>
-                      {photo.emoji}
-                    </div>
-                    <small style={{ fontSize: 10.5, color: "var(--blue)", fontWeight: 800 }}>
-                      {photo.label}
-                    </small>
-                  </div>
-                </div>
-              ))}
-              <div className="gadd" title="Disponible avec le stockage de fichiers" style={{ opacity: 0.6 }}>
-                ＋ Ajouter
-              </div>
-            </div>
+            <h4>🖼️ Photos du cabinet</h4>
+            <GaleriePhotos proprietaireId={medecinConnecte.id} type="medecin" mobile />
           </div>
           <p className="muted" style={{ fontSize: 11.5, textAlign: "center" }}>
             ✓ Modifications enregistrées automatiquement
@@ -639,35 +694,79 @@ export default function ProfilMedecin() {
       {/* Diplôme et formation */}
       <div className="mb-4 rounded-2xl border border-line bg-white p-5">
         <h3 className="mb-3 text-[15px] font-extrabold">🎓 Diplôme et formation</h3>
-        {medecinConnecte.diplomes.map((diplome) => (
-          <div
-            key={diplome.titre}
-            className="flex items-center gap-[11px] rounded-[11px] border border-line px-[13px] py-[11px] text-[13px]"
-          >
-            <span aria-hidden>🎓</span>
-            <span className="font-bold">
-              {diplome.titre}
-              <small className="block text-xs font-semibold text-muted">{diplome.lieu}</small>
-            </span>
-          </div>
-        ))}
+        <div className="mb-3 flex flex-col gap-2">
+          {profil.diplomes.length === 0 && (
+            <p className="text-[12.5px] text-muted">
+              Aucun diplôme renseigné — il apparaîtra sur votre fiche publique.
+            </p>
+          )}
+          {profil.diplomes.map((diplome, index) => (
+            <div
+              key={`${diplome.titre}-${index}`}
+              className="flex items-center gap-[11px] rounded-[11px] border border-line px-[13px] py-[11px] text-[13px]"
+            >
+              <span aria-hidden>🎓</span>
+              <span className="min-w-0 flex-1 font-bold">
+                {diplome.titre}
+                <small className="block text-xs font-semibold text-muted">{diplome.lieu}</small>
+              </span>
+              <button
+                type="button"
+                onClick={() => retirerDiplome(index)}
+                aria-label={`Retirer le diplôme ${diplome.titre}`}
+                className="text-xs font-bold text-red hover:underline"
+              >
+                Retirer
+              </button>
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={ajouterDiplome}
+          className="rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
+        >
+          + Ajouter un diplôme
+        </button>
       </div>
 
       {/* Parcours professionnel */}
       <div className="mb-4 rounded-2xl border border-line bg-white p-5">
         <h3 className="mb-3 text-[15px] font-extrabold">💼 Parcours professionnel</h3>
-        {medecinConnecte.parcours.map((etape) => (
-          <div
-            key={etape.lieu}
-            className="flex items-center gap-[11px] rounded-[11px] border border-line px-[13px] py-[11px] text-[13px]"
-          >
-            <span aria-hidden>🏥</span>
-            <span className="font-bold">
-              {etape.lieu}
-              <small className="block text-xs font-semibold text-muted">{etape.duree}</small>
-            </span>
-          </div>
-        ))}
+        <div className="mb-3 flex flex-col gap-2">
+          {profil.parcours.length === 0 && (
+            <p className="text-[12.5px] text-muted">
+              Aucune étape renseignée — elle apparaîtra sur votre fiche publique.
+            </p>
+          )}
+          {profil.parcours.map((etape, index) => (
+            <div
+              key={`${etape.lieu}-${index}`}
+              className="flex items-center gap-[11px] rounded-[11px] border border-line px-[13px] py-[11px] text-[13px]"
+            >
+              <span aria-hidden>🏥</span>
+              <span className="min-w-0 flex-1 font-bold">
+                {etape.lieu}
+                <small className="block text-xs font-semibold text-muted">{etape.duree}</small>
+              </span>
+              <button
+                type="button"
+                onClick={() => retirerEtape(index)}
+                aria-label={`Retirer l’étape ${etape.lieu}`}
+                className="text-xs font-bold text-red hover:underline"
+              >
+                Retirer
+              </button>
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={ajouterEtape}
+          className="rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
+        >
+          + Ajouter une étape
+        </button>
       </div>
 
       {/* Langues */}
@@ -757,29 +856,8 @@ export default function ProfilMedecin() {
 
       {/* Photos */}
       <div className="rounded-2xl border border-line bg-white p-5">
-        <h3 className="mb-3 text-[15px] font-extrabold">🖼️ Photos de l’établissement</h3>
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(130px,1fr))] gap-3">
-          {PHOTOS.map((photo) => (
-            <div
-              key={photo.label}
-              className="relative grid aspect-[4/3] place-items-center overflow-hidden rounded-xl border border-line text-center"
-              style={{ background: photo.fond }}
-            >
-              <div>
-                <div className="text-[26px]" aria-hidden>
-                  {photo.emoji}
-                </div>
-                <small className="text-[11px] font-extrabold text-blue">{photo.label}</small>
-              </div>
-            </div>
-          ))}
-          <div
-            title="Disponible avec le stockage de fichiers"
-            className="grid aspect-[4/3] cursor-not-allowed place-items-center rounded-xl border-[1.5px] border-dashed border-[#BCD3E0] bg-[#F6FAFC] p-2 text-center text-[12.5px] font-extrabold text-teal opacity-60"
-          >
-            ＋ Ajouter une photo
-          </div>
-        </div>
+        <h3 className="mb-1 text-[15px] font-extrabold">🖼️ Photos du cabinet</h3>
+        <GaleriePhotos proprietaireId={medecinConnecte.id} type="medecin" />
       </div>
       </div>
     </MedecinShell>

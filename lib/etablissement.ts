@@ -50,6 +50,8 @@ export interface EtablissementConnecte {
   telephone: string;
   email: string;
   siteWeb: string;
+  /** Photo principale (Cloudinary) ; null = pictogramme par défaut. */
+  photoUrl: string | null;
   gradient: string;
   statut: string;
   parametres: Record<string, boolean>;
@@ -77,7 +79,7 @@ export function useEtablissementConnecte(): {
       const [{ data: e }, { data: u }] = await Promise.all([
         supabase
           .from("etablissements")
-          .select("id, nom, type, description, adresse, quartier, telephone, email, statut, parametres, villes ( nom )")
+          .select("id, nom, type, description, adresse, quartier, telephone, email, statut, parametres, photo_url, villes ( nom )")
           .eq("gestionnaire_id", auth.user.id)
           .maybeSingle(),
         supabase.from("utilisateurs").select("nom, prenom, email, telephone").eq("id", auth.user.id).single(),
@@ -95,6 +97,7 @@ export function useEtablissementConnecte(): {
           telephone: e.telephone ?? "",
           email: e.email ?? "",
           siteWeb: "",
+          photoUrl: (e as unknown as { photo_url: string | null }).photo_url ?? null,
           gradient: gradientPour(e.id),
           statut: e.statut,
           parametres: (e.parametres as Record<string, boolean>) ?? {},

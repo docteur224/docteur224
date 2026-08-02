@@ -927,6 +927,8 @@ export async function enregistrerProfilMedecin(d: {
   genre?: string;
   lienMaps?: string;
   telephoneSecretariat?: string;
+  diplomes?: { titre: string; lieu: string }[];
+  parcours?: { lieu: string; duree: string }[];
 }): Promise<{ erreur?: string }> {
   const supabase = creerClientNavigateur();
   const { data: auth } = await supabase.auth.getUser();
@@ -941,6 +943,8 @@ export async function enregistrerProfilMedecin(d: {
   if (d.genre !== undefined) maj.genre = d.genre === "" ? null : d.genre;
   if (d.lienMaps !== undefined) maj.localisation = d.lienMaps;
   if (d.telephoneSecretariat !== undefined) maj.telephone_secretariat = d.telephoneSecretariat;
+  if (d.diplomes !== undefined) maj.diplomes = d.diplomes;
+  if (d.parcours !== undefined) maj.parcours = d.parcours;
   const { error } = await supabase.from("medecins").update(maj).eq("id", auth.user.id);
   return error ? { erreur: error.message } : {};
 }
