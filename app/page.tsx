@@ -165,15 +165,17 @@ export default async function Accueil() {
       {/* ================= VERSION WEB (inchangée) ================= */}
       <div className="hidden md:block">
       {/* ===== HERO ===== */}
-      <section className="relative overflow-hidden bg-[linear-gradient(150deg,var(--blue)_0%,var(--blue-deep)_100%)] px-[30px] pb-16 pt-[54px] text-center text-white">
+      {/* Pas d'overflow-hidden sur la section : la liste de suggestions du
+          bandeau de recherche doit pouvoir déborder sous le héros. Seuls les
+          cercles décoratifs sont rognés, par leur propre conteneur. */}
+      <section className="relative bg-[linear-gradient(150deg,var(--blue)_0%,var(--blue-deep)_100%)] px-[30px] pb-16 pt-[54px] text-center text-white">
         <span
           aria-hidden
-          className="absolute -right-20 -top-20 h-[280px] w-[280px] rounded-full bg-[rgba(46,156,202,.22)]"
-        />
-        <span
-          aria-hidden
-          className="absolute -bottom-[110px] -left-[60px] h-60 w-60 rounded-full bg-[rgba(46,156,202,.14)]"
-        />
+          className="pointer-events-none absolute inset-0 overflow-hidden"
+        >
+          <span className="absolute -right-20 -top-20 block h-[280px] w-[280px] rounded-full bg-[rgba(46,156,202,.22)]" />
+          <span className="absolute -bottom-[110px] -left-[60px] block h-60 w-60 rounded-full bg-[rgba(46,156,202,.14)]" />
+        </span>
         <span className="relative inline-block rounded-[30px] bg-white/12 px-[14px] py-[6px] text-[13px] font-bold tracking-[.04em] opacity-85">
           🇬🇳 La santé accessible en Guinée
         </span>

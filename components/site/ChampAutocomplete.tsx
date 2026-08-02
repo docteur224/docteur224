@@ -142,8 +142,10 @@ export default function ChampAutocomplete({
           />
         </span>
       </label>
+      {/* max-h 300 px : les 8 suggestions affichées au maximum tiennent en
+          entier, sans demi-ligne coupée en bas. */}
       {ouvert && filtrees.length > 0 && (
-        <ul className="absolute left-0 right-0 top-full z-30 mt-1 max-h-[240px] overflow-auto rounded-xl border border-line bg-white py-1 shadow-[0_10px_26px_rgba(16,59,80,.14)]">
+        <ul className="absolute left-0 right-0 top-full z-30 mt-1 max-h-[300px] overflow-auto rounded-xl border border-line bg-white py-1 shadow-[0_10px_26px_rgba(16,59,80,.14)]">
           {filtrees.map((s, i) => (
             <li key={s}>
               <button
