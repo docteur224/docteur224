@@ -199,6 +199,9 @@
   .autolist button:hover, .autolist button:focus { background: var(--teal-soft); color: var(--blue); }
   .field { display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-radius: 11px; }
   .field + .field { border-top: 1px solid var(--line); }
+  /* Un champ à autocomplétion est enveloppé (la liste se place en absolu) :
+     le séparateur ne peut plus s'appuyer sur .field + .field. */
+  .searchbox > div + div > .field { border-top: 1px solid var(--line); }
   .field .ic { width: 22px; text-align: center; color: var(--teal); font-size: 15px; flex: none; }
   .field input { border: none; outline: none; font-family: inherit; font-size: 14px; width: 100%; color: var(--ink); background: transparent; }
   .field input::placeholder { color: #9cb0bd; }

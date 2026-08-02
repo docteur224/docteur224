@@ -5,11 +5,16 @@ import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import PiedPageMobile from "@/components/mobile/PiedPageMobile";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
 import AvatarMedecin from "@/components/site/AvatarMedecin";
+import RechercheAccueil, {
+  RechercheAccueilMobile,
+} from "@/components/site/RechercheAccueil";
 import { formatNote } from "@/lib/format";
 import {
   chargerEtablissements,
   chargerMedecins,
+  chargerNomsRecherche,
   chargerSpecialites,
+  chargerVilles,
   nomComplet,
 } from "@/lib/donnees";
 
@@ -22,11 +27,17 @@ export const revalidate = 60;
  * Les cartes sont alimentées par Supabase (lib/donnees.ts).
  */
 export default async function Accueil() {
-  const [tousMedecins, tousEtablissements, specialites] = await Promise.all([
-    chargerMedecins(),
-    chargerEtablissements(),
-    chargerSpecialites(),
-  ]);
+  const [tousMedecins, tousEtablissements, specialites, villes, nomsRecherche] =
+    await Promise.all([
+      chargerMedecins(),
+      chargerEtablissements(),
+      chargerSpecialites(),
+      chargerVilles(),
+      chargerNomsRecherche(),
+    ]);
+  // Suggestions du bandeau de recherche : le référentiel complet, pas
+  // seulement les vedettes affichées plus bas.
+  const nomsSpecialites = specialites.map((s) => s.nom);
   const medecinsEnVedette = tousMedecins.slice(0, 3);
   const etablissementsEnVedette = tousEtablissements.slice(0, 3);
   const getEtablissement = (id: string) => tousEtablissements.find((e) => e.id === id);
@@ -46,29 +57,11 @@ export default async function Accueil() {
             <br />
             et prenez rendez-vous
           </h2>
-          <form action="/resultats" className="searchbox">
-            <label className="field">
-              <span className="ic" aria-hidden>
-                🩺
-              </span>
-              <input name="specialite" placeholder="Spécialité (ex. Pédiatrie)" />
-            </label>
-            <label className="field">
-              <span className="ic" aria-hidden>
-                📍
-              </span>
-              <input name="ville" placeholder="Ville (ex. Conakry)" />
-            </label>
-            <label className="field">
-              <span className="ic" aria-hidden>
-                🔎
-              </span>
-              <input name="q" placeholder="Médecin ou établissement" />
-            </label>
-            <button type="submit" className="btn block">
-              🔎 Rechercher
-            </button>
-          </form>
+          <RechercheAccueilMobile
+            specialites={nomsSpecialites}
+            villes={villes}
+            nomsMedecins={nomsRecherche}
+          />
         </div>
         <div className="pad">
           <div className="section-t">Spécialités courantes</div>
@@ -195,56 +188,11 @@ export default async function Accueil() {
         </p>
 
         {/* Bandeau de recherche à 3 filtres (spec C.1.1) */}
-        <form
-          action="/resultats"
-          className="relative mx-auto mt-7 flex max-w-[780px] flex-col items-stretch gap-1 rounded-2xl bg-white p-2 text-ink shadow-[0_18px_40px_rgba(0,0,0,.22)] md:flex-row md:items-center"
-        >
-          <label className="flex flex-1 items-center gap-[10px] rounded-[11px] px-[14px] py-3 text-left">
-            <span className="text-base text-teal" aria-hidden>
-              🩺
-            </span>
-            <span className="block w-full">
-              <b className="block text-xs font-bold text-ink">Spécialité</b>
-              <input
-                name="specialite"
-                placeholder="Ex. Cardiologie"
-                className="w-full bg-transparent text-[13px] text-ink outline-none placeholder:text-muted"
-              />
-            </span>
-          </label>
-          <label className="flex flex-1 items-center gap-[10px] rounded-[11px] border-t border-line px-[14px] py-3 text-left md:border-l md:border-t-0">
-            <span className="text-base text-teal" aria-hidden>
-              📍
-            </span>
-            <span className="block w-full">
-              <b className="block text-xs font-bold text-ink">Ville</b>
-              <input
-                name="ville"
-                placeholder="Ex. Kankan"
-                className="w-full bg-transparent text-[13px] text-ink outline-none placeholder:text-muted"
-              />
-            </span>
-          </label>
-          <label className="flex flex-1 items-center gap-[10px] rounded-[11px] border-t border-line px-[14px] py-3 text-left md:border-l md:border-t-0">
-            <span className="text-base text-teal" aria-hidden>
-              🔎
-            </span>
-            <span className="block w-full">
-              <b className="block text-xs font-bold text-ink">Médecin ou établissement</b>
-              <input
-                name="q"
-                placeholder="Ex. Dr Barry, Clinique A. Paré"
-                className="w-full bg-transparent text-[13px] text-ink outline-none placeholder:text-muted"
-              />
-            </span>
-          </label>
-          <button
-            type="submit"
-            className="rounded-[11px] bg-teal px-[26px] py-[15px] text-[15px] font-bold text-white transition-colors hover:bg-[#2790bc]"
-          >
-            🔎 Rechercher
-          </button>
-        </form>
+        <RechercheAccueil
+          specialites={nomsSpecialites}
+          villes={villes}
+          nomsMedecins={nomsRecherche}
+        />
 
         <div className="relative mt-[30px] flex justify-center gap-[42px]">
           <div>
