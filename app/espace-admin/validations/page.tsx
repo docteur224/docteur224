@@ -7,9 +7,12 @@ import {
   deciderDossier,
   demanderComplement,
   LIBELLE_PIECE,
+  nomJour,
   urlPieceValidation,
+  useDetailDossier,
   useEtablissementsEnAttente,
   useMedecinsEnAttente,
+  type DetailDossier,
   type DossierValidation,
   type PieceDossier,
 } from "@/lib/admin";
@@ -117,6 +120,86 @@ function DialogueMotif({
   );
 }
 
+/** Profil déclaré par le professionnel, tel qu'il sera publié s'il est validé. */
+function ProfilDossier({ detail, chargement }: { detail: DetailDossier | null; chargement: boolean }) {
+  if (chargement) return <p className="text-[12.5px] text-muted">Chargement du profil…</p>;
+  if (!detail) return <p className="text-[12.5px] text-muted">Profil indisponible.</p>;
+
+  const champs = detail.champs.filter((c) => c.valeur);
+  const textes = detail.textes.filter((t) => t.valeur);
+  const listes = detail.listes.filter((l) => l.valeurs.length);
+
+  return (
+    <div className="rounded-xl border border-line bg-[#F6FAFC] p-4">
+      <div className="mb-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <b className="text-[13.5px] font-extrabold">
+          {`${detail.contact.prenom} ${detail.contact.nom}`.trim() || "—"}
+        </b>
+        <small className="text-[12.5px] text-muted">{detail.contact.email}</small>
+        {detail.contact.telephone && (
+          <small className="text-[12.5px] text-muted">{detail.contact.telephone}</small>
+        )}
+      </div>
+
+      {champs.length > 0 && (
+        <dl className="grid gap-x-4 gap-y-1.5 sm:grid-cols-2">
+          {champs.map((c) => (
+            <div key={c.label} className="flex gap-2 text-[12.5px]">
+              <dt className="w-[112px] flex-none font-bold text-muted">{c.label}</dt>
+              <dd className="min-w-0 flex-1">{c.valeur}</dd>
+            </div>
+          ))}
+        </dl>
+      )}
+
+      {listes.map((l) => (
+        <div key={l.label} className="mt-2.5">
+          <small className="block text-[11.5px] font-bold uppercase tracking-[0.04em] text-muted">
+            {l.label}
+          </small>
+          <div className="mt-1 flex flex-wrap gap-1.5">
+            {l.valeurs.map((v) => (
+              <span key={v} className="rounded-full bg-white px-2.5 py-1 text-[11.5px] font-semibold text-blue">
+                {v}
+              </span>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      {textes.map((t) => (
+        <div key={t.label} className="mt-2.5">
+          <small className="block text-[11.5px] font-bold uppercase tracking-[0.04em] text-muted">
+            {t.label}
+          </small>
+          <p className="mt-1 whitespace-pre-line text-[12.5px] leading-relaxed">{t.valeur}</p>
+        </div>
+      ))}
+
+      {detail.horaires.length > 0 && (
+        <div className="mt-2.5">
+          <small className="block text-[11.5px] font-bold uppercase tracking-[0.04em] text-muted">
+            Horaires de consultation
+          </small>
+          <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-[12.5px]">
+            {detail.horaires.map((h) => (
+              <span key={h.jour}>
+                <b className="font-bold text-muted">{nomJour(h.jour)}</b> {h.debut}–{h.fin}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {champs.length === 0 && textes.length === 0 && listes.length === 0 && detail.horaires.length === 0 && (
+        <p className="text-[12.5px] font-semibold text-red">
+          ⚠ Ce dossier ne contient aucune information de profil.
+        </p>
+      )}
+    </div>
+  );
+}
+
 /** Vignette d'une pièce réellement déposée : ouvre le fichier en URL signée. */
 function Vignette({ piece, mobile = false }: { piece: PieceDossier; mobile?: boolean }) {
   const [ouverture, setOuverture] = useState(false);
@@ -155,9 +238,21 @@ function Vignette({ piece, mobile = false }: { piece: PieceDossier; mobile?: boo
 }
 
 /** Ligne mobile de la file (mêmes actions que la version web). */
-function LigneDossierMobile({ dossier, approuver, demanderRejet }: { dossier: DossierValidation; approuver: (d: DossierValidation) => void; demanderRejet: (d: DossierValidation) => void }) {
+function LigneDossierMobile({
+  dossier,
+  approuver,
+  demanderRejet,
+  examiner,
+  actif,
+}: {
+  dossier: DossierValidation;
+  approuver: (d: DossierValidation) => void;
+  demanderRejet: (d: DossierValidation) => void;
+  examiner: (d: DossierValidation) => void;
+  actif: boolean;
+}) {
   return (
-    <div className="asstrowm">
+    <div className="asstrowm" style={actif ? { background: "var(--teal-soft)" } : undefined}>
       <span
         className="av"
         aria-hidden
@@ -166,7 +261,14 @@ function LigneDossierMobile({ dossier, approuver, demanderRejet }: { dossier: Do
         {dossier.initiales}
       </span>
       <span className="meta">
-        <b>{dossier.nom}</b>
+        <button
+          type="button"
+          onClick={() => examiner(dossier)}
+          aria-pressed={actif}
+          style={{ background: "none", border: 0, padding: 0, textAlign: "left", font: "inherit" }}
+        >
+          <b>{dossier.nom}</b>
+        </button>
         <small>
           {[dossier.detail, ancienneteDossier(dossier.depotLe)].filter(Boolean).join(" · ")}
         </small>
@@ -177,6 +279,9 @@ function LigneDossierMobile({ dossier, approuver, demanderRejet }: { dossier: Do
         </small>
       </span>
       <span style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+        <button type="button" className="btnm gh" onClick={() => examiner(dossier)}>
+          {actif ? "En examen" : "Examiner"}
+        </button>
         <button type="button" className="btnm" onClick={() => approuver(dossier)}>
           Approuver
         </button>
@@ -188,9 +293,25 @@ function LigneDossierMobile({ dossier, approuver, demanderRejet }: { dossier: Do
   );
 }
 
-function LigneDossier({ dossier, approuver, demanderRejet }: { dossier: DossierValidation; approuver: (d: DossierValidation) => void; demanderRejet: (d: DossierValidation) => void }) {
+function LigneDossier({
+  dossier,
+  approuver,
+  demanderRejet,
+  examiner,
+  actif,
+}: {
+  dossier: DossierValidation;
+  approuver: (d: DossierValidation) => void;
+  demanderRejet: (d: DossierValidation) => void;
+  examiner: (d: DossierValidation) => void;
+  actif: boolean;
+}) {
   return (
-    <div className="flex flex-wrap items-center gap-[13px] border-b border-line py-[14px] last:border-b-0">
+    <div
+      className={`flex flex-wrap items-center gap-[13px] border-b border-line py-[14px] last:border-b-0 ${
+        actif ? "bg-teal-soft" : ""
+      }`}
+    >
       <span
         aria-hidden
         className="grid h-[42px] w-[42px] flex-none place-items-center rounded-xl text-sm font-extrabold text-white"
@@ -199,7 +320,14 @@ function LigneDossier({ dossier, approuver, demanderRejet }: { dossier: DossierV
         {dossier.initiales}
       </span>
       <div className="min-w-0 flex-1">
-        <b className="block text-sm font-extrabold">{dossier.nom}</b>
+        <button
+          type="button"
+          onClick={() => examiner(dossier)}
+          aria-pressed={actif}
+          className="block text-left text-sm font-extrabold hover:text-teal"
+        >
+          {dossier.nom}
+        </button>
         <small className="text-xs text-muted">
           {[dossier.detail, ancienneteDossier(dossier.depotLe)].filter(Boolean).join(" · ")} ·{" "}
           {dossier.documents.length > 0 ? (
@@ -211,6 +339,13 @@ function LigneDossier({ dossier, approuver, demanderRejet }: { dossier: DossierV
           )}
         </small>
       </div>
+      <button
+        type="button"
+        onClick={() => examiner(dossier)}
+        className="rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg"
+      >
+        {actif ? "En examen" : "Examiner"}
+      </button>
       <button
         type="button"
         onClick={() => approuver(dossier)}
@@ -241,6 +376,8 @@ export default function ValidationsAdmin() {
   const [enCours, setEnCours] = useState(false);
   /** Dossier dont le rejet est en cours de motivation (lignes de file). */
   const [rejetEnCours, setRejetEnCours] = useState<DossierValidation | null>(null);
+  /** Dossier choisi pour examen ; null = le premier de la file. */
+  const [selectionId, setSelectionId] = useState<string | null>(null);
 
   // Motif retenu : la saisie libre quand « Autre motif » est choisi, sinon
   // l'intitulé de la liste. `undefined` = rien de motivé.
@@ -314,8 +451,22 @@ export default function ValidationsAdmin() {
     reinitialiserMotif();
   }
 
-  // Le dossier « en cours d'examen » est le premier médecin de la file.
-  const dossierEnCours = medecins[0];
+  // Le dossier examiné est celui que l'admin a choisi ; à défaut le premier
+  // de la file. Il était auparavant imposé (medecins[0]) : impossible
+  // d'examiner un autre professionnel, ni le moindre établissement.
+  const tousLesDossiers = [...medecins, ...etablissements];
+  const dossierEnCours =
+    tousLesDossiers.find((d) => d.id === selectionId) ?? medecins[0] ?? etablissements[0];
+
+  const examiner = (d: DossierValidation) => {
+    setSelectionId(d.id);
+    setErreur(null);
+    setSucces(null);
+    reinitialiserMotif();
+    if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const { detail, chargement: chargementDetail } = useDetailDossier(dossierEnCours ?? null);
 
   const messages = (
     <>
@@ -371,8 +522,12 @@ export default function ValidationsAdmin() {
             <div className="card2">
               <h4>Dossier en examen — {dossierEnCours.nom}</h4>
               <p className="muted" style={{ fontSize: 12 }}>
+                {dossierEnCours.etablissement ? "Établissement" : "Médecin"} ·{" "}
                 {ancienneteDossier(dossierEnCours.depotLe)}
               </p>
+              <div style={{ marginTop: 8, marginBottom: 10 }}>
+                <ProfilDossier detail={detail} chargement={chargementDetail} />
+              </div>
               {dossierEnCours.documents.length > 0 ? (
                 <div className="docthumbs">
                   {dossierEnCours.documents.map((piece) => (
@@ -457,7 +612,7 @@ export default function ValidationsAdmin() {
               </p>
             )}
             {pagiMedecins.tranche.map((dossier) => (
-              <LigneDossierMobile key={dossier.id} dossier={dossier} approuver={approuver} demanderRejet={setRejetEnCours} />
+              <LigneDossierMobile key={dossier.id} dossier={dossier} approuver={approuver} demanderRejet={setRejetEnCours} examiner={examiner} actif={dossierEnCours?.id === dossier.id} />
             ))}
             <Pagination
               page={pagiMedecins.page}
@@ -477,7 +632,7 @@ export default function ValidationsAdmin() {
               </p>
             )}
             {pagiEtabs.tranche.map((dossier) => (
-              <LigneDossierMobile key={dossier.id} dossier={dossier} approuver={approuver} demanderRejet={setRejetEnCours} />
+              <LigneDossierMobile key={dossier.id} dossier={dossier} approuver={approuver} demanderRejet={setRejetEnCours} examiner={examiner} actif={dossierEnCours?.id === dossier.id} />
             ))}
             <Pagination
               page={pagiEtabs.page}
@@ -514,9 +669,22 @@ export default function ValidationsAdmin() {
 
       {dossierEnCours ? (
         <div className="mb-4 rounded-2xl border border-line bg-white p-5">
-          <h3 className="mb-[14px] text-[15px] font-extrabold">
-            Dossier en cours d’examen — {dossierEnCours.nom}
-          </h3>
+          <div className="mb-[14px] flex flex-wrap items-baseline justify-between gap-2">
+            <h3 className="text-[15px] font-extrabold">
+              Dossier en cours d’examen — {dossierEnCours.nom}
+            </h3>
+            <small className="rounded-full bg-bg px-2.5 py-1 text-[11.5px] font-bold text-muted">
+              {dossierEnCours.etablissement ? "Établissement" : "Médecin"}
+            </small>
+          </div>
+
+          <div className="mb-4">
+            <ProfilDossier detail={detail} chargement={chargementDetail} />
+          </div>
+
+          <small className="mb-1.5 block text-[11.5px] font-bold uppercase tracking-[0.04em] text-muted">
+            Pièces justificatives
+          </small>
           {dossierEnCours.documents.length > 0 ? (
             <div className="mb-1 mt-2 flex flex-wrap gap-[10px]">
               {dossierEnCours.documents.map((piece) => (
@@ -613,7 +781,7 @@ export default function ValidationsAdmin() {
           <p className="py-3 text-[12.5px] text-muted">Aucun médecin en attente.</p>
         )}
         {pagiMedecins.tranche.map((dossier) => (
-          <LigneDossier key={dossier.id} dossier={dossier} approuver={approuver} demanderRejet={setRejetEnCours} />
+          <LigneDossier key={dossier.id} dossier={dossier} approuver={approuver} demanderRejet={setRejetEnCours} examiner={examiner} actif={dossierEnCours?.id === dossier.id} />
         ))}
         <Pagination
           page={pagiMedecins.page}
@@ -634,7 +802,7 @@ export default function ValidationsAdmin() {
           <p className="py-3 text-[12.5px] text-muted">Aucun établissement en attente.</p>
         )}
         {pagiEtabs.tranche.map((dossier) => (
-          <LigneDossier key={dossier.id} dossier={dossier} approuver={approuver} demanderRejet={setRejetEnCours} />
+          <LigneDossier key={dossier.id} dossier={dossier} approuver={approuver} demanderRejet={setRejetEnCours} examiner={examiner} actif={dossierEnCours?.id === dossier.id} />
         ))}
         <Pagination
           page={pagiEtabs.page}

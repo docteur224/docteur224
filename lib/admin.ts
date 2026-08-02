@@ -194,6 +194,175 @@ export function useEtablissementsEnAttente(): { dossiers: DossierValidation[]; r
   return { dossiers: donnees, recharger };
 }
 
+/* ----- Détail d'un dossier soumis à validation ----- */
+
+export interface DetailDossier {
+  /** Identité du professionnel ou du gestionnaire de la structure. */
+  contact: { nom: string; prenom: string; email: string; telephone: string };
+  /** Couples libellé/valeur du profil, prêts à afficher. */
+  champs: { label: string; valeur: string }[];
+  /** Blocs de texte long (présentation, description). */
+  textes: { label: string; valeur: string }[];
+  /** Listes (langues, soins, services). */
+  listes: { label: string; valeurs: string[] }[];
+  horaires: { jour: number; debut: string; fin: string }[];
+}
+
+const JOURS_SEMAINE = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+export const nomJour = (jour: number) => JOURS_SEMAINE[jour] ?? "";
+
+const gnfOuVide = (n: number | null) =>
+  n ? `${n.toLocaleString("fr-FR").replace(/ | /g, " ")} GNF` : "";
+
+/**
+ * Profil complet du dossier examiné. L'écran ne montrait que les pièces :
+ * on ne peut pas valider un professionnel sans voir qui il est, ce qu'il
+ * déclare exercer et où.
+ */
+export function useDetailDossier(dossier: DossierValidation | null): {
+  detail: DetailDossier | null;
+  chargement: boolean;
+} {
+  const { donnees } = utiliserRequete<{ cle: string; detail: DetailDossier | null }>(
+    { cle: "", detail: null },
+    async () => {
+      const cle = dossier ? `${dossier.etablissement ? "e" : "m"}:${dossier.id}` : "";
+      if (!dossier) return { cle, detail: null };
+      const supabase = creerClientNavigateur();
+
+      if (!dossier.etablissement) {
+        const { data } = await supabase
+          .from("medecins")
+          .select(
+            "civilite, quartier, tarif_consultation, presentation, soins_et_actes, diplomes, parcours, langues, annees_experience, telephone_secretariat, localisation, utilisateurs ( nom, prenom, email, telephone ), specialites ( nom ), villes ( nom ), horaires_types ( jour_semaine, heure_debut, heure_fin )"
+          )
+          .eq("id", dossier.id)
+          .maybeSingle();
+        if (!data) return { cle, detail: null };
+        type M = {
+          civilite: string;
+          quartier: string | null;
+          tarif_consultation: number | null;
+          presentation: string | null;
+          soins_et_actes: string[] | null;
+          diplomes: { titre?: string; lieu?: string }[] | null;
+          parcours: { lieu?: string; duree?: string }[] | null;
+          langues: string[] | null;
+          annees_experience: number | null;
+          telephone_secretariat: string | null;
+          localisation: string | null;
+          utilisateurs: { nom: string | null; prenom: string | null; email: string; telephone: string | null } | null;
+          specialites: { nom: string } | null;
+          villes: { nom: string } | null;
+          horaires_types: { jour_semaine: number; heure_debut: string; heure_fin: string }[] | null;
+        };
+        const m = data as unknown as M;
+        return {
+          cle,
+          detail: {
+            contact: {
+              nom: m.utilisateurs?.nom ?? "",
+              prenom: m.utilisateurs?.prenom ?? "",
+              email: m.utilisateurs?.email ?? "",
+              telephone: m.utilisateurs?.telephone ?? "",
+            },
+            champs: [
+              { label: "Civilité", valeur: m.civilite ?? "" },
+              { label: "Spécialité", valeur: m.specialites?.nom ?? "" },
+              { label: "Ville", valeur: m.villes?.nom ?? "" },
+              { label: "Quartier", valeur: m.quartier ?? "" },
+              { label: "Tarif consultation", valeur: gnfOuVide(m.tarif_consultation) },
+              {
+                label: "Expérience",
+                valeur: m.annees_experience ? `${m.annees_experience} ans` : "",
+              },
+              { label: "Tél. secrétariat", valeur: m.telephone_secretariat ?? "" },
+              { label: "Localisation", valeur: m.localisation ?? "" },
+              {
+                label: "Diplômes",
+                valeur: (m.diplomes ?? [])
+                  .map((d) => [d.titre, d.lieu].filter(Boolean).join(" — "))
+                  .filter(Boolean)
+                  .join(" · "),
+              },
+              {
+                label: "Parcours",
+                valeur: (m.parcours ?? [])
+                  .map((p) => [p.lieu, p.duree].filter(Boolean).join(" — "))
+                  .filter(Boolean)
+                  .join(" · "),
+              },
+            ],
+            textes: [{ label: "Présentation", valeur: m.presentation ?? "" }],
+            listes: [
+              { label: "Langues", valeurs: m.langues ?? [] },
+              { label: "Soins et actes", valeurs: m.soins_et_actes ?? [] },
+            ],
+            horaires: (m.horaires_types ?? [])
+              .map((h) => ({
+                jour: h.jour_semaine,
+                debut: h.heure_debut.slice(0, 5),
+                fin: h.heure_fin.slice(0, 5),
+              }))
+              .sort((a, b) => (a.jour || 7) - (b.jour || 7)),
+          },
+        };
+      }
+
+      const { data } = await supabase
+        .from("etablissements")
+        .select(
+          "nom, type, description, adresse, quartier, telephone, email, services, horaires, villes ( nom ), utilisateurs!etablissements_gestionnaire_id_fkey ( nom, prenom, email, telephone )"
+        )
+        .eq("id", dossier.id)
+        .maybeSingle();
+      if (!data) return { cle, detail: null };
+      type E = {
+        nom: string;
+        type: string;
+        description: string | null;
+        adresse: string | null;
+        quartier: string | null;
+        telephone: string | null;
+        email: string | null;
+        services: string[] | null;
+        horaires: Record<string, { debut?: string; fin?: string }> | null;
+        villes: { nom: string } | null;
+        utilisateurs: { nom: string | null; prenom: string | null; email: string; telephone: string | null } | null;
+      };
+      const e = data as unknown as E;
+      return {
+        cle,
+        detail: {
+          contact: {
+            nom: e.utilisateurs?.nom ?? "",
+            prenom: e.utilisateurs?.prenom ?? "",
+            email: e.utilisateurs?.email ?? "",
+            telephone: e.utilisateurs?.telephone ?? "",
+          },
+          champs: [
+            { label: "Type", valeur: e.type ?? "" },
+            { label: "Ville", valeur: e.villes?.nom ?? "" },
+            { label: "Quartier", valeur: e.quartier ?? "" },
+            { label: "Adresse", valeur: e.adresse ?? "" },
+            { label: "Téléphone", valeur: e.telephone ?? "" },
+            { label: "E-mail", valeur: e.email ?? "" },
+          ],
+          textes: [{ label: "Description", valeur: e.description ?? "" }],
+          listes: [{ label: "Services", valeurs: e.services ?? [] }],
+          horaires: [],
+        },
+      };
+    },
+    [dossier?.id, dossier?.etablissement]
+  );
+
+  const cleAttendue = dossier ? `${dossier.etablissement ? "e" : "m"}:${dossier.id}` : "";
+  // Clé portée dans l'état plutôt qu'un setChargement en tête d'effet, que le
+  // linter interdit (react-hooks/set-state-in-effect).
+  return { detail: donnees.cle === cleAttendue ? donnees.detail : null, chargement: donnees.cle !== cleAttendue };
+}
+
 /** URL signée (5 min) vers une pièce du bucket privé `validation`. */
 export async function urlPieceValidation(fichierPath: string): Promise<string | null> {
   const { data } = await creerClientNavigateur()
