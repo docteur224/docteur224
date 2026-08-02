@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { creerClientServeur } from "@/lib/supabase/server";
+import { formuleEtablissement, ouvrirAbonnement } from "@/lib/abonnement-inscription";
 
 /*
  * Clôture du parcours d'inscription professionnel : ouverture de
@@ -10,28 +11,17 @@ import { creerClientServeur } from "@/lib/supabase/server";
  * 0019 retire l'écriture client sur `abonnements` : le statut et la date
  * de fin déterminent ce que le professionnel a payé, ils ne peuvent pas
  * venir du client. Rien de ce que poste l'appelant n'est utilisé pour en
- * décider — la formule est déduite du type d'établissement lu en base, la
- * durée des réglages plateforme.
+ * décider.
  *
- * Ordre de précédence de la gratuité (cf. /espace-admin/abonnements) :
- *   1. période gratuite de lancement  → essai sans échéance
- *   2. essai gratuit à l'inscription  → essai de `essai_jours` jours
- *   3. aucun des deux                 → aucun abonnement actif
- * Le cas 3 laissera place à l'étape Paiement (phase C) ; d'ici là il
- * produit un abonnement expiré, c'est-à-dire l'état exact que le paiement
- * viendra basculer en « actif ».
+ * L'étape « Abonnement » a normalement déjà créé la ligne avec la formule
+ * choisie (/api/inscription/abonnement) : on ne la refait pas. Ce filet ne
+ * sert qu'aux parcours qui ont sauté l'étape — formule par défaut, mêmes
+ * règles de gratuité, partagées dans lib/abonnement-inscription.
  */
 
-const JOUR_MS = 86_400_000;
-const versISO = (d: Date) => d.toISOString().slice(0, 10);
-
-/** Formule facturée selon le type de structure saisi dans la fiche. */
-function formulePour(role: string, typeEtablissement: string | null): string {
-  if (role !== "etablissement") return "standard";
-  const type = (typeEtablissement ?? "").toLowerCase();
-  if (type.includes("hôpital") || type.includes("hopital")) return "hopital";
-  if (type.includes("clinique")) return "clinique";
-  return "cabinet";
+/** Formule par défaut si le professionnel n'a rien choisi. */
+function formuleParDefaut(role: string, typeEtablissement: string | null): string {
+  return role === "etablissement" ? formuleEtablissement(typeEtablissement) : "standard";
 }
 
 export async function POST() {
@@ -73,8 +63,6 @@ export async function POST() {
     etablissement = data;
   }
 
-  const formule = formulePour(role, etablissement?.type ?? null);
-
   // ----- Abonnement (une seule fois : on ne réouvre pas un essai) -----
   const { data: existants } = await admin
     .from("abonnements")
@@ -83,35 +71,8 @@ export async function POST() {
     .limit(1);
 
   if (!existants || existants.length === 0) {
-    const [{ data: reglages }, { data: tarif }] = await Promise.all([
-      admin
-        .from("parametres_plateforme")
-        .select("cle, valeur")
-        .in("cle", ["periode_gratuite", "essai_gratuit"]),
-      admin
-        .from("tarifs_plateforme")
-        .select("essai_jours, quota_sms, gratuit_jusqua")
-        .eq("formule", formule)
-        .maybeSingle(),
-    ]);
-
-    const actif = (cle: string) => (reglages ?? []).find((r) => r.cle === cle)?.valeur === true;
-    const gratuitJusqua = tarif?.gratuit_jusqua ? new Date(tarif.gratuit_jusqua) : null;
-    const periodeGratuite = actif("periode_gratuite") || (gratuitJusqua !== null && gratuitJusqua > new Date());
-    const essaiGratuit = actif("essai_gratuit");
-
-    let statut: "essai" | "expire" = "essai";
-    let dateFin: string | null = null;
-    if (periodeGratuite) {
-      // Phase pilote : aucune facturation, donc aucune échéance.
-      dateFin = null;
-    } else if (essaiGratuit) {
-      dateFin = versISO(new Date(Date.now() + (tarif?.essai_jours ?? 30) * JOUR_MS));
-    } else {
-      statut = "expire";
-      dateFin = versISO(new Date());
-    }
-
+    const formule = formuleParDefaut(role, etablissement?.type ?? null);
+    const { statut, dateFin, quotaSms } = await ouvrirAbonnement(admin, formule);
     const { error } = await admin.from("abonnements").insert({
       titulaire_id: utilisateurId,
       type_titulaire: role,
@@ -119,7 +80,7 @@ export async function POST() {
       periode: "mensuel",
       statut,
       date_fin: dateFin,
-      quota_sms: tarif?.quota_sms ?? 0,
+      quota_sms: quotaSms,
     });
     if (error) return NextResponse.json({ erreur: error.message }, { status: 500 });
   }

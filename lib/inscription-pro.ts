@@ -28,6 +28,7 @@ export const ETAPES_PRATICIEN: DefinitionEtape[] = [
   { id: "lieu", label: "Lieu d'exercice" },
   { id: "documents", label: "Documents" },
   { id: "horaires", label: "Horaires" },
+  { id: "abonnement", label: "Abonnement" },
   { id: "recap", label: "Récap" },
   { id: "confirmation", label: "Confirmation" },
 ];
@@ -36,6 +37,7 @@ export const ETAPES_ETABLISSEMENT: DefinitionEtape[] = [
   { id: "compte", label: "Compte" },
   { id: "fiche", label: "Fiche établissement" },
   { id: "documents", label: "Documents" },
+  { id: "abonnement", label: "Abonnement" },
   { id: "recap", label: "Récap" },
   { id: "confirmation", label: "Confirmation" },
 ];

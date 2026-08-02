@@ -50,7 +50,7 @@ export default function EtapeDocuments() {
       (fournis.has("diplome") || fournis.has("carte_ordre") || fournis.has("autorisation_exercice"))
     : fournis.has("identite") && fournis.has("autorisation_exercice");
 
-  const suivant = medecin ? "horaires" : "recap";
+  const suivant = medecin ? "horaires" : "abonnement";
 
   async function televerser(type: TypeDoc, fichiers: FileList | null) {
     if (!fichiers || fichiers.length === 0) return;

@@ -84,16 +84,18 @@ export default function EtapeHoraires() {
         return setErreur(`${nom} : l’heure de fin doit être après l’heure de début.`);
     }
     setEnCours(true);
+    let cible = "abonnement";
     const res = await enregistrerHorairesHebdo(
       ouverts.map(({ jour }) => ({ jour, debut: jours[jour].debut, fin: jours[jour].fin }))
     );
     if (!res.erreur) {
-      const avancee = await avancerEtape("medecin", null, "recap");
+      const avancee = await avancerEtape("medecin", null, "abonnement");
       if (avancee.erreur) res.erreur = avancee.erreur;
+      else cible = avancee.cible;
     }
     setEnCours(false);
     if (res.erreur) setErreur(res.erreur);
-    else router.push("/inscription/professionnel/etapes/recap");
+    else router.push(`/inscription/professionnel/etapes/${cible}`);
   }
 
   return (

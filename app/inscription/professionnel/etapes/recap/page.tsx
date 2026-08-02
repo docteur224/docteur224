@@ -23,6 +23,20 @@ const LIBELLES_DOC: Record<string, string> = {
   carte_ordre: "Carte de l’Ordre",
   autorisation_exercice: "Autorisation d’exercice",
 };
+const LIBELLE_FORMULE: Record<string, string> = {
+  standard: "Standard",
+  premium: "Premium",
+  cabinet: "Cabinet",
+  clinique: "Clinique",
+  hopital: "Hôpital / Grand centre",
+};
+
+interface RecapAbonnement {
+  formule: string;
+  periode: string;
+  statut: string;
+  dateFin: string | null;
+}
 
 interface RecapMedecin {
   specialite: string;
@@ -91,8 +105,36 @@ export default function EtapeRecap() {
   const [compte, setCompte] = useState<{ nom: string; prenom: string; email: string; telephone: string } | null>(null);
   const [medecin, setMedecin] = useState<RecapMedecin | null>(null);
   const [etab, setEtab] = useState<RecapEtab | null>(null);
+  const [abonnement, setAbonnement] = useState<RecapAbonnement | null>(null);
   const [erreur, setErreur] = useState<string | null>(null);
   const [enCours, setEnCours] = useState(false);
+
+  // La formule choisie à l'étape « Abonnement », relue en base comme le
+  // reste du récap.
+  useEffect(() => {
+    let actif = true;
+    (async () => {
+      const supabase = creerClientNavigateur();
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) return;
+      const { data } = await supabase
+        .from("abonnements")
+        .select("formule, periode, statut, date_fin")
+        .eq("titulaire_id", auth.user.id)
+        .maybeSingle();
+      if (actif && data) {
+        setAbonnement({
+          formule: data.formule,
+          periode: data.periode,
+          statut: data.statut,
+          dateFin: data.date_fin,
+        });
+      }
+    })();
+    return () => {
+      actif = false;
+    };
+  }, []);
 
   useEffect(() => {
     let actif = true;
@@ -197,7 +239,7 @@ export default function EtapeRecap() {
     <CadreEtape
       titre="Récapitulatif de votre dossier"
       sousTitre="Vérifiez vos informations : votre dossier part ensuite en validation auprès de notre équipe."
-      retour={`${base}/${medecinRole ? "horaires" : "documents"}`}
+      retour={`${base}/abonnement`}
       onContinuer={confirmer}
       boutonTexte="Confirmer mon inscription →"
       boutonEnCours={enCours}
@@ -274,9 +316,34 @@ export default function EtapeRecap() {
         </Section>
       )}
 
+      <Section titre="💳 Abonnement" modifier={`${base}/abonnement`}>
+        {abonnement ? (
+          <>
+            <Ligne label="Formule" valeur={LIBELLE_FORMULE[abonnement.formule] ?? abonnement.formule} />
+            <Ligne label="Périodicité" valeur={abonnement.periode === "annuel" ? "Annuel" : "Mensuel"} />
+            <Ligne
+              label="À régler"
+              valeur={
+                abonnement.statut === "essai" ? (
+                  <span className="font-bold text-green">
+                    Rien pour l’instant{abonnement.dateFin ? ` (jusqu’au ${abonnement.dateFin})` : ""}
+                  </span>
+                ) : (
+                  <span className="font-bold text-red">
+                    À régler — notre équipe vous contactera
+                  </span>
+                )
+              }
+            />
+          </>
+        ) : (
+          <p className="text-[12.5px] text-muted">Aucune formule choisie.</p>
+        )}
+      </Section>
+
       <div className="mt-4 rounded-xl bg-teal-soft px-4 py-3 text-[12.5px] font-semibold leading-relaxed text-blue">
-        ℹ️ En confirmant, votre essai gratuit démarre et votre dossier est transmis à notre équipe.
-        Votre fiche sera visible des patients après validation (24–48 h).
+        ℹ️ En confirmant, votre dossier est transmis à notre équipe. Votre fiche sera visible des
+        patients après validation (24–48 h).
       </div>
     </CadreEtape>
   );
