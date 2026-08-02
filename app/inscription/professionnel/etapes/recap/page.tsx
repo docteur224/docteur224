@@ -45,6 +45,8 @@ interface RecapMedecin {
   presentation: string;
   langues: string[];
   soins: string[];
+  diplomes: { titre: string; lieu: string }[];
+  parcours: { lieu: string; duree: string }[];
   quartier: string;
   ville: string;
   localisation: string;
@@ -161,7 +163,7 @@ export default function EtapeRecap() {
         const { data: m } = await supabase
           .from("medecins")
           .select(
-            "tarif_consultation, annees_experience, presentation, langues, soins_et_actes, quartier, localisation, telephone_secretariat, specialites ( nom ), villes ( nom ), horaires_types ( jour_semaine, heure_debut, heure_fin )"
+            "tarif_consultation, annees_experience, presentation, langues, soins_et_actes, diplomes, parcours, quartier, localisation, telephone_secretariat, specialites ( nom ), villes ( nom ), horaires_types ( jour_semaine, heure_debut, heure_fin )"
           )
           .eq("id", auth.user.id)
           .maybeSingle();
@@ -172,6 +174,8 @@ export default function EtapeRecap() {
             presentation: string | null;
             langues: string[];
             soins_et_actes: string[];
+            diplomes: { titre: string; lieu: string }[] | null;
+            parcours: { lieu: string; duree: string }[] | null;
             quartier: string | null;
             localisation: string | null;
             telephone_secretariat: string | null;
@@ -186,6 +190,8 @@ export default function EtapeRecap() {
             presentation: ligne.presentation ?? "",
             langues: ligne.langues ?? [],
             soins: ligne.soins_et_actes ?? [],
+            diplomes: ligne.diplomes ?? [],
+            parcours: ligne.parcours ?? [],
             quartier: ligne.quartier ?? "",
             ville: ligne.villes?.nom ?? "",
             localisation: ligne.localisation ?? "",
@@ -259,6 +265,18 @@ export default function EtapeRecap() {
             <Ligne label="Expérience" valeur={medecin.experience ? `${medecin.experience} ans` : ""} />
             <Ligne label="Langues" valeur={medecin.langues.join(", ")} />
             <Ligne label="Soins et actes" valeur={medecin.soins.join(", ")} />
+            <Ligne
+              label="Diplômes"
+              valeur={medecin.diplomes
+                .map((d) => [d.titre, d.lieu].filter(Boolean).join(" — "))
+                .join(" · ")}
+            />
+            <Ligne
+              label="Parcours"
+              valeur={medecin.parcours
+                .map((p) => [p.lieu, p.duree].filter(Boolean).join(" — "))
+                .join(" · ")}
+            />
             <Ligne label="Présentation" valeur={medecin.presentation} />
           </Section>
           <Section titre="📍 Lieu d’exercice" modifier={`${base}/lieu`}>

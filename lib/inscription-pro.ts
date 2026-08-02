@@ -191,6 +191,8 @@ export async function enregistrerEtapeProfil(d: {
   soins?: string[];
   /** « femme » | « homme » | "" (non précisé). */
   genre?: string;
+  diplomes?: { titre: string; lieu: string }[];
+  parcours?: { lieu: string; duree: string }[];
 }): Promise<{ erreur?: string }> {
   const supabase = creerClientNavigateur();
   const { data: auth } = await supabase.auth.getUser();
@@ -203,6 +205,8 @@ export async function enregistrerEtapeProfil(d: {
   if (d.langues !== undefined) maj.langues = d.langues;
   if (d.soins !== undefined) maj.soins_et_actes = d.soins;
   if (d.genre !== undefined) maj.genre = d.genre === "" ? null : d.genre;
+  if (d.diplomes !== undefined) maj.diplomes = d.diplomes;
+  if (d.parcours !== undefined) maj.parcours = d.parcours;
   const { error } = await supabase.from("medecins").update(maj).eq("id", auth.user.id);
   return error ? { erreur: error.message } : {};
 }
