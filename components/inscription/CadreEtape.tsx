@@ -43,14 +43,6 @@ export default function CadreEtape({
   return (
     <div className="mx-auto w-full max-w-[600px] px-4 py-6 md:py-10">
       <div className="rounded-2xl border border-line bg-white p-5 md:p-8">
-        {retour && (
-          <Link
-            href={retour}
-            className="mb-3 inline-flex items-center gap-1.5 text-[12.5px] font-bold text-muted hover:text-blue"
-          >
-            ‹ Étape précédente
-          </Link>
-        )}
         <Stepper etapes={etapesPour(role)} courante={segment} className="mb-5" />
         <h1 className="text-[20px] font-extrabold tracking-[-0.3px]">{titre}</h1>
         {sousTitre && <p className="mt-1.5 text-[13px] text-muted">{sousTitre}</p>}
@@ -60,15 +52,34 @@ export default function CadreEtape({
             {erreur}
           </p>
         )}
-        {onContinuer && (
-          <button
-            type="button"
-            onClick={onContinuer}
-            disabled={boutonEnCours}
-            className="mt-5 flex w-full items-center justify-center gap-2 rounded-[11px] bg-teal px-6 py-[14px] text-[15px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:opacity-60"
-          >
-            {boutonEnCours ? "Enregistrement…" : boutonTexte}
-          </button>
+        {/* Retour et Continuer côte à côte : le lien discret placé au-dessus
+            du fil d'Ariane passait inaperçu. Sous sm, la pile est inversée
+            pour que l'action principale reste sous le pouce. */}
+        {(retour || onContinuer) && (
+          <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row">
+            {retour && (
+              <Link
+                href={retour}
+                aria-disabled={boutonEnCours}
+                tabIndex={boutonEnCours ? -1 : undefined}
+                className={`flex items-center justify-center gap-1.5 rounded-[11px] border-[1.5px] border-line bg-white px-6 py-[14px] text-[15px] font-bold text-blue transition-colors hover:bg-bg sm:w-auto sm:flex-none ${
+                  boutonEnCours ? "pointer-events-none opacity-60" : ""
+                }`}
+              >
+                ‹ Retour
+              </Link>
+            )}
+            {onContinuer && (
+              <button
+                type="button"
+                onClick={onContinuer}
+                disabled={boutonEnCours}
+                className="flex w-full items-center justify-center gap-2 rounded-[11px] bg-teal px-6 py-[14px] text-[15px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:opacity-60 sm:flex-1"
+              >
+                {boutonEnCours ? "Enregistrement…" : boutonTexte}
+              </button>
+            )}
+          </div>
         )}
         {secondaire && (
           <button
