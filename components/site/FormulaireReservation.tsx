@@ -15,11 +15,17 @@ import {
 } from "@/lib/patient";
 
 /**
- * Partie interactive de l'écran de réservation :
- * - « Pour qui est ce rendez-vous ? » : moi-même ou un proche enregistré,
- *   avec ajout d'un proche sans quitter l'écran (spec C.2.1 / C.3) ;
- * - motif de consultation et bandeau « réservation gratuite » ;
- * - à la confirmation, écriture réelle dans la table `rendez_vous`.
+ * Partie interactive de l'écran de réservation, dans l'ordre où le patient
+ * décide :
+ *   1. « Où souhaitez-vous consulter ? » — le lieu commande la liste des soins
+ *      et le tarif, il vient donc en premier ;
+ *   2. « Motif de la consultation » — un soin choisi dans la grille du
+ *      praticien ; le montant correspondant ne s'affiche qu'une fois le soin
+ *      retenu, pour qu'un seul prix soit visible à la fois ;
+ *   3. « Pour qui est ce rendez-vous ? » — moi-même ou un proche, avec ajout
+ *      d'un proche sans quitter l'écran (spec C.2.1 / C.3) ;
+ *   4. précisions libres, puis bandeau « réservation gratuite ».
+ * À la confirmation, écriture réelle dans la table `rendez_vous`.
  */
 
 const NOUVEAU_PROCHE_VIDE = {
@@ -52,7 +58,7 @@ export default function FormulaireReservation({
   /** Le praticien se déplace-t-il ? Sans cela, aucun choix n'est proposé. */
   visiteDomicile?: boolean;
   zoneDomicile?: string;
-  /** Grille tarifaire, pour n'afficher que les prix du lieu retenu. */
+  /** Grille tarifaire : elle sert aussi de liste des soins proposés. */
   tarifs?: { libelle: string; montant: number; lieu: LieuConsultation | "tous" }[];
 }) {
   const router = useRouter();
@@ -61,7 +67,8 @@ export default function FormulaireReservation({
   const [selection, setSelection] = useState<string>("moi");
   const [ajoutOuvert, setAjoutOuvert] = useState(false);
   const [nouveau, setNouveau] = useState(NOUVEAU_PROCHE_VIDE);
-  const [motif, setMotif] = useState("");
+  const [soinChoisi, setSoinChoisi] = useState("");
+  const [precision, setPrecision] = useState("");
   const [lieu, setLieu] = useState<LieuConsultation>("cabinet");
   const [adresse, setAdresse] = useState<{ saisie: string; depuis: string } | null>(null);
   const [enCours, setEnCours] = useState(false);
@@ -77,12 +84,30 @@ export default function FormulaireReservation({
   const suggestion = profil?.quartier ? `${profil.quartier}, ` : "";
   const adresseVisite = adresse?.depuis === suggestion ? adresse.saisie : suggestion;
 
-  // Tarifs applicables au lieu choisi ; « tous » vaut pour les deux.
-  const tarifsDuLieu = tarifs.filter((t) => t.lieu === lieu || t.lieu === "tous");
-  const tarifAffiche = tarifsDuLieu[0]?.montant ?? tarif;
+  /*
+   * Soins proposés au lieu retenu ; « tous » vaut pour les deux. Changer de
+   * lieu peut retirer le soin sélectionné de la liste : on le neutralise au
+   * rendu plutôt que dans un effet, pour ne jamais confirmer un motif qui
+   * n'est plus proposé.
+   */
+  const soins = tarifs.filter((t) => t.lieu === lieu || t.lieu === "tous");
+  const soin = soins.find((t) => t.libelle === soinChoisi) ?? null;
+  const tarifAffiche = soin?.montant ?? tarif;
 
   const nouveauValide =
     nouveau.nom.trim() !== "" && nouveau.prenom.trim() !== "" && nouveau.dateNaissance !== "";
+
+  /* Ouvrir l'ajout d'un proche décoche le bénéficiaire : tant que le
+   * formulaire est ouvert, le rendez-vous n'est pour personne. */
+  function ouvrirAjout() {
+    setAjoutOuvert(true);
+    setSelection("");
+  }
+
+  function choisirBeneficiaire(id: string) {
+    setSelection(id);
+    setAjoutOuvert(false);
+  }
 
   async function enregistrerNouveauProche() {
     if (!nouveauValide) return;
@@ -103,12 +128,21 @@ export default function FormulaireReservation({
     if (lieu === "domicile" && !adresseVisite.trim()) {
       return setErreur("Indiquez l’adresse où le médecin doit se rendre.");
     }
+    if (soins.length > 0 && !soin) {
+      return setErreur("Choisissez le motif de la consultation.");
+    }
+    if (!selection) {
+      return setErreur("Indiquez pour qui est ce rendez-vous.");
+    }
     setEnCours(true);
+    /* Le motif transmis au médecin : le soin retenu, complété des précisions
+     * du patient quand il en a saisi. */
+    const motif = [soin?.libelle, precision.trim()].filter(Boolean).join(" — ");
     const res = await reserverRendezVous({
       medecinId,
       date,
       heure,
-      motif: motif.trim(),
+      motif,
       procheId: selection === "moi" ? undefined : selection,
       lieu,
       adresseDomicile: adresseVisite.trim(),
@@ -161,6 +195,7 @@ export default function FormulaireReservation({
    * Choix du lieu — rendu une seule fois et posé dans les deux mises en
    * page. Il n'apparaît que si le praticien se déplace : proposer un choix
    * qui n'en est pas un ajouterait une étape à tout le monde pour rien.
+   * Aucun tarif ici : le prix ne s'affiche qu'avec le motif retenu.
    */
   const blocLieu = visiteDomicile && (
     <div className="rounded-[18px] border border-line bg-white p-5 md:mb-[18px] md:p-6">
@@ -224,22 +259,108 @@ export default function FormulaireReservation({
           </p>
         </div>
       )}
+    </div>
+  );
 
-      {tarifsDuLieu.length > 0 && (
-        <div className="mt-[14px] overflow-hidden rounded-xl border border-line">
-          {tarifsDuLieu.map((t, i) => (
-            <div
-              key={`${t.libelle}-${i}`}
-              className={`flex items-center justify-between gap-3 px-[13px] py-2 text-[12.5px] ${
-                i > 0 ? "border-t border-line" : ""
-              }`}
-            >
-              <b className="min-w-0 font-bold">{t.libelle}</b>
-              <span className="flex-none font-extrabold text-blue">{formatGNF(t.montant)}</span>
+  /*
+   * Motif — la liste des soins que le praticien déclare pratiquer au lieu
+   * retenu, puis le montant du soin choisi et un champ de précisions libres.
+   * Si le praticien n'a pas renseigné de grille, on retombe sur la saisie
+   * libre : mieux vaut un motif écrit que pas de motif du tout.
+   */
+  const blocMotif = (
+    <div className="rounded-[18px] border border-line bg-white p-5 md:mb-[18px] md:p-6">
+      <h3 className="mb-1 text-base font-extrabold">Motif de la consultation</h3>
+      {soins.length > 0 ? (
+        <>
+          <p className="mb-[14px] text-[12.5px] text-muted">
+            Choisissez le soin souhaité{lieu === "domicile" ? " pour la visite à domicile" : ""}.
+          </p>
+          <div className="grid gap-[10px] sm:grid-cols-2">
+            {soins.map((option) => (
+              <button
+                key={option.libelle}
+                type="button"
+                aria-pressed={soin?.libelle === option.libelle}
+                onClick={() => setSoinChoisi(option.libelle)}
+                className={`flex items-center gap-[11px] rounded-[13px] border-[1.5px] p-3 text-left transition-colors ${
+                  soin?.libelle === option.libelle
+                    ? "border-teal bg-teal-soft"
+                    : "border-line bg-white"
+                }`}
+              >
+                <b className="min-w-0 flex-1 text-[13.5px]">{option.libelle}</b>
+                <span
+                  className={`h-[18px] w-[18px] flex-none rounded-full border-2 ${
+                    soin?.libelle === option.libelle
+                      ? "border-teal bg-teal shadow-[inset_0_0_0_3px_#fff]"
+                      : "border-line"
+                  }`}
+                />
+              </button>
+            ))}
+          </div>
+
+          {soin && (
+            <div className="mt-[14px] rounded-xl border border-line bg-bg px-[13px] py-3">
+              <div className="flex items-center justify-between gap-3 text-[13.5px]">
+                <b>{soin.libelle}</b>
+                <span className="flex-none font-extrabold text-blue">
+                  {formatGNF(soin.montant)}
+                </span>
+              </div>
+              <p className="mt-1 text-[11.5px] text-muted">
+                {lieu === "domicile"
+                  ? "Ce tarif comprend la consultation et le déplacement du médecin."
+                  : "Tarif de ce soin au cabinet, réglé sur place."}
+              </p>
             </div>
-          ))}
-        </div>
+          )}
+        </>
+      ) : (
+        <>
+          <p className="mb-[14px] text-[12.5px] text-muted">
+            Indiquez en quelques mots la raison de votre venue.
+          </p>
+          <textarea
+            rows={3}
+            value={precision}
+            onChange={(e) => setPrecision(e.target.value)}
+            placeholder="Ex. Vaccination de mon enfant, fièvre depuis 2 jours…"
+            className="w-full resize-none rounded-xl border border-line bg-white p-[13px] text-[13.5px] outline-none focus:border-teal"
+          />
+        </>
       )}
+    </div>
+  );
+
+  /* Précisions libres — séparées du motif, et facultatives. */
+  const blocPrecisions = soins.length > 0 && (
+    <div className="rounded-[18px] border border-line bg-white p-5 md:mb-[18px] md:p-6">
+      <h3 className="mb-1 text-base font-extrabold">Commentaire ou précisions</h3>
+      <p className="mb-[14px] text-[12.5px] text-muted">
+        Facultatif — tout ce qui peut aider le médecin à préparer la consultation.
+      </p>
+      <textarea
+        rows={3}
+        value={precision}
+        onChange={(e) => setPrecision(e.target.value)}
+        placeholder="Ex. fièvre depuis 2 jours, traitement en cours, résultats d’analyses…"
+        className="w-full resize-none rounded-xl border border-line bg-white p-[13px] text-[13.5px] outline-none focus:border-teal"
+      />
+    </div>
+  );
+
+  /* Bandeau de rassurance : gratuité de la réservation, paiement sur place. */
+  const blocGratuite = (
+    <div className="flex items-start gap-[9px] rounded-xl border border-[#BFE3CC] bg-green-soft px-[14px] py-3 text-[12.5px] font-semibold leading-normal text-blue">
+      <span aria-hidden>✅</span>
+      <div>
+        <b>Réservation gratuite.</b>{" "}
+        {soin ? `${soin.libelle} (${formatGNF(tarifAffiche)})` : "La consultation"} se règle{" "}
+        <b>{lieu === "domicile" ? "sur place, à la fin de la visite" : "sur place, chez le médecin"}</b>.
+        Aucun paiement en ligne n’est requis.
+      </div>
     </div>
   );
 
@@ -254,9 +375,15 @@ export default function FormulaireReservation({
             </p>
           )}
           {blocLieu && <div style={{ marginBottom: 14 }}>{blocLieu}</div>}
+          <div style={{ marginBottom: 14 }}>{blocMotif}</div>
+
           <span className="labelm">Pour qui est ce rendez-vous ?</span>
           <div className="benelist">
-            <button type="button" className={`bene${selection === "moi" ? " on" : ""}`} onClick={() => setSelection("moi")}>
+            <button
+              type="button"
+              className={`bene${selection === "moi" ? " on" : ""}`}
+              onClick={() => choisirBeneficiaire("moi")}
+            >
               <span
                 className="ba"
                 aria-hidden
@@ -277,7 +404,7 @@ export default function FormulaireReservation({
                 key={proche.id}
                 type="button"
                 className={`bene${selection === proche.id ? " on" : ""}`}
-                onClick={() => setSelection(proche.id)}
+                onClick={() => choisirBeneficiaire(proche.id)}
               >
                 <span className="ba" aria-hidden style={{ background: proche.gradient }}>
                   {initiales(proche.prenom, proche.nom)}
@@ -294,7 +421,11 @@ export default function FormulaireReservation({
                 <span className="rc" />
               </button>
             ))}
-            <button type="button" className="bene add" onClick={() => setAjoutOuvert(!ajoutOuvert)}>
+            <button
+              type="button"
+              className={`bene add${ajoutOuvert ? " on" : ""}`}
+              onClick={() => (ajoutOuvert ? setAjoutOuvert(false) : ouvrirAjout())}
+            >
               <span className="plus" aria-hidden>
                 +
               </span>
@@ -366,7 +497,11 @@ export default function FormulaireReservation({
                 <option>Homme</option>
               </select>
               <div style={{ display: "flex", gap: 9 }}>
-                <button type="button" className="btnm gh" onClick={() => setAjoutOuvert(false)}>
+                <button
+                  type="button"
+                  className="btnm gh"
+                  onClick={() => choisirBeneficiaire("moi")}
+                >
                   Annuler
                 </button>
                 <button
@@ -382,21 +517,8 @@ export default function FormulaireReservation({
             </div>
           )}
 
-          <span className="labelm">Motif de la consultation</span>
-          <textarea
-            className="textarea"
-            rows={3}
-            value={motif}
-            onChange={(e) => setMotif(e.target.value)}
-            placeholder="Ex. Vaccination de mon enfant, fièvre depuis 2 jours…"
-          />
-          <div className="abannerm" style={{ background: "var(--green-soft)", marginTop: 14 }}>
-            <span aria-hidden>✅</span>
-            <div>
-              <b>Réservation gratuite.</b> La consultation ({formatGNF(tarifAffiche)}) se règle{" "}
-              <b>sur place</b>. Aucun paiement en ligne requis.
-            </div>
-          </div>
+          {blocPrecisions && <div style={{ marginTop: 14 }}>{blocPrecisions}</div>}
+          <div style={{ marginTop: 14 }}>{blocGratuite}</div>
         </div>
         <div className="ctafoot">
           <button type="button" className="btn green" onClick={confirmer} disabled={enCours}>
@@ -405,7 +527,7 @@ export default function FormulaireReservation({
         </div>
       </div>
 
-      {/* ================= VERSION WEB (inchangée) ================= */}
+      {/* ================= VERSION WEB ================= */}
       <div className="hidden md:block">
       {erreur && (
         <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-[12.5px] font-semibold text-red-600">
@@ -413,6 +535,8 @@ export default function FormulaireReservation({
         </p>
       )}
       {blocLieu}
+      {blocMotif}
+
       {/* ===== Pour qui est ce rendez-vous ? ===== */}
       <div className="mb-[18px] rounded-[18px] border border-line bg-white p-6">
         <h3 className="mb-[14px] text-base font-extrabold">Pour qui est ce rendez-vous ?</h3>
@@ -420,7 +544,7 @@ export default function FormulaireReservation({
           {/* Moi-même */}
           <button
             type="button"
-            onClick={() => setSelection("moi")}
+            onClick={() => choisirBeneficiaire("moi")}
             className={`flex items-center gap-[11px] rounded-[13px] border-[1.5px] p-3 text-left transition-colors ${
               selection === "moi" ? "border-teal bg-teal-soft" : "border-line bg-white"
             }`}
@@ -452,7 +576,7 @@ export default function FormulaireReservation({
             <button
               key={proche.id}
               type="button"
-              onClick={() => setSelection(proche.id)}
+              onClick={() => choisirBeneficiaire(proche.id)}
               className={`flex items-center gap-[11px] rounded-[13px] border-[1.5px] p-3 text-left transition-colors ${
                 selection === proche.id ? "border-teal bg-teal-soft" : "border-line bg-white"
               }`}
@@ -483,11 +607,13 @@ export default function FormulaireReservation({
             </button>
           ))}
 
-          {/* Ajouter un proche */}
+          {/* Ajouter un proche — ouvrir le formulaire décoche le bénéficiaire */}
           <button
             type="button"
-            onClick={() => setAjoutOuvert(!ajoutOuvert)}
-            className="flex items-center justify-center gap-1 rounded-[13px] border-[1.5px] border-dashed border-line bg-white p-3 text-[13.5px] font-bold text-teal transition-colors hover:border-teal"
+            onClick={() => (ajoutOuvert ? setAjoutOuvert(false) : ouvrirAjout())}
+            className={`flex items-center justify-center gap-1 rounded-[13px] border-[1.5px] border-dashed p-3 text-[13.5px] font-bold text-teal transition-colors hover:border-teal ${
+              ajoutOuvert ? "border-teal bg-teal-soft" : "border-line bg-white"
+            }`}
           >
             <span className="mr-1.5 text-lg" aria-hidden>
               +
@@ -563,7 +689,7 @@ export default function FormulaireReservation({
             <div className="mt-3 flex gap-[10px]">
               <button
                 type="button"
-                onClick={() => setAjoutOuvert(false)}
+                onClick={() => choisirBeneficiaire("moi")}
                 className="rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg"
               >
                 Annuler
@@ -581,24 +707,9 @@ export default function FormulaireReservation({
         )}
       </div>
 
-      {/* ===== Motif ===== */}
-      <div className="mb-[18px] rounded-[18px] border border-line bg-white p-6">
-        <h3 className="mb-[14px] text-base font-extrabold">Motif de la consultation</h3>
-        <textarea
-          rows={3}
-          value={motif}
-          onChange={(e) => setMotif(e.target.value)}
-          placeholder="Ex. Vaccination de mon enfant, fièvre depuis 2 jours…"
-          className="w-full resize-none rounded-xl border border-line bg-white p-[13px] text-[13.5px] outline-none focus:border-teal"
-        />
-        <div className="mt-4 flex items-start gap-[9px] rounded-xl border border-[#BFE3CC] bg-green-soft px-[14px] py-3 text-[12.5px] font-semibold leading-normal text-blue">
-          <span aria-hidden>✅</span>
-          <div>
-            <b>Réservation gratuite.</b> La consultation ({formatGNF(tarifAffiche)}) se règle{" "}
-            <b>sur place, chez le médecin</b>. Aucun paiement en ligne n’est requis.
-          </div>
-        </div>
-      </div>
+      {blocPrecisions}
+
+      <div className="mb-[18px]">{blocGratuite}</div>
 
       <div className="flex gap-3">
         <Link

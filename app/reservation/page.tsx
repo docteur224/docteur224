@@ -4,7 +4,6 @@ import TopNav from "@/components/site/TopNav";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import FormulaireReservation from "@/components/site/FormulaireReservation";
 import { capitaliser, creneauReservable, formatDateLongue } from "@/lib/dates";
-import { formatGNF } from "@/lib/format";
 import { chargerEtablissementParId, chargerMedecinParId, nomComplet } from "@/lib/donnees";
 
 export const metadata: Metadata = {
@@ -12,10 +11,11 @@ export const metadata: Metadata = {
 };
 
 /*
- * Écran de réservation — reproduit l'écran « reservation » de la maquette web :
- * fil d'étapes, récapitulatif, « Pour qui est ce rendez-vous ? » (soi-même
- * uniquement à ce stade — les proches arrivent en Phase 5), motif et bandeau
- * « réservation gratuite / paiement sur place ».
+ * Écran de réservation — fil d'étapes puis récapitulatif du créneau. Le
+ * récapitulatif ne porte aucun tarif : le prix dépend du soin choisi et du
+ * lieu, et n'est annoncé qu'une fois ces deux choix faits, dans le
+ * formulaire. Celui-ci enchaîne lieu, motif, bénéficiaire, précisions et
+ * bandeau « réservation gratuite / paiement sur place ».
  */
 export default async function Reservation({
   searchParams,
@@ -67,10 +67,12 @@ export default async function Reservation({
                 <span className="k">Spécialité</span>
                 <span className="v">{medecin.specialite}</span>
               </div>
-              <div className="r">
-                <span className="k">Lieu</span>
-                <span className="v">{etab?.nom ?? "Cabinet du praticien"}</span>
-              </div>
+              {!medecin.visiteDomicile && (
+                <div className="r">
+                  <span className="k">Lieu</span>
+                  <span className="v">{etab?.nom ?? "Cabinet du praticien"}</span>
+                </div>
+              )}
               <div className="r">
                 <span className="k">Date</span>
                 <span className="v">{capitaliser(formatDateLongue(date))}</span>
@@ -78,10 +80,6 @@ export default async function Reservation({
               <div className="r">
                 <span className="k">Heure</span>
                 <span className="v">{heure}</span>
-              </div>
-              <div className="r">
-                <span className="k">Tarif</span>
-                <span className="v">{formatGNF(medecin.tarifConsultation)}</span>
               </div>
             </div>
           </div>
@@ -120,23 +118,25 @@ export default async function Reservation({
               {nomComplet(medecin)} · {medecin.specialite}
             </span>
           </div>
-          <div className="flex justify-between border-b border-line py-[11px] text-[13.5px]">
-            <span className="text-muted">Lieu</span>
-            <span className="font-bold">
-              {etab?.nom ?? "Cabinet du praticien"} · {adresseCabinet}
-            </span>
-          </div>
+          {/* Le lieu n'est rappelé ici que s'il n'y a rien à choisir : quand le
+              praticien se déplace, c'est le bloc « Où souhaitez-vous
+              consulter ? » qui fait foi, et deux lieux affichés se
+              contrediraient. */}
+          {!medecin.visiteDomicile && (
+            <div className="flex justify-between border-b border-line py-[11px] text-[13.5px]">
+              <span className="text-muted">Lieu</span>
+              <span className="font-bold">
+                {etab?.nom ?? "Cabinet du praticien"} · {adresseCabinet}
+              </span>
+            </div>
+          )}
           <div className="flex justify-between border-b border-line py-[11px] text-[13.5px]">
             <span className="text-muted">Date</span>
             <span className="font-bold">{capitaliser(formatDateLongue(date))}</span>
           </div>
-          <div className="flex justify-between border-b border-line py-[11px] text-[13.5px]">
+          <div className="flex justify-between py-[11px] text-[13.5px]">
             <span className="text-muted">Heure</span>
             <span className="font-bold">{heure}</span>
-          </div>
-          <div className="flex justify-between py-[11px] text-[13.5px]">
-            <span className="text-muted">Tarif</span>
-            <span className="font-bold">{formatGNF(medecin.tarifConsultation)}</span>
           </div>
         </div>
 
