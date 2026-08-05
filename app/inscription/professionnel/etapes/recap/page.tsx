@@ -50,6 +50,7 @@ interface RecapMedecin {
   presentation: string;
   langues: string[];
   soins: string[];
+  assurances: string[];
   diplomes: { titre: string; lieu: string }[];
   parcours: { lieu: string; duree: string }[];
   commune: string;
@@ -172,7 +173,7 @@ export default function EtapeRecap() {
           supabase
             .from("medecins")
             .select(
-              "civilite, numero_ordre, rccm, visite_domicile, zone_domicile, annees_experience, presentation, langues, soins_et_actes, diplomes, parcours, commune, quartier, localisation, telephone_secretariat, photo_url, specialites ( nom ), villes ( nom ), horaires_types ( jour_semaine, heure_debut, heure_fin ), tarifs_medecin ( libelle, montant, position )"
+              "civilite, numero_ordre, rccm, visite_domicile, zone_domicile, annees_experience, presentation, langues, soins_et_actes, diplomes, parcours, commune, quartier, localisation, telephone_secretariat, photo_url, specialites ( nom ), villes ( nom ), horaires_types ( jour_semaine, heure_debut, heure_fin ), tarifs_medecin ( libelle, montant, position ), medecin_assurances ( assurances ( libelle ) )"
             )
             .eq("id", auth.user.id)
             .maybeSingle(),
@@ -203,6 +204,7 @@ export default function EtapeRecap() {
             villes: { nom: string } | null;
             horaires_types: { jour_semaine: number; heure_debut: string; heure_fin: string }[];
             tarifs_medecin: { libelle: string; montant: number; position: number }[];
+            medecin_assurances: { assurances: { libelle: string } | null }[] | null;
           };
           setMedecin({
             specialite: ligne.specialites?.nom ?? "",
@@ -218,6 +220,9 @@ export default function EtapeRecap() {
             presentation: ligne.presentation ?? "",
             langues: ligne.langues ?? [],
             soins: ligne.soins_et_actes ?? [],
+            assurances: (ligne.medecin_assurances ?? [])
+              .map((a) => a.assurances?.libelle ?? "")
+              .filter(Boolean),
             diplomes: ligne.diplomes ?? [],
             parcours: ligne.parcours ?? [],
             commune: ligne.commune ?? "",
@@ -304,6 +309,7 @@ export default function EtapeRecap() {
                 .map((t) => `${t.libelle} — ${formatGNF(t.montant)}`)
                 .join(" · ")}
             />
+            <Ligne label="Assurances acceptées" valeur={medecin.assurances.join(", ")} />
             <Ligne label="Expérience" valeur={medecin.experience ? `${medecin.experience} ans` : ""} />
             <Ligne label="Langues" valeur={medecin.langues.join(", ")} />
             <Ligne

@@ -1039,7 +1039,7 @@ export async function enregistrerIdentiteMedecin(d: {
 export function useAssurancesMedecin(medecinId: string | undefined): {
   referentiel: { id: string; libelle: string }[];
   actives: Set<string>;
-  basculer: (assuranceId: string, active: boolean) => Promise<void>;
+  basculer: (assuranceId: string, active: boolean) => Promise<{ erreur?: string }>;
 } {
   const [referentiel, setReferentiel] = useState<{ id: string; libelle: string }[]>([]);
   const [actives, setActives] = useState<Set<string>>(new Set());
@@ -1061,19 +1061,34 @@ export function useAssurancesMedecin(medecinId: string | undefined): {
     };
   }, [medecinId]);
 
-  async function basculer(assuranceId: string, active: boolean) {
+  /*
+   * L'état local ne suit l'écriture que si elle a réussi : une case cochée
+   * alors que l'insertion a échoué laisserait le médecin croire qu'il
+   * accepte une assurance que sa fiche n'affichera jamais.
+   */
+  async function basculer(assuranceId: string, active: boolean): Promise<{ erreur?: string }> {
+    if (!medecinId) return { erreur: "Session expirée." };
     const supabase = creerClientNavigateur();
     if (active) {
-      await supabase.from("medecin_assurances").insert({ medecin_id: medecinId, assurance_id: assuranceId });
+      const { error } = await supabase
+        .from("medecin_assurances")
+        .insert({ medecin_id: medecinId, assurance_id: assuranceId });
+      if (error) return { erreur: error.message };
       setActives((s) => new Set([...s, assuranceId]));
     } else {
-      await supabase.from("medecin_assurances").delete().eq("medecin_id", medecinId!).eq("assurance_id", assuranceId);
+      const { error } = await supabase
+        .from("medecin_assurances")
+        .delete()
+        .eq("medecin_id", medecinId)
+        .eq("assurance_id", assuranceId);
+      if (error) return { erreur: error.message };
       setActives((s) => {
         const n = new Set(s);
         n.delete(assuranceId);
         return n;
       });
     }
+    return {};
   }
 
   return { referentiel, actives, basculer };

@@ -417,14 +417,18 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
             ))}
           </div>
 
-          <div className="section-t">Assurances acceptées</div>
-          <div className="chips">
-            {medecin.assurances.map((assurance) => (
-              <span key={assurance} className="chip">
-                {assurance}
-              </span>
-            ))}
-          </div>
+          {medecin.assurances.length > 0 && (
+            <>
+              <div className="section-t">Assurances acceptées</div>
+              <div className="chips">
+                {medecin.assurances.map((assurance) => (
+                  <span key={assurance} className="chip">
+                    {assurance}
+                  </span>
+                ))}
+              </div>
+            </>
+          )}
 
           {photos.length > 0 && (
             <>
@@ -584,17 +588,23 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
               </div>
             ))}
 
-            <TitreSection>Assurances acceptées</TitreSection>
-            <div className="flex flex-wrap gap-2">
-              {medecin.assurances.map((assurance) => (
-                <span
-                  key={assurance}
-                  className="rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
-                >
-                  {assurance}
-                </span>
-              ))}
-            </div>
+            {/* Un intertitre sans rien dessous laissait croire à un bug ;
+                tant que le praticien n'a rien coché, la rubrique disparaît. */}
+            {medecin.assurances.length > 0 && (
+              <>
+                <TitreSection>Assurances acceptées</TitreSection>
+                <div className="flex flex-wrap gap-2">
+                  {medecin.assurances.map((assurance) => (
+                    <span
+                      key={assurance}
+                      className="rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
+                    >
+                      {assurance}
+                    </span>
+                  ))}
+                </div>
+              </>
+            )}
 
             <TitreSection>Langues parlées</TitreSection>
             <div className="flex flex-wrap gap-2">

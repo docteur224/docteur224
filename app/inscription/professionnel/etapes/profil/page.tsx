@@ -6,6 +6,7 @@ import CadreEtape from "@/components/inscription/CadreEtape";
 import { useInscription } from "@/components/inscription/ContexteInscription";
 import GrilleTarifs from "@/components/pro/GrilleTarifs";
 import { avancerEtape, enregistrerEtapeProfil } from "@/lib/inscription-pro";
+import { useAssurancesMedecin } from "@/lib/pro";
 import { creerClientNavigateur } from "@/lib/supabase/client";
 import { useTarifsMedecin } from "@/lib/tarifs";
 
@@ -62,6 +63,10 @@ export default function EtapeProfilMedical() {
   const [erreur, setErreur] = useState<string | null>(null);
   const [enCours, setEnCours] = useState(false);
   const { tarifs, recharger: rechargerTarifs } = useTarifsMedecin(medecinId);
+  // Comme la grille tarifaire, les assurances vivent dans leur propre table
+  // et sont écrites au clic — rien à repasser à `enregistrerEtapeProfil`.
+  const { referentiel: assurances, actives: assurancesActives, basculer: basculerAssurance } =
+    useAssurancesMedecin(medecinId);
 
   useEffect(() => {
     let actif = true;
@@ -97,6 +102,11 @@ export default function EtapeProfilMedical() {
       actif = false;
     };
   }, []);
+
+  async function changerAssurance(assuranceId: string, active: boolean) {
+    const res = await basculerAssurance(assuranceId, active);
+    setErreur(res.erreur ? `Assurance non enregistrée : ${res.erreur}` : null);
+  }
 
   function basculerLangue(langue: string) {
     setLangues((l) => (l.includes(langue) ? l.filter((x) => x !== langue) : [...l, langue]));
@@ -265,6 +275,37 @@ export default function EtapeProfilMedical() {
         Payés sur place par le patient. Chaque ligne est enregistrée immédiatement.
       </p>
       <GrilleTarifs medecinId={medecinId} onChangement={rechargerTarifs} visiteDomicile={visiteDomicile} />
+
+      {/* Avec les tarifs : le patient qui regarde un prix se demande dans la
+          foulée si son assurance est prise. Rien n'invitait le médecin à le
+          renseigner, et la rubrique restait vide sur la fiche publique. */}
+      <label className={etiquette}>Assurances acceptées</label>
+      <p className="-mt-0.5 mb-2 text-[11.5px] text-muted">
+        Parmi les assurances référencées par la plateforme. Elles sont affichées sur votre fiche et
+        servent de filtre de recherche aux patients assurés. Modifiable à tout moment depuis votre
+        profil.
+      </p>
+      {assurances.length === 0 ? (
+        <p className="text-[12.5px] text-muted">Aucune assurance référencée pour le moment.</p>
+      ) : (
+        <div className="flex flex-wrap gap-2">
+          {assurances.map((assurance) => {
+            const active = assurancesActives.has(assurance.id);
+            return (
+              <button
+                key={assurance.id}
+                type="button"
+                aria-pressed={active}
+                className={chip(active)}
+                onClick={() => changerAssurance(assurance.id, !active)}
+              >
+                {assurance.libelle}
+                {active ? " ✓" : ""}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <label className={etiquette}>Langues parlées</label>
       <div className="flex flex-wrap gap-2">
