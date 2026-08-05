@@ -145,17 +145,37 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
     </div>
   );
 
+  /*
+   * Un tarif « à domicile » n'a de sens que si le praticien se déplace : il
+   * peut rester une ligne d'un réglage abandonné. Le lieu n'est annoté que
+   * lorsqu'il y a effectivement deux lieux possibles.
+   */
+  const tarifsVisibles = medecin.tarifs.filter(
+    (t) => medecin.visiteDomicile || t.lieu !== "domicile"
+  );
+  const LIBELLE_LIEU: Record<string, string> = {
+    cabinet: "Au cabinet",
+    domicile: "À domicile",
+    tous: "Cabinet et domicile",
+  };
   const grilleTarifs =
-    medecin.tarifs.length > 0 ? (
+    tarifsVisibles.length > 0 ? (
       <div className="mt-1.5 overflow-hidden rounded-xl border border-line">
-        {medecin.tarifs.map((tarif, i) => (
+        {tarifsVisibles.map((tarif, i) => (
           <div
             key={`${tarif.libelle}-${i}`}
             className={`flex items-center justify-between gap-3 px-[13px] py-[10px] text-[13px] ${
               i > 0 ? "border-t border-line" : ""
             }`}
           >
-            <b className="min-w-0 font-bold">{tarif.libelle}</b>
+            <b className="min-w-0 font-bold">
+              {tarif.libelle}
+              {medecin.visiteDomicile && (
+                <small className="block text-[11px] font-semibold text-muted">
+                  {LIBELLE_LIEU[tarif.lieu]}
+                </small>
+              )}
+            </b>
             <span className="flex-none font-extrabold text-blue">{formatGNF(tarif.montant)}</span>
           </div>
         ))}
@@ -164,6 +184,21 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
         </p>
       </div>
     ) : null;
+
+  const blocDomicile = medecin.visiteDomicile && (
+    <div className="mt-1.5 flex items-start gap-[11px] rounded-xl border border-[#BFE3CC] bg-green-soft px-[14px] py-3 text-[12.5px] leading-relaxed text-blue">
+      <span aria-hidden className="text-base">
+        🏠
+      </span>
+      <div>
+        <b className="block font-extrabold">Ce praticien se déplace à domicile.</b>
+        {medecin.zoneDomicile
+          ? `Zones desservies : ${medecin.zoneDomicile}.`
+          : "Vous pourrez indiquer votre adresse au moment de réserver."}{" "}
+        Le choix du lieu se fait à la réservation.
+      </div>
+    </div>
+  );
 
   const infosPratiques = (
     <div className="mt-1.5 grid gap-[14px] sm:grid-cols-2">
@@ -177,6 +212,14 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
       <LigneInfo icone="💳" titre="Paiement" detail="Sur place, chez le médecin" />
       {medecin.numeroOrdre && (
         <LigneInfo icone="🪪" titre={medecin.numeroOrdre} detail="Numéro d’ordre médical" />
+      )}
+      {medecin.rccm && <LigneInfo icone="📑" titre={medecin.rccm} detail="RCCM" />}
+      {medecin.visiteDomicile && (
+        <LigneInfo
+          icone="🏠"
+          titre="Visites à domicile"
+          detail={medecin.zoneDomicile || "Sur demande, à la réservation"}
+        />
       )}
     </div>
   );
@@ -278,6 +321,7 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
               {grilleTarifs}
             </>
           )}
+          {blocDomicile}
 
           <div className="section-t">Soins et actes</div>
           <div className="chips">
@@ -418,6 +462,11 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
                 <span className="rounded-lg bg-teal-soft px-[9px] py-1 text-[11px] font-bold text-blue">
                   {medecin.anneesExperience} ans d’expérience
                 </span>
+                {medecin.visiteDomicile && (
+                  <span className="rounded-lg bg-green-soft px-[9px] py-1 text-[11px] font-bold text-green">
+                    🏠 Visites à domicile
+                  </span>
+                )}
               </div>
               <div className="mt-[10px]">
                 <BoutonFavori medecinId={medecin.id} nom={nomComplet(medecin)} />
@@ -445,6 +494,7 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
                 {grilleTarifs}
               </>
             )}
+            {blocDomicile}
 
             <TitreSection>Soins et actes</TitreSection>
             <div className="flex flex-wrap gap-2">

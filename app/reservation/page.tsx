@@ -38,6 +38,16 @@ export default async function Reservation({
     redirect(`/medecin/${medecinId}`);
   }
   const etab = await chargerEtablissementParId(medecin.etablissementId);
+  // Comme sur la fiche : l'adresse part de ce que le médecin a saisi, pas
+  // de l'établissement — un praticien indépendant n'en a pas.
+  const adresseCabinet =
+    [
+      medecin.quartier && `Quartier ${medecin.quartier}`,
+      medecin.commune,
+      medecin.ville || etab?.ville,
+    ]
+      .filter(Boolean)
+      .join(" · ") || medecin.ville;
 
   return (
     <div className="min-h-screen bg-bg">
@@ -58,8 +68,8 @@ export default async function Reservation({
                 <span className="v">{medecin.specialite}</span>
               </div>
               <div className="r">
-                <span className="k">Établissement</span>
-                <span className="v">{etab?.nom}</span>
+                <span className="k">Lieu</span>
+                <span className="v">{etab?.nom ?? "Cabinet du praticien"}</span>
               </div>
               <div className="r">
                 <span className="k">Date</span>
@@ -111,9 +121,9 @@ export default async function Reservation({
             </span>
           </div>
           <div className="flex justify-between border-b border-line py-[11px] text-[13.5px]">
-            <span className="text-muted">Établissement</span>
+            <span className="text-muted">Lieu</span>
             <span className="font-bold">
-              {etab?.nom} · {etab?.ville}
+              {etab?.nom ?? "Cabinet du praticien"} · {adresseCabinet}
             </span>
           </div>
           <div className="flex justify-between border-b border-line py-[11px] text-[13.5px]">
@@ -130,16 +140,16 @@ export default async function Reservation({
           </div>
         </div>
 
-        {/* « Pour qui ? » (moi-même ou un proche), motif et confirmation */}
+        {/* Lieu, « Pour qui ? » (moi-même ou un proche), motif et confirmation */}
         <FormulaireReservation
           medecinId={medecin.id}
-          medecinNom={nomComplet(medecin)}
-          specialite={medecin.specialite}
-          etablissementNom={etab?.nom ?? ""}
-          ville={etab?.ville ?? medecin.ville}
           date={date}
           heure={heure}
           tarif={medecin.tarifConsultation}
+          adresseCabinet={adresseCabinet}
+          visiteDomicile={medecin.visiteDomicile}
+          zoneDomicile={medecin.zoneDomicile}
+          tarifs={medecin.tarifs}
         />
       </div>
     </div>

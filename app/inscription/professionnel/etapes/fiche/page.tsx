@@ -39,6 +39,7 @@ export default function EtapeFiche() {
   const [description, setDescription] = useState("");
   const [adresse, setAdresse] = useState("");
   const [quartier, setQuartier] = useState("");
+  const [rccm, setRccm] = useState("");
   const [telephone, setTelephone] = useState("");
   const [email, setEmail] = useState("");
   const [services, setServices] = useState<string[]>([]);
@@ -52,7 +53,7 @@ export default function EtapeFiche() {
     (async () => {
       const { data: e } = await creerClientNavigateur()
         .from("etablissements")
-        .select("nom, type, description, adresse, quartier, telephone, email, services")
+        .select("nom, type, description, adresse, quartier, telephone, email, services, rccm")
         .eq("id", etabId)
         .maybeSingle();
       if (!actif || !e) return;
@@ -61,6 +62,7 @@ export default function EtapeFiche() {
       if (e.description) setDescription(e.description);
       if (e.adresse) setAdresse(e.adresse);
       if (e.quartier) setQuartier(e.quartier);
+      if (e.rccm) setRccm(e.rccm);
       if (e.telephone) setTelephone(e.telephone);
       if (e.email) setEmail(e.email);
       if (e.services?.length) setServices(e.services);
@@ -91,6 +93,7 @@ export default function EtapeFiche() {
       description: description.trim(),
       adresse: adresse.trim(),
       quartier: quartier.trim(),
+      rccm: rccm.trim(),
       telephone: telephone.trim(),
       email: email.trim(),
       services,
@@ -143,6 +146,17 @@ export default function EtapeFiche() {
         value={quartier}
         onChange={(e) => setQuartier(e.target.value)}
       />
+
+      <label className={etiquette}>RCCM</label>
+      <input
+        className={champ}
+        placeholder="Ex. GC-KAL/123.456A/2021"
+        value={rccm}
+        onChange={(e) => setRccm(e.target.value)}
+      />
+      <p className="mt-1.5 text-[11.5px] text-muted">
+        Registre du Commerce et du Crédit Mobilier — mention légale de votre établissement.
+      </p>
 
       <label className={etiquette}>Téléphone d’accueil</label>
       <input

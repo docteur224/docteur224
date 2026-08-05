@@ -6,6 +6,7 @@ import {
   HEURES_JOURNEE,
   statutCreneau,
   type EtatCreneau,
+  lieuTarif,
   type MedecinAvecPlages,
 } from "@/lib/donnees";
 import { versISO } from "@/lib/dates";
@@ -112,13 +113,14 @@ export function useContextePro(): ContextePro {
         .select(`
           id, civilite, genre, tarif_consultation, presentation, soins_et_actes, diplomes,
           parcours, langues, annees_experience, telephone_secretariat, numero_ordre,
+          rccm, visite_domicile, zone_domicile,
           note_moyenne, nb_avis, etablissement_id, commune, quartier, photo_url, localisation,
           utilisateurs ( nom, prenom ),
           specialites ( nom ),
           villes ( nom ),
           medecin_assurances ( assurances ( libelle ) ),
           horaires_types ( jour_semaine, heure_debut, heure_fin ),
-          tarifs_medecin ( libelle, montant, position )
+          tarifs_medecin ( libelle, montant, position, lieu )
         `)
         .eq("id", medecinId)
         .maybeSingle();
@@ -138,6 +140,9 @@ export function useContextePro(): ContextePro {
           annees_experience: number | null;
           telephone_secretariat: string | null;
           numero_ordre: string | null;
+          rccm: string | null;
+          visite_domicile: boolean | null;
+          zone_domicile: string | null;
           note_moyenne: number;
           nb_avis: number;
           etablissement_id: string | null;
@@ -150,7 +155,7 @@ export function useContextePro(): ContextePro {
           villes: { nom: string } | null;
           medecin_assurances: { assurances: { libelle: string } | null }[];
           horaires_types: { jour_semaine: number; heure_debut: string; heure_fin: string }[];
-          tarifs_medecin: { libelle: string; montant: number; position: number }[];
+          tarifs_medecin: { libelle: string; montant: number; position: number; lieu: string }[];
         };
 
         const prenom = ligne.utilisateurs?.prenom ?? "";
@@ -201,11 +206,14 @@ export function useContextePro(): ContextePro {
           commune: ligne.commune ?? "",
           quartier: ligne.quartier ?? "",
           numeroOrdre: ligne.numero_ordre ?? "",
+          rccm: ligne.rccm ?? "",
+          visiteDomicile: ligne.visite_domicile ?? false,
+          zoneDomicile: ligne.zone_domicile ?? "",
           anneesExperience: ligne.annees_experience ?? 0,
           tarifConsultation: ligne.tarif_consultation ?? 0,
           tarifs: [...(ligne.tarifs_medecin ?? [])]
             .sort((a, b) => a.position - b.position)
-            .map((t) => ({ libelle: t.libelle, montant: t.montant })),
+            .map((t) => ({ libelle: t.libelle, montant: t.montant, lieu: lieuTarif(t.lieu) })),
           note: Number(ligne.note_moyenne) || 0,
           nbAvis: ligne.nb_avis,
           disponibilite: ouvertAujourdHui
@@ -253,6 +261,9 @@ export interface CreneauAgenda {
   patient?: string;
   motif?: string;
   statutRdv?: "en_attente" | "confirme" | "annule" | "honore";
+  /** « domicile » quand le patient a demandé une visite chez lui. */
+  lieu?: "cabinet" | "domicile";
+  adresseDomicile?: string;
 }
 
 interface LigneRdvPro {
@@ -264,13 +275,15 @@ interface LigneRdvPro {
   patient_id: string | null;
   proche_id: string | null;
   patient_sans_compte_id: string | null;
+  lieu: string | null;
+  adresse_domicile: string | null;
   patients: { utilisateurs: { nom: string | null; prenom: string | null } | null } | null;
   proches: { nom: string; prenom: string } | null;
   patients_sans_compte: { nom: string; prenom: string } | null;
 }
 
 const SELECTION_RDV_PRO = `
-  id, date, heure, motif, statut, patient_id, proche_id, patient_sans_compte_id,
+  id, date, heure, motif, statut, patient_id, proche_id, patient_sans_compte_id, lieu, adresse_domicile,
   patients ( utilisateurs ( nom, prenom ) ),
   proches ( nom, prenom ),
   patients_sans_compte ( nom, prenom )
@@ -332,6 +345,8 @@ export function useAgenda(medecinId: string | undefined, joursAvance = 30): {
           patient: rdv.beneficiaire,
           motif: rdv.motif ?? "Consultation",
           statutRdv: rdv.statut,
+          lieu: rdv.lieu === "domicile" ? ("domicile" as const) : ("cabinet" as const),
+          adresseDomicile: rdv.adresse_domicile ?? "",
         };
       }
       return { heure, statut: statutCreneau(plages, exceptions, dateISO, heure) };
@@ -939,6 +954,9 @@ export async function enregistrerProfilMedecin(d: {
   commune?: string;
   quartier?: string;
   numeroOrdre?: string;
+  rccm?: string;
+  visiteDomicile?: boolean;
+  zoneDomicile?: string;
   anneesExperience?: number | null;
 }): Promise<{ erreur?: string }> {
   const supabase = creerClientNavigateur();
@@ -960,6 +978,9 @@ export async function enregistrerProfilMedecin(d: {
   if (d.commune !== undefined) maj.commune = d.commune;
   if (d.quartier !== undefined) maj.quartier = d.quartier;
   if (d.numeroOrdre !== undefined) maj.numero_ordre = d.numeroOrdre || null;
+  if (d.rccm !== undefined) maj.rccm = d.rccm || null;
+  if (d.visiteDomicile !== undefined) maj.visite_domicile = d.visiteDomicile;
+  if (d.zoneDomicile !== undefined) maj.zone_domicile = d.zoneDomicile || null;
   if (d.anneesExperience !== undefined) maj.annees_experience = d.anneesExperience;
   // Un update refusé par la RLS ne lève pas d'erreur : il touche zéro
   // ligne. Sans ce `.select()` l'écran annoncerait « enregistré » sur une

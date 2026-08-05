@@ -194,6 +194,8 @@ export async function enregistrerEtapeProfil(d: {
   soins?: string[];
   /** Numéro d'inscription à l'Ordre, affiché sur la fiche publique. */
   numeroOrdre?: string;
+  /** Registre du Commerce et du Crédit Mobilier. */
+  rccm?: string;
   /** « femme » | « homme » | "" (non précisé). */
   genre?: string;
   diplomes?: { titre: string; lieu: string }[];
@@ -209,6 +211,7 @@ export async function enregistrerEtapeProfil(d: {
   if (d.langues !== undefined) maj.langues = d.langues;
   if (d.soins !== undefined) maj.soins_et_actes = d.soins;
   if (d.numeroOrdre !== undefined) maj.numero_ordre = d.numeroOrdre || null;
+  if (d.rccm !== undefined) maj.rccm = d.rccm || null;
   if (d.genre !== undefined) maj.genre = d.genre === "" ? null : d.genre;
   if (d.diplomes !== undefined) maj.diplomes = d.diplomes;
   if (d.parcours !== undefined) maj.parcours = d.parcours;
@@ -221,6 +224,8 @@ export async function enregistrerEtapeLieu(d: {
   quartier?: string;
   localisation?: string;
   telephoneSecretariat?: string;
+  visiteDomicile?: boolean;
+  zoneDomicile?: string;
 }): Promise<{ erreur?: string }> {
   const supabase = creerClientNavigateur();
   const { data: auth } = await supabase.auth.getUser();
@@ -230,6 +235,8 @@ export async function enregistrerEtapeLieu(d: {
   if (d.quartier !== undefined) maj.quartier = d.quartier;
   if (d.localisation !== undefined) maj.localisation = d.localisation;
   if (d.telephoneSecretariat !== undefined) maj.telephone_secretariat = d.telephoneSecretariat;
+  if (d.visiteDomicile !== undefined) maj.visite_domicile = d.visiteDomicile;
+  if (d.zoneDomicile !== undefined) maj.zone_domicile = d.zoneDomicile || null;
   const { error } = await supabase.from("medecins").update(maj).eq("id", auth.user.id);
   return error ? { erreur: error.message } : {};
 }
@@ -269,6 +276,7 @@ export async function enregistrerEtapeFiche(
   etabId: string,
   d: {
     description?: string;
+    rccm?: string;
     adresse?: string;
     quartier?: string;
     telephone?: string;

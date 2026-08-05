@@ -17,6 +17,7 @@ import { creerClientNavigateur } from "@/lib/supabase/client";
 import Stepper from "@/components/inscription/Stepper";
 import { etapesPour, useParcoursInscription } from "@/lib/inscription-pro";
 import { MESSAGE_TELEPHONE_GN, telephoneGuineenValide } from "@/lib/telephone";
+import { CIVILITES } from "@/lib/civilites";
 
 /*
  * Inscription professionnel — étape 1 (« Compte ») du parcours multi-étapes :
@@ -73,6 +74,7 @@ export default function InscriptionProfessionnel() {
     supabase.from("villes").select("id,nom").order("nom").then(({ data }) => setVilles(data ?? []));
   }, []);
 
+  const [civilite, setCivilite] = useState("Dr");
   const [nom, setNom] = useState("");
   const [prenom, setPrenom] = useState("");
   const [nomEtablissement, setNomEtablissement] = useState("");
@@ -136,6 +138,7 @@ export default function InscriptionProfessionnel() {
       nomEtablissement: praticien ? undefined : nomEtablissement.trim(),
       villeId: villeChoisie,
       commune: commune.trim(),
+      civilite: praticien ? civilite : undefined,
     });
     setEnCours(false);
     if (res.erreur) setErreur(res.erreur);
@@ -182,6 +185,12 @@ export default function InscriptionProfessionnel() {
           {messageErreur}
           {praticien ? (
             <>
+              <div className="flabel">Civilité *</div>
+              <select className="selm" aria-label="Civilité" value={civilite} onChange={(e) => setCivilite(e.target.value)}>
+                {CIVILITES.map((c) => (
+                  <option key={c.valeur} value={c.valeur}>{c.label}</option>
+                ))}
+              </select>
               <div className="fgrid2">
                 <div>
                   <div className="flabel">Nom *</div>
@@ -324,6 +333,12 @@ export default function InscriptionProfessionnel() {
             {messageErreur}
             {praticien ? (
               <>
+                <label className={etiquette}>Civilité *</label>
+                <select className={champ} aria-label="Civilité" value={civilite} onChange={(e) => setCivilite(e.target.value)}>
+                  {CIVILITES.map((c) => (
+                    <option key={c.valeur} value={c.valeur}>{c.label}</option>
+                  ))}
+                </select>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className={etiquette}>Nom *</label>

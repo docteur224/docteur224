@@ -5,6 +5,8 @@ import { useEtablissementConnecte } from "@/lib/etablissement";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import GaleriePhotos from "@/components/pro/GaleriePhotos";
 import PhotoProfil from "@/components/pro/PhotoProfil";
+import { useState } from "react";
+import { enregistrerInformationsEtablissement } from "@/lib/etablissement";
 
 /*
  * Informations — reproduit l'écran « etab-infos » de la maquette web :
@@ -15,8 +17,43 @@ import PhotoProfil from "@/components/pro/PhotoProfil";
 
 export default function InformationsEtablissement() {
   const { etablissement } = useEtablissementConnecte();
-  const ETABLISSEMENT_CONNECTE = etablissement ?? { id: "", nom: "…", nomCourt: "…", type: "", description: "", adresse: "", telephone: "", email: "", siteWeb: "", photoUrl: null, gradient: "linear-gradient(135deg,#16A085,#0E6655)", statut: "", parametres: {}, gestionnaire: { nom: "", role: "", email: "", telephone: "" } };
+  const ETABLISSEMENT_CONNECTE = etablissement ?? { id: "", nom: "…", nomCourt: "…", type: "", description: "", adresse: "", telephone: "", email: "", siteWeb: "", rccm: "", photoUrl: null, gradient: "linear-gradient(135deg,#16A085,#0E6655)", statut: "", parametres: {}, gestionnaire: { nom: "", role: "", email: "", telephone: "" } };
   const etab = ETABLISSEMENT_CONNECTE;
+
+  /*
+   * Le RCCM est la seule mention légale de la fiche et doit rester
+   * corrigeable : le reste de cet écran est encore en lecture seule.
+   * L'état local n'est retenu que tant que la valeur du serveur ne
+   * change pas (même motif que PhotoProfil).
+   */
+  const [saisie, setSaisie] = useState<{ depuis: string; valeur: string } | null>(null);
+  const rccm = saisie?.depuis === etab.rccm ? saisie.valeur : etab.rccm;
+  const [messageRccm, setMessageRccm] = useState<string | null>(null);
+  const blocRccm = (prefixe: string) => (
+    <>
+      <label className={labelChamp} htmlFor={`${prefixe}-rccm`}>
+        RCCM
+      </label>
+      <input
+        id={`${prefixe}-rccm`}
+        className="w-full rounded-[11px] border border-line bg-white px-[13px] py-3 text-[13.5px] outline-none focus:border-teal"
+        placeholder="Ex. GC-KAL/123.456A/2021"
+        value={rccm}
+        onChange={(e) => setSaisie({ depuis: etab.rccm, valeur: e.target.value })}
+        onBlur={async (e) => {
+          if (!etab.id) return;
+          const res = await enregistrerInformationsEtablissement(etab.id, {
+            rccm: e.target.value.trim(),
+          });
+          setMessageRccm(res.erreur ?? "Enregistré ✓");
+        }}
+      />
+      <p className="mt-1.5 text-[11.5px] text-muted">
+        Registre du Commerce et du Crédit Mobilier.{" "}
+        {messageRccm && <b className="text-green">{messageRccm}</b>}
+      </p>
+    </>
+  );
   const champStatique = "rounded-[11px] border border-line bg-white px-[13px] py-3 text-[13.5px]";
   const labelChamp = "mb-1.5 block text-xs font-bold text-muted";
 
@@ -43,6 +80,7 @@ export default function InformationsEtablissement() {
                 <small>{etab.type}</small>
               </div>
             </div>
+            <div style={{ marginTop: 10 }}>{blocRccm("m")}</div>
             <div className="setrow">
               <div>
                 <b>Description</b>
@@ -174,6 +212,7 @@ export default function InformationsEtablissement() {
             <label className={labelChamp}>Site web</label>
             <div className={champStatique}>{etab.siteWeb}</div>
           </div>
+          <div className="sm:col-span-2">{blocRccm("w")}</div>
         </div>
         <div className="mt-[14px] flex items-start gap-[9px] rounded-[11px] bg-teal-soft px-[13px] py-[11px] text-[12.5px] font-semibold leading-relaxed text-blue">
           <span aria-hidden>ℹ️</span>

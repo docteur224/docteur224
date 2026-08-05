@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { calculerAge } from "@/lib/dates";
 import { formatGNF } from "@/lib/format";
+import type { LieuConsultation } from "@/types";
 import {
   ajouterProche,
   LIENS_PROCHE,
@@ -34,22 +35,25 @@ const initiales = (prenom: string, nom: string) =>
 
 export default function FormulaireReservation({
   medecinId,
-  medecinNom,
-  specialite,
-  etablissementNom,
-  ville,
   date,
   heure,
   tarif,
+  adresseCabinet,
+  visiteDomicile = false,
+  zoneDomicile = "",
+  tarifs = [],
 }: {
   medecinId: string;
-  medecinNom: string;
-  specialite: string;
-  etablissementNom: string;
-  ville: string;
   date: string;
   heure: string;
   tarif: number;
+  /** Adresse affichée pour l'option « Au cabinet ». */
+  adresseCabinet: string;
+  /** Le praticien se déplace-t-il ? Sans cela, aucun choix n'est proposé. */
+  visiteDomicile?: boolean;
+  zoneDomicile?: string;
+  /** Grille tarifaire, pour n'afficher que les prix du lieu retenu. */
+  tarifs?: { libelle: string; montant: number; lieu: LieuConsultation | "tous" }[];
 }) {
   const router = useRouter();
   const { profil, chargement } = useProfilConnecte();
@@ -58,8 +62,24 @@ export default function FormulaireReservation({
   const [ajoutOuvert, setAjoutOuvert] = useState(false);
   const [nouveau, setNouveau] = useState(NOUVEAU_PROCHE_VIDE);
   const [motif, setMotif] = useState("");
+  const [lieu, setLieu] = useState<LieuConsultation>("cabinet");
+  const [adresse, setAdresse] = useState<{ saisie: string; depuis: string } | null>(null);
   const [enCours, setEnCours] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
+
+  /*
+   * L'adresse de visite est pré-remplie avec le quartier du patient, mais
+   * reste modifiable : la visite peut avoir lieu ailleurs (travail, chez un
+   * parent). Le pré-remplissage est dérivé au rendu et non posé par un
+   * effet — le linter interdit setState dans un effet, et le profil
+   * arrive de façon asynchrone.
+   */
+  const suggestion = profil?.quartier ? `${profil.quartier}, ` : "";
+  const adresseVisite = adresse?.depuis === suggestion ? adresse.saisie : suggestion;
+
+  // Tarifs applicables au lieu choisi ; « tous » vaut pour les deux.
+  const tarifsDuLieu = tarifs.filter((t) => t.lieu === lieu || t.lieu === "tous");
+  const tarifAffiche = tarifsDuLieu[0]?.montant ?? tarif;
 
   const nouveauValide =
     nouveau.nom.trim() !== "" && nouveau.prenom.trim() !== "" && nouveau.dateNaissance !== "";
@@ -80,6 +100,9 @@ export default function FormulaireReservation({
   async function confirmer() {
     if (enCours) return;
     setErreur(null);
+    if (lieu === "domicile" && !adresseVisite.trim()) {
+      return setErreur("Indiquez l’adresse où le médecin doit se rendre.");
+    }
     setEnCours(true);
     const res = await reserverRendezVous({
       medecinId,
@@ -87,6 +110,8 @@ export default function FormulaireReservation({
       heure,
       motif: motif.trim(),
       procheId: selection === "moi" ? undefined : selection,
+      lieu,
+      adresseDomicile: adresseVisite.trim(),
     });
     setEnCours(false);
     if (res.erreur === "non_connecte") {
@@ -132,6 +157,92 @@ export default function FormulaireReservation({
   const classeChamp =
     "w-full rounded-[11px] border border-line bg-white px-[13px] py-3 text-[13.5px] outline-none focus:border-teal";
 
+  /*
+   * Choix du lieu — rendu une seule fois et posé dans les deux mises en
+   * page. Il n'apparaît que si le praticien se déplace : proposer un choix
+   * qui n'en est pas un ajouterait une étape à tout le monde pour rien.
+   */
+  const blocLieu = visiteDomicile && (
+    <div className="rounded-[18px] border border-line bg-white p-5 md:mb-[18px] md:p-6">
+      <h3 className="mb-1 text-base font-extrabold">Où souhaitez-vous consulter ?</h3>
+      <p className="mb-[14px] text-[12.5px] text-muted">
+        Ce praticien reçoit au cabinet et se déplace à domicile.
+      </p>
+      <div className="grid gap-[10px] sm:grid-cols-2">
+        {(
+          [
+            { valeur: "cabinet" as const, icone: "🏥", titre: "Au cabinet", detail: adresseCabinet },
+            {
+              valeur: "domicile" as const,
+              icone: "🏠",
+              titre: "À domicile",
+              detail: zoneDomicile ? `Zones desservies : ${zoneDomicile}` : "Le médecin se déplace chez vous",
+            },
+          ]
+        ).map((option) => (
+          <button
+            key={option.valeur}
+            type="button"
+            aria-pressed={lieu === option.valeur}
+            onClick={() => setLieu(option.valeur)}
+            className={`flex items-center gap-[11px] rounded-[13px] border-[1.5px] p-3 text-left transition-colors ${
+              lieu === option.valeur ? "border-teal bg-teal-soft" : "border-line bg-white"
+            }`}
+          >
+            <span aria-hidden className="text-xl">
+              {option.icone}
+            </span>
+            <span className="min-w-0 flex-1">
+              <b className="block text-[13.5px]">{option.titre}</b>
+              <small className="block truncate text-[11.5px] text-muted">{option.detail}</small>
+            </span>
+            <span
+              className={`h-[18px] w-[18px] flex-none rounded-full border-2 ${
+                lieu === option.valeur
+                  ? "border-teal bg-teal shadow-[inset_0_0_0_3px_#fff]"
+                  : "border-line"
+              }`}
+            />
+          </button>
+        ))}
+      </div>
+
+      {lieu === "domicile" && (
+        <div className="mt-[14px]">
+          <label className="mb-1.5 block text-[12.5px] font-bold" htmlFor="adresse-visite">
+            Adresse de la visite *
+          </label>
+          <input
+            id="adresse-visite"
+            className={classeChamp}
+            placeholder="Ex. Ratoma, Kipé, immeuble Diallo, 2e étage"
+            value={adresseVisite}
+            onChange={(e) => setAdresse({ saisie: e.target.value, depuis: suggestion })}
+          />
+          <p className="mt-1.5 text-[11.5px] text-muted">
+            Ajoutez un repère (école, mosquée, boutique) : le médecin doit pouvoir vous trouver.
+          </p>
+        </div>
+      )}
+
+      {tarifsDuLieu.length > 0 && (
+        <div className="mt-[14px] overflow-hidden rounded-xl border border-line">
+          {tarifsDuLieu.map((t, i) => (
+            <div
+              key={`${t.libelle}-${i}`}
+              className={`flex items-center justify-between gap-3 px-[13px] py-2 text-[12.5px] ${
+                i > 0 ? "border-t border-line" : ""
+              }`}
+            >
+              <b className="min-w-0 font-bold">{t.libelle}</b>
+              <span className="flex-none font-extrabold text-blue">{formatGNF(t.montant)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <>
       {/* ================= VERSION MOBILE (écran « reservation » de la maquette mobile) ================= */}
@@ -142,6 +253,7 @@ export default function FormulaireReservation({
               {erreur}
             </p>
           )}
+          {blocLieu && <div style={{ marginBottom: 14 }}>{blocLieu}</div>}
           <span className="labelm">Pour qui est ce rendez-vous ?</span>
           <div className="benelist">
             <button type="button" className={`bene${selection === "moi" ? " on" : ""}`} onClick={() => setSelection("moi")}>
@@ -281,7 +393,7 @@ export default function FormulaireReservation({
           <div className="abannerm" style={{ background: "var(--green-soft)", marginTop: 14 }}>
             <span aria-hidden>✅</span>
             <div>
-              <b>Réservation gratuite.</b> La consultation ({formatGNF(tarif)}) se règle{" "}
+              <b>Réservation gratuite.</b> La consultation ({formatGNF(tarifAffiche)}) se règle{" "}
               <b>sur place</b>. Aucun paiement en ligne requis.
             </div>
           </div>
@@ -300,6 +412,7 @@ export default function FormulaireReservation({
           {erreur}
         </p>
       )}
+      {blocLieu}
       {/* ===== Pour qui est ce rendez-vous ? ===== */}
       <div className="mb-[18px] rounded-[18px] border border-line bg-white p-6">
         <h3 className="mb-[14px] text-base font-extrabold">Pour qui est ce rendez-vous ?</h3>
@@ -481,7 +594,7 @@ export default function FormulaireReservation({
         <div className="mt-4 flex items-start gap-[9px] rounded-xl border border-[#BFE3CC] bg-green-soft px-[14px] py-3 text-[12.5px] font-semibold leading-normal text-blue">
           <span aria-hidden>✅</span>
           <div>
-            <b>Réservation gratuite.</b> La consultation ({formatGNF(tarif)}) se règle{" "}
+            <b>Réservation gratuite.</b> La consultation ({formatGNF(tarifAffiche)}) se règle{" "}
             <b>sur place, chez le médecin</b>. Aucun paiement en ligne n’est requis.
           </div>
         </div>

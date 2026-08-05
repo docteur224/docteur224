@@ -63,8 +63,16 @@ export default function AgendaMedecin() {
               <div key={creneau.heure} className="agm">
                 <div className="t">{creneau.heure}</div>
                 <div className="who">
-                  <b>{creneau.patient}</b>
-                  <small>{creneau.motif}</small>
+                  <b>
+                    {creneau.patient}
+                    {creneau.lieu === "domicile" && " 🏠"}
+                  </b>
+                  <small>
+                    {creneau.motif}
+                    {/* L'adresse est ce qui décide de l'organisation de la
+                        journée : elle doit être lisible sans ouvrir le RDV. */}
+                    {creneau.lieu === "domicile" && ` · À domicile : ${creneau.adresseDomicile}`}
+                  </small>
                 </div>
               </div>
             ) : (
@@ -133,9 +141,20 @@ export default function AgendaMedecin() {
             </div>
             <div className="px-[14px] py-[10px]">
               {creneau.statut === "reserve" ? (
-                <div className="rounded-lg border-l-[3px] border-teal bg-teal-soft px-3 py-[9px] text-[12.5px]">
+                <div
+                  className={`rounded-lg border-l-[3px] px-3 py-[9px] text-[12.5px] ${
+                    creneau.lieu === "domicile"
+                      ? "border-green bg-green-soft"
+                      : "border-teal bg-teal-soft"
+                  }`}
+                >
                   <b className="font-extrabold">{creneau.patient}</b>{" "}
                   <small className="text-muted">· {creneau.motif}</small>
+                  {creneau.lieu === "domicile" && (
+                    <small className="block font-semibold text-green">
+                      🏠 À domicile — {creneau.adresseDomicile}
+                    </small>
+                  )}
                 </div>
               ) : (
                 <div className="rounded-lg border-l-[3px] border-[#CBD8E0] bg-[#F4F8FA] px-3 py-[9px] text-[12.5px] italic text-muted">

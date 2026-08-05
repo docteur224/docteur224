@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { formatGNF } from "@/lib/format";
 import {
+  LIBELLES_LIEU,
   MAX_TARIFS,
   ajouterTarif,
   modifierTarif,
   supprimerTarif,
   useTarifsMedecin,
+  type LieuTarif,
 } from "@/lib/tarifs";
 
 /*
@@ -34,15 +36,23 @@ export default function GrilleTarifs({
   medecinId,
   mobile = false,
   onChangement,
+  visiteDomicile = false,
 }: {
   medecinId: string | undefined;
   mobile?: boolean;
   /** Notifie le parent après une écriture (rafraîchit le tarif affiché ailleurs). */
   onChangement?: () => void;
+  /**
+   * Le praticien accepte-t-il les visites à domicile ? Le sélecteur de lieu
+   * n'apparaît que dans ce cas : l'imposer à un médecin qui ne se déplace
+   * jamais serait un choix inutile sur chaque ligne.
+   */
+  visiteDomicile?: boolean;
 }) {
   const { tarifs, recharger } = useTarifsMedecin(medecinId);
   const [libelle, setLibelle] = useState("");
   const [montant, setMontant] = useState("");
+  const [lieu, setLieu] = useState<LieuTarif>("cabinet");
   const [erreur, setErreur] = useState<string | null>(null);
   const [enCours, setEnCours] = useState(false);
 
@@ -62,11 +72,18 @@ export default function GrilleTarifs({
       return setErreur("Indiquez un montant en GNF.");
     if (complete) return setErreur(`Grille limitée à ${MAX_TARIFS} lignes.`);
     setEnCours(true);
-    const res = await ajouterTarif(nom, prix, tarifs.length);
+    const res = await ajouterTarif(nom, prix, tarifs.length, visiteDomicile ? lieu : "cabinet");
     setEnCours(false);
     if (res.erreur) return setErreur(res.erreur);
     setLibelle("");
     setMontant("");
+    setLieu("cabinet");
+    apresEcriture();
+  }
+
+  async function changerLieu(id: string, valeur: LieuTarif) {
+    const res = await modifierTarif(id, { lieu: valeur });
+    if (res.erreur) return setErreur(res.erreur);
     apresEcriture();
   }
 
@@ -132,6 +149,25 @@ export default function GrilleTarifs({
                   </button>
                 </div>
               </div>
+              {visiteDomicile && (
+                <div className="mt-2 flex items-center gap-2">
+                  <label className="text-[11.5px] font-bold text-muted" htmlFor={`lieu-${tarif.id}`}>
+                    S’applique
+                  </label>
+                  <select
+                    id={`lieu-${tarif.id}`}
+                    value={tarif.lieu}
+                    onChange={(e) => changerLieu(tarif.id, e.target.value as LieuTarif)}
+                    className="rounded-lg border border-line bg-white px-2 py-1.5 text-[12px] font-semibold outline-none focus:border-teal"
+                  >
+                    {(["cabinet", "domicile", "tous"] as LieuTarif[]).map((l) => (
+                      <option key={l} value={l}>
+                        {LIBELLES_LIEU[l]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <p className="mt-1.5 text-[11px] text-muted">
                 {index === 0
                   ? `Tarif de référence — ${formatGNF(tarif.montant)} s’affiche sur votre fiche et dans les résultats de recherche.`
@@ -171,6 +207,20 @@ export default function GrilleTarifs({
               }
             }}
           />
+          {visiteDomicile && (
+            <select
+              value={lieu}
+              aria-label="Lieu du nouveau tarif"
+              onChange={(e) => setLieu(e.target.value as LieuTarif)}
+              className={`${CHAMP} sm:w-[135px] sm:flex-none`}
+            >
+              {(["cabinet", "domicile", "tous"] as LieuTarif[]).map((l) => (
+                <option key={l} value={l}>
+                  {LIBELLES_LIEU[l]}
+                </option>
+              ))}
+            </select>
+          )}
           <button
             type="button"
             onClick={ajouter}

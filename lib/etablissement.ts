@@ -50,6 +50,8 @@ export interface EtablissementConnecte {
   telephone: string;
   email: string;
   siteWeb: string;
+  /** Registre du Commerce et du Crédit Mobilier. */
+  rccm: string;
   /** Photo principale (Cloudinary) ; null = pictogramme par défaut. */
   photoUrl: string | null;
   gradient: string;
@@ -79,7 +81,7 @@ export function useEtablissementConnecte(): {
       const [{ data: e }, { data: u }] = await Promise.all([
         supabase
           .from("etablissements")
-          .select("id, nom, type, description, adresse, quartier, telephone, email, statut, parametres, photo_url, villes ( nom )")
+          .select("id, nom, type, description, adresse, quartier, telephone, email, rccm, statut, parametres, photo_url, villes ( nom )")
           .eq("gestionnaire_id", auth.user.id)
           .maybeSingle(),
         supabase.from("utilisateurs").select("nom, prenom, email, telephone").eq("id", auth.user.id).single(),
@@ -97,6 +99,7 @@ export function useEtablissementConnecte(): {
           telephone: e.telephone ?? "",
           email: e.email ?? "",
           siteWeb: "",
+          rccm: (e as unknown as { rccm: string | null }).rccm ?? "",
           photoUrl: (e as unknown as { photo_url: string | null }).photo_url ?? null,
           gradient: gradientPour(e.id),
           statut: e.statut,
@@ -121,7 +124,7 @@ export function useEtablissementConnecte(): {
 
 export async function enregistrerInformationsEtablissement(
   etabId: string,
-  d: Partial<{ nom: string; type: string; description: string; adresse: string; telephone: string; email: string }>
+  d: Partial<{ nom: string; type: string; description: string; adresse: string; telephone: string; email: string; rccm: string }>
 ): Promise<{ erreur?: string }> {
   const { error } = await creerClientNavigateur().from("etablissements").update(d).eq("id", etabId);
   return error ? { erreur: error.message } : {};

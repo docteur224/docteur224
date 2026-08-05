@@ -45,6 +45,8 @@ export default function EtapeProfilMedical() {
   const [specialites, setSpecialites] = useState<{ id: string; nom: string }[]>([]);
   const [specialiteId, setSpecialiteId] = useState("");
   const [numeroOrdre, setNumeroOrdre] = useState("");
+  const [rccm, setRccm] = useState("");
+  const [visiteDomicile, setVisiteDomicile] = useState(false);
   const [experience, setExperience] = useState("");
   const [presentation, setPresentation] = useState("");
   const [langues, setLangues] = useState<string[]>(["Français"]);
@@ -75,12 +77,14 @@ export default function EtapeProfilMedical() {
       setMedecinId(auth.user.id);
       const { data: m } = await supabase
         .from("medecins")
-        .select("specialite_id, numero_ordre, annees_experience, presentation, langues, soins_et_actes, diplomes, parcours, genre")
+        .select("specialite_id, numero_ordre, rccm, visite_domicile, annees_experience, presentation, langues, soins_et_actes, diplomes, parcours, genre")
         .eq("id", auth.user.id)
         .maybeSingle();
       if (!actif || !m) return;
       if (m.specialite_id) setSpecialiteId(m.specialite_id);
       if (m.numero_ordre) setNumeroOrdre(m.numero_ordre);
+      if (m.rccm) setRccm(m.rccm);
+      setVisiteDomicile(!!m.visite_domicile);
       if (m.annees_experience) setExperience(String(m.annees_experience));
       if (m.presentation) setPresentation(m.presentation);
       if (m.langues?.length) setLangues(m.langues);
@@ -136,6 +140,7 @@ export default function EtapeProfilMedical() {
     const res = await enregistrerEtapeProfil({
       specialiteId,
       numeroOrdre,
+      rccm,
       anneesExperience: experience ? Number(experience) : null,
       presentation,
       langues,
@@ -224,6 +229,18 @@ export default function EtapeProfilMedical() {
         publique : c’est ce qui permet à un patient de vérifier que vous exercez légalement.
       </p>
 
+      <label className={etiquette}>RCCM</label>
+      <input
+        className={champ}
+        placeholder="Ex. GC-KAL/123.456A/2021"
+        value={rccm}
+        onChange={(e) => setRccm(e.target.value)}
+      />
+      <p className="mt-1.5 text-[11.5px] text-muted">
+        Registre du Commerce et du Crédit Mobilier — mention légale de votre activité, affichée
+        avec votre numéro d’ordre.
+      </p>
+
       <label className={etiquette}>Années d’expérience</label>
       <input
         className={champ}
@@ -247,7 +264,7 @@ export default function EtapeProfilMedical() {
         Ajoutez autant de lignes que nécessaire (consultation, consultation le dimanche, suivi…).
         Payés sur place par le patient. Chaque ligne est enregistrée immédiatement.
       </p>
-      <GrilleTarifs medecinId={medecinId} onChangement={rechargerTarifs} />
+      <GrilleTarifs medecinId={medecinId} onChangement={rechargerTarifs} visiteDomicile={visiteDomicile} />
 
       <label className={etiquette}>Langues parlées</label>
       <div className="flex flex-wrap gap-2">

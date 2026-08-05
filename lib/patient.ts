@@ -21,6 +21,8 @@ export interface ProfilConnecte {
   dateNaissance?: string;
   genre?: string;
   villeId?: string | null;
+  /** Quartier du patient — sert à pré-remplir l'adresse d'une visite à domicile. */
+  quartier?: string;
 }
 
 let cacheProfil: ProfilConnecte | null | undefined;
@@ -39,15 +41,17 @@ async function chargerProfil(): Promise<ProfilConnecte | null> {
   let dateNaissance: string | undefined;
   let genre: string | undefined;
   let villeId: string | null = null;
+  let quartier: string | undefined;
   if (u.role === "patient") {
     const { data: p } = await supabase
       .from("patients")
-      .select("date_naissance, genre, ville_id")
+      .select("date_naissance, genre, ville_id, quartier")
       .eq("id", u.id)
       .single();
     dateNaissance = p?.date_naissance ?? undefined;
     genre = p?.genre ?? undefined;
     villeId = p?.ville_id ?? null;
+    quartier = p?.quartier ?? undefined;
   }
   return {
     id: u.id,
@@ -59,6 +63,7 @@ async function chargerProfil(): Promise<ProfilConnecte | null> {
     dateNaissance,
     genre,
     villeId,
+    quartier,
   };
 }
 
@@ -435,6 +440,10 @@ export interface RendezVousPatient {
   pourQui: string;
   procheId?: string;
   statut: "en_attente" | "confirme" | "annule" | "honore";
+  /** Où se tient la consultation (migration 0024). */
+  lieu: "cabinet" | "domicile";
+  /** Adresse de la visite quand  vaut « domicile ». */
+  adresseDomicile: string;
 }
 
 interface LigneRdv {
@@ -446,6 +455,8 @@ interface LigneRdv {
   statut: RendezVousPatient["statut"];
   proche_id: string | null;
   patient_id: string | null;
+  lieu: string | null;
+  adresse_domicile: string | null;
   medecins: {
     civilite: string;
     tarif_consultation: number | null;
@@ -458,7 +469,7 @@ interface LigneRdv {
 }
 
 const SELECTION_RDV = `
-  id, medecin_id, date, heure, motif, statut, proche_id, patient_id,
+  id, medecin_id, date, heure, motif, statut, proche_id, patient_id, lieu, adresse_domicile,
   medecins (
     civilite, tarif_consultation,
     utilisateurs ( nom, prenom ),
@@ -477,6 +488,8 @@ function versRdv(l: LigneRdv): RendezVousPatient {
     medecinNom: m
       ? `${m.civilite === "Pr" ? "Pr" : "Dr"} ${m.utilisateurs?.prenom ?? ""} ${m.utilisateurs?.nom ?? ""}`.trim()
       : "Médecin",
+    lieu: l.lieu === "domicile" ? "domicile" : "cabinet",
+    adresseDomicile: l.adresse_domicile ?? "",
     specialite: m?.specialites?.nom ?? "",
     etablissementNom: m?.etablissements?.nom ?? "Cabinet",
     ville: m?.villes?.nom ?? "",
@@ -605,7 +618,7 @@ interface LigneRdvDetail extends LigneRdv {
 }
 
 const SELECTION_RDV_DETAIL = `
-  id, medecin_id, date, heure, motif, statut, proche_id, patient_id,
+  id, medecin_id, date, heure, motif, statut, proche_id, patient_id, lieu, adresse_domicile,
   medecins (
     civilite, tarif_consultation, telephone_secretariat, localisation, quartier,
     utilisateurs ( nom, prenom ),
@@ -680,9 +693,17 @@ export async function reserverRendezVous(d: {
   heure: string;
   motif: string;
   procheId?: string;
+  /** « cabinet » (défaut) ou « domicile » — migration 0024. */
+  lieu?: "cabinet" | "domicile";
+  /** Obligatoire pour une visite à domicile ; le trigger le vérifie aussi. */
+  adresseDomicile?: string;
 }): Promise<{ erreur?: string }> {
   if (!creneauReservable(d.date, d.heure)) {
     return { erreur: "Ce créneau n'est plus disponible. Choisissez un autre horaire." };
+  }
+  const lieu = d.lieu === "domicile" ? "domicile" : "cabinet";
+  if (lieu === "domicile" && !d.adresseDomicile?.trim()) {
+    return { erreur: "Indiquez l'adresse de la visite à domicile." };
   }
   const supabase = creerClientNavigateur();
   const { data: auth } = await supabase.auth.getUser();
@@ -696,6 +717,8 @@ export async function reserverRendezVous(d: {
     patient_id: d.procheId ? null : auth.user.id,
     proche_id: d.procheId ?? null,
     motif: d.motif || null,
+    lieu,
+    adresse_domicile: lieu === "domicile" ? d.adresseDomicile!.trim() : null,
     statut: "en_attente",
     source: "en_ligne",
   });

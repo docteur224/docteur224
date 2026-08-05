@@ -17,11 +17,21 @@ import { creerClientNavigateur } from "@/lib/supabase/client";
 /** Plafond aligné sur le trigger `tarifs_medecin_limite`. */
 export const MAX_TARIFS = 20;
 
+/** Où s'applique une ligne : au cabinet, à domicile, ou les deux. */
+export type LieuTarif = "cabinet" | "domicile" | "tous";
+
+export const LIBELLES_LIEU: Record<LieuTarif, string> = {
+  cabinet: "Au cabinet",
+  domicile: "À domicile",
+  tous: "Les deux",
+};
+
 export interface TarifMedecin {
   id: string;
   libelle: string;
   montant: number;
   position: number;
+  lieu: LieuTarif;
 }
 
 interface Ligne {
@@ -29,6 +39,7 @@ interface Ligne {
   libelle: string;
   montant: number;
   position: number;
+  lieu: LieuTarif;
 }
 
 export function useTarifsMedecin(medecinId: string | undefined): {
@@ -46,7 +57,7 @@ export function useTarifsMedecin(medecinId: string | undefined): {
     (async () => {
       const { data } = await creerClientNavigateur()
         .from("tarifs_medecin")
-        .select("id, libelle, montant, position")
+        .select("id, libelle, montant, position, lieu")
         .eq("medecin_id", medecinId)
         .order("position")
         .order("cree_le");
@@ -69,14 +80,15 @@ export function useTarifsMedecin(medecinId: string | undefined): {
 export async function ajouterTarif(
   libelle: string,
   montant: number,
-  position: number
+  position: number,
+  lieu: LieuTarif = "cabinet"
 ): Promise<{ erreur?: string }> {
   const supabase = creerClientNavigateur();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return { erreur: "Session expirée." };
   const { error } = await supabase
     .from("tarifs_medecin")
-    .insert({ medecin_id: auth.user.id, libelle, montant, position });
+    .insert({ medecin_id: auth.user.id, libelle, montant, position, lieu });
   return error ? { erreur: error.message } : {};
 }
 
@@ -87,7 +99,7 @@ export async function ajouterTarif(
  */
 export async function modifierTarif(
   id: string,
-  maj: { libelle?: string; montant?: number; position?: number }
+  maj: { libelle?: string; montant?: number; position?: number; lieu?: LieuTarif }
 ): Promise<{ erreur?: string }> {
   const { data, error } = await creerClientNavigateur()
     .from("tarifs_medecin")

@@ -791,6 +791,68 @@ export async function ajouterAListeContenu(cle: CleListeContenu, valeur: string)
   await tracerAudit("A ajouté une entrée de référentiel", `${cle} · ${valeur}`);
 }
 
+/* ===== Communes (référentiel rattaché à une ville, migration 0023) ===== */
+
+export interface CommuneAdmin {
+  id: string;
+  nom: string;
+}
+
+export function useCommunesAdmin(villeId: string | undefined): {
+  communes: CommuneAdmin[];
+  recharger: () => void;
+} {
+  const { donnees, recharger } = utiliserRequete<CommuneAdmin[]>(
+    [],
+    async () => {
+      if (!villeId) return [];
+      const { data } = await creerClientNavigateur()
+        .from("communes")
+        .select("id, nom")
+        .eq("ville_id", villeId)
+        .order("nom");
+      return data ?? [];
+    },
+    [villeId]
+  );
+  return { communes: donnees, recharger };
+}
+
+export async function ajouterCommune(
+  villeId: string,
+  nom: string
+): Promise<{ erreur?: string }> {
+  const { error } = await creerClientNavigateur()
+    .from("communes")
+    .insert({ ville_id: villeId, nom });
+  if (error) {
+    // La contrainte unique (ville, nom) est le cas courant : l'admin
+    // retape une commune déjà présente. Le message brut de Postgres ne lui
+    // apprendrait rien.
+    return {
+      erreur:
+        error.code === "23505"
+          ? "Cette commune existe déjà."
+          : "Ajout refusé : le référentiel est réservé aux administrateurs.",
+    };
+  }
+  await tracerAudit("A ajouté une commune au référentiel", nom);
+  return {};
+}
+
+export async function retirerCommune(id: string, nom: string): Promise<{ erreur?: string }> {
+  const { data, error } = await creerClientNavigateur()
+    .from("communes")
+    .delete()
+    .eq("id", id)
+    .select("id");
+  if (error) return { erreur: "Suppression refusée : le référentiel est réservé aux administrateurs." };
+  // Un DELETE bloqué par la RLS ne lève rien : il touche zéro ligne.
+  if (!data || data.length === 0) return { erreur: "Suppression refusée." };
+  await tracerAudit("A retiré une commune du référentiel", nom);
+  return {};
+}
+
 /* ===== Vedettes ===== */
 
 export interface Vedette {

@@ -50,6 +50,9 @@ interface LigneMedecin {
   telephone_secretariat: string | null;
   localisation: string | null;
   numero_ordre: string | null;
+  rccm: string | null;
+  visite_domicile: boolean | null;
+  zone_domicile: string | null;
   note_moyenne: number;
   nb_avis: number;
   etablissement_id: string | null;
@@ -61,20 +64,26 @@ interface LigneMedecin {
   villes: { nom: string } | null;
   medecin_assurances: { assurances: { libelle: string } | null }[];
   horaires_types: { jour_semaine: number; heure_debut: string; heure_fin: string }[];
-  tarifs_medecin: { libelle: string; montant: number; position: number }[];
+  tarifs_medecin: { libelle: string; montant: number; position: number; lieu: string }[];
 }
 
 const SELECTION_MEDECIN = `
   id, civilite, genre, tarif_consultation, presentation, soins_et_actes, diplomes,
   parcours, langues, annees_experience, telephone_secretariat, localisation, numero_ordre,
+  rccm, visite_domicile, zone_domicile,
   note_moyenne, nb_avis, etablissement_id, commune, quartier, photo_url,
   utilisateurs ( nom, prenom ),
   specialites ( nom ),
   villes ( nom ),
   medecin_assurances ( assurances ( libelle ) ),
   horaires_types ( jour_semaine, heure_debut, heure_fin ),
-  tarifs_medecin ( libelle, montant, position )
+  tarifs_medecin ( libelle, montant, position, lieu )
 `;
+
+/** Normalise le `lieu` d'une ligne tarifaire venu de la base. */
+export function lieuTarif(valeur: string | null | undefined): "cabinet" | "domicile" | "tous" {
+  return valeur === "domicile" || valeur === "tous" ? valeur : "cabinet";
+}
 
 /** Médecin UI enrichi de ses plages horaires (pour calculer les créneaux). */
 export type MedecinAvecPlages = Medecin & {
@@ -111,11 +120,14 @@ function versMedecinUI(ligne: LigneMedecin): MedecinAvecPlages {
     commune: ligne.commune ?? "",
     quartier: ligne.quartier ?? "",
     numeroOrdre: ligne.numero_ordre ?? "",
+    rccm: ligne.rccm ?? "",
+    visiteDomicile: ligne.visite_domicile ?? false,
+    zoneDomicile: ligne.zone_domicile ?? "",
     anneesExperience: ligne.annees_experience ?? 0,
     tarifConsultation: ligne.tarif_consultation ?? 0,
     tarifs: [...(ligne.tarifs_medecin ?? [])]
       .sort((a, b) => a.position - b.position)
-      .map((t) => ({ libelle: t.libelle, montant: t.montant })),
+      .map((t) => ({ libelle: t.libelle, montant: t.montant, lieu: lieuTarif(t.lieu) })),
     note: Number(ligne.note_moyenne) || 0,
     nbAvis: ligne.nb_avis,
     disponibilite: ouvertAujourdHui

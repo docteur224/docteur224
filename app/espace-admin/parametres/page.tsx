@@ -4,6 +4,7 @@ import Link from "next/link";
 import AdminShell from "@/components/admin/AdminShell";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import Interrupteur from "@/components/patient/Interrupteur";
+import CommunesCouvertes from "@/components/admin/CommunesCouvertes";
 import {
   ajouterAListeContenu,
   useListeContenu,
@@ -94,6 +95,9 @@ export default function ParametresAdmin() {
       {LISTES.map((liste) => (
         <CarteListe key={liste.cle} {...liste} />
       ))}
+
+      {/* Les communes dépendent d'une ville : elles ont leur propre carte. */}
+      <CommunesCouvertes />
 
       {/* Réglages — variante mobile */}
       <div className="card2 md:hidden">

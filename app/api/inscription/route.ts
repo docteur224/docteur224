@@ -79,6 +79,9 @@ export async function POST(request: Request) {
       specialite_id: corps.specialiteId || null,
       ville_id: corps.villeId || null,
       commune: corps.commune || null,
+      // Liste blanche : la civilité vient du client, elle ne peut pas être
+      // un titre inventé.
+      civilite: corps.civilite === "Pr" ? "Pr" : "Dr",
       statut: "en_attente",
       etape_inscription: "profil",
     });

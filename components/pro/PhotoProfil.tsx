@@ -9,6 +9,14 @@ import { useRef, useState } from "react";
  *
  * La validation (type, poids) est refaite côté serveur : celle d'ici sert
  * seulement à donner un message immédiat plutôt qu'un aller-retour inutile.
+ *
+ * BUG CORRIGÉ : l'aperçu vivait dans un `useState(photoUrl)`, donc figé sur
+ * la valeur du PREMIER rendu. Or /espace-medecin/profil monte ce composant
+ * avant que le profil ne soit chargé (photoUrl = null) : la photo déposée à
+ * l'inscription n'apparaissait jamais, le bouton proposait « Ajouter une
+ * photo » et l'avatar restait aux initiales. L'état local ne retient
+ * désormais qu'une modification faite ICI, et il est abandonné dès que le
+ * parent apporte une valeur différente de celle qu'on avait modifiée.
  */
 
 const TAILLE_MAX = 5 * 1024 * 1024;
@@ -28,10 +36,20 @@ export default function PhotoProfil({
   /** Notifie le parent après un envoi ou un retrait réussi. */
   onChangement?: (url: string | null) => void;
 }) {
-  const [url, setUrl] = useState(photoUrl);
+  // { depuis } = la valeur du parent au moment où l'on a modifié ici. Tant
+  // qu'elle n'a pas bougé, notre modification prime ; dès que le parent
+  // annonce autre chose (profil enfin chargé, rechargement), c'est lui
+  // qui fait foi.
+  const [modification, setModification] = useState<{
+    depuis: string | null;
+    url: string | null;
+  } | null>(null);
+  const url = modification && modification.depuis === photoUrl ? modification.url : photoUrl;
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const champ = useRef<HTMLInputElement>(null);
+  const setUrl = (nouvelle: string | null) =>
+    setModification({ depuis: photoUrl, url: nouvelle });
 
   async function envoyer(fichier: File) {
     setErreur(null);

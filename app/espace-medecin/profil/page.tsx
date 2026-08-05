@@ -14,6 +14,8 @@ import HorairesHebdo, {
   type JourEdition,
 } from "@/components/pro/HorairesHebdo";
 import ChampCommune from "@/components/site/ChampCommune";
+import Interrupteur from "@/components/patient/Interrupteur";
+import { CIVILITES } from "@/lib/civilites";
 import ChampTelephoneGN from "@/components/site/ChampTelephoneGN";
 import { chargerEtablissementParId } from "@/lib/donnees";
 import { enregistrerHorairesHebdo } from "@/lib/inscription-pro";
@@ -77,6 +79,9 @@ const MEDECIN_VIDE = {
   commune: "",
   quartier: "",
   numeroOrdre: "",
+  rccm: "",
+  visiteDomicile: false,
+  zoneDomicile: "",
   anneesExperience: 0,
   tarifConsultation: 0,
   telephoneSecretariat: "",
@@ -94,6 +99,9 @@ interface Formulaire {
   civilite: string;
   specialiteId: string;
   numeroOrdre: string;
+  rccm: string;
+  visiteDomicile: boolean;
+  zoneDomicile: string;
   experience: string;
   presentation: string;
   villeId: string;
@@ -135,7 +143,7 @@ export default function ProfilMedecin() {
           supabase
             .from("medecins")
             .select(
-              "civilite, specialite_id, ville_id, commune, quartier, numero_ordre, annees_experience, presentation, telephone_secretariat"
+              "civilite, specialite_id, ville_id, commune, quartier, numero_ordre, rccm, visite_domicile, zone_domicile, annees_experience, presentation, telephone_secretariat"
             )
             .eq("id", auth.user.id)
             .maybeSingle(),
@@ -156,6 +164,9 @@ export default function ProfilMedecin() {
           civilite: m.civilite ?? "Dr",
           specialiteId: m.specialite_id ?? "",
           numeroOrdre: m.numero_ordre ?? "",
+          rccm: m.rccm ?? "",
+          visiteDomicile: !!m.visite_domicile,
+          zoneDomicile: m.zone_domicile ?? "",
           experience: m.annees_experience != null ? String(m.annees_experience) : "",
           presentation: m.presentation ?? "",
           villeId: m.ville_id ?? "",
@@ -225,6 +236,10 @@ export default function ProfilMedecin() {
         return signaler(await enregistrerProfilMedecin({ quartier: valeur.trim() }));
       case "numeroOrdre":
         return signaler(await enregistrerProfilMedecin({ numeroOrdre: valeur.trim() }));
+      case "rccm":
+        return signaler(await enregistrerProfilMedecin({ rccm: valeur.trim() }));
+      case "zoneDomicile":
+        return signaler(await enregistrerProfilMedecin({ zoneDomicile: valeur.trim() }));
       case "presentation":
         return signaler(await enregistrerProfilMedecin({ presentation: valeur }));
       case "experience":
@@ -412,8 +427,9 @@ export default function ProfilMedecin() {
             enregistrerChamp("civilite", e.target.value);
           }}
         >
-          <option value="Dr">Dr</option>
-          <option value="Pr">Pr</option>
+          {CIVILITES.map((c) => (
+            <option key={c.valeur} value={c.valeur}>{c.label}</option>
+          ))}
         </select>
       </div>
       <div>
@@ -448,6 +464,19 @@ export default function ProfilMedecin() {
           value={formulaire.numeroOrdre}
           onChange={(e) => majFormulaire({ numeroOrdre: e.target.value })}
           onBlur={(e) => enregistrerChamp("numeroOrdre", e.target.value)}
+        />
+      </div>
+      <div>
+        <label className={labelChamp} htmlFor={`${prefixe}-rccm`}>
+          RCCM
+        </label>
+        <input
+          id={`${prefixe}-rccm`}
+          className={champ}
+          placeholder="Ex. GC-KAL/123.456A/2021"
+          value={formulaire.rccm}
+          onChange={(e) => majFormulaire({ rccm: e.target.value })}
+          onBlur={(e) => enregistrerChamp("rccm", e.target.value)}
         />
       </div>
       <div>
@@ -550,6 +579,52 @@ export default function ProfilMedecin() {
         </div>
       </div>
     </div>
+  );
+
+  /*
+   * Visites à domicile. Le lieu conditionne la grille tarifaire (chaque
+   * ligne dit où elle s'applique) et ce que le patient peut choisir à la
+   * réservation : la bascule est donc enregistrée immédiatement, sans
+   * attendre la sortie d'un champ.
+   */
+  const carteDomicile = (prefixe: string) => !formulaire ? (
+    <p className="text-[13px] text-muted">Chargement…</p>
+  ) : (
+    <>
+      <div className="flex items-start justify-between gap-3">
+        <p className="min-w-0 text-[12.5px] leading-relaxed text-muted">
+          Si vous vous déplacez, le patient choisit son lieu de consultation au moment de
+          réserver et l’information apparaît sur votre fiche.
+        </p>
+        <Interrupteur
+          actif={formulaire.visiteDomicile}
+          label="J’accepte les visites à domicile"
+          onChange={async (v) => {
+            majFormulaire({ visiteDomicile: v });
+            signaler(await enregistrerProfilMedecin({ visiteDomicile: v }));
+          }}
+        />
+      </div>
+      {formulaire.visiteDomicile && (
+        <div className="mt-4 border-t border-line pt-4">
+          <label className={labelChamp} htmlFor={`${prefixe}-zone`}>
+            Zones desservies
+          </label>
+          <input
+            id={`${prefixe}-zone`}
+            className={champ}
+            placeholder="Ex. Ratoma, Dixinn, Matam"
+            value={formulaire.zoneDomicile}
+            onChange={(e) => majFormulaire({ zoneDomicile: e.target.value })}
+            onBlur={(e) => enregistrerChamp("zoneDomicile", e.target.value)}
+          />
+          <p className="mt-1.5 text-[11.5px] text-muted">
+            Affichées au patient avant qu’il ne réserve. Précisez le lieu d’application de chaque
+            ligne dans la grille tarifaire ci-dessus.
+          </p>
+        </div>
+      )}
+    </>
   );
 
   const carteHoraires = (
@@ -669,7 +744,16 @@ export default function ProfilMedecin() {
               Affichés sur votre fiche juste après « À propos ». Le premier sert de tarif de
               référence dans les résultats de recherche.
             </p>
-            <GrilleTarifs medecinId={medecinConnecte.id} mobile />
+            <GrilleTarifs
+              medecinId={medecinConnecte.id}
+              mobile
+              visiteDomicile={formulaire?.visiteDomicile ?? false}
+            />
+          </div>
+
+          <div className="card2">
+            <h4>🏠 Visites à domicile</h4>
+            {carteDomicile("m")}
           </div>
 
           <div className="card2">
@@ -942,7 +1026,16 @@ export default function ProfilMedecin() {
             référence : c’est elle qui apparaît sur les cartes de résultat et dans le panneau de
             réservation.
           </p>
-          <GrilleTarifs medecinId={medecinConnecte.id} />
+          <GrilleTarifs
+            medecinId={medecinConnecte.id}
+            visiteDomicile={formulaire?.visiteDomicile ?? false}
+          />
+        </div>
+
+        {/* Visites à domicile */}
+        <div className="mb-4 rounded-2xl border border-line bg-white p-5">
+          <h3 className="mb-2 text-[15px] font-extrabold">🏠 Visites à domicile</h3>
+          {carteDomicile("w")}
         </div>
 
         {/* Adresse */}

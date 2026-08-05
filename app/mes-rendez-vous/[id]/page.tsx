@@ -98,7 +98,13 @@ export default function DetailRdv() {
   const annule = rdv.statut === "annule";
   const passe = rdv.date < versISO(new Date());
   const modifiable = !annule && !passe;
-  const adresseComplete = [rdv.adresse, rdv.quartier, rdv.ville].filter(Boolean).join(", ");
+  // Une visite à domicile n'a pas lieu au cabinet : c'est l'adresse donnée
+  // par le patient qui compte, partout — affichage, carte et fichier
+  // d'agenda compris.
+  const aDomicile = rdv.lieu === "domicile";
+  const adresseComplete = aDomicile
+    ? rdv.adresseDomicile
+    : [rdv.adresse, rdv.quartier, rdv.ville].filter(Boolean).join(", ");
   const carte = lienCarte({
     localisation: rdv.localisation,
     etablissementNom: rdv.etablissementNom,
@@ -125,7 +131,9 @@ export default function DetailRdv() {
         date: rdv.date,
         heure: rdv.heure,
         titre: `Consultation — ${rdv.medecinNom}`,
-        lieu: [rdv.etablissementNom, adresseComplete].filter(Boolean).join(", "),
+        lieu: aDomicile
+          ? `À domicile — ${adresseComplete}`
+          : [rdv.etablissementNom, adresseComplete].filter(Boolean).join(", "),
         description: [
           `${rdv.specialite} · ${rdv.medecinNom}`,
           rdv.motif ? `Motif : ${rdv.motif}` : "",
@@ -143,8 +151,14 @@ export default function DetailRdv() {
 
   const lignesLieu = (
     <>
-      {rdv.etablissementType && (
-        <div className="text-[12.5px] text-muted">{rdv.etablissementType}</div>
+      {aDomicile ? (
+        <div className="mb-1 inline-block rounded-full bg-green-soft px-[10px] py-1 text-[11px] font-extrabold text-green">
+          🏠 Visite à domicile
+        </div>
+      ) : (
+        rdv.etablissementType && (
+          <div className="text-[12.5px] text-muted">{rdv.etablissementType}</div>
+        )
       )}
       {adresseComplete && <div className="text-[13px]">{adresseComplete}</div>}
     </>
@@ -225,7 +239,7 @@ export default function DetailRdv() {
               </>
             )}
             <div className="det">📍 Se rendre à la consultation</div>
-            <div style={{ fontSize: 14, fontWeight: 700 }}>{rdv.etablissementNom}</div>
+            <div style={{ fontSize: 14, fontWeight: 700 }}>{aDomicile ? "Chez vous" : rdv.etablissementNom}</div>
             <div style={{ marginTop: 2 }}>{lignesLieu}</div>
             {carte && (
               <a
@@ -365,7 +379,7 @@ export default function DetailRdv() {
               )}
 
               <div className="text-[12.5px] font-bold text-muted">📍 Se rendre à la consultation</div>
-              <div className="mt-1 text-[14px] font-bold">{rdv.etablissementNom}</div>
+              <div className="mt-1 text-[14px] font-bold">{aDomicile ? "Chez vous" : rdv.etablissementNom}</div>
               <div className="mt-0.5">{lignesLieu}</div>
               {carte && (
                 <a

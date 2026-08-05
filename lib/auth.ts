@@ -98,6 +98,8 @@ export interface DonneesInscriptionPro {
   nomEtablissement?: string;
   villeId?: string;
   commune?: string;
+  /** « Dr » ou « Pr » (praticien uniquement). */
+  civilite?: string;
 }
 
 export async function inscrireProfessionnel(d: DonneesInscriptionPro): Promise<{ erreur?: string }> {
@@ -114,6 +116,7 @@ export async function inscrireProfessionnel(d: DonneesInscriptionPro): Promise<{
       nomEtablissement: d.nomEtablissement,
       villeId: d.villeId,
       commune: d.commune,
+      civilite: d.civilite,
     },
     d.email,
     d.motDePasse

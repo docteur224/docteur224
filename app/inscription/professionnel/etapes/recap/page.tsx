@@ -40,7 +40,11 @@ interface RecapAbonnement {
 
 interface RecapMedecin {
   specialite: string;
+  civilite: string;
   numeroOrdre: string;
+  rccm: string;
+  visiteDomicile: boolean;
+  zoneDomicile: string;
   tarifs: { libelle: string; montant: number }[];
   experience: number | null;
   presentation: string;
@@ -168,7 +172,7 @@ export default function EtapeRecap() {
           supabase
             .from("medecins")
             .select(
-              "numero_ordre, annees_experience, presentation, langues, soins_et_actes, diplomes, parcours, commune, quartier, localisation, telephone_secretariat, photo_url, specialites ( nom ), villes ( nom ), horaires_types ( jour_semaine, heure_debut, heure_fin ), tarifs_medecin ( libelle, montant, position )"
+              "civilite, numero_ordre, rccm, visite_domicile, zone_domicile, annees_experience, presentation, langues, soins_et_actes, diplomes, parcours, commune, quartier, localisation, telephone_secretariat, photo_url, specialites ( nom ), villes ( nom ), horaires_types ( jour_semaine, heure_debut, heure_fin ), tarifs_medecin ( libelle, montant, position )"
             )
             .eq("id", auth.user.id)
             .maybeSingle(),
@@ -179,7 +183,11 @@ export default function EtapeRecap() {
         ]);
         if (actif && m) {
           const ligne = m as unknown as {
+            civilite: string | null;
             numero_ordre: string | null;
+            rccm: string | null;
+            visite_domicile: boolean | null;
+            zone_domicile: string | null;
             annees_experience: number | null;
             presentation: string | null;
             langues: string[];
@@ -198,7 +206,11 @@ export default function EtapeRecap() {
           };
           setMedecin({
             specialite: ligne.specialites?.nom ?? "",
+            civilite: ligne.civilite ?? "Dr",
             numeroOrdre: ligne.numero_ordre ?? "",
+            rccm: ligne.rccm ?? "",
+            visiteDomicile: !!ligne.visite_domicile,
+            zoneDomicile: ligne.zone_domicile ?? "",
             tarifs: [...(ligne.tarifs_medecin ?? [])]
               .sort((a, b) => a.position - b.position)
               .map((t) => ({ libelle: t.libelle, montant: t.montant })),
@@ -271,7 +283,10 @@ export default function EtapeRecap() {
       erreur={erreur}
     >
       <Section titre="👤 Compte" modifier={medecinRole ? `${base}/profil` : `${base}/fiche`}>
-        <Ligne label="Nom" valeur={`${compte?.prenom ?? ""} ${compte?.nom ?? ""}`.trim()} />
+        <Ligne
+          label="Nom"
+          valeur={`${medecinRole && medecin ? `${medecin.civilite} ` : ""}${compte?.prenom ?? ""} ${compte?.nom ?? ""}`.trim()}
+        />
         <Ligne label="E-mail" valeur={compte?.email} />
         <Ligne label="Téléphone" valeur={compte?.telephone} />
       </Section>
@@ -282,6 +297,7 @@ export default function EtapeRecap() {
             <Ligne label="Spécialité" valeur={medecin.specialite} />
             <Ligne label="Soins et actes" valeur={medecin.soins.join(", ")} />
             <Ligne label="N° d’ordre" valeur={medecin.numeroOrdre} />
+            <Ligne label="RCCM" valeur={medecin.rccm} />
             <Ligne
               label="Tarifs"
               valeur={medecin.tarifs
@@ -309,6 +325,14 @@ export default function EtapeRecap() {
             <Ligne label="Ville" valeur={medecin.ville} />
             <Ligne label="Quartier" valeur={medecin.quartier} />
             <Ligne label="Secrétariat" valeur={medecin.telephoneSecretariat} />
+            <Ligne
+              label="Visites à domicile"
+              valeur={
+                medecin.visiteDomicile
+                  ? `Oui${medecin.zoneDomicile ? ` — ${medecin.zoneDomicile}` : ""}`
+                  : "Non"
+              }
+            />
             <Ligne
               label="Position GPS"
               valeur={medecin.localisation ? "Enregistrée ✓" : "Non renseignée"}

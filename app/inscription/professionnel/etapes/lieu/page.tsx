@@ -6,6 +6,8 @@ import CadreEtape from "@/components/inscription/CadreEtape";
 import { useInscription } from "@/components/inscription/ContexteInscription";
 import ChampCommune from "@/components/site/ChampCommune";
 import ChampTelephoneGN from "@/components/site/ChampTelephoneGN";
+import GrilleTarifs from "@/components/pro/GrilleTarifs";
+import Interrupteur from "@/components/patient/Interrupteur";
 import { avancerEtape, enregistrerEtapeLieu } from "@/lib/inscription-pro";
 import { creerClientNavigateur } from "@/lib/supabase/client";
 import {
@@ -35,10 +37,13 @@ export default function EtapeLieu() {
   const router = useRouter();
   const { etape } = useInscription();
 
+  const [medecinId, setMedecinId] = useState<string | undefined>();
   const [ville, setVille] = useState("");
   const [villeId, setVilleId] = useState<string | undefined>();
   const [commune, setCommune] = useState("");
   const [quartier, setQuartier] = useState("");
+  const [visiteDomicile, setVisiteDomicile] = useState(false);
+  const [zoneDomicile, setZoneDomicile] = useState("");
   const [telephone, setTelephone] = useState("");
   const [localisation, setLocalisation] = useState("");
   const [precision, setPrecision] = useState<number | null>(null);
@@ -53,12 +58,17 @@ export default function EtapeLieu() {
       const supabase = creerClientNavigateur();
       const { data: auth } = await supabase.auth.getUser();
       if (!auth.user) return;
+      setMedecinId(auth.user.id);
       const { data: m } = await supabase
         .from("medecins")
-        .select("commune, quartier, localisation, telephone_secretariat, ville_id, villes ( nom )")
+        .select(
+          "commune, quartier, localisation, telephone_secretariat, ville_id, visite_domicile, zone_domicile, villes ( nom )"
+        )
         .eq("id", auth.user.id)
         .maybeSingle();
       if (!actif || !m) return;
+      setVisiteDomicile(!!m.visite_domicile);
+      if (m.zone_domicile) setZoneDomicile(m.zone_domicile);
       if (m.commune) setCommune(m.commune);
       if (m.quartier) setQuartier(m.quartier);
       if (m.localisation) setLocalisation(m.localisation);
@@ -98,6 +108,8 @@ export default function EtapeLieu() {
       quartier: quartier.trim(),
       localisation: localisation.trim(),
       telephoneSecretariat: telephone ? `+224${chiffresTelephone(telephone)}` : "",
+      visiteDomicile,
+      zoneDomicile: visiteDomicile ? zoneDomicile.trim() : "",
     });
     let cible = "photos";
     if (!res.erreur) {
@@ -141,6 +153,53 @@ export default function EtapeLieu() {
         onChange={setTelephone}
         ariaLabel="Téléphone du secrétariat"
       />
+
+      {/*
+        Les visites à domicile sont un LIEU d'exercice au même titre que le
+        cabinet : la question se pose ici, pas dans le profil médical. Quand
+        elle est activée, la grille tarifaire s'ouvre dans la foulée — sinon
+        le médecin devrait revenir à l'étape précédente pour dire combien
+        coûte un déplacement.
+      */}
+      <div className="mt-6 rounded-xl border border-line p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <b className="block text-[13.5px]">🏠 Visites à domicile</b>
+            <p className="mt-1 text-[11.5px] leading-relaxed text-muted">
+              Vous déplacez-vous chez vos patients ? Le patient choisira son lieu de consultation
+              au moment de réserver, et l’information apparaîtra sur votre fiche.
+            </p>
+          </div>
+          <Interrupteur
+            actif={visiteDomicile}
+            onChange={setVisiteDomicile}
+            label="J’accepte les visites à domicile"
+          />
+        </div>
+
+        {visiteDomicile && (
+          <div className="mt-4 border-t border-line pt-4">
+            <label className={`${etiquette} mt-0`}>Zones desservies</label>
+            <input
+              className={champ}
+              placeholder="Ex. Ratoma, Dixinn, Matam"
+              value={zoneDomicile}
+              onChange={(e) => setZoneDomicile(e.target.value)}
+            />
+            <p className="mt-1.5 text-[11.5px] text-muted">
+              Communes ou quartiers où vous acceptez de vous déplacer. Affichées au patient avant
+              qu’il ne réserve.
+            </p>
+
+            <label className={etiquette}>Tarifs applicables</label>
+            <p className="-mt-0.5 mb-2 text-[11.5px] text-muted">
+              Ajoutez le prix d’une visite à domicile et précisez, pour chaque ligne, où elle
+              s’applique.
+            </p>
+            <GrilleTarifs medecinId={medecinId} visiteDomicile />
+          </div>
+        )}
+      </div>
 
       <div className="mt-5 rounded-xl border border-[#CDE6F2] bg-teal-soft p-4">
         <b className="block text-[13px] text-blue">📍 Position GPS du cabinet</b>

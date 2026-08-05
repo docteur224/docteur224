@@ -22,6 +22,9 @@ export interface Etablissement {
   gradient: string;
 }
 
+/** Où se déroule la consultation (migration 0024). */
+export type LieuConsultation = "cabinet" | "domicile";
+
 export interface Medecin {
   id: string;
   civilite: "Dr" | "Pr";
@@ -42,14 +45,23 @@ export interface Medecin {
   quartier: string;
   /** Numéro d'inscription à l'Ordre national des médecins. */
   numeroOrdre: string;
+  /** Registre du Commerce et du Crédit Mobilier. */
+  rccm: string;
+  /** Le praticien se déplace-t-il au domicile du patient ? */
+  visiteDomicile: boolean;
+  /** Communes ou quartiers desservis pour les visites à domicile. */
+  zoneDomicile: string;
   anneesExperience: number;
   /**
    * Tarif de référence en GNF, payé sur place. Recopié depuis la première
    * ligne de `tarifs` par un trigger — voir migration 0023.
    */
   tarifConsultation: number;
-  /** Grille tarifaire complète, dans l'ordre choisi par le médecin. */
-  tarifs: { libelle: string; montant: number }[];
+  /**
+   * Grille tarifaire complète, dans l'ordre choisi par le médecin.
+   * `lieu` dit où la ligne s'applique : cabinet, domicile ou les deux.
+   */
+  tarifs: { libelle: string; montant: number; lieu: LieuConsultation | "tous" }[];
   note: number;
   nbAvis: number;
   /** Prochaine disponibilité affichée sur les cartes (pastille verte ou ambre) */
