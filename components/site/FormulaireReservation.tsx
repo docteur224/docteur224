@@ -276,30 +276,22 @@ export default function FormulaireReservation({
           <p className="mb-[14px] text-[12.5px] text-muted">
             Choisissez le soin souhaité{lieu === "domicile" ? " pour la visite à domicile" : ""}.
           </p>
-          <div className="grid gap-[10px] sm:grid-cols-2">
+          {/* Liste déroulante plutôt que des cartes : un praticien peut
+              déclarer beaucoup de soins, et une grille les ferait défiler
+              sur des écrans entiers. */}
+          <select
+            aria-label="Soin souhaité"
+            className={classeChamp}
+            value={soin?.libelle ?? ""}
+            onChange={(e) => setSoinChoisi(e.target.value)}
+          >
+            <option value="">Choisissez un soin…</option>
             {soins.map((option) => (
-              <button
-                key={option.libelle}
-                type="button"
-                aria-pressed={soin?.libelle === option.libelle}
-                onClick={() => setSoinChoisi(option.libelle)}
-                className={`flex items-center gap-[11px] rounded-[13px] border-[1.5px] p-3 text-left transition-colors ${
-                  soin?.libelle === option.libelle
-                    ? "border-teal bg-teal-soft"
-                    : "border-line bg-white"
-                }`}
-              >
-                <b className="min-w-0 flex-1 text-[13.5px]">{option.libelle}</b>
-                <span
-                  className={`h-[18px] w-[18px] flex-none rounded-full border-2 ${
-                    soin?.libelle === option.libelle
-                      ? "border-teal bg-teal shadow-[inset_0_0_0_3px_#fff]"
-                      : "border-line"
-                  }`}
-                />
-              </button>
+              <option key={option.libelle} value={option.libelle}>
+                {option.libelle}
+              </option>
             ))}
-          </div>
+          </select>
 
           {soin && (
             <div className="mt-[14px] rounded-xl border border-line bg-bg px-[13px] py-3">
