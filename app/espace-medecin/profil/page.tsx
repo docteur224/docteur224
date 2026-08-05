@@ -5,10 +5,33 @@ import MedecinShell from "@/components/medecin/MedecinShell";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import PhotoProfil from "@/components/pro/PhotoProfil";
 import GaleriePhotos from "@/components/pro/GaleriePhotos";
-import { formatGNF } from "@/lib/format";
+import GrilleTarifs from "@/components/pro/GrilleTarifs";
+import HorairesHebdo, {
+  JOURS_DEFAUT,
+  depuisPlages,
+  premiereErreurHoraires,
+  versPlages,
+  type JourEdition,
+} from "@/components/pro/HorairesHebdo";
+import ChampCommune from "@/components/site/ChampCommune";
+import ChampTelephoneGN from "@/components/site/ChampTelephoneGN";
 import { chargerEtablissementParId } from "@/lib/donnees";
+import { enregistrerHorairesHebdo } from "@/lib/inscription-pro";
+import { creerClientNavigateur } from "@/lib/supabase/client";
+import {
+  MESSAGE_TELEPHONE_GN,
+  chiffresTelephone,
+  telephoneGuineenValide,
+} from "@/lib/telephone";
+import {
+  estCoordonnees as sontDesCoordonnees,
+  formaterPosition,
+  lienCarte,
+  recupererPositionActuelle,
+} from "@/lib/geolocalisation";
 import type { Etablissement } from "@/types";
 import {
+  enregistrerIdentiteMedecin,
   enregistrerProfilMedecin,
   televerserDocumentValidation,
   useAssurancesMedecin,
@@ -17,11 +40,20 @@ import {
 } from "@/lib/pro";
 
 /*
- * Mon profil (médecin) — reproduit l'écran « med-profil » de la maquette web
- * (spec C.4.5) : identité, localisation (géolocalisation navigateur + repli
- * lien Google Maps), documents de validation privés (Storage + table
- * documents_validation), soins et actes, langues, assurances — tout est
- * écrit dans la table `medecins`.
+ * Mon profil (médecin) — spec C.4.5.
+ *
+ * Tout ce qui est saisi pendant le parcours d'inscription doit être
+ * corrigeable ici : c'est le même dossier, vu après coup. L'écran ne
+ * montrait jusqu'à présent qu'une fiche d'identité EN LECTURE SEULE
+ * (spécialité, expérience, téléphone, tarif, présentation) — un médecin
+ * qui changeait de cabinet ou de tarif n'avait aucun moyen de le dire,
+ * sinon en écrivant au support.
+ *
+ * Chaque champ s'enregistre à la sortie du champ (« au blur »), comme les
+ * listes de puces le faisaient déjà : c'est ce que promet le bandeau
+ * « Modifications enregistrées automatiquement ». Seule la grille horaire
+ * a un bouton, parce qu'un jour ouvert sans heures cohérentes ne doit pas
+ * partir en base à mi-saisie.
  */
 
 const LIBELLES_STATUT_DOC: Record<string, string> = {
@@ -42,6 +74,9 @@ const MEDECIN_VIDE = {
   specialite: "",
   etablissementId: "",
   ville: "",
+  commune: "",
+  quartier: "",
+  numeroOrdre: "",
   anneesExperience: 0,
   tarifConsultation: 0,
   telephoneSecretariat: "",
@@ -51,6 +86,21 @@ const MEDECIN_VIDE = {
   parcours: [] as { lieu: string; duree: string }[],
   langues: [] as string[],
 };
+
+/** Champs texte du dossier, tels qu'ils sont édités à l'écran. */
+interface Formulaire {
+  prenom: string;
+  nom: string;
+  civilite: string;
+  specialiteId: string;
+  numeroOrdre: string;
+  experience: string;
+  presentation: string;
+  villeId: string;
+  commune: string;
+  quartier: string;
+  telephoneSecretariat: string;
+}
 
 export default function ProfilMedecin() {
   const { medecin } = useContextePro();
@@ -65,6 +115,61 @@ export default function ProfilMedecin() {
   const { documents: docsBase, recharger: rechargerDocs } = useDocumentsValidation();
   const { referentiel, actives, basculer } = useAssurancesMedecin(medecin?.id);
 
+  /* ---------- Dossier éditable (chargé une fois, puis tenu en local) ---------- */
+  const [specialites, setSpecialites] = useState<{ id: string; nom: string }[]>([]);
+  const [villes, setVilles] = useState<{ id: string; nom: string }[]>([]);
+  const [formulaire, setFormulaire] = useState<Formulaire | null>(null);
+  const [jours, setJours] = useState<Record<number, JourEdition> | null>(null);
+  const [message, setMessage] = useState<{ texte: string; erreur: boolean } | null>(null);
+
+  useEffect(() => {
+    let actif = true;
+    (async () => {
+      const supabase = creerClientNavigateur();
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) return;
+      const [{ data: specs }, { data: vls }, { data: m }, { data: u }, { data: h }] =
+        await Promise.all([
+          supabase.from("specialites").select("id, nom").order("nom"),
+          supabase.from("villes").select("id, nom").order("nom"),
+          supabase
+            .from("medecins")
+            .select(
+              "civilite, specialite_id, ville_id, commune, quartier, numero_ordre, annees_experience, presentation, telephone_secretariat"
+            )
+            .eq("id", auth.user.id)
+            .maybeSingle(),
+          supabase.from("utilisateurs").select("nom, prenom").eq("id", auth.user.id).maybeSingle(),
+          supabase
+            .from("horaires_types")
+            .select("jour_semaine, heure_debut, heure_fin")
+            .eq("medecin_id", auth.user.id),
+        ]);
+      if (!actif) return;
+      setSpecialites(specs ?? []);
+      setVilles(vls ?? []);
+      setJours(h && h.length > 0 ? depuisPlages(h) : JOURS_DEFAUT);
+      if (m) {
+        setFormulaire({
+          prenom: u?.prenom ?? "",
+          nom: u?.nom ?? "",
+          civilite: m.civilite ?? "Dr",
+          specialiteId: m.specialite_id ?? "",
+          numeroOrdre: m.numero_ordre ?? "",
+          experience: m.annees_experience != null ? String(m.annees_experience) : "",
+          presentation: m.presentation ?? "",
+          villeId: m.ville_id ?? "",
+          commune: m.commune ?? "",
+          quartier: m.quartier ?? "",
+          telephoneSecretariat: chiffresTelephone(m.telephone_secretariat ?? ""),
+        });
+      }
+    })();
+    return () => {
+      actif = false;
+    };
+  }, []);
+
   // Surcharges locales (affichage immédiat) au-dessus du profil chargé
   const [soinsLocaux, setSoinsLocaux] = useState<string[] | null>(null);
   const [languesLocales, setLanguesLocales] = useState<string[] | null>(null);
@@ -72,18 +177,19 @@ export default function ProfilMedecin() {
   const [parcoursLocal, setParcoursLocal] = useState<{ lieu: string; duree: string }[] | null>(null);
   const [genreLocal, setGenreLocal] = useState<string | null>(null);
   const [lienMapsLocal, setLienMapsLocal] = useState<string | null>(null);
+  const [precision, setPrecision] = useState<number | null>(null);
   const [geolocEnCours, setGeolocEnCours] = useState(false);
   const [erreurGeoloc, setErreurGeoloc] = useState("");
   const [erreurDoc, setErreurDoc] = useState("");
+  const [horairesEnCours, setHorairesEnCours] = useState(false);
 
   const localisation = lienMapsLocal ?? (medecin as { localisation?: string } | null)?.localisation ?? "";
-  const estCoordonnees = /^-?\d+\.\d+,\s*-?\d+\.\d+$/.test(localisation.trim());
+  const estCoordonnees = sontDesCoordonnees(localisation);
   const profil = {
     soins: soinsLocaux ?? medecinConnecte.soinsEtActes,
     langues: languesLocales ?? medecinConnecte.langues,
     diplomes: diplomesLocaux ?? medecinConnecte.diplomes,
     parcours: parcoursLocal ?? medecinConnecte.parcours,
-    lienMaps: estCoordonnees ? "" : localisation,
     positionTexte: estCoordonnees ? localisation : "",
     documents: docsBase.map((d) => ({
       nom: d.fichier.split("/").pop() ?? d.type,
@@ -93,28 +199,74 @@ export default function ProfilMedecin() {
   };
   const ASSURANCES_REFERENCEES = referentiel.map((a) => a.libelle);
 
-  function recupererPosition() {
-    setErreurGeoloc("");
-    if (!navigator.geolocation) {
-      setErreurGeoloc("Géolocalisation non disponible — collez un lien Google Maps ci-dessous.");
-      return;
-    }
-    setGeolocEnCours(true);
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const lat = position.coords.latitude.toFixed(5);
-        const lon = position.coords.longitude.toFixed(5);
-        setLienMapsLocal(`${lat}, ${lon}`);
-        await enregistrerProfilMedecin({ lienMaps: `${lat}, ${lon}` });
-        setGeolocEnCours(false);
-      },
-      () => {
-        setErreurGeoloc(
-          "Autorisation refusée ou indisponible — collez un lien Google Maps ci-dessous."
+  function signaler(res: { erreur?: string }, succes = "Enregistré ✓") {
+    setMessage(res.erreur ? { texte: res.erreur, erreur: true } : { texte: succes, erreur: false });
+  }
+
+  function majFormulaire(maj: Partial<Formulaire>) {
+    setFormulaire((f) => (f ? { ...f, ...maj } : f));
+  }
+
+  /* ---------- Enregistrements ---------- */
+
+  async function enregistrerChamp(champ: keyof Formulaire, valeur: string) {
+    switch (champ) {
+      case "prenom":
+      case "nom":
+      case "civilite":
+        return signaler(await enregistrerIdentiteMedecin({ [champ]: valeur.trim() }));
+      case "specialiteId":
+        return signaler(await enregistrerProfilMedecin({ specialiteId: valeur }));
+      case "villeId":
+        return signaler(await enregistrerProfilMedecin({ villeId: valeur }));
+      case "commune":
+        return signaler(await enregistrerProfilMedecin({ commune: valeur.trim() }));
+      case "quartier":
+        return signaler(await enregistrerProfilMedecin({ quartier: valeur.trim() }));
+      case "numeroOrdre":
+        return signaler(await enregistrerProfilMedecin({ numeroOrdre: valeur.trim() }));
+      case "presentation":
+        return signaler(await enregistrerProfilMedecin({ presentation: valeur }));
+      case "experience":
+        return signaler(
+          await enregistrerProfilMedecin({ anneesExperience: valeur ? Number(valeur) : null })
         );
-        setGeolocEnCours(false);
+      case "telephoneSecretariat": {
+        if (valeur && !telephoneGuineenValide(valeur))
+          return setMessage({ texte: MESSAGE_TELEPHONE_GN, erreur: true });
+        return signaler(
+          await enregistrerProfilMedecin({
+            telephoneSecretariat: valeur ? `+224${chiffresTelephone(valeur)}` : "",
+          })
+        );
       }
-    );
+    }
+  }
+
+  async function enregistrerHoraires() {
+    if (!jours || horairesEnCours) return;
+    const probleme = premiereErreurHoraires(jours);
+    if (probleme) return setMessage({ texte: probleme, erreur: true });
+    setHorairesEnCours(true);
+    const res = await enregistrerHorairesHebdo(versPlages(jours));
+    setHorairesEnCours(false);
+    signaler(res, "Horaires enregistrés ✓");
+  }
+
+  async function recupererPosition() {
+    setErreurGeoloc("");
+    setGeolocEnCours(true);
+    const { position, erreur } = await recupererPositionActuelle();
+    if (!position) {
+      setGeolocEnCours(false);
+      setPrecision(null);
+      return setErreurGeoloc(erreur ?? "Localisation impossible pour le moment.");
+    }
+    const texte = formaterPosition(position);
+    setLienMapsLocal(texte);
+    setPrecision(position.precision);
+    signaler(await enregistrerProfilMedecin({ lienMaps: texte }), "Position enregistrée ✓");
+    setGeolocEnCours(false);
   }
 
   async function ajouterFichier(fichiers: FileList | null) {
@@ -131,10 +283,21 @@ export default function ProfilMedecin() {
     const nouvelle = [...profil[cle], valeur];
     if (cle === "soins") {
       setSoinsLocaux(nouvelle);
-      await enregistrerProfilMedecin({ soins: nouvelle });
+      signaler(await enregistrerProfilMedecin({ soins: nouvelle }));
     } else {
       setLanguesLocales(nouvelle);
-      await enregistrerProfilMedecin({ langues: nouvelle });
+      signaler(await enregistrerProfilMedecin({ langues: nouvelle }));
+    }
+  }
+
+  async function retirerElement(cle: "soins" | "langues", valeur: string) {
+    const nouvelle = profil[cle].filter((x) => x !== valeur);
+    if (cle === "soins") {
+      setSoinsLocaux(nouvelle);
+      signaler(await enregistrerProfilMedecin({ soins: nouvelle }));
+    } else {
+      setLanguesLocales(nouvelle);
+      signaler(await enregistrerProfilMedecin({ langues: nouvelle }));
     }
   }
 
@@ -150,13 +313,13 @@ export default function ProfilMedecin() {
     const lieu = window.prompt("Établissement et année (ex. Université de Conakry — 2014) :")?.trim() ?? "";
     const nouvelle = [...profil.diplomes, { titre, lieu }];
     setDiplomesLocaux(nouvelle);
-    await enregistrerProfilMedecin({ diplomes: nouvelle });
+    signaler(await enregistrerProfilMedecin({ diplomes: nouvelle }));
   }
 
   async function retirerDiplome(index: number) {
     const nouvelle = profil.diplomes.filter((_, i) => i !== index);
     setDiplomesLocaux(nouvelle);
-    await enregistrerProfilMedecin({ diplomes: nouvelle });
+    signaler(await enregistrerProfilMedecin({ diplomes: nouvelle }));
   }
 
   async function ajouterEtape() {
@@ -165,13 +328,13 @@ export default function ProfilMedecin() {
     const duree = window.prompt("Période (ex. 2018 – 2024) :")?.trim() ?? "";
     const nouvelle = [...profil.parcours, { lieu, duree }];
     setParcoursLocal(nouvelle);
-    await enregistrerProfilMedecin({ parcours: nouvelle });
+    signaler(await enregistrerProfilMedecin({ parcours: nouvelle }));
   }
 
   async function retirerEtape(index: number) {
     const nouvelle = profil.parcours.filter((_, i) => i !== index);
     setParcoursLocal(nouvelle);
-    await enregistrerProfilMedecin({ parcours: nouvelle });
+    signaler(await enregistrerProfilMedecin({ parcours: nouvelle }));
   }
 
   async function basculerAssurance(nom: string) {
@@ -180,16 +343,298 @@ export default function ProfilMedecin() {
     await basculer(assurance.id, !actives.has(assurance.id));
   }
 
-  async function changerLienMaps(valeur: string) {
-    setLienMapsLocal(valeur);
-  }
-
   async function sauverLienMaps() {
-    await enregistrerProfilMedecin({ lienMaps: localisation });
+    signaler(await enregistrerProfilMedecin({ lienMaps: localisation }));
   }
 
+  const champ =
+    "w-full rounded-[11px] border border-line bg-white px-[13px] py-3 text-[13.5px] outline-none focus:border-teal";
   const champStatique = "rounded-[11px] border border-line bg-white px-[13px] py-3 text-[13.5px]";
   const labelChamp = "mb-1.5 block text-xs font-bold text-muted";
+
+  /* ---------- Blocs partagés mobile / web ---------- */
+
+  const bandeauMessage = message && (
+    <p
+      role="status"
+      className={`mb-3 rounded-lg px-3 py-2 text-[12.5px] font-semibold ${
+        message.erreur ? "bg-red-soft text-red" : "bg-green-soft text-green"
+      }`}
+    >
+      {message.texte}
+    </p>
+  );
+
+  /*
+   * L'écran rend deux fois les mêmes champs (bloc mobile + bloc web, l'un
+   * masqué par CSS). Les identifiants doivent donc être préfixés : deux
+   * `id` identiques dans le document rendraient chaque `label for` ambigu
+   * — celui du bloc web désignerait l'input mobile, invisible.
+   */
+  const champsIdentite = (prefixe: string) => !formulaire ? (
+    <p className="text-[13px] text-muted">Chargement…</p>
+  ) : (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <div>
+        <label className={labelChamp} htmlFor={`${prefixe}-prenom`}>
+          Prénom
+        </label>
+        <input
+          id={`${prefixe}-prenom`}
+          className={champ}
+          value={formulaire.prenom}
+          onChange={(e) => majFormulaire({ prenom: e.target.value })}
+          onBlur={(e) => enregistrerChamp("prenom", e.target.value)}
+        />
+      </div>
+      <div>
+        <label className={labelChamp} htmlFor={`${prefixe}-nom`}>
+          Nom
+        </label>
+        <input
+          id={`${prefixe}-nom`}
+          className={champ}
+          value={formulaire.nom}
+          onChange={(e) => majFormulaire({ nom: e.target.value })}
+          onBlur={(e) => enregistrerChamp("nom", e.target.value)}
+        />
+      </div>
+      <div>
+        <label className={labelChamp} htmlFor={`${prefixe}-civilite`}>
+          Civilité
+        </label>
+        <select
+          id={`${prefixe}-civilite`}
+          className={champ}
+          value={formulaire.civilite}
+          onChange={(e) => {
+            majFormulaire({ civilite: e.target.value });
+            enregistrerChamp("civilite", e.target.value);
+          }}
+        >
+          <option value="Dr">Dr</option>
+          <option value="Pr">Pr</option>
+        </select>
+      </div>
+      <div>
+        <label className={labelChamp} htmlFor={`${prefixe}-specialite`}>
+          Spécialité
+        </label>
+        <select
+          id={`${prefixe}-specialite`}
+          className={champ}
+          value={formulaire.specialiteId}
+          onChange={(e) => {
+            majFormulaire({ specialiteId: e.target.value });
+            enregistrerChamp("specialiteId", e.target.value);
+          }}
+        >
+          <option value="">— Choisir —</option>
+          {specialites.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.nom}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className={labelChamp} htmlFor={`${prefixe}-ordre`}>
+          Numéro d’ordre médical
+        </label>
+        <input
+          id={`${prefixe}-ordre`}
+          className={champ}
+          placeholder="Ex. ONMG-2014-0873"
+          value={formulaire.numeroOrdre}
+          onChange={(e) => majFormulaire({ numeroOrdre: e.target.value })}
+          onBlur={(e) => enregistrerChamp("numeroOrdre", e.target.value)}
+        />
+      </div>
+      <div>
+        <label className={labelChamp} htmlFor={`${prefixe}-experience`}>
+          Années d’expérience
+        </label>
+        <input
+          id={`${prefixe}-experience`}
+          className={champ}
+          inputMode="numeric"
+          value={formulaire.experience}
+          onChange={(e) => majFormulaire({ experience: e.target.value.replace(/\D/g, "") })}
+          onBlur={(e) => enregistrerChamp("experience", e.target.value)}
+        />
+      </div>
+      <div className="sm:col-span-2">
+        <label className={labelChamp} htmlFor={`${prefixe}-presentation`}>
+          Présentation (« À propos »)
+        </label>
+        <textarea
+          id={`${prefixe}-presentation`}
+          className={`${champ} min-h-[90px]`}
+          placeholder="Présentez votre pratique en quelques phrases…"
+          value={formulaire.presentation}
+          onChange={(e) => majFormulaire({ presentation: e.target.value })}
+          onBlur={(e) => enregistrerChamp("presentation", e.target.value)}
+        />
+      </div>
+    </div>
+  );
+
+  const champsLieu = (prefixe: string) => !formulaire ? (
+    <p className="text-[13px] text-muted">Chargement…</p>
+  ) : (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <div>
+        <label className={labelChamp}>Commune</label>
+        <ChampCommune
+          villeId={formulaire.villeId || undefined}
+          valeur={formulaire.commune}
+          onChange={(v) => {
+            majFormulaire({ commune: v });
+            enregistrerChamp("commune", v);
+          }}
+        />
+      </div>
+      <div>
+        <label className={labelChamp} htmlFor={`${prefixe}-ville`}>
+          Ville
+        </label>
+        <select
+          id={`${prefixe}-ville`}
+          className={champ}
+          value={formulaire.villeId}
+          onChange={(e) => {
+            majFormulaire({ villeId: e.target.value });
+            enregistrerChamp("villeId", e.target.value);
+          }}
+        >
+          <option value="">— Choisir —</option>
+          {villes.map((v) => (
+            <option key={v.id} value={v.id}>
+              {v.nom}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className={labelChamp} htmlFor={`${prefixe}-quartier`}>
+          Quartier
+        </label>
+        <input
+          id={`${prefixe}-quartier`}
+          className={champ}
+          placeholder="Ex. Kipé, Nongo…"
+          value={formulaire.quartier}
+          onChange={(e) => majFormulaire({ quartier: e.target.value })}
+          onBlur={(e) => enregistrerChamp("quartier", e.target.value)}
+        />
+      </div>
+      <div>
+        <label className={labelChamp}>Téléphone du secrétariat</label>
+        <ChampTelephoneGN
+          valeur={formulaire.telephoneSecretariat}
+          ariaLabel="Téléphone du secrétariat"
+          onChange={(v) => majFormulaire({ telephoneSecretariat: v })}
+        />
+        <button
+          type="button"
+          onClick={() => enregistrerChamp("telephoneSecretariat", formulaire.telephoneSecretariat)}
+          className="-mt-1 rounded-[9px] border-[1.5px] border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-blue hover:border-teal"
+        >
+          Enregistrer le numéro
+        </button>
+      </div>
+      <div className="sm:col-span-2">
+        <label className={labelChamp}>Établissement de rattachement</label>
+        <div className={champStatique}>
+          {etab?.nom ?? "Aucun — vous exercez en cabinet indépendant"}
+        </div>
+      </div>
+    </div>
+  );
+
+  const carteHoraires = (
+    <>
+      <p className="mb-3 text-[12.5px] text-muted">
+        Ils déterminent les créneaux réservables et s’affichent sur votre fiche dans « Lieu de
+        consultation ». Les fermetures ponctuelles se gèrent dans « Mes disponibilités ».
+      </p>
+      {jours ? (
+        <>
+          <HorairesHebdo
+            jours={jours}
+            onChange={(jour, maj) =>
+              setJours((j) => (j ? { ...j, [jour]: { ...j[jour], ...maj } } : j))
+            }
+          />
+          <button
+            type="button"
+            onClick={enregistrerHoraires}
+            disabled={horairesEnCours}
+            className="mt-3 rounded-[11px] bg-teal px-5 py-3 text-[13px] font-extrabold text-white disabled:opacity-60"
+          >
+            {horairesEnCours ? "Enregistrement…" : "Enregistrer les horaires"}
+          </button>
+        </>
+      ) : (
+        <p className="text-[13px] text-muted">Chargement…</p>
+      )}
+    </>
+  );
+
+  const carteLocalisation = (
+    <>
+      <p className="mb-3 text-[12.5px] text-muted">
+        Récupérez votre position pendant que vous êtes dans votre établissement, ou collez un lien
+        Google Maps.
+      </p>
+      <button
+        type="button"
+        onClick={recupererPosition}
+        disabled={geolocEnCours}
+        className="inline-flex items-center gap-2 rounded-[11px] border border-[#CDE6F2] bg-teal-soft px-[15px] py-[11px] text-[13px] font-extrabold text-blue disabled:opacity-60"
+      >
+        🎯 {geolocEnCours ? "Localisation en cours…" : "Récupérer ma position actuelle"}
+      </button>
+      <p className="mt-[10px] text-[12.5px] text-muted">
+        {erreurGeoloc ? (
+          <span className="font-semibold text-red">{erreurGeoloc}</span>
+        ) : profil.positionTexte ? (
+          <>
+            📍 Position enregistrée : <b className="text-ink">{profil.positionTexte}</b>
+            {precision !== null && ` (précision ~${precision} m)`} ·{" "}
+            <a
+              href={lienCarte(profil.positionTexte)}
+              target="_blank"
+              rel="noopener"
+              className="font-bold text-teal"
+            >
+              Vérifier sur la carte
+            </a>
+          </>
+        ) : (
+          "Aucune position enregistrée pour le moment."
+        )}
+      </p>
+      <div className="mt-[14px] grid gap-4">
+        <div>
+          <label className={labelChamp}>Lien Google Maps (optionnel)</label>
+          <input
+            className={champ}
+            value={estCoordonnees ? "" : localisation}
+            onChange={(e) => setLienMapsLocal(e.target.value)}
+            onBlur={sauverLienMaps}
+          />
+        </div>
+      </div>
+      <div className="mt-[14px] flex items-start gap-[9px] rounded-[11px] bg-teal-soft px-[13px] py-[11px] text-[12.5px] font-semibold leading-relaxed text-blue">
+        <span aria-hidden>ℹ️</span>
+        <div>
+          La position alimente le bouton « Voir l’itinéraire » côté patient : il vise vos
+          coordonnées exactes dès qu’elles sont relevées.
+        </div>
+      </div>
+    </>
+  );
 
   return (
     <MedecinShell>
@@ -203,6 +648,7 @@ export default function ProfilMedecin() {
               <small>{medecinConnecte.specialite}</small>
             </div>
           </div>
+          {bandeauMessage}
           <div style={{ marginBottom: 14 }}>
             <PhotoProfil
               photoUrl={medecinConnecte.photoUrl}
@@ -211,80 +657,34 @@ export default function ProfilMedecin() {
               taille={64}
             />
           </div>
-          <div className="fldm">
-            <label>Spécialité</label>
-            <div className="v">{medecinConnecte.specialite}</div>
-          </div>
-          <div className="fldm">
-            <label>Établissement</label>
-            <div className="v">{etab?.nom}</div>
-          </div>
-          <div className="fldm">
-            <label>Adresse du cabinet</label>
-            <div className="v">
-              Quartier {etab?.quartier} · {etab?.ville}
-            </div>
-          </div>
-          <div className="fldm">
-            <label>Téléphone</label>
-            <div className="v">{medecinConnecte.telephoneSecretariat}</div>
-          </div>
-          <div className="fldm">
-            <label>Tarif de consultation</label>
-            <div className="v">{formatGNF(medecinConnecte.tarifConsultation)}</div>
-          </div>
-          <div className="fldm">
-            <label>Présentation</label>
-            <div className="v">{medecinConnecte.aPropos}</div>
+
+          <div className="card2">
+            <h4>👤 Identité et exercice</h4>
+            {champsIdentite("m")}
           </div>
 
           <div className="card2">
-            <h4>📍 Localisation du cabinet</h4>
+            <h4>💰 Tarifs</h4>
             <p className="muted" style={{ fontSize: 11.5, margin: "-4px 0 11px", lineHeight: 1.5 }}>
-              Récupérez votre position depuis votre établissement, ou collez un lien Google Maps.
+              Affichés sur votre fiche juste après « À propos ». Le premier sert de tarif de
+              référence dans les résultats de recherche.
             </p>
-            <button type="button" className="posbtn" onClick={recupererPosition} disabled={geolocEnCours}>
-              🎯 {geolocEnCours ? "Localisation en cours…" : "Récupérer ma position actuelle"}
-            </button>
-            <div className="poscoord">
-              {erreurGeoloc ||
-                (profil.positionTexte ? (
-                  <>
-                    📍 Position enregistrée : <b style={{ color: "var(--ink)" }}>{profil.positionTexte}</b> ·{" "}
-                    <a
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(profil.positionTexte)}`}
-                      target="_blank"
-                      rel="noopener"
-                      style={{ color: "var(--teal)", fontWeight: 700 }}
-                    >
-                      Vérifier sur la carte
-                    </a>
-                  </>
-                ) : (
-                  "Aucune position enregistrée pour le moment."
-                ))}
-            </div>
-            <div className="fldm" style={{ marginTop: 12 }}>
-              <label>Lien Google Maps (optionnel)</label>
-              <input
-                className="v"
-                value={estCoordonnees ? "" : localisation}
-                onChange={(e) => changerLienMaps(e.target.value)}
-                onBlur={sauverLienMaps}
-              />
-            </div>
-            <div className="fldm">
-              <label>Adresse affichée aux patients</label>
-              <div className="v">
-                Quartier {etab?.quartier} · {etab?.ville}
-              </div>
-            </div>
-            <div className="privnote info">
-              <span aria-hidden>ℹ️</span>
-              <div>
-                La position alimente le bouton « Voir l&apos;itinéraire » côté patient.
-              </div>
-            </div>
+            <GrilleTarifs medecinId={medecinConnecte.id} mobile />
+          </div>
+
+          <div className="card2">
+            <h4>📍 Adresse du cabinet</h4>
+            {champsLieu("m")}
+          </div>
+
+          <div className="card2">
+            <h4>🕐 Horaires de consultation</h4>
+            {carteHoraires}
+          </div>
+
+          <div className="card2">
+            <h4>🗺️ Localisation GPS</h4>
+            {carteLocalisation}
           </div>
 
           <div className="card2">
@@ -309,6 +709,11 @@ export default function ProfilMedecin() {
                 }}
               />
             </label>
+            {erreurDoc && (
+              <p className="text-[12px] font-semibold text-red" style={{ marginTop: 6 }}>
+                {erreurDoc}
+              </p>
+            )}
             {profil.documents.map((document, i) => (
               <div key={`${document.nom}-${i}`} className="docrow">
                 <span aria-hidden>📄</span>
@@ -338,9 +743,15 @@ export default function ProfilMedecin() {
             <h4>🩺 Soins et actes</h4>
             <div className="chips">
               {profil.soins.map((soin) => (
-                <span key={soin} className="chip grey">
-                  {soin}
-                </span>
+                <button
+                  key={soin}
+                  type="button"
+                  className="chip grey"
+                  title="Retirer"
+                  onClick={() => retirerElement("soins", soin)}
+                >
+                  {soin} ✕
+                </button>
               ))}
               <button
                 type="button"
@@ -414,9 +825,15 @@ export default function ProfilMedecin() {
             <h4>🗣️ Langues parlées</h4>
             <div className="chips">
               {profil.langues.map((langue) => (
-                <span key={langue} className="chip grey">
-                  {langue}
-                </span>
+                <button
+                  key={langue}
+                  type="button"
+                  className="chip grey"
+                  title="Retirer"
+                  onClick={() => retirerElement("langues", langue)}
+                >
+                  {langue} ✕
+                </button>
               ))}
               <button type="button" className="chip" onClick={() => ajouterElement("langues", "Langue à ajouter :")}>
                 + Ajouter
@@ -443,7 +860,7 @@ export default function ProfilMedecin() {
                     className={`chip${actif ? "" : " grey"}`}
                     onClick={async () => {
                       setGenreLocal(o.valeur);
-                      await enregistrerProfilMedecin({ genre: o.valeur });
+                      signaler(await enregistrerProfilMedecin({ genre: o.valeur }));
                     }}
                   >
                     {o.label}
@@ -486,379 +903,316 @@ export default function ProfilMedecin() {
         </div>
       </div>
 
-      {/* ===== Version web (inchangée) ===== */}
+      {/* ===== Version web ===== */}
       <div className="hidden md:block">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Mon profil</h2>
-          <small className="text-[13px] text-muted">Informations affichées aux patients</small>
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Mon profil</h2>
+            <small className="text-[13px] text-muted">
+              Informations affichées aux patients — tout ce que vous avez saisi à l’inscription se
+              corrige ici.
+            </small>
+          </div>
+          <span className="text-[12.5px] font-bold text-green">
+            ✓ Modifications enregistrées automatiquement
+          </span>
         </div>
-        <span className="text-[12.5px] font-bold text-green">
-          ✓ Modifications enregistrées automatiquement
-        </span>
-      </div>
 
-      {/* Identité */}
-      <div className="mb-4 rounded-2xl border border-line bg-white p-5">
-        <div className="mb-5">
-          <b className="block text-base font-extrabold">{`${medecinConnecte.civilite} ${medecinConnecte.prenom} ${medecinConnecte.nom}`}</b>
-          <div className="mb-3 text-[12.5px] text-muted">
-            {medecinConnecte.specialite} · Profil vérifié ✔
-          </div>
-          <PhotoProfil
-            photoUrl={medecinConnecte.photoUrl}
-            initiales={medecinConnecte.initiales}
-            gradient={medecinConnecte.gradient}
-          />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <label className={labelChamp}>Prénom</label>
-            <div className={champStatique}>{medecinConnecte.prenom}</div>
-          </div>
-          <div>
-            <label className={labelChamp}>Nom</label>
-            <div className={champStatique}>{medecinConnecte.nom}</div>
-          </div>
-          <div>
-            <label className={labelChamp}>Spécialité</label>
-            <div className={champStatique}>{medecinConnecte.specialite}</div>
-          </div>
-          <div>
-            <label className={labelChamp}>Années d’expérience</label>
-            <div className={champStatique}>{medecinConnecte.anneesExperience} ans</div>
-          </div>
-          <div>
-            <label className={labelChamp}>Établissement</label>
-            <div className={champStatique}>{etab?.nom}</div>
-          </div>
-          <div>
-            <label className={labelChamp}>Ville</label>
-            <div className={champStatique}>{medecinConnecte.ville}</div>
-          </div>
-          <div className="sm:col-span-2">
-            <label className={labelChamp}>Adresse du cabinet</label>
-            <div className={champStatique}>
-              Quartier {etab?.quartier} · {etab?.ville}
-            </div>
-          </div>
-          <div>
-            <label className={labelChamp}>Téléphone</label>
-            <div className={champStatique}>{medecinConnecte.telephoneSecretariat}</div>
-          </div>
-          <div>
-            <label className={labelChamp}>Tarif de consultation</label>
-            <div className={champStatique}>{formatGNF(medecinConnecte.tarifConsultation)}</div>
-          </div>
-          <div className="sm:col-span-2">
-            <label className={labelChamp}>Présentation</label>
-            <div className={`${champStatique} min-h-[60px]`}>{medecinConnecte.aPropos}</div>
-          </div>
-        </div>
-      </div>
+        {bandeauMessage}
 
-      {/* Localisation */}
-      <div className="mb-4 rounded-2xl border border-line bg-white p-5">
-        <h3 className="mb-2 text-[15px] font-extrabold">📍 Localisation du cabinet</h3>
-        <p className="mb-3 text-[12.5px] text-muted">
-          Récupérez votre position pendant que vous êtes dans votre établissement, ou collez un
-          lien Google Maps.
-        </p>
-        <button
-          type="button"
-          onClick={recupererPosition}
-          disabled={geolocEnCours}
-          className="inline-flex items-center gap-2 rounded-[11px] border border-[#CDE6F2] bg-teal-soft px-[15px] py-[11px] text-[13px] font-extrabold text-blue disabled:opacity-60"
-        >
-          🎯 {geolocEnCours ? "Localisation en cours…" : "Récupérer ma position actuelle"}
-        </button>
-        <p className="mt-[10px] text-[12.5px] text-muted">
-          {erreurGeoloc ||
-            (profil.positionTexte ? (
-              <>
-                📍 Position enregistrée : <b className="text-ink">{profil.positionTexte}</b> ·{" "}
-                <a
-                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(profil.positionTexte)}`}
-                  target="_blank"
-                  rel="noopener"
-                  className="font-bold text-teal"
-                >
-                  Vérifier sur la carte
-                </a>
-              </>
-            ) : (
-              "Aucune position enregistrée pour le moment."
-            ))}
-        </p>
-        <div className="mt-[14px] grid gap-4">
-          <div>
-            <label className={labelChamp}>Lien Google Maps (optionnel)</label>
-            <input
-              value={estCoordonnees ? "" : localisation}
-              onChange={(e) => changerLienMaps(e.target.value)}
-                onBlur={sauverLienMaps}
-              className="w-full rounded-[11px] border border-line bg-white px-[13px] py-3 text-[13.5px] outline-none focus:border-teal"
+        {/* Identité */}
+        <div className="mb-4 rounded-2xl border border-line bg-white p-5">
+          <div className="mb-5">
+            <b className="block text-base font-extrabold">{`${medecinConnecte.civilite} ${medecinConnecte.prenom} ${medecinConnecte.nom}`}</b>
+            <div className="mb-3 text-[12.5px] text-muted">{medecinConnecte.specialite}</div>
+            <PhotoProfil
+              photoUrl={medecinConnecte.photoUrl}
+              initiales={medecinConnecte.initiales}
+              gradient={medecinConnecte.gradient}
             />
           </div>
-          <div>
-            <label className={labelChamp}>Adresse affichée aux patients</label>
-            <div className={champStatique}>
-              Quartier {etab?.quartier} · {etab?.ville}
-            </div>
-          </div>
+          {champsIdentite("w")}
         </div>
-        <div className="mt-[14px] flex items-start gap-[9px] rounded-[11px] bg-teal-soft px-[13px] py-[11px] text-[12.5px] font-semibold leading-relaxed text-blue">
-          <span aria-hidden>ℹ️</span>
-          <div>
-            La position alimente le bouton « Voir l’itinéraire » côté patient. Vous pourrez
-            ajuster le repère sur une vraie carte quand la cartographie sera branchée.
-          </div>
-        </div>
-      </div>
 
-      {/* Documents de validation */}
-      <div className="mb-4 rounded-2xl border border-line bg-white p-5">
-        <h3 className="mb-3 text-[15px] font-extrabold">📄 Documents de validation</h3>
-        <label className="flex cursor-pointer items-center gap-[14px] rounded-[14px] border-[1.5px] border-dashed border-[#BCD3E0] bg-[#F6FAFC] p-4">
-          <span className="text-2xl" aria-hidden>
-            ⬆️
-          </span>
-          <span className="flex-1">
-            <b className="block text-[13.5px]">Charger un document</b>
-            <span className="text-xs text-muted">
-              Autorisation d’exercice, diplôme, carte de l’ordre, pièce d’identité — PDF ou image.
-            </span>
-          </span>
-          <span className="rounded-[9px] border-[1.5px] border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-blue">
-            Parcourir
-          </span>
-          <input
-            type="file"
-            accept=".pdf,image/*"
-            className="hidden"
-            onChange={(e) => {
-              ajouterFichier(e.target.files);
-              e.target.value = "";
-            }}
-          />
-        </label>
-        {profil.documents.map((document, i) => (
-          <div
-            key={`${document.nom}-${i}`}
-            className="mt-[10px] flex items-center gap-[11px] rounded-[11px] border border-line px-[13px] py-[11px] text-[13px]"
-          >
-            <span aria-hidden>📄</span>
-            <span className="font-bold">{document.nom}</span>
-            <span
-              className={`ml-auto flex-none rounded-full px-[10px] py-1 text-[11px] font-extrabold ${
-                document.statut === "Validé"
-                  ? "bg-green-soft text-green"
-                  : "bg-amber-soft text-amber"
-              }`}
-            >
-              {document.statut}
-            </span>
-          </div>
-        ))}
-        <div className="mt-[14px] flex items-start gap-[9px] rounded-[11px] bg-amber-soft px-[13px] py-[11px] text-[12.5px] font-semibold leading-relaxed text-[#7A5320]">
-          <span aria-hidden>🔒</span>
-          <div>
-            <b>Privé.</b> Ces documents sont visibles uniquement par l’administrateur lors de la
-            validation. Ils ne sont jamais affichés aux patients. 
-          </div>
+        {/* Tarifs */}
+        <div className="mb-4 rounded-2xl border border-line bg-white p-5">
+          <h3 className="mb-1 text-[15px] font-extrabold">💰 Tarifs</h3>
+          <p className="mb-3 text-[12.5px] text-muted">
+            Affichés sur votre fiche juste après « À propos ». La première ligne sert de tarif de
+            référence : c’est elle qui apparaît sur les cartes de résultat et dans le panneau de
+            réservation.
+          </p>
+          <GrilleTarifs medecinId={medecinConnecte.id} />
         </div>
-      </div>
 
-      {/* Soins et actes */}
-      <div className="mb-4 rounded-2xl border border-line bg-white p-5">
-        <h3 className="mb-3 text-[15px] font-extrabold">🩺 Soins et actes proposés</h3>
-        <div className="flex flex-wrap gap-2">
-          {profil.soins.map((soin) => (
-            <span
-              key={soin}
-              className="rounded-full border border-[#DCE4EA] bg-[#EEF2F5] px-[14px] py-2 text-xs font-bold text-[#3A4A55]"
-            >
-              {soin}
-            </span>
-          ))}
-          <button
-            type="button"
-            onClick={() => ajouterElement("soins", "Nom du soin ou de l'acte à ajouter :")}
-            className="rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
-          >
-            + Ajouter
-          </button>
+        {/* Adresse */}
+        <div className="mb-4 rounded-2xl border border-line bg-white p-5">
+          <h3 className="mb-3 text-[15px] font-extrabold">📍 Adresse du cabinet</h3>
+          {champsLieu("w")}
         </div>
-      </div>
 
-      {/* Diplôme et formation */}
-      <div className="mb-4 rounded-2xl border border-line bg-white p-5">
-        <h3 className="mb-3 text-[15px] font-extrabold">🎓 Diplôme et formation</h3>
-        <div className="mb-3 flex flex-col gap-2">
-          {profil.diplomes.length === 0 && (
-            <p className="text-[12.5px] text-muted">
-              Aucun diplôme renseigné — il apparaîtra sur votre fiche publique.
-            </p>
-          )}
-          {profil.diplomes.map((diplome, index) => (
-            <div
-              key={`${diplome.titre}-${index}`}
-              className="flex items-center gap-[11px] rounded-[11px] border border-line px-[13px] py-[11px] text-[13px]"
-            >
-              <span aria-hidden>🎓</span>
-              <span className="min-w-0 flex-1 font-bold">
-                {diplome.titre}
-                <small className="block text-xs font-semibold text-muted">{diplome.lieu}</small>
+        {/* Horaires */}
+        <div className="mb-4 rounded-2xl border border-line bg-white p-5">
+          <h3 className="mb-1 text-[15px] font-extrabold">🕐 Horaires de consultation</h3>
+          {carteHoraires}
+        </div>
+
+        {/* Localisation */}
+        <div className="mb-4 rounded-2xl border border-line bg-white p-5">
+          <h3 className="mb-2 text-[15px] font-extrabold">🗺️ Localisation GPS du cabinet</h3>
+          {carteLocalisation}
+        </div>
+
+        {/* Documents de validation */}
+        <div className="mb-4 rounded-2xl border border-line bg-white p-5">
+          <h3 className="mb-3 text-[15px] font-extrabold">📄 Documents de validation</h3>
+          <label className="flex cursor-pointer items-center gap-[14px] rounded-[14px] border-[1.5px] border-dashed border-[#BCD3E0] bg-[#F6FAFC] p-4">
+            <span className="text-2xl" aria-hidden>
+              ⬆️
+            </span>
+            <span className="flex-1">
+              <b className="block text-[13.5px]">Charger un document</b>
+              <span className="text-xs text-muted">
+                Autorisation d’exercice, diplôme, carte de l’ordre, pièce d’identité — PDF ou image.
               </span>
-              <button
-                type="button"
-                onClick={() => retirerDiplome(index)}
-                aria-label={`Retirer le diplôme ${diplome.titre}`}
-                className="text-xs font-bold text-red hover:underline"
-              >
-                Retirer
-              </button>
-            </div>
-          ))}
-        </div>
-        <button
-          type="button"
-          onClick={ajouterDiplome}
-          className="rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
-        >
-          + Ajouter un diplôme
-        </button>
-      </div>
-
-      {/* Parcours professionnel */}
-      <div className="mb-4 rounded-2xl border border-line bg-white p-5">
-        <h3 className="mb-3 text-[15px] font-extrabold">💼 Parcours professionnel</h3>
-        <div className="mb-3 flex flex-col gap-2">
-          {profil.parcours.length === 0 && (
-            <p className="text-[12.5px] text-muted">
-              Aucune étape renseignée — elle apparaîtra sur votre fiche publique.
-            </p>
-          )}
-          {profil.parcours.map((etape, index) => (
-            <div
-              key={`${etape.lieu}-${index}`}
-              className="flex items-center gap-[11px] rounded-[11px] border border-line px-[13px] py-[11px] text-[13px]"
-            >
-              <span aria-hidden>🏥</span>
-              <span className="min-w-0 flex-1 font-bold">
-                {etape.lieu}
-                <small className="block text-xs font-semibold text-muted">{etape.duree}</small>
-              </span>
-              <button
-                type="button"
-                onClick={() => retirerEtape(index)}
-                aria-label={`Retirer l’étape ${etape.lieu}`}
-                className="text-xs font-bold text-red hover:underline"
-              >
-                Retirer
-              </button>
-            </div>
-          ))}
-        </div>
-        <button
-          type="button"
-          onClick={ajouterEtape}
-          className="rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
-        >
-          + Ajouter une étape
-        </button>
-      </div>
-
-      {/* Langues */}
-      <div className="mb-4 rounded-2xl border border-line bg-white p-5">
-        <h3 className="mb-3 text-[15px] font-extrabold">🗣️ Langues parlées</h3>
-        <div className="flex flex-wrap gap-2">
-          {profil.langues.map((langue) => (
-            <span
-              key={langue}
-              className="rounded-full border border-[#DCE4EA] bg-[#EEF2F5] px-[14px] py-2 text-xs font-bold text-[#3A4A55]"
-            >
-              {langue}
             </span>
-          ))}
-          <button
-            type="button"
-            onClick={() => ajouterElement("langues", "Langue à ajouter :")}
-            className="rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
-          >
-            + Ajouter
-          </button>
-        </div>
-      </div>
-
-      {/* Genre — alimente le filtre « Sexe » de la recherche patient */}
-      <div className="mb-4 rounded-2xl border border-line bg-white p-5">
-        <h3 className="mb-2 text-[15px] font-extrabold">👤 Sexe</h3>
-        <p className="mb-3 text-[12.5px] text-muted">
-          Certains patients préfèrent consulter une femme ou un homme. Cette
-          information alimente un filtre de recherche ; vous pouvez ne pas la préciser.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {[
-            { valeur: "femme", label: "Femme" },
-            { valeur: "homme", label: "Homme" },
-            { valeur: "", label: "Ne pas préciser" },
-          ].map((o) => {
-            const actif = (genreLocal ?? medecinConnecte.genre ?? "") === o.valeur;
-            return (
-              <button
-                key={o.valeur || "non-precise"}
-                type="button"
-                onClick={async () => {
-                  setGenreLocal(o.valeur);
-                  await enregistrerProfilMedecin({ genre: o.valeur });
-                }}
-                className={`rounded-full border px-[14px] py-2 text-xs font-bold transition-colors ${
-                  actif
-                    ? "border-teal bg-teal-soft text-blue"
-                    : "border-[#DCE4EA] bg-[#EEF2F5] text-[#3A4A55] hover:border-teal"
+            <span className="rounded-[9px] border-[1.5px] border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-blue">
+              Parcourir
+            </span>
+            <input
+              type="file"
+              accept=".pdf,image/*"
+              className="hidden"
+              onChange={(e) => {
+                ajouterFichier(e.target.files);
+                e.target.value = "";
+              }}
+            />
+          </label>
+          {erreurDoc && <p className="mt-2 text-[12.5px] font-semibold text-red">{erreurDoc}</p>}
+          {profil.documents.map((document, i) => (
+            <div
+              key={`${document.nom}-${i}`}
+              className="mt-[10px] flex items-center gap-[11px] rounded-[11px] border border-line px-[13px] py-[11px] text-[13px]"
+            >
+              <span aria-hidden>📄</span>
+              <span className="font-bold">{document.nom}</span>
+              <span
+                className={`ml-auto flex-none rounded-full px-[10px] py-1 text-[11px] font-extrabold ${
+                  document.statut === "Validé"
+                    ? "bg-green-soft text-green"
+                    : "bg-amber-soft text-amber"
                 }`}
               >
-                {o.label}
-              </button>
-            );
-          })}
+                {document.statut}
+              </span>
+            </div>
+          ))}
+          <div className="mt-[14px] flex items-start gap-[9px] rounded-[11px] bg-amber-soft px-[13px] py-[11px] text-[12.5px] font-semibold leading-relaxed text-[#7A5320]">
+            <span aria-hidden>🔒</span>
+            <div>
+              <b>Privé.</b> Ces documents sont visibles uniquement par l’administrateur lors de la
+              validation. Ils ne sont jamais affichés aux patients.
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* Assurances */}
-      <div className="mb-4 rounded-2xl border border-line bg-white p-5">
-        <h3 className="mb-2 text-[15px] font-extrabold">💳 Assurances acceptées</h3>
-        <p className="mb-3 text-[12.5px] text-muted">
-          Sélectionnez parmi les assurances référencées par la plateforme.
-        </p>
-        <div className="flex flex-wrap gap-2">
-          {ASSURANCES_REFERENCEES.map((assurance) => {
-            const active = profil.assurances.includes(assurance);
-            return (
+        {/* Soins et actes */}
+        <div className="mb-4 rounded-2xl border border-line bg-white p-5">
+          <h3 className="mb-3 text-[15px] font-extrabold">🩺 Soins et actes proposés</h3>
+          <div className="flex flex-wrap gap-2">
+            {profil.soins.map((soin) => (
               <button
-                key={assurance}
+                key={soin}
                 type="button"
-                onClick={() => basculerAssurance(assurance)}
-                className={`rounded-full border px-[14px] py-2 text-xs font-bold ${
-                  active
-                    ? "border-[#BFE3CC] bg-green-soft text-green"
-                    : "border-[#CDE6F2] bg-teal-soft text-blue"
-                }`}
+                title="Retirer"
+                onClick={() => retirerElement("soins", soin)}
+                className="rounded-full border border-[#DCE4EA] bg-[#EEF2F5] px-[14px] py-2 text-xs font-bold text-[#3A4A55] hover:border-red"
               >
-                {assurance}
-                {active ? " ✓" : ""}
+                {soin} ✕
               </button>
-            );
-          })}
+            ))}
+            <button
+              type="button"
+              onClick={() => ajouterElement("soins", "Nom du soin ou de l'acte à ajouter :")}
+              className="rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
+            >
+              + Ajouter
+            </button>
+          </div>
         </div>
-      </div>
 
-      {/* Photos */}
-      <div className="rounded-2xl border border-line bg-white p-5">
-        <h3 className="mb-1 text-[15px] font-extrabold">🖼️ Photos du cabinet</h3>
-        <GaleriePhotos proprietaireId={medecinConnecte.id} type="medecin" />
-      </div>
+        {/* Diplôme et formation */}
+        <div className="mb-4 rounded-2xl border border-line bg-white p-5">
+          <h3 className="mb-3 text-[15px] font-extrabold">🎓 Diplôme et formation</h3>
+          <div className="mb-3 flex flex-col gap-2">
+            {profil.diplomes.length === 0 && (
+              <p className="text-[12.5px] text-muted">
+                Aucun diplôme renseigné — il apparaîtra sur votre fiche publique.
+              </p>
+            )}
+            {profil.diplomes.map((diplome, index) => (
+              <div
+                key={`${diplome.titre}-${index}`}
+                className="flex items-center gap-[11px] rounded-[11px] border border-line px-[13px] py-[11px] text-[13px]"
+              >
+                <span aria-hidden>🎓</span>
+                <span className="min-w-0 flex-1 font-bold">
+                  {diplome.titre}
+                  <small className="block text-xs font-semibold text-muted">{diplome.lieu}</small>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => retirerDiplome(index)}
+                  aria-label={`Retirer le diplôme ${diplome.titre}`}
+                  className="text-xs font-bold text-red hover:underline"
+                >
+                  Retirer
+                </button>
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={ajouterDiplome}
+            className="rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
+          >
+            + Ajouter un diplôme
+          </button>
+        </div>
+
+        {/* Parcours professionnel */}
+        <div className="mb-4 rounded-2xl border border-line bg-white p-5">
+          <h3 className="mb-3 text-[15px] font-extrabold">💼 Parcours professionnel</h3>
+          <div className="mb-3 flex flex-col gap-2">
+            {profil.parcours.length === 0 && (
+              <p className="text-[12.5px] text-muted">
+                Aucune étape renseignée — elle apparaîtra sur votre fiche publique.
+              </p>
+            )}
+            {profil.parcours.map((etape, index) => (
+              <div
+                key={`${etape.lieu}-${index}`}
+                className="flex items-center gap-[11px] rounded-[11px] border border-line px-[13px] py-[11px] text-[13px]"
+              >
+                <span aria-hidden>🏥</span>
+                <span className="min-w-0 flex-1 font-bold">
+                  {etape.lieu}
+                  <small className="block text-xs font-semibold text-muted">{etape.duree}</small>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => retirerEtape(index)}
+                  aria-label={`Retirer l’étape ${etape.lieu}`}
+                  className="text-xs font-bold text-red hover:underline"
+                >
+                  Retirer
+                </button>
+              </div>
+            ))}
+          </div>
+          <button
+            type="button"
+            onClick={ajouterEtape}
+            className="rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
+          >
+            + Ajouter une étape
+          </button>
+        </div>
+
+        {/* Langues */}
+        <div className="mb-4 rounded-2xl border border-line bg-white p-5">
+          <h3 className="mb-3 text-[15px] font-extrabold">🗣️ Langues parlées</h3>
+          <div className="flex flex-wrap gap-2">
+            {profil.langues.map((langue) => (
+              <button
+                key={langue}
+                type="button"
+                title="Retirer"
+                onClick={() => retirerElement("langues", langue)}
+                className="rounded-full border border-[#DCE4EA] bg-[#EEF2F5] px-[14px] py-2 text-xs font-bold text-[#3A4A55] hover:border-red"
+              >
+                {langue} ✕
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={() => ajouterElement("langues", "Langue à ajouter :")}
+              className="rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
+            >
+              + Ajouter
+            </button>
+          </div>
+        </div>
+
+        {/* Genre — alimente le filtre « Sexe » de la recherche patient */}
+        <div className="mb-4 rounded-2xl border border-line bg-white p-5">
+          <h3 className="mb-2 text-[15px] font-extrabold">👤 Sexe</h3>
+          <p className="mb-3 text-[12.5px] text-muted">
+            Certains patients préfèrent consulter une femme ou un homme. Cette information alimente
+            un filtre de recherche ; vous pouvez ne pas la préciser.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { valeur: "femme", label: "Femme" },
+              { valeur: "homme", label: "Homme" },
+              { valeur: "", label: "Ne pas préciser" },
+            ].map((o) => {
+              const actif = (genreLocal ?? medecinConnecte.genre ?? "") === o.valeur;
+              return (
+                <button
+                  key={o.valeur || "non-precise"}
+                  type="button"
+                  onClick={async () => {
+                    setGenreLocal(o.valeur);
+                    signaler(await enregistrerProfilMedecin({ genre: o.valeur }));
+                  }}
+                  className={`rounded-full border px-[14px] py-2 text-xs font-bold transition-colors ${
+                    actif
+                      ? "border-teal bg-teal-soft text-blue"
+                      : "border-[#DCE4EA] bg-[#EEF2F5] text-[#3A4A55] hover:border-teal"
+                  }`}
+                >
+                  {o.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Assurances */}
+        <div className="mb-4 rounded-2xl border border-line bg-white p-5">
+          <h3 className="mb-2 text-[15px] font-extrabold">💳 Assurances acceptées</h3>
+          <p className="mb-3 text-[12.5px] text-muted">
+            Sélectionnez parmi les assurances référencées par la plateforme.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {ASSURANCES_REFERENCEES.map((assurance) => {
+              const active = profil.assurances.includes(assurance);
+              return (
+                <button
+                  key={assurance}
+                  type="button"
+                  onClick={() => basculerAssurance(assurance)}
+                  className={`rounded-full border px-[14px] py-2 text-xs font-bold ${
+                    active
+                      ? "border-[#BFE3CC] bg-green-soft text-green"
+                      : "border-[#CDE6F2] bg-teal-soft text-blue"
+                  }`}
+                >
+                  {assurance}
+                  {active ? " ✓" : ""}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Photos */}
+        <div className="rounded-2xl border border-line bg-white p-5">
+          <h3 className="mb-1 text-[15px] font-extrabold">🖼️ Photos du cabinet</h3>
+          <GaleriePhotos proprietaireId={medecinConnecte.id} type="medecin" />
+        </div>
       </div>
     </MedecinShell>
   );

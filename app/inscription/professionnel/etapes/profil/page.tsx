@@ -4,14 +4,21 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import CadreEtape from "@/components/inscription/CadreEtape";
 import { useInscription } from "@/components/inscription/ContexteInscription";
+import GrilleTarifs from "@/components/pro/GrilleTarifs";
 import { avancerEtape, enregistrerEtapeProfil } from "@/lib/inscription-pro";
 import { creerClientNavigateur } from "@/lib/supabase/client";
+import { useTarifsMedecin } from "@/lib/tarifs";
 
 /*
- * Étape 2 (praticien) — profil médical : spécialité, tarif, expérience,
- * présentation, langues, soins, diplômes, parcours, genre. Tout est écrit
- * dans `medecins`, donc déjà visible sur /espace-medecin/profil à la fin du
- * parcours.
+ * Étape 2 (praticien) — profil médical : spécialité, soins, numéro
+ * d'ordre, expérience, présentation, grille tarifaire, langues, diplômes,
+ * parcours, genre. Tout est écrit dans `medecins` (ou `tarifs_medecin`),
+ * donc déjà visible sur /espace-medecin/profil à la fin du parcours.
+ *
+ * Ordre voulu : « Soins et actes » suit immédiatement la spécialité — les
+ * deux répondent à la même question (« que faites-vous ? ») et se
+ * remplissent d'un trait ; la grille tarifaire suit la présentation, comme
+ * sur la fiche publique où les tarifs viennent juste après « À propos ».
  *
  * Diplômes et parcours sont demandés ICI et pas seulement après coup : ce
  * sont eux qui rassurent un patient hésitant entre deux praticiens, et rien
@@ -34,9 +41,10 @@ export default function EtapeProfilMedical() {
   const router = useRouter();
   const { etape } = useInscription();
 
+  const [medecinId, setMedecinId] = useState<string | undefined>();
   const [specialites, setSpecialites] = useState<{ id: string; nom: string }[]>([]);
   const [specialiteId, setSpecialiteId] = useState("");
-  const [tarif, setTarif] = useState("");
+  const [numeroOrdre, setNumeroOrdre] = useState("");
   const [experience, setExperience] = useState("");
   const [presentation, setPresentation] = useState("");
   const [langues, setLangues] = useState<string[]>(["Français"]);
@@ -51,6 +59,7 @@ export default function EtapeProfilMedical() {
   const [genre, setGenre] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);
   const [enCours, setEnCours] = useState(false);
+  const { tarifs, recharger: rechargerTarifs } = useTarifsMedecin(medecinId);
 
   useEffect(() => {
     let actif = true;
@@ -63,14 +72,15 @@ export default function EtapeProfilMedical() {
       if (!actif) return;
       setSpecialites(refs ?? []);
       if (!auth.user) return;
+      setMedecinId(auth.user.id);
       const { data: m } = await supabase
         .from("medecins")
-        .select("specialite_id, tarif_consultation, annees_experience, presentation, langues, soins_et_actes, diplomes, parcours, genre")
+        .select("specialite_id, numero_ordre, annees_experience, presentation, langues, soins_et_actes, diplomes, parcours, genre")
         .eq("id", auth.user.id)
         .maybeSingle();
       if (!actif || !m) return;
       if (m.specialite_id) setSpecialiteId(m.specialite_id);
-      if (m.tarif_consultation) setTarif(String(m.tarif_consultation));
+      if (m.numero_ordre) setNumeroOrdre(m.numero_ordre);
       if (m.annees_experience) setExperience(String(m.annees_experience));
       if (m.presentation) setPresentation(m.presentation);
       if (m.langues?.length) setLangues(m.langues);
@@ -117,13 +127,15 @@ export default function EtapeProfilMedical() {
     if (enCours) return;
     setErreur(null);
     if (!specialiteId) return setErreur("Choisissez votre spécialité.");
-    const tarifNombre = Number(tarif);
-    if (!tarif || Number.isNaN(tarifNombre) || tarifNombre <= 0)
-      return setErreur("Indiquez votre tarif de consultation en GNF.");
+    // Les tarifs vivent dans leur propre table et sont écrits au fil de la
+    // saisie : il reste à vérifier qu'au moins une ligne existe, sans quoi
+    // la fiche publique n'afficherait aucun prix.
+    if (tarifs.length === 0)
+      return setErreur("Ajoutez au moins un tarif (ex. Consultation — 150000 GNF).");
     setEnCours(true);
     const res = await enregistrerEtapeProfil({
       specialiteId,
-      tarifConsultation: tarifNombre,
+      numeroOrdre,
       anneesExperience: experience ? Number(experience) : null,
       presentation,
       langues,
@@ -160,45 +172,8 @@ export default function EtapeProfilMedical() {
         ))}
       </select>
 
-      <label className={etiquette}>Tarif de consultation (GNF) *</label>
-      <input
-        className={champ}
-        inputMode="numeric"
-        placeholder="Ex. 150000"
-        value={tarif}
-        onChange={(e) => setTarif(e.target.value.replace(/\D/g, ""))}
-      />
-      <p className="mt-1.5 text-[11.5px] text-muted">
-        Tarif standard en cabinet, payé sur place par le patient.
-      </p>
-
-      <label className={etiquette}>Années d’expérience</label>
-      <input
-        className={champ}
-        inputMode="numeric"
-        placeholder="Ex. 8"
-        value={experience}
-        onChange={(e) => setExperience(e.target.value.replace(/\D/g, ""))}
-      />
-
-      <label className={etiquette}>Présentation</label>
-      <textarea
-        className={`${champ} min-h-[90px]`}
-        placeholder="Présentez votre pratique en quelques phrases…"
-        value={presentation}
-        onChange={(e) => setPresentation(e.target.value)}
-      />
-
-      <label className={etiquette}>Langues parlées</label>
-      <div className="flex flex-wrap gap-2">
-        {LANGUES.map((langue) => (
-          <button key={langue} type="button" className={chip(langues.includes(langue))} onClick={() => basculerLangue(langue)}>
-            {langue}
-            {langues.includes(langue) ? " ✓" : ""}
-          </button>
-        ))}
-      </div>
-
+      {/* Juste après la spécialité : c'est la même question posée en plus
+          précis, et le médecin est déjà dans le bon état d'esprit. */}
       <label className={etiquette}>Soins et actes proposés</label>
       <div className="flex gap-2">
         <input
@@ -236,6 +211,53 @@ export default function EtapeProfilMedical() {
           ))}
         </div>
       )}
+
+      <label className={etiquette}>Numéro d’ordre médical</label>
+      <input
+        className={champ}
+        placeholder="Ex. ONMG-2014-0873"
+        value={numeroOrdre}
+        onChange={(e) => setNumeroOrdre(e.target.value)}
+      />
+      <p className="mt-1.5 text-[11.5px] text-muted">
+        Votre numéro d’inscription à l’Ordre national des médecins. Il est affiché sur votre fiche
+        publique : c’est ce qui permet à un patient de vérifier que vous exercez légalement.
+      </p>
+
+      <label className={etiquette}>Années d’expérience</label>
+      <input
+        className={champ}
+        inputMode="numeric"
+        placeholder="Ex. 8"
+        value={experience}
+        onChange={(e) => setExperience(e.target.value.replace(/\D/g, ""))}
+      />
+
+      <label className={etiquette}>Présentation (« À propos »)</label>
+      <textarea
+        className={`${champ} min-h-[90px]`}
+        placeholder="Présentez votre pratique en quelques phrases…"
+        value={presentation}
+        onChange={(e) => setPresentation(e.target.value)}
+      />
+
+      {/* Juste après « À propos », comme sur la fiche publique. */}
+      <label className={etiquette}>Tarifs *</label>
+      <p className="-mt-0.5 mb-2 text-[11.5px] text-muted">
+        Ajoutez autant de lignes que nécessaire (consultation, consultation le dimanche, suivi…).
+        Payés sur place par le patient. Chaque ligne est enregistrée immédiatement.
+      </p>
+      <GrilleTarifs medecinId={medecinId} onChangement={rechargerTarifs} />
+
+      <label className={etiquette}>Langues parlées</label>
+      <div className="flex flex-wrap gap-2">
+        {LANGUES.map((langue) => (
+          <button key={langue} type="button" className={chip(langues.includes(langue))} onClick={() => basculerLangue(langue)}>
+            {langue}
+            {langues.includes(langue) ? " ✓" : ""}
+          </button>
+        ))}
+      </div>
 
       <label className={etiquette}>Diplômes et formation</label>
       <p className="-mt-0.5 mb-2 text-[11.5px] text-muted">

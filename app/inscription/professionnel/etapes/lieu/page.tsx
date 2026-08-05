@@ -4,13 +4,27 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import CadreEtape from "@/components/inscription/CadreEtape";
 import { useInscription } from "@/components/inscription/ContexteInscription";
+import ChampCommune from "@/components/site/ChampCommune";
+import ChampTelephoneGN from "@/components/site/ChampTelephoneGN";
 import { avancerEtape, enregistrerEtapeLieu } from "@/lib/inscription-pro";
 import { creerClientNavigateur } from "@/lib/supabase/client";
+import {
+  estCoordonnees as sontDesCoordonnees,
+  formaterPosition,
+  lienCarte,
+  recupererPositionActuelle,
+} from "@/lib/geolocalisation";
+import { MESSAGE_TELEPHONE_GN, chiffresTelephone, telephoneGuineenValide } from "@/lib/telephone";
 
 /*
- * Étape 3 (praticien) — lieu d'exercice : quartier, téléphone du
+ * Étape 3 (praticien) — lieu d'exercice : commune, quartier, téléphone du
  * secrétariat et position GPS (géolocalisation navigateur ou lien
  * Google Maps, même mécanique que /espace-medecin/profil).
+ *
+ * La commune précède la ville, comme sur l'étape « Compte » : c'est
+ * l'échelon que tout le monde donne en premier en Guinée. La ville reste
+ * en lecture seule — elle a été choisie à la création du compte et sert de
+ * clé à la recherche des patients.
  */
 
 const champ =
@@ -22,9 +36,12 @@ export default function EtapeLieu() {
   const { etape } = useInscription();
 
   const [ville, setVille] = useState("");
+  const [villeId, setVilleId] = useState<string | undefined>();
+  const [commune, setCommune] = useState("");
   const [quartier, setQuartier] = useState("");
   const [telephone, setTelephone] = useState("");
   const [localisation, setLocalisation] = useState("");
+  const [precision, setPrecision] = useState<number | null>(null);
   const [geolocEnCours, setGeolocEnCours] = useState(false);
   const [erreurGeoloc, setErreurGeoloc] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);
@@ -38,13 +55,15 @@ export default function EtapeLieu() {
       if (!auth.user) return;
       const { data: m } = await supabase
         .from("medecins")
-        .select("quartier, localisation, telephone_secretariat, villes ( nom )")
+        .select("commune, quartier, localisation, telephone_secretariat, ville_id, villes ( nom )")
         .eq("id", auth.user.id)
         .maybeSingle();
       if (!actif || !m) return;
+      if (m.commune) setCommune(m.commune);
       if (m.quartier) setQuartier(m.quartier);
       if (m.localisation) setLocalisation(m.localisation);
-      if (m.telephone_secretariat) setTelephone(m.telephone_secretariat);
+      if (m.telephone_secretariat) setTelephone(chiffresTelephone(m.telephone_secretariat));
+      setVilleId(m.ville_id ?? undefined);
       setVille((m.villes as unknown as { nom: string } | null)?.nom ?? "");
     })();
     return () => {
@@ -52,42 +71,37 @@ export default function EtapeLieu() {
     };
   }, []);
 
-  const estCoordonnees = /^-?\d+\.\d+,\s*-?\d+\.\d+$/.test(localisation.trim());
+  const estCoordonnees = sontDesCoordonnees(localisation);
 
-  function recupererPosition() {
+  async function recupererPosition() {
     setErreurGeoloc("");
-    if (!navigator.geolocation) {
-      setErreurGeoloc("Géolocalisation non disponible — collez un lien Google Maps ci-dessous.");
-      return;
-    }
     setGeolocEnCours(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const lat = position.coords.latitude.toFixed(5);
-        const lon = position.coords.longitude.toFixed(5);
-        setLocalisation(`${lat}, ${lon}`);
-        setGeolocEnCours(false);
-      },
-      () => {
-        setErreurGeoloc("Autorisation refusée ou indisponible — collez un lien Google Maps ci-dessous.");
-        setGeolocEnCours(false);
-      }
-    );
+    const { position, erreur: echec } = await recupererPositionActuelle();
+    setGeolocEnCours(false);
+    if (echec || !position) {
+      setPrecision(null);
+      return setErreurGeoloc(echec ?? "Localisation impossible pour le moment.");
+    }
+    setLocalisation(formaterPosition(position));
+    setPrecision(position.precision);
   }
 
   async function continuer() {
     if (enCours) return;
     setErreur(null);
+    if (!commune.trim()) return setErreur("Indiquez la commune de votre cabinet.");
     if (!quartier.trim()) return setErreur("Indiquez le quartier de votre cabinet.");
+    if (telephone && !telephoneGuineenValide(telephone)) return setErreur(MESSAGE_TELEPHONE_GN);
     setEnCours(true);
     const res = await enregistrerEtapeLieu({
+      commune: commune.trim(),
       quartier: quartier.trim(),
       localisation: localisation.trim(),
-      telephoneSecretariat: telephone.trim(),
+      telephoneSecretariat: telephone ? `+224${chiffresTelephone(telephone)}` : "",
     });
-    let cible = "documents";
+    let cible = "photos";
     if (!res.erreur) {
-      const avancee = await avancerEtape("medecin", null, "documents");
+      const avancee = await avancerEtape("medecin", null, "photos");
       cible = avancee.cible;
       if (avancee.erreur) res.erreur = avancee.erreur;
     }
@@ -106,24 +120,26 @@ export default function EtapeLieu() {
       boutonEnCours={enCours}
       erreur={erreur}
     >
-      <label className={`${etiquette} mt-0`}>Ville</label>
+      <label className={`${etiquette} mt-0`}>Commune *</label>
+      <ChampCommune villeId={villeId} valeur={commune} onChange={setCommune} />
+
+      <label className={etiquette}>Ville</label>
       <div className={`${champ} bg-[#F4F8FA] text-muted`}>{ville || "—"}</div>
       <p className="mt-1.5 text-[11.5px] text-muted">Choisie à la création du compte.</p>
 
       <label className={etiquette}>Quartier *</label>
       <input
         className={champ}
-        placeholder="Ex. Kaloum, Ratoma…"
+        placeholder="Ex. Kipé, Nongo, Hamdallaye…"
         value={quartier}
         onChange={(e) => setQuartier(e.target.value)}
       />
 
       <label className={etiquette}>Téléphone du secrétariat</label>
-      <input
-        className={champ}
-        placeholder="+224 6XX XX XX XX"
-        value={telephone}
-        onChange={(e) => setTelephone(e.target.value)}
+      <ChampTelephoneGN
+        valeur={telephone}
+        onChange={setTelephone}
+        ariaLabel="Téléphone du secrétariat"
       />
 
       <div className="mt-5 rounded-xl border border-[#CDE6F2] bg-teal-soft p-4">
@@ -141,22 +157,47 @@ export default function EtapeLieu() {
           🎯 {geolocEnCours ? "Localisation en cours…" : "Récupérer ma position actuelle"}
         </button>
         <p className="mt-2 text-[12px] text-muted">
-          {erreurGeoloc ||
-            (estCoordonnees ? (
-              <>
-                📍 Position enregistrée : <b className="text-ink">{localisation}</b>
-              </>
-            ) : (
-              "Aucune position pour le moment — vous pourrez aussi le faire plus tard depuis votre espace."
-            ))}
+          {erreurGeoloc ? (
+            <span className="font-semibold text-red">{erreurGeoloc}</span>
+          ) : estCoordonnees ? (
+            <>
+              📍 Position enregistrée : <b className="text-ink">{localisation}</b>
+              {precision !== null && ` (précision ~${precision} m)`} ·{" "}
+              <a
+                href={lienCarte(localisation)}
+                target="_blank"
+                rel="noopener"
+                className="font-bold text-teal"
+              >
+                Vérifier sur la carte
+              </a>
+            </>
+          ) : (
+            "Aucune position pour le moment — vous pourrez aussi le faire plus tard depuis votre espace."
+          )}
         </p>
         <label className={etiquette}>Ou collez un lien Google Maps</label>
         <input
           className={champ}
           placeholder="https://maps.app.goo.gl/…"
           value={estCoordonnees ? "" : localisation}
-          onChange={(e) => setLocalisation(e.target.value)}
+          onChange={(e) => {
+            setLocalisation(e.target.value);
+            setPrecision(null);
+          }}
         />
+        {estCoordonnees && (
+          <button
+            type="button"
+            onClick={() => {
+              setLocalisation("");
+              setPrecision(null);
+            }}
+            className="mt-2 text-[11.5px] font-bold text-blue underline underline-offset-2"
+          >
+            Effacer la position enregistrée
+          </button>
+        )}
       </div>
     </CadreEtape>
   );

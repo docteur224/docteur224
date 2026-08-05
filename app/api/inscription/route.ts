@@ -1,5 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import {
+  MESSAGE_TELEPHONE_GN,
+  telephoneGuineenValide,
+  versTelephoneInternational,
+} from "@/lib/telephone";
 
 /*
  * Inscription (patient ou professionnel) côté serveur.
@@ -20,6 +25,12 @@ export async function POST(request: Request) {
   }
   if (!email || !motDePasse || motDePasse.length < 8) {
     return NextResponse.json({ erreur: "E-mail ou mot de passe invalide." }, { status: 400 });
+  }
+  // Le contrôle du formulaire ne protège de rien : un POST direct passerait
+  // à côté. Réservé aux comptes professionnels — la fiche publique affiche
+  // ce numéro et le secrétariat doit être joignable.
+  if (role !== "patient" && !telephoneGuineenValide(String(telephone ?? ""))) {
+    return NextResponse.json({ erreur: MESSAGE_TELEPHONE_GN }, { status: 400 });
   }
 
   const admin = createClient(
@@ -52,7 +63,10 @@ export async function POST(request: Request) {
     email,
     nom: nom ?? null,
     prenom: prenom ?? null,
-    telephone: telephone ? `+224${String(telephone).replace(/\D/g, "").replace(/^224/, "")}` : null,
+    telephone: telephone
+      ? versTelephoneInternational(String(telephone)) ||
+        `+224${String(telephone).replace(/\D/g, "").replace(/^224/, "")}`
+      : null,
   });
   if (e1) return annuler(e1.message);
 
@@ -64,6 +78,7 @@ export async function POST(request: Request) {
       id,
       specialite_id: corps.specialiteId || null,
       ville_id: corps.villeId || null,
+      commune: corps.commune || null,
       statut: "en_attente",
       etape_inscription: "profil",
     });
@@ -74,6 +89,7 @@ export async function POST(request: Request) {
       nom: corps.nomEtablissement || nom || "Établissement",
       type: corps.typeEtablissement || "Clinique privée",
       ville_id: corps.villeId || null,
+      commune: corps.commune || null,
       statut: "en_attente",
       etape_inscription: "fiche",
     });

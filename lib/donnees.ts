@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Etablissement, Medecin } from "@/types";
 import { creneauReservable, depuisISO, versISO } from "@/lib/dates";
+import { JOURS_NOMS, horairesParJour, resumeHeures, resumeJours } from "@/lib/horaires";
 
 /*
  * Couche de données publique (remplace lib/mock-data.ts) : lit les vraies
@@ -35,8 +36,6 @@ function empreinte(texte: string): number {
 
 const gradientPour = (id: string) => GRADIENTS[empreinte(id) % GRADIENTS.length];
 
-const JOURS_NOMS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
-
 interface LigneMedecin {
   id: string;
   civilite: string;
@@ -49,9 +48,12 @@ interface LigneMedecin {
   langues: string[];
   annees_experience: number | null;
   telephone_secretariat: string | null;
+  localisation: string | null;
+  numero_ordre: string | null;
   note_moyenne: number;
   nb_avis: number;
   etablissement_id: string | null;
+  commune: string | null;
   quartier: string | null;
   photo_url: string | null;
   utilisateurs: { nom: string | null; prenom: string | null } | null;
@@ -59,17 +61,19 @@ interface LigneMedecin {
   villes: { nom: string } | null;
   medecin_assurances: { assurances: { libelle: string } | null }[];
   horaires_types: { jour_semaine: number; heure_debut: string; heure_fin: string }[];
+  tarifs_medecin: { libelle: string; montant: number; position: number }[];
 }
 
 const SELECTION_MEDECIN = `
   id, civilite, genre, tarif_consultation, presentation, soins_et_actes, diplomes,
-  parcours, langues, annees_experience, telephone_secretariat, note_moyenne,
-  nb_avis, etablissement_id, quartier, photo_url,
+  parcours, langues, annees_experience, telephone_secretariat, localisation, numero_ordre,
+  note_moyenne, nb_avis, etablissement_id, commune, quartier, photo_url,
   utilisateurs ( nom, prenom ),
   specialites ( nom ),
   villes ( nom ),
   medecin_assurances ( assurances ( libelle ) ),
-  horaires_types ( jour_semaine, heure_debut, heure_fin )
+  horaires_types ( jour_semaine, heure_debut, heure_fin ),
+  tarifs_medecin ( libelle, montant, position )
 `;
 
 /** Médecin UI enrichi de ses plages horaires (pour calculer les créneaux). */
@@ -83,16 +87,9 @@ function versMedecinUI(ligne: LigneMedecin): MedecinAvecPlages {
   const joursOuverts = new Set(ligne.horaires_types.map((h) => h.jour_semaine));
   const joursFermes = [0, 1, 2, 3, 4, 5, 6].filter((j) => !joursOuverts.has(j));
 
-  // Résumé d'horaires pour la fiche (ex. « Lundi — Vendredi », « 08:00 à 18:00 »)
-  const tries = [...joursOuverts].sort();
-  const jours =
-    tries.length === 0
-      ? "Sur rendez-vous"
-      : `${JOURS_NOMS[tries[0]]} — ${JOURS_NOMS[tries[tries.length - 1]]}`;
-  const debuts = ligne.horaires_types.map((h) => h.heure_debut.slice(0, 5)).sort();
-  const fins = ligne.horaires_types.map((h) => h.heure_fin.slice(0, 5)).sort();
-  const detail =
-    debuts.length > 0 ? `${debuts[0]} à ${fins[fins.length - 1]}` : "Horaires à confirmer";
+  // Résumé d'horaires pour les cartes (ex. « Lundi — Vendredi, Samedi »)
+  const jours = resumeJours(ligne.horaires_types);
+  const detail = resumeHeures(ligne.horaires_types);
 
   const aujourdHui = new Date().getDay();
   const ouvertAujourdHui = joursOuverts.has(aujourdHui);
@@ -111,14 +108,21 @@ function versMedecinUI(ligne: LigneMedecin): MedecinAvecPlages {
     specialite: ligne.specialites?.nom ?? "Médecine générale",
     etablissementId: ligne.etablissement_id ?? "",
     ville: ligne.villes?.nom ?? "",
+    commune: ligne.commune ?? "",
+    quartier: ligne.quartier ?? "",
+    numeroOrdre: ligne.numero_ordre ?? "",
     anneesExperience: ligne.annees_experience ?? 0,
     tarifConsultation: ligne.tarif_consultation ?? 0,
+    tarifs: [...(ligne.tarifs_medecin ?? [])]
+      .sort((a, b) => a.position - b.position)
+      .map((t) => ({ libelle: t.libelle, montant: t.montant })),
     note: Number(ligne.note_moyenne) || 0,
     nbAvis: ligne.nb_avis,
     disponibilite: ouvertAujourdHui
       ? { type: "aujourdhui", label: "Dispo aujourd'hui" }
       : { type: "bientot", label: joursOuverts.size ? JOURS_NOMS[prochainJour] : "Sur demande" },
     telephoneSecretariat: ligne.telephone_secretariat ?? "",
+    localisation: ligne.localisation ?? "",
     aPropos: ligne.presentation ?? "",
     soinsEtActes: ligne.soins_et_actes ?? [],
     diplomes: ligne.diplomes ?? [],
@@ -126,6 +130,7 @@ function versMedecinUI(ligne: LigneMedecin): MedecinAvecPlages {
     langues: ligne.langues ?? [],
     assurances: ligne.medecin_assurances.map((a) => a.assurances?.libelle ?? "").filter(Boolean),
     horaires: { jours, detail },
+    horairesSemaine: horairesParJour(ligne.horaires_types ?? []),
     joursFermes,
     plages: ligne.horaires_types ?? [],
   };

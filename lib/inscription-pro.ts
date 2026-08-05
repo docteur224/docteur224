@@ -26,6 +26,10 @@ export const ETAPES_PRATICIEN: DefinitionEtape[] = [
   { id: "compte", label: "Compte" },
   { id: "profil", label: "Profil médical" },
   { id: "lieu", label: "Lieu d'exercice" },
+  // Les photos suivent le lieu : la photo de profil et celles du cabinet
+  // sont ce que le patient regarde en premier sur la fiche, et l'étape
+  // arrive avant les documents administratifs, plus rébarbatifs.
+  { id: "photos", label: "Photo & Galerie" },
   { id: "documents", label: "Documents" },
   { id: "horaires", label: "Horaires" },
   { id: "abonnement", label: "Abonnement" },
@@ -184,11 +188,12 @@ export async function avancerEtape(
 
 export async function enregistrerEtapeProfil(d: {
   specialiteId?: string;
-  tarifConsultation?: number | null;
   anneesExperience?: number | null;
   presentation?: string;
   langues?: string[];
   soins?: string[];
+  /** Numéro d'inscription à l'Ordre, affiché sur la fiche publique. */
+  numeroOrdre?: string;
   /** « femme » | « homme » | "" (non précisé). */
   genre?: string;
   diplomes?: { titre: string; lieu: string }[];
@@ -199,11 +204,11 @@ export async function enregistrerEtapeProfil(d: {
   if (!auth.user) return { erreur: "Session expirée." };
   const maj: Record<string, unknown> = {};
   if (d.specialiteId !== undefined) maj.specialite_id = d.specialiteId || null;
-  if (d.tarifConsultation !== undefined) maj.tarif_consultation = d.tarifConsultation;
   if (d.anneesExperience !== undefined) maj.annees_experience = d.anneesExperience;
   if (d.presentation !== undefined) maj.presentation = d.presentation;
   if (d.langues !== undefined) maj.langues = d.langues;
   if (d.soins !== undefined) maj.soins_et_actes = d.soins;
+  if (d.numeroOrdre !== undefined) maj.numero_ordre = d.numeroOrdre || null;
   if (d.genre !== undefined) maj.genre = d.genre === "" ? null : d.genre;
   if (d.diplomes !== undefined) maj.diplomes = d.diplomes;
   if (d.parcours !== undefined) maj.parcours = d.parcours;
@@ -212,6 +217,7 @@ export async function enregistrerEtapeProfil(d: {
 }
 
 export async function enregistrerEtapeLieu(d: {
+  commune?: string;
   quartier?: string;
   localisation?: string;
   telephoneSecretariat?: string;
@@ -220,6 +226,7 @@ export async function enregistrerEtapeLieu(d: {
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return { erreur: "Session expirée." };
   const maj: Record<string, unknown> = {};
+  if (d.commune !== undefined) maj.commune = d.commune;
   if (d.quartier !== undefined) maj.quartier = d.quartier;
   if (d.localisation !== undefined) maj.localisation = d.localisation;
   if (d.telephoneSecretariat !== undefined) maj.telephone_secretariat = d.telephoneSecretariat;

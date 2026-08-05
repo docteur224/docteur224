@@ -4,40 +4,28 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import CadreEtape from "@/components/inscription/CadreEtape";
 import { useInscription } from "@/components/inscription/ContexteInscription";
+import HorairesHebdo, {
+  JOURS_DEFAUT,
+  depuisPlages,
+  premiereErreurHoraires,
+  versPlages,
+  type JourEdition,
+} from "@/components/pro/HorairesHebdo";
 import { avancerEtape, enregistrerHorairesHebdo } from "@/lib/inscription-pro";
 import { creerClientNavigateur } from "@/lib/supabase/client";
 
 /*
- * Étape 5 (praticien) — horaires type de la semaine (`horaires_types`,
- * 0 = dimanche). Un interrupteur par jour + une plage début/fin ; gabarit
- * Lundi–Vendredi 08:00–17:00 pré-rempli. Affinable ensuite dans
- * /espace-medecin/disponibilites (pauses, exceptions…).
+ * Étape 6 (praticien) — horaires type de la semaine (`horaires_types`,
+ * 0 = dimanche). Gabarit Lundi–Vendredi 08:00–17:00 pré-rempli. L'éditeur
+ * est le même que celui de /espace-medecin/profil, où le médecin les
+ * corrigera ; /espace-medecin/disponibilites ne gère, lui, que les
+ * exceptions ponctuelles.
  */
-
-const JOURS: { jour: number; nom: string }[] = [
-  { jour: 1, nom: "Lundi" },
-  { jour: 2, nom: "Mardi" },
-  { jour: 3, nom: "Mercredi" },
-  { jour: 4, nom: "Jeudi" },
-  { jour: 5, nom: "Vendredi" },
-  { jour: 6, nom: "Samedi" },
-  { jour: 0, nom: "Dimanche" },
-];
-
-interface Jour {
-  ouvert: boolean;
-  debut: string;
-  fin: string;
-}
-
-const DEFAUT: Record<number, Jour> = Object.fromEntries(
-  JOURS.map(({ jour }) => [jour, { ouvert: jour >= 1 && jour <= 5, debut: "08:00", fin: "17:00" }])
-);
 
 export default function EtapeHoraires() {
   const router = useRouter();
   const { etape } = useInscription();
-  const [jours, setJours] = useState<Record<number, Jour>>(DEFAUT);
+  const [jours, setJours] = useState<Record<number, JourEdition>>(JOURS_DEFAUT);
   const [erreur, setErreur] = useState<string | null>(null);
   const [enCours, setEnCours] = useState(false);
 
@@ -52,42 +40,25 @@ export default function EtapeHoraires() {
         .select("jour_semaine, heure_debut, heure_fin")
         .eq("medecin_id", auth.user.id);
       if (!actif || !data || data.length === 0) return;
-      const repris: Record<number, Jour> = Object.fromEntries(
-        JOURS.map(({ jour }) => [jour, { ouvert: false, debut: "08:00", fin: "17:00" }])
-      );
-      for (const h of data) {
-        repris[h.jour_semaine] = {
-          ouvert: true,
-          debut: h.heure_debut.slice(0, 5),
-          fin: h.heure_fin.slice(0, 5),
-        };
-      }
-      setJours(repris);
+      setJours(depuisPlages(data));
     })();
     return () => {
       actif = false;
     };
   }, []);
 
-  function majJour(jour: number, maj: Partial<Jour>) {
+  function majJour(jour: number, maj: Partial<JourEdition>) {
     setJours((j) => ({ ...j, [jour]: { ...j[jour], ...maj } }));
   }
 
   async function continuer() {
     if (enCours) return;
     setErreur(null);
-    const ouverts = JOURS.filter(({ jour }) => jours[jour].ouvert);
-    if (ouverts.length === 0)
-      return setErreur("Ouvrez au moins un jour de consultation.");
-    for (const { jour, nom } of ouverts) {
-      if (jours[jour].debut >= jours[jour].fin)
-        return setErreur(`${nom} : l’heure de fin doit être après l’heure de début.`);
-    }
+    const probleme = premiereErreurHoraires(jours);
+    if (probleme) return setErreur(probleme);
     setEnCours(true);
     let cible = "abonnement";
-    const res = await enregistrerHorairesHebdo(
-      ouverts.map(({ jour }) => ({ jour, debut: jours[jour].debut, fin: jours[jour].fin }))
-    );
+    const res = await enregistrerHorairesHebdo(versPlages(jours));
     if (!res.erreur) {
       const avancee = await avancerEtape("medecin", null, "abonnement");
       if (avancee.erreur) res.erreur = avancee.erreur;
@@ -101,52 +72,14 @@ export default function EtapeHoraires() {
   return (
     <CadreEtape
       titre="Vos jours et heures de consultation"
-      sousTitre="Ils déterminent les créneaux réservables par les patients. Vous pourrez ajouter pauses et exceptions depuis votre espace."
+      sousTitre="Ils déterminent les créneaux réservables par les patients, et s’affichent sur votre fiche dans « Lieu de consultation ». Vous pourrez ajouter pauses et exceptions depuis votre espace."
       retour="/inscription/professionnel/etapes/documents"
       onContinuer={continuer}
       boutonTexte={etape === "recap" ? "Enregistrer et revenir au récap" : "Continuer"}
       boutonEnCours={enCours}
       erreur={erreur}
     >
-      <div className="flex flex-col gap-2">
-        {JOURS.map(({ jour, nom }) => {
-          const j = jours[jour];
-          return (
-            <div key={jour} className="rounded-xl border border-line px-[14px] py-3">
-              <label className="flex cursor-pointer items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={j.ouvert}
-                  onChange={(e) => majJour(jour, { ouvert: e.target.checked })}
-                  className="h-[18px] w-[18px] accent-[#2E9CCA]"
-                />
-                <b className="flex-1 text-[13.5px]">{nom}</b>
-                <small className={`text-[12px] font-bold ${j.ouvert ? "text-blue" : "text-muted"}`}>
-                  {j.ouvert ? `${j.debut} – ${j.fin}` : "Fermé"}
-                </small>
-              </label>
-              {j.ouvert && (
-                <div className="mt-3 flex items-center gap-2 text-[12.5px] font-semibold text-muted">
-                  De
-                  <input
-                    type="time"
-                    value={j.debut}
-                    onChange={(e) => majJour(jour, { debut: e.target.value })}
-                    className="rounded-lg border border-line bg-white px-2 py-1.5 text-[13px] text-ink outline-none focus:border-teal"
-                  />
-                  à
-                  <input
-                    type="time"
-                    value={j.fin}
-                    onChange={(e) => majJour(jour, { fin: e.target.value })}
-                    className="rounded-lg border border-line bg-white px-2 py-1.5 text-[13px] text-ink outline-none focus:border-teal"
-                  />
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+      <HorairesHebdo jours={jours} onChange={majJour} />
     </CadreEtape>
   );
 }

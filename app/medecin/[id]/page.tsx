@@ -10,7 +10,7 @@ import BadgeNote from "@/components/site/BadgeNote";
 import BoutonFavori from "@/components/site/BoutonFavori";
 import PanneauAvis from "@/components/site/PanneauAvis";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
-import { formatNote } from "@/lib/format";
+import { formatGNF, formatNote } from "@/lib/format";
 import {
   chargerAvisMedecin,
   chargerEtablissementParId,
@@ -105,25 +105,89 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
       </div>
     ) : null;
 
+  /*
+   * Adresse : elle était construite à partir de l'ÉTABLISSEMENT seul, si
+   * bien qu'un praticien indépendant — cas de tous ceux qui s'inscrivent
+   * par le parcours en ligne — affichait « Quartier · ». On part donc de
+   * ce que le médecin a lui-même saisi (quartier, commune, ville) et
+   * l'établissement ne sert plus qu'à nommer le lieu.
+   */
+  const lieuNom = etab?.nom ?? "Cabinet du praticien";
+  const adresse =
+    [
+      medecin.quartier && `Quartier ${medecin.quartier}`,
+      medecin.commune,
+      etab?.quartier && !medecin.quartier ? `Quartier ${etab.quartier}` : "",
+      medecin.ville || etab?.ville,
+    ]
+      .filter(Boolean)
+      .join(" · ") || medecin.ville;
+
+  // Horaires jour par jour : le résumé « Lundi — Vendredi » ne dit rien
+  // d'un médecin ouvert le samedi matin seulement.
+  const horairesDetail = (
+    <div className="mt-1.5 overflow-hidden rounded-xl border border-line">
+      {medecin.horairesSemaine.map((jour, i) => (
+        <div
+          key={jour.jour}
+          className={`flex items-center justify-between gap-3 px-[13px] py-2 text-[12.5px] ${
+            i > 0 ? "border-t border-line" : ""
+          }`}
+        >
+          <b className="font-bold">{jour.nom}</b>
+          <span className={jour.plages.length === 0 ? "text-muted" : "font-semibold text-blue"}>
+            {jour.plages.length === 0
+              ? "Fermé"
+              : jour.plages.map((p) => `${p.debut} – ${p.fin}`).join(" · ")}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+
+  const grilleTarifs =
+    medecin.tarifs.length > 0 ? (
+      <div className="mt-1.5 overflow-hidden rounded-xl border border-line">
+        {medecin.tarifs.map((tarif, i) => (
+          <div
+            key={`${tarif.libelle}-${i}`}
+            className={`flex items-center justify-between gap-3 px-[13px] py-[10px] text-[13px] ${
+              i > 0 ? "border-t border-line" : ""
+            }`}
+          >
+            <b className="min-w-0 font-bold">{tarif.libelle}</b>
+            <span className="flex-none font-extrabold text-blue">{formatGNF(tarif.montant)}</span>
+          </div>
+        ))}
+        <p className="border-t border-line bg-[#F6FAFC] px-[13px] py-2 text-[11.5px] text-muted">
+          Payés sur place, chez le médecin. La réservation en ligne est gratuite.
+        </p>
+      </div>
+    ) : null;
+
   const infosPratiques = (
     <div className="mt-1.5 grid gap-[14px] sm:grid-cols-2">
-      <LigneInfo
-        icone="🏥"
-        titre={etab?.nom ?? "Établissement"}
-        detail={etab ? `Quartier ${etab.quartier} · ${etab.ville}` : medecin.ville}
-      />
+      <LigneInfo icone="🏥" titre={lieuNom} detail={adresse} />
       <LigneInfo icone="🕐" titre={medecin.horaires.jours} detail={medecin.horaires.detail} />
-      <LigneInfo icone="📞" titre={medecin.telephoneSecretariat} detail="Secrétariat" />
+      <LigneInfo
+        icone="📞"
+        titre={medecin.telephoneSecretariat || "Non renseigné"}
+        detail="Secrétariat"
+      />
       <LigneInfo icone="💳" titre="Paiement" detail="Sur place, chez le médecin" />
+      {medecin.numeroOrdre && (
+        <LigneInfo icone="🪪" titre={medecin.numeroOrdre} detail="Numéro d’ordre médical" />
+      )}
     </div>
   );
 
   const carteLocalisation = (
     <CarteLocalisation
-      etablissementNom={etab?.nom ?? ""}
-      quartier={etab?.quartier ?? ""}
-      ville={etab?.ville ?? medecin.ville}
+      etablissementNom={lieuNom}
+      quartier={medecin.quartier || etab?.quartier || medecin.commune}
+      ville={medecin.ville || etab?.ville || ""}
       telephone={medecin.telephoneSecretariat}
+      localisation={medecin.localisation}
     />
   );
 
@@ -169,10 +233,8 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
               🏥
             </span>
             <div>
-              <b>{etab?.nom}</b>
-              <small>
-                Quartier {etab?.quartier} · {etab?.ville}
-              </small>
+              <b>{lieuNom}</b>
+              <small>{adresse}</small>
             </div>
           </div>
           <div className="infoline">
@@ -189,15 +251,33 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
               📞
             </span>
             <div>
-              <b>{medecin.telephoneSecretariat}</b>
+              <b>{medecin.telephoneSecretariat || "Non renseigné"}</b>
               <small>Secrétariat</small>
             </div>
           </div>
+          {medecin.numeroOrdre && (
+            <div className="infoline">
+              <span className="ic" aria-hidden>
+                🪪
+              </span>
+              <div>
+                <b>{medecin.numeroOrdre}</b>
+                <small>Numéro d’ordre médical</small>
+              </div>
+            </div>
+          )}
 
           <div className="section-t">À propos</div>
           <p className="muted" style={{ fontSize: 13, lineHeight: 1.6 }}>
             {medecin.aPropos}
           </p>
+
+          {grilleTarifs && (
+            <>
+              <div className="section-t">Tarifs</div>
+              {grilleTarifs}
+            </>
+          )}
 
           <div className="section-t">Soins et actes</div>
           <div className="chips">
@@ -271,12 +351,9 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
           )}
 
           <div className="section-t">Lieu de consultation</div>
-          <CarteLocalisation
-            etablissementNom={etab?.nom ?? ""}
-            quartier={etab?.quartier ?? ""}
-            ville={etab?.ville ?? medecin.ville}
-            telephone={medecin.telephoneSecretariat}
-          />
+          {horairesDetail}
+          <div style={{ height: 12 }} />
+          {carteLocalisation}
 
           {/* Les avis sont une section à part entière sur mobile : la maquette
               n'a pas d'onglets ici, tout est empilé. */}
@@ -362,6 +439,13 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
               {medecin.aPropos}
             </p>
 
+            {grilleTarifs && (
+              <>
+                <TitreSection>Tarifs</TitreSection>
+                {grilleTarifs}
+              </>
+            )}
+
             <TitreSection>Soins et actes</TitreSection>
             <div className="flex flex-wrap gap-2">
               {medecin.soinsEtActes.map((soin) => (
@@ -431,6 +515,9 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
             <TitreSection>Lieu de consultation</TitreSection>
             {infosPratiques}
 
+            <h4 className="mb-1.5 mt-4 text-[13px] font-extrabold">Horaires de consultation</h4>
+            {horairesDetail}
+
             {galeriePhotos && (
               <>
                 <TitreSection>Photos du cabinet</TitreSection>
@@ -459,6 +546,9 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
                 elles vivent dans l'onglet Présentation, pas ici. */}
             <TitreSection>Informations pratiques</TitreSection>
             {infosPratiques}
+
+            <h4 className="mb-1.5 mt-4 text-[13px] font-extrabold">Horaires de consultation</h4>
+            {horairesDetail}
 
             <TitreSection>Localisation</TitreSection>
             {carteLocalisation}

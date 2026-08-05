@@ -2,8 +2,20 @@
 
 import { useState } from "react";
 
-/** Case à cocher des formulaires d'inscription — reproduit le .chkrow des maquettes. */
-export default function CaseCocher({ texte }: { texte: string }) {
+/**
+ * Case à cocher des formulaires d'inscription — reproduit le .chkrow des maquettes.
+ *
+ * L'état reste interne (les appelants n'ont pas tous besoin de le connaître)
+ * mais `onChange` le remonte, ce qui permet de conditionner le bouton
+ * « Continuer » à l'acceptation des conditions.
+ */
+export default function CaseCocher({
+  texte,
+  onChange,
+}: {
+  texte: string;
+  onChange?: (cochee: boolean) => void;
+}) {
   const [cochee, setCochee] = useState(false);
 
   return (
@@ -11,7 +23,10 @@ export default function CaseCocher({ texte }: { texte: string }) {
       <input
         type="checkbox"
         checked={cochee}
-        onChange={(e) => setCochee(e.target.checked)}
+        onChange={(e) => {
+          setCochee(e.target.checked);
+          onChange?.(e.target.checked);
+        }}
         className="sr-only"
       />
       <span

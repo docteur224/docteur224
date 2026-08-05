@@ -9,10 +9,14 @@ import Footer from "@/components/site/Footer";
 import TopNav from "@/components/site/TopNav";
 import CoteAuth from "@/components/site/CoteAuth";
 import FauxCaptcha from "@/components/site/FauxCaptcha";
+import ChampCommune from "@/components/site/ChampCommune";
+import ChampMotDePasse from "@/components/site/ChampMotDePasse";
+import ChampTelephoneGN from "@/components/site/ChampTelephoneGN";
 import { inscrireProfessionnel } from "@/lib/auth";
 import { creerClientNavigateur } from "@/lib/supabase/client";
 import Stepper from "@/components/inscription/Stepper";
 import { etapesPour, useParcoursInscription } from "@/lib/inscription-pro";
+import { MESSAGE_TELEPHONE_GN, telephoneGuineenValide } from "@/lib/telephone";
 
 /*
  * Inscription professionnel — étape 1 (« Compte ») du parcours multi-étapes :
@@ -74,11 +78,37 @@ export default function InscriptionProfessionnel() {
   const [nomEtablissement, setNomEtablissement] = useState("");
   const [specialiteId, setSpecialiteId] = useState("");
   const [villeId, setVilleId] = useState("");
+  const [commune, setCommune] = useState("");
   const [telephone, setTelephone] = useState("");
   const [email, setEmail] = useState("");
   const [motDePasse, setMotDePasse] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [conditions, setConditions] = useState(false);
+  const [captcha, setCaptcha] = useState(false);
   const [erreur, setErreur] = useState<string | null>(null);
   const [enCours, setEnCours] = useState(false);
+
+  // La ville pilote la liste des communes ; tant qu'aucune n'est choisie,
+  // c'est la première du référentiel qui sera envoyée (comportement du
+  // menu déroulant, dont l'option affichée est la première).
+  const villeChoisie = villeId || villes[0]?.id;
+
+  /*
+   * Le bouton « Continuer » reste grisé tant que le dossier n'est pas
+   * complet : conditions acceptées, captcha coché, mot de passe confirmé
+   * et numéro guinéen valide. Les vérifications de `creerCompte` sont
+   * conservées — elles portent le message d'erreur, et un bouton grisé
+   * n'explique jamais ce qui manque.
+   */
+  const identiteOk = praticien ? !!nom.trim() && !!prenom.trim() : !!nomEtablissement.trim();
+  const motDePasseOk = motDePasse.length >= 8 && motDePasse === confirmation;
+  const peutContinuer =
+    identiteOk &&
+    telephoneGuineenValide(telephone) &&
+    !!email.trim() &&
+    motDePasseOk &&
+    conditions &&
+    captcha;
 
   async function creerCompte() {
     if (enCours) return;
@@ -86,7 +116,13 @@ export default function InscriptionProfessionnel() {
     if (praticien && (!nom || !prenom)) return setErreur("Renseignez votre nom et votre prénom.");
     if (!praticien && !nomEtablissement) return setErreur("Renseignez le nom de l'établissement.");
     if (!telephone || !email || !motDePasse) return setErreur("Remplissez tous les champs obligatoires.");
+    if (!telephoneGuineenValide(telephone)) return setErreur(MESSAGE_TELEPHONE_GN);
     if (motDePasse.length < 8) return setErreur("Le mot de passe doit contenir au moins 8 caractères.");
+    if (motDePasse !== confirmation)
+      return setErreur("Les deux mots de passe ne sont pas identiques.");
+    if (!conditions)
+      return setErreur("Acceptez les conditions d’utilisation pour continuer.");
+    if (!captcha) return setErreur("Cochez « Je ne suis pas un robot » pour continuer.");
     setEnCours(true);
     const res = await inscrireProfessionnel({
       typeCompte: praticien ? "medecin" : "etablissement",
@@ -98,7 +134,8 @@ export default function InscriptionProfessionnel() {
       specialiteId: praticien ? specialiteId || specialites[0]?.id : undefined,
       typeEtablissement: praticien ? undefined : CHAMPS_ETABLISSEMENT[profil as Exclude<Profil, "praticien">].type,
       nomEtablissement: praticien ? undefined : nomEtablissement.trim(),
-      villeId: villeId || villes[0]?.id,
+      villeId: villeChoisie,
+      commune: commune.trim(),
     });
     setEnCours(false);
     if (res.erreur) setErreur(res.erreur);
@@ -180,6 +217,8 @@ export default function InscriptionProfessionnel() {
               />
             </>
           )}
+          <div className="flabel">Commune *</div>
+          <ChampCommune mobile villeId={villeChoisie} valeur={commune} onChange={setCommune} />
           <div className="flabel">Ville *</div>
           <select className="selm" value={villeId} onChange={(e) => setVilleId(e.target.value)}>
             {villes.map((v) => (
@@ -187,28 +226,45 @@ export default function InscriptionProfessionnel() {
             ))}
           </select>
           <div className="flabel">Téléphone *</div>
-          <div className="phone-inp">
-            <span className="cc">🇬🇳 +224</span>
-            <input
-              className="inp"
-              placeholder="6XX XX XX XX"
-              aria-label="Numéro de téléphone"
-              value={telephone}
-              onChange={(e) => setTelephone(e.target.value)}
-            />
-          </div>
+          <ChampTelephoneGN mobile valeur={telephone} onChange={setTelephone} />
           <div className="muted" style={{ fontSize: 10.5, margin: "-6px 0 11px" }}>
             Un SMS de vérification sera envoyé à ce numéro.
           </div>
           <div className="flabel">E-mail *</div>
           <input className="inp" placeholder="contact@exemple.com" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           <div className="flabel">Mot de passe *</div>
-          <input className="inp" type="password" placeholder="••••••••" value={motDePasse} onChange={(e) => setMotDePasse(e.target.value)} />
-          <CaseCocher texte="J'accepte les conditions d'utilisation et la politique de confidentialité." />
-          <FauxCaptcha />
-          <button type="button" className="btn block w-full" onClick={creerCompte} disabled={enCours}>
+          <ChampMotDePasse mobile valeur={motDePasse} onChange={setMotDePasse} ariaLabel="Mot de passe" />
+          <div className="flabel">Confirmer le mot de passe *</div>
+          <ChampMotDePasse
+            mobile
+            valeur={confirmation}
+            onChange={setConfirmation}
+            ariaLabel="Confirmer le mot de passe"
+          />
+          {confirmation.length > 0 && motDePasse !== confirmation && (
+            <p className="text-[11.5px] font-semibold text-red" style={{ margin: "-6px 0 10px" }}>
+              Les deux mots de passe ne sont pas identiques.
+            </p>
+          )}
+          <CaseCocher
+            texte="J'accepte les conditions d'utilisation et la politique de confidentialité."
+            onChange={setConditions}
+          />
+          <FauxCaptcha onChange={setCaptcha} />
+          <button
+            type="button"
+            className="btn block w-full disabled:opacity-50"
+            onClick={creerCompte}
+            disabled={enCours || !peutContinuer}
+          >
             {enCours ? "Création…" : "Continuer"}
           </button>
+          {!peutContinuer && !enCours && (
+            <p className="muted" style={{ fontSize: 11, textAlign: "center", margin: "8px 0 0" }}>
+              Renseignez tous les champs obligatoires, acceptez les conditions et cochez « Je ne
+              suis pas un robot » pour continuer.
+            </p>
+          )}
           <div className="promo">
             <h4>Élargissez votre patientèle</h4>
             <p>Laissez vos patients prendre rendez-vous en ligne 24h/24.</p>
@@ -303,6 +359,8 @@ export default function InscriptionProfessionnel() {
                 />
               </>
             )}
+            <label className={etiquette}>Commune *</label>
+            <ChampCommune villeId={villeChoisie} valeur={commune} onChange={setCommune} />
             <label className={etiquette}>Ville *</label>
             <select className={champ} value={villeId} onChange={(e) => setVilleId(e.target.value)}>
               {villes.map((v) => (
@@ -310,35 +368,44 @@ export default function InscriptionProfessionnel() {
               ))}
             </select>
             <label className={etiquette}>Téléphone *</label>
-            <div className="mb-3 flex gap-2">
-              <span className="flex flex-none items-center gap-1.5 whitespace-nowrap rounded-xl border border-line bg-[#F4F8FA] px-[13px] text-sm font-bold">
-                🇬🇳 +224
-              </span>
-              <input
-                className={`${champ} mb-0`}
-                placeholder="6XX XX XX XX"
-                aria-label="Numéro de téléphone"
-                value={telephone}
-                onChange={(e) => setTelephone(e.target.value)}
-              />
-            </div>
+            <ChampTelephoneGN valeur={telephone} onChange={setTelephone} />
             <p className="-mt-1.5 mb-3 text-[11px] text-muted">
               Un SMS de vérification sera envoyé à ce numéro.
             </p>
             <label className={etiquette}>E-mail *</label>
             <input className={champ} placeholder="contact@exemple.com" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
             <label className={etiquette}>Mot de passe *</label>
-            <input className={champ} type="password" placeholder="••••••••" value={motDePasse} onChange={(e) => setMotDePasse(e.target.value)} />
-            <CaseCocher texte="J'accepte les conditions d'utilisation et la politique de confidentialité." />
-            <FauxCaptcha />
+            <ChampMotDePasse valeur={motDePasse} onChange={setMotDePasse} ariaLabel="Mot de passe" />
+            <label className={etiquette}>Confirmer le mot de passe *</label>
+            <ChampMotDePasse
+              valeur={confirmation}
+              onChange={setConfirmation}
+              ariaLabel="Confirmer le mot de passe"
+            />
+            {confirmation.length > 0 && motDePasse !== confirmation && (
+              <p className="-mt-1.5 mb-3 text-[11.5px] font-semibold text-red">
+                Les deux mots de passe ne sont pas identiques.
+              </p>
+            )}
+            <CaseCocher
+              texte="J'accepte les conditions d'utilisation et la politique de confidentialité."
+              onChange={setConditions}
+            />
+            <FauxCaptcha onChange={setCaptcha} />
             <button
               type="button"
               onClick={creerCompte}
-              disabled={enCours}
-              className="flex w-full items-center justify-center gap-2 rounded-[11px] bg-teal px-6 py-[14px] text-[15px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:opacity-60"
+              disabled={enCours || !peutContinuer}
+              className="flex w-full items-center justify-center gap-2 rounded-[11px] bg-teal px-6 py-[14px] text-[15px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {enCours ? "Création…" : "Continuer"}
             </button>
+            {!peutContinuer && !enCours && (
+              <p className="mt-2 text-center text-[11.5px] text-muted">
+                Renseignez tous les champs obligatoires, acceptez les conditions et cochez « Je ne
+                suis pas un robot » pour continuer.
+              </p>
+            )}
             <div className="mt-[18px] text-center text-[13px] text-muted">
               Déjà inscrit ?{" "}
               <Link href="/connexion" className="font-bold text-teal">

@@ -9,6 +9,7 @@ import {
   type MedecinAvecPlages,
 } from "@/lib/donnees";
 import { versISO } from "@/lib/dates";
+import { JOURS_NOMS, horairesParJour, resumeHeures, resumeJours } from "@/lib/horaires";
 
 /*
  * Couche de données de l'espace professionnel (médecin ET assistant) :
@@ -110,13 +111,14 @@ export function useContextePro(): ContextePro {
         .from("medecins")
         .select(`
           id, civilite, genre, tarif_consultation, presentation, soins_et_actes, diplomes,
-          parcours, langues, annees_experience, telephone_secretariat, note_moyenne,
-          nb_avis, etablissement_id, quartier, photo_url,
+          parcours, langues, annees_experience, telephone_secretariat, numero_ordre,
+          note_moyenne, nb_avis, etablissement_id, commune, quartier, photo_url, localisation,
           utilisateurs ( nom, prenom ),
           specialites ( nom ),
           villes ( nom ),
           medecin_assurances ( assurances ( libelle ) ),
-          horaires_types ( jour_semaine, heure_debut, heure_fin )
+          horaires_types ( jour_semaine, heure_debut, heure_fin ),
+          tarifs_medecin ( libelle, montant, position )
         `)
         .eq("id", medecinId)
         .maybeSingle();
@@ -135,16 +137,20 @@ export function useContextePro(): ContextePro {
           langues: string[];
           annees_experience: number | null;
           telephone_secretariat: string | null;
+          numero_ordre: string | null;
           note_moyenne: number;
           nb_avis: number;
           etablissement_id: string | null;
+          commune: string | null;
           quartier: string | null;
           photo_url: string | null;
+          localisation: string | null;
           utilisateurs: { nom: string | null; prenom: string | null } | null;
           specialites: { nom: string } | null;
           villes: { nom: string } | null;
           medecin_assurances: { assurances: { libelle: string } | null }[];
           horaires_types: { jour_semaine: number; heure_debut: string; heure_fin: string }[];
+          tarifs_medecin: { libelle: string; montant: number; position: number }[];
         };
 
         const prenom = ligne.utilisateurs?.prenom ?? "";
@@ -152,16 +158,8 @@ export function useContextePro(): ContextePro {
         const joursOuverts = new Set(ligne.horaires_types?.map((h) => h.jour_semaine) ?? []);
         const joursFermes = [0, 1, 2, 3, 4, 5, 6].filter((j) => !joursOuverts.has(j));
 
-        const JOURS_NOMS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
-        const tries = [...joursOuverts].sort();
-        const jours =
-          tries.length === 0
-            ? "Sur rendez-vous"
-            : `${JOURS_NOMS[tries[0]]} — ${JOURS_NOMS[tries[tries.length - 1]]}`;
-        const debuts = ligne.horaires_types?.map((h) => h.heure_debut.slice(0, 5)).sort() ?? [];
-        const fins = ligne.horaires_types?.map((h) => h.heure_fin.slice(0, 5)).sort() ?? [];
-        const detail =
-          debuts.length > 0 ? `${debuts[0]} à ${fins[fins.length - 1]}` : "Horaires à confirmer";
+        const jours = resumeJours(ligne.horaires_types ?? []);
+        const detail = resumeHeures(ligne.horaires_types ?? []);
 
         const GRADIENTS = [
           "linear-gradient(135deg,#E08E45,#C0392B)",
@@ -200,8 +198,14 @@ export function useContextePro(): ContextePro {
           specialite: ligne.specialites?.nom ?? "Médecine générale",
           etablissementId: ligne.etablissement_id ?? "",
           ville: ligne.villes?.nom ?? "",
+          commune: ligne.commune ?? "",
+          quartier: ligne.quartier ?? "",
+          numeroOrdre: ligne.numero_ordre ?? "",
           anneesExperience: ligne.annees_experience ?? 0,
           tarifConsultation: ligne.tarif_consultation ?? 0,
+          tarifs: [...(ligne.tarifs_medecin ?? [])]
+            .sort((a, b) => a.position - b.position)
+            .map((t) => ({ libelle: t.libelle, montant: t.montant })),
           note: Number(ligne.note_moyenne) || 0,
           nbAvis: ligne.nb_avis,
           disponibilite: ouvertAujourdHui
@@ -215,8 +219,10 @@ export function useContextePro(): ContextePro {
           langues: ligne.langues ?? [],
           assurances: ligne.medecin_assurances?.map((a) => a.assurances?.libelle ?? "").filter(Boolean) ?? [],
           horaires: { jours, detail },
+          horairesSemaine: horairesParJour(ligne.horaires_types ?? []),
           joursFermes,
           plages: ligne.horaires_types ?? [],
+          localisation: ligne.localisation ?? "",
         };
       }
 
@@ -920,7 +926,6 @@ export function useAbonnement(): {
 
 export async function enregistrerProfilMedecin(d: {
   presentation?: string;
-  tarifConsultation?: number;
   soins?: string[];
   langues?: string[];
   /** « femme » | « homme » | "" pour ne pas préciser. */
@@ -929,13 +934,18 @@ export async function enregistrerProfilMedecin(d: {
   telephoneSecretariat?: string;
   diplomes?: { titre: string; lieu: string }[];
   parcours?: { lieu: string; duree: string }[];
+  specialiteId?: string;
+  villeId?: string;
+  commune?: string;
+  quartier?: string;
+  numeroOrdre?: string;
+  anneesExperience?: number | null;
 }): Promise<{ erreur?: string }> {
   const supabase = creerClientNavigateur();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return { erreur: "Session expirée." };
   const maj: Record<string, unknown> = {};
   if (d.presentation !== undefined) maj.presentation = d.presentation;
-  if (d.tarifConsultation !== undefined) maj.tarif_consultation = d.tarifConsultation;
   if (d.soins !== undefined) maj.soins_et_actes = d.soins;
   if (d.langues !== undefined) maj.langues = d.langues;
   // Chaîne vide = « non précisé » : la colonne accepte uniquement
@@ -945,8 +955,63 @@ export async function enregistrerProfilMedecin(d: {
   if (d.telephoneSecretariat !== undefined) maj.telephone_secretariat = d.telephoneSecretariat;
   if (d.diplomes !== undefined) maj.diplomes = d.diplomes;
   if (d.parcours !== undefined) maj.parcours = d.parcours;
-  const { error } = await supabase.from("medecins").update(maj).eq("id", auth.user.id);
-  return error ? { erreur: error.message } : {};
+  if (d.specialiteId !== undefined) maj.specialite_id = d.specialiteId || null;
+  if (d.villeId !== undefined) maj.ville_id = d.villeId || null;
+  if (d.commune !== undefined) maj.commune = d.commune;
+  if (d.quartier !== undefined) maj.quartier = d.quartier;
+  if (d.numeroOrdre !== undefined) maj.numero_ordre = d.numeroOrdre || null;
+  if (d.anneesExperience !== undefined) maj.annees_experience = d.anneesExperience;
+  // Un update refusé par la RLS ne lève pas d'erreur : il touche zéro
+  // ligne. Sans ce `.select()` l'écran annoncerait « enregistré » sur une
+  // modification jamais partie.
+  const { data, error } = await supabase
+    .from("medecins")
+    .update(maj)
+    .eq("id", auth.user.id)
+    .select("id");
+  if (error) return { erreur: error.message };
+  if (!data || data.length === 0) return { erreur: "Enregistrement refusé." };
+  return {};
+}
+
+/**
+ * Identité du praticien : elle vit dans `utilisateurs`, pas dans
+ * `medecins`. Sans cette fonction, le nom saisi à l'inscription n'était
+ * modifiable nulle part.
+ */
+export async function enregistrerIdentiteMedecin(d: {
+  nom?: string;
+  prenom?: string;
+  /** Numéro personnel, au format +224XXXXXXXXX. */
+  telephone?: string;
+  civilite?: string;
+}): Promise<{ erreur?: string }> {
+  const supabase = creerClientNavigateur();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return { erreur: "Session expirée." };
+
+  if (d.nom !== undefined || d.prenom !== undefined || d.telephone !== undefined) {
+    const maj: Record<string, unknown> = {};
+    if (d.nom !== undefined) maj.nom = d.nom;
+    if (d.prenom !== undefined) maj.prenom = d.prenom;
+    if (d.telephone !== undefined) maj.telephone = d.telephone || null;
+    const { data, error } = await supabase
+      .from("utilisateurs")
+      .update(maj)
+      .eq("id", auth.user.id)
+      .select("id");
+    if (error) return { erreur: error.message };
+    if (!data || data.length === 0) return { erreur: "Enregistrement refusé." };
+  }
+
+  if (d.civilite !== undefined) {
+    const { error } = await supabase
+      .from("medecins")
+      .update({ civilite: d.civilite })
+      .eq("id", auth.user.id);
+    if (error) return { erreur: error.message };
+  }
+  return {};
 }
 
 /** Assurances acceptées par le médecin connecté (liaison medecin_assurances). */

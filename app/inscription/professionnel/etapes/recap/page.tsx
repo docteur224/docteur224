@@ -40,17 +40,21 @@ interface RecapAbonnement {
 
 interface RecapMedecin {
   specialite: string;
-  tarif: number | null;
+  numeroOrdre: string;
+  tarifs: { libelle: string; montant: number }[];
   experience: number | null;
   presentation: string;
   langues: string[];
   soins: string[];
   diplomes: { titre: string; lieu: string }[];
   parcours: { lieu: string; duree: string }[];
+  commune: string;
   quartier: string;
   ville: string;
   localisation: string;
   telephoneSecretariat: string;
+  photoUrl: string | null;
+  nbPhotos: number;
   horaires: { jour: number; debut: string; fin: string }[];
 }
 
@@ -160,42 +164,57 @@ export default function EtapeRecap() {
       if (actif && u) setCompte({ nom: u.nom ?? "", prenom: u.prenom ?? "", email: u.email, telephone: u.telephone ?? "" });
 
       if (role === "medecin") {
-        const { data: m } = await supabase
-          .from("medecins")
-          .select(
-            "tarif_consultation, annees_experience, presentation, langues, soins_et_actes, diplomes, parcours, quartier, localisation, telephone_secretariat, specialites ( nom ), villes ( nom ), horaires_types ( jour_semaine, heure_debut, heure_fin )"
-          )
-          .eq("id", auth.user.id)
-          .maybeSingle();
+        const [{ data: m }, { count: nbPhotos }] = await Promise.all([
+          supabase
+            .from("medecins")
+            .select(
+              "numero_ordre, annees_experience, presentation, langues, soins_et_actes, diplomes, parcours, commune, quartier, localisation, telephone_secretariat, photo_url, specialites ( nom ), villes ( nom ), horaires_types ( jour_semaine, heure_debut, heure_fin ), tarifs_medecin ( libelle, montant, position )"
+            )
+            .eq("id", auth.user.id)
+            .maybeSingle(),
+          supabase
+            .from("photos_pro")
+            .select("id", { count: "exact", head: true })
+            .eq("medecin_id", auth.user.id),
+        ]);
         if (actif && m) {
           const ligne = m as unknown as {
-            tarif_consultation: number | null;
+            numero_ordre: string | null;
             annees_experience: number | null;
             presentation: string | null;
             langues: string[];
             soins_et_actes: string[];
             diplomes: { titre: string; lieu: string }[] | null;
             parcours: { lieu: string; duree: string }[] | null;
+            commune: string | null;
             quartier: string | null;
             localisation: string | null;
             telephone_secretariat: string | null;
+            photo_url: string | null;
             specialites: { nom: string } | null;
             villes: { nom: string } | null;
             horaires_types: { jour_semaine: number; heure_debut: string; heure_fin: string }[];
+            tarifs_medecin: { libelle: string; montant: number; position: number }[];
           };
           setMedecin({
             specialite: ligne.specialites?.nom ?? "",
-            tarif: ligne.tarif_consultation,
+            numeroOrdre: ligne.numero_ordre ?? "",
+            tarifs: [...(ligne.tarifs_medecin ?? [])]
+              .sort((a, b) => a.position - b.position)
+              .map((t) => ({ libelle: t.libelle, montant: t.montant })),
             experience: ligne.annees_experience,
             presentation: ligne.presentation ?? "",
             langues: ligne.langues ?? [],
             soins: ligne.soins_et_actes ?? [],
             diplomes: ligne.diplomes ?? [],
             parcours: ligne.parcours ?? [],
+            commune: ligne.commune ?? "",
             quartier: ligne.quartier ?? "",
             ville: ligne.villes?.nom ?? "",
             localisation: ligne.localisation ?? "",
             telephoneSecretariat: ligne.telephone_secretariat ?? "",
+            photoUrl: ligne.photo_url,
+            nbPhotos: nbPhotos ?? 0,
             horaires: (ligne.horaires_types ?? [])
               .map((h) => ({ jour: h.jour_semaine, debut: h.heure_debut.slice(0, 5), fin: h.heure_fin.slice(0, 5) }))
               .sort((a, b) => ((a.jour + 6) % 7) - ((b.jour + 6) % 7)),
@@ -261,10 +280,16 @@ export default function EtapeRecap() {
         <>
           <Section titre="🩺 Profil médical" modifier={`${base}/profil`}>
             <Ligne label="Spécialité" valeur={medecin.specialite} />
-            <Ligne label="Tarif" valeur={medecin.tarif ? formatGNF(medecin.tarif) : ""} />
+            <Ligne label="Soins et actes" valeur={medecin.soins.join(", ")} />
+            <Ligne label="N° d’ordre" valeur={medecin.numeroOrdre} />
+            <Ligne
+              label="Tarifs"
+              valeur={medecin.tarifs
+                .map((t) => `${t.libelle} — ${formatGNF(t.montant)}`)
+                .join(" · ")}
+            />
             <Ligne label="Expérience" valeur={medecin.experience ? `${medecin.experience} ans` : ""} />
             <Ligne label="Langues" valeur={medecin.langues.join(", ")} />
-            <Ligne label="Soins et actes" valeur={medecin.soins.join(", ")} />
             <Ligne
               label="Diplômes"
               valeur={medecin.diplomes
@@ -280,12 +305,33 @@ export default function EtapeRecap() {
             <Ligne label="Présentation" valeur={medecin.presentation} />
           </Section>
           <Section titre="📍 Lieu d’exercice" modifier={`${base}/lieu`}>
+            <Ligne label="Commune" valeur={medecin.commune} />
             <Ligne label="Ville" valeur={medecin.ville} />
             <Ligne label="Quartier" valeur={medecin.quartier} />
             <Ligne label="Secrétariat" valeur={medecin.telephoneSecretariat} />
             <Ligne
               label="Position GPS"
               valeur={medecin.localisation ? "Enregistrée ✓" : "Non renseignée"}
+            />
+          </Section>
+          <Section titre="🖼️ Photo & Galerie" modifier={`${base}/photos`}>
+            <Ligne
+              label="Photo de profil"
+              valeur={
+                medecin.photoUrl ? (
+                  <span className="font-bold text-green">Ajoutée ✓</span>
+                ) : (
+                  <span className="text-amber">Aucune — vos initiales seront affichées</span>
+                )
+              }
+            />
+            <Ligne
+              label="Photos du cabinet"
+              valeur={
+                medecin.nbPhotos > 0
+                  ? `${medecin.nbPhotos} photo${medecin.nbPhotos > 1 ? "s" : ""}`
+                  : "Aucune"
+              }
             />
           </Section>
         </>

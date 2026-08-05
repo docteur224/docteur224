@@ -37,14 +37,26 @@ export interface Medecin {
   specialite: string;
   etablissementId: string;
   ville: string;
+  /** Commune du lieu d'exercice (échelon donné avant la ville en Guinée). */
+  commune: string;
+  quartier: string;
+  /** Numéro d'inscription à l'Ordre national des médecins. */
+  numeroOrdre: string;
   anneesExperience: number;
-  /** Tarif de consultation en GNF, payé sur place chez le médecin */
+  /**
+   * Tarif de référence en GNF, payé sur place. Recopié depuis la première
+   * ligne de `tarifs` par un trigger — voir migration 0023.
+   */
   tarifConsultation: number;
+  /** Grille tarifaire complète, dans l'ordre choisi par le médecin. */
+  tarifs: { libelle: string; montant: number }[];
   note: number;
   nbAvis: number;
   /** Prochaine disponibilité affichée sur les cartes (pastille verte ou ambre) */
   disponibilite: { type: "aujourdhui" | "bientot"; label: string };
   telephoneSecretariat: string;
+  /** « lat, lon » relevé au GPS, ou lien Google Maps collé. "" si non renseigné. */
+  localisation: string;
   aPropos: string;
   soinsEtActes: string[];
   diplomes: { titre: string; lieu: string }[];
@@ -52,6 +64,8 @@ export interface Medecin {
   langues: string[];
   assurances: string[];
   horaires: { jours: string; detail: string };
+  /** Horaires jour par jour (lundi → dimanche), pour la fiche détaillée. */
+  horairesSemaine: { jour: number; nom: string; plages: { debut: string; fin: string }[] }[];
   /** Jours de fermeture hebdomadaires (0 = dimanche … 6 = samedi) */
   joursFermes: number[];
 }

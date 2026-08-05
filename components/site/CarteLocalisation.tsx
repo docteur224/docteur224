@@ -1,20 +1,37 @@
+import { estCoordonnees } from "@/lib/geolocalisation";
+
 /**
  * Bloc « Localisation » de la fiche médecin — reproduit la .mapwrap de la
  * maquette web : carte décorative SVG avec épingle animée, carte d'identité
  * de l'établissement et boutons itinéraire / appel.
+ *
+ * Quand le praticien a relevé sa position GPS (étape « Lieu d'exercice »
+ * du parcours d'inscription), l'itinéraire vise ces coordonnées plutôt
+ * qu'une recherche par nom : c'est précisément à cela que sert le relevé,
+ * et une recherche textuelle tombe souvent sur le mauvais quartier.
  */
 export default function CarteLocalisation({
   etablissementNom,
   quartier,
   ville,
   telephone,
+  localisation = "",
 }: {
   etablissementNom: string;
   quartier: string;
   ville: string;
   telephone: string;
+  /** « lat, lon » relevé au GPS, ou lien Google Maps collé par le médecin. */
+  localisation?: string;
 }) {
-  const requete = encodeURIComponent(`${etablissementNom} ${quartier} ${ville}`);
+  const coordonnees = estCoordonnees(localisation);
+  const lienItineraire = coordonnees
+    ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(localisation.trim())}`
+    : localisation.startsWith("http")
+      ? localisation
+      : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+          `${etablissementNom} ${quartier} ${ville}`
+        )}`;
   return (
     <div className="mt-2 overflow-hidden rounded-2xl border border-line bg-white">
       <div className="relative h-[248px] bg-[#E6EDE9]">
@@ -83,7 +100,7 @@ export default function CarteLocalisation({
 
       <div className="flex flex-wrap items-center gap-[11px] border-t border-line px-4 py-[14px]">
         <a
-          href={`https://www.google.com/maps/search/?api=1&query=${requete}`}
+          href={lienItineraire}
           target="_blank"
           rel="noopener"
           className="inline-flex items-center justify-center gap-2 rounded-[11px] bg-teal px-[18px] py-[11px] text-[13.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
@@ -97,7 +114,7 @@ export default function CarteLocalisation({
           📞 Appeler le secrétariat
         </a>
         <span className="ml-auto flex items-center text-xs text-muted">
-          🚗 à ~12 min du centre-ville
+          {coordonnees ? "📍 Position GPS relevée par le praticien" : "🚗 à ~12 min du centre-ville"}
         </span>
       </div>
     </div>
