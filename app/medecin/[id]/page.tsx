@@ -153,32 +153,82 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
   const tarifsVisibles = medecin.tarifs.filter(
     (t) => medecin.visiteDomicile || t.lieu !== "domicile"
   );
-  const LIBELLE_LIEU: Record<string, string> = {
-    cabinet: "Au cabinet",
-    domicile: "À domicile",
-    tous: "Cabinet et domicile",
-  };
+  /*
+   * Les tarifs sont regroupés par lieu, sous un intertitre. Une simple
+   * annotation sous chaque libellé ne suffisait pas : un praticien qui
+   * facture « Consultation » au cabinet et à domicile affichait deux lignes
+   * de même nom, à des prix différents, sans séparation visible.
+   */
+  const groupesTarifs: {
+    cle: string;
+    icone: string;
+    titre: string;
+    note?: string;
+    lignes: typeof tarifsVisibles;
+  }[] = [
+    {
+      cle: "cabinet",
+      icone: "🏥",
+      titre: "Au cabinet",
+      lignes: tarifsVisibles.filter((t) => t.lieu === "cabinet"),
+    },
+    {
+      cle: "domicile",
+      icone: "🏠",
+      titre: "À domicile",
+      note: "Ces tarifs comprennent la consultation et le déplacement du médecin.",
+      lignes: tarifsVisibles.filter((t) => t.lieu === "domicile"),
+    },
+    {
+      cle: "tous",
+      icone: "📋",
+      titre: "Au cabinet ou à domicile",
+      note: "Même tarif quel que soit le lieu choisi.",
+      lignes: tarifsVisibles.filter((t) => t.lieu === "tous"),
+    },
+  ].filter((g) => g.lignes.length > 0);
+
+  const lignesTarifs = (lignes: typeof tarifsVisibles, premiereBordure: boolean) =>
+    lignes.map((tarif, i) => (
+      <div
+        key={`${tarif.libelle}-${i}`}
+        className={`flex items-center justify-between gap-3 px-[13px] py-[10px] text-[13px] ${
+          i > 0 || premiereBordure ? "border-t border-line" : ""
+        }`}
+      >
+        <b className="min-w-0 font-bold">{tarif.libelle}</b>
+        <span className="flex-none font-extrabold text-blue">{formatGNF(tarif.montant)}</span>
+      </div>
+    ));
+
   const grilleTarifs =
     tarifsVisibles.length > 0 ? (
       <div className="mt-1.5 overflow-hidden rounded-xl border border-line">
-        {tarifsVisibles.map((tarif, i) => (
-          <div
-            key={`${tarif.libelle}-${i}`}
-            className={`flex items-center justify-between gap-3 px-[13px] py-[10px] text-[13px] ${
-              i > 0 ? "border-t border-line" : ""
-            }`}
-          >
-            <b className="min-w-0 font-bold">
-              {tarif.libelle}
-              {medecin.visiteDomicile && (
-                <small className="block text-[11px] font-semibold text-muted">
-                  {LIBELLE_LIEU[tarif.lieu]}
-                </small>
-              )}
-            </b>
-            <span className="flex-none font-extrabold text-blue">{formatGNF(tarif.montant)}</span>
-          </div>
-        ))}
+        {/* Un seul lieu possible : les intertitres n'apprendraient rien. */}
+        {groupesTarifs.length < 2
+          ? lignesTarifs(tarifsVisibles, false)
+          : groupesTarifs.map((groupe, g) => (
+              <div key={groupe.cle}>
+                <div
+                  className={`flex items-center gap-2 bg-[#F6FAFC] px-[13px] py-[7px] ${
+                    g > 0 ? "border-t border-line" : ""
+                  }`}
+                >
+                  <span aria-hidden className="text-[13px]">
+                    {groupe.icone}
+                  </span>
+                  <b className="text-[11.5px] font-extrabold uppercase tracking-[0.06em] text-blue">
+                    {groupe.titre}
+                  </b>
+                </div>
+                {lignesTarifs(groupe.lignes, true)}
+                {groupe.note && (
+                  <p className="border-t border-line px-[13px] py-[7px] text-[11px] italic text-muted">
+                    {groupe.note}
+                  </p>
+                )}
+              </div>
+            ))}
         <p className="border-t border-line bg-[#F6FAFC] px-[13px] py-2 text-[11.5px] text-muted">
           Payés sur place, chez le médecin. La réservation en ligne est gratuite.
         </p>
