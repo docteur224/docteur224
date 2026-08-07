@@ -30,7 +30,7 @@ import {
  * resynchroniser.
  *
  * Le montant est FACULTATIF : un acte dont le prix dépend du cas
- * (vaccination, dépistage) s'annonce « sur demande » plutôt que de
+ * (vaccination, dépistage) s'annonce « selon le cas » plutôt que de
  * disparaître de la liste ou d'afficher un chiffre inventé.
  *
  * Le tarif de référence — celui que le trigger recopie dans
@@ -44,7 +44,7 @@ import {
 const CHAMP =
   "w-full rounded-xl border border-line bg-white p-[11px] text-[13px] outline-none focus:border-teal";
 
-const SUR_DEMANDE = "Tarif sur demande — vous l’annoncerez au patient.";
+const SANS_PRIX = "Prix selon le cas — vous l’annoncerez au patient.";
 
 export default function GrilleTarifs({
   medecinId,
@@ -111,7 +111,7 @@ export default function GrilleTarifs({
 
   /**
    * Vider la case ne remet pas le prix à zéro : elle repasse l'acte en
-   * « sur demande ». Un montant de 0 GNF annoncerait une gratuité.
+   * « selon le cas ». Un montant de 0 GNF annoncerait une gratuité.
    */
   async function retarifer(id: string, valeur: string, initial: number | null) {
     const chiffres = valeur.replace(/\D/g, "");
@@ -156,7 +156,7 @@ export default function GrilleTarifs({
                   <input
                     className={CHAMP}
                     inputMode="numeric"
-                    placeholder="Sur demande"
+                    placeholder="Selon le cas"
                     defaultValue={tarif.montant === null ? "" : String(tarif.montant)}
                     aria-label={`Montant du soin ${index + 1} en GNF`}
                     onBlur={(e) => retarifer(tarif.id, e.target.value, tarif.montant)}
@@ -193,7 +193,7 @@ export default function GrilleTarifs({
               )}
               <p className="mt-1.5 text-[11px] text-muted">
                 {tarif.montant === null
-                  ? SUR_DEMANDE
+                  ? SANS_PRIX
                   : tarif.id === reference?.id
                     ? `Tarif de référence — ${formatGNF(tarif.montant)} s’affiche sur votre fiche et dans les résultats de recherche.`
                     : formatGNF(tarif.montant)}

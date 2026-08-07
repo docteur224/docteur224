@@ -62,7 +62,7 @@ export interface Medecin {
    * 0027, cette grille est la liste unique des actes, et c'est en elle que
    * le patient choisit son motif en réservant. `lieu` dit où la ligne
    * s'applique (cabinet, domicile ou les deux) et `montant` vaut `null`
-   * quand le prix n'est pas ferme (« sur demande »).
+   * quand le prix n'est pas ferme (« selon le cas »).
    */
   tarifs: { libelle: string; montant: number | null; lieu: LieuConsultation | "tous" }[];
   note: number;

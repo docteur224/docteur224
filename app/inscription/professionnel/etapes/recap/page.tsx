@@ -305,7 +305,7 @@ export default function EtapeRecap() {
             <Ligne
               label="Soins, actes et tarifs"
               valeur={medecin.tarifs
-                .map((t) => `${t.libelle} — ${t.montant === null ? "sur demande" : formatGNF(t.montant)}`)
+                .map((t) => `${t.libelle} — ${t.montant === null ? "selon le cas" : formatGNF(t.montant)}`)
                 .join(" · ")}
             />
             <Ligne label="Assurances acceptées" valeur={medecin.assurances.join(", ")} />

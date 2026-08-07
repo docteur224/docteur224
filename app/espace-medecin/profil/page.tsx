@@ -993,7 +993,7 @@ export default function ProfilMedecin() {
           <p className="mb-3 text-[12.5px] text-muted">
             Chaque ligne est un soin que vous proposez : c’est cette liste que le patient voit sur
             votre fiche, et dans laquelle il choisit le motif de sa consultation en réservant.
-            Laissez le prix vide si le montant dépend du cas — l’acte s’affichera « sur demande ».
+            Laissez le prix vide si le montant dépend du cas — l’acte s’affichera « selon le cas ».
           </p>
           <GrilleTarifs
             medecinId={medecinConnecte.id}

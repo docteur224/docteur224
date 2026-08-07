@@ -17,7 +17,7 @@ import { creerClientNavigateur } from "@/lib/supabase/client";
  * proposés : chaque ligne est un motif que le patient pourra choisir en
  * réservant, et `medecins.soins_et_actes` en découle par le même trigger.
  * Un acte sans prix ferme (vaccination, dépistage sur devis) porte un
- * `montant` nul et s'annonce « tarif sur demande ».
+ * `montant` nul et s'annonce « selon le cas ».
  */
 
 /** Plafond aligné sur le trigger `tarifs_medecin_limite`. */
@@ -35,7 +35,7 @@ export const LIBELLES_LIEU: Record<LieuTarif, string> = {
 export interface TarifMedecin {
   id: string;
   libelle: string;
-  /** `null` = tarif sur demande : l'acte est proposé, son prix n'est pas ferme. */
+  /** `null` = prix selon le cas : l'acte est proposé, son prix n'est pas ferme. */
   montant: number | null;
   position: number;
   lieu: LieuTarif;

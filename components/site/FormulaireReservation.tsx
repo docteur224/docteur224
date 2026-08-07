@@ -314,7 +314,7 @@ export default function FormulaireReservation({
                 <b>{soin.libelle}</b>
                 {soin.montant === null ? (
                   <span className="flex-none text-[12.5px] font-bold italic text-muted">
-                    Sur demande
+                    Selon le cas
                   </span>
                 ) : (
                   <span className="flex-none font-extrabold text-blue">
@@ -324,7 +324,7 @@ export default function FormulaireReservation({
               </div>
               <p className="mt-1 text-[11.5px] text-muted">
                 {soin.montant === null
-                  ? "Le prix de cet acte dépend du cas : le praticien vous le communiquera avant de le pratiquer."
+                  ? "Le prix dépend de votre situation : le médecin vous l’annoncera avant de pratiquer l’acte."
                   : lieu === "domicile"
                     ? "Ce tarif comprend la consultation et le déplacement du médecin."
                     : "Tarif de ce soin au cabinet, réglé sur place."}

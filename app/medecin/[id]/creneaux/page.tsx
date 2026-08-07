@@ -46,11 +46,7 @@ export default async function ChoixCreneau({ params }: { params: Promise<{ id: s
 
       {/* ===== VERSION WEB (repli : même panneau que la fiche) ===== */}
       <div className="mx-auto hidden w-full max-w-[420px] px-[30px] py-[26px] md:block">
-        <PanneauReservation
-          medecinId={medecin.id}
-          tarif={medecin.tarifConsultation}
-          joursFermes={medecin.joursFermes}
-        />
+        <PanneauReservation medecinId={medecin.id} joursFermes={medecin.joursFermes} />
       </div>
     </div>
   );

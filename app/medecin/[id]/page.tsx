@@ -29,7 +29,7 @@ import {
  * nourries par deux sources qui ne se parlaient pas : le patient pouvait
  * lire quatre soins et n'en réserver que deux. Depuis la 0027 il n'y en a
  * plus qu'une, la grille tarifaire, dont les libellés SONT les actes
- * proposés — un acte sans prix ferme s'y affiche « sur demande ».
+ * proposés — un acte sans prix ferme s'y affiche « selon le cas ».
  */
 
 function TitreSection({ children }: { children: React.ReactNode }) {
@@ -204,10 +204,12 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
       >
         <b className="min-w-0 font-bold">{tarif.libelle}</b>
         {/* Un acte peut être proposé sans prix ferme (vaccination,
-            dépistage) : on l'annonce « sur demande » plutôt que de le
-            taire — le patient peut le réserver, il doit donc le voir. */}
+            dépistage) : on l'annonce « selon le cas » plutôt que de le
+            taire — le patient peut le réserver, il doit donc le voir. La
+            formule dit POURQUOI il n'y a pas de chiffre, au lieu de
+            renvoyer le patient vers une démarche. */}
         {tarif.montant === null ? (
-          <span className="flex-none text-[12px] font-bold italic text-muted">Sur demande</span>
+          <span className="flex-none text-[12px] font-bold italic text-muted">Selon le cas</span>
         ) : (
           <span className="flex-none font-extrabold text-blue">{formatGNF(tarif.montant)}</span>
         )}
@@ -667,11 +669,7 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
         </div>
 
         {/* ===== Panneau de réservation ===== */}
-        <PanneauReservation
-          medecinId={medecin.id}
-          tarif={medecin.tarifConsultation}
-          joursFermes={medecin.joursFermes}
-        />
+        <PanneauReservation medecinId={medecin.id} joursFermes={medecin.joursFermes} />
       </div>
       </div>
     </div>
