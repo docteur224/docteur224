@@ -194,6 +194,18 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
     },
   ].filter((g) => g.lignes.length > 0);
 
+  /*
+   * Nombre d'actes distincts, pour la ligne de statistiques mobile. Compté
+   * sur `tarifsVisibles` et non sur `soinsEtActes` pour coller exactement à
+   * la section affichée juste en dessous ; dédoublonné parce qu'un même acte
+   * peut avoir deux lignes, une au cabinet et une à domicile.
+   */
+  const nbSoins = new Set(
+    tarifsVisibles.map((t) =>
+      t.libelle.trim().toLowerCase().normalize("NFD").replace(/\p{Diacritic}/gu, "")
+    )
+  ).size;
+
   const lignesTarifs = (lignes: typeof tarifsVisibles, premiereBordure: boolean) =>
     lignes.map((tarif, i) => (
       <div
@@ -329,10 +341,15 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
               <b>{medecin.anneesExperience} ans</b>
               <small>d&apos;expérience</small>
             </div>
-            <div className="s">
-              <b>{Math.round(medecin.tarifConsultation / 1000)}k</b>
-              <small>GNF / consult.</small>
-            </div>
+            {/* Plus de prix ici : le tarif dépend de l'acte, et un montant
+                isolé en haut de fiche laissait croire à un prix unique.
+                Le nombre d'actes renvoie à la section détaillée plus bas. */}
+            {nbSoins > 0 && (
+              <div className="s">
+                <b>{nbSoins}</b>
+                <small>{nbSoins > 1 ? "soins" : "soin"}</small>
+              </div>
+            )}
           </div>
         </div>
         <div className="pad" style={{ paddingTop: 6 }}>
@@ -483,7 +500,7 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
               color: "var(--muted)",
             }}
           >
-            Réservation gratuite · consultation à régler sur place
+            Réservation gratuite · soin à régler sur place
           </small>
         </div>
       </div>
