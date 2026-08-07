@@ -12,15 +12,18 @@ import { creerClientNavigateur } from "@/lib/supabase/client";
 import { useTarifsMedecin } from "@/lib/tarifs";
 
 /*
- * Étape 2 (praticien) — profil médical : spécialité, soins, numéro
- * d'ordre, expérience, présentation, grille tarifaire, langues, diplômes,
- * parcours, genre. Tout est écrit dans `medecins` (ou `tarifs_medecin`),
- * donc déjà visible sur /espace-medecin/profil à la fin du parcours.
+ * Étape 2 (praticien) — profil médical : spécialité, numéro d'ordre,
+ * expérience, présentation, soins et tarifs, langues, diplômes, parcours,
+ * genre. Tout est écrit dans `medecins` (ou `tarifs_medecin`), donc déjà
+ * visible sur /espace-medecin/profil à la fin du parcours.
  *
- * Ordre voulu : « Soins et actes » suit immédiatement la spécialité — les
- * deux répondent à la même question (« que faites-vous ? ») et se
- * remplissent d'un trait ; la grille tarifaire suit la présentation, comme
- * sur la fiche publique où les tarifs viennent juste après « À propos ».
+ * Il y avait ici DEUX listes : des « soins et actes » sans prix et une
+ * grille tarifaire. Le patient voyait les premiers sur la fiche mais ne
+ * pouvait réserver que les seconds. Depuis la 0027 il n'en reste qu'une :
+ * la grille, où chaque ligne est un soin, avec ou sans prix ferme.
+ *
+ * La grille suit la présentation, comme sur la fiche publique où les
+ * tarifs viennent juste après « À propos ».
  *
  * Diplômes et parcours sont demandés ICI et pas seulement après coup : ce
  * sont eux qui rassurent un patient hésitant entre deux praticiens, et rien
@@ -52,8 +55,6 @@ export default function EtapeProfilMedical() {
   const [experience, setExperience] = useState("");
   const [presentation, setPresentation] = useState("");
   const [langues, setLangues] = useState<string[]>(["Français"]);
-  const [soins, setSoins] = useState<string[]>([]);
-  const [nouveauSoin, setNouveauSoin] = useState("");
   const [diplomes, setDiplomes] = useState<{ titre: string; lieu: string }[]>([]);
   const [titreDiplome, setTitreDiplome] = useState("");
   const [lieuDiplome, setLieuDiplome] = useState("");
@@ -85,7 +86,7 @@ export default function EtapeProfilMedical() {
       setMedecinId(auth.user.id);
       const { data: m } = await supabase
         .from("medecins")
-        .select("specialite_id, numero_ordre, rccm, visite_domicile, annees_experience, presentation, langues, soins_et_actes, diplomes, parcours, genre")
+        .select("specialite_id, numero_ordre, rccm, visite_domicile, annees_experience, presentation, langues, diplomes, parcours, genre")
         .eq("id", auth.user.id)
         .maybeSingle();
       if (!actif || !m) return;
@@ -96,7 +97,6 @@ export default function EtapeProfilMedical() {
       if (m.annees_experience) setExperience(String(m.annees_experience));
       if (m.presentation) setPresentation(m.presentation);
       if (m.langues?.length) setLangues(m.langues);
-      if (m.soins_et_actes?.length) setSoins(m.soins_et_actes);
       if (m.diplomes?.length) setDiplomes(m.diplomes);
       if (m.parcours?.length) setParcours(m.parcours);
       if (m.genre) setGenre(m.genre);
@@ -113,13 +113,6 @@ export default function EtapeProfilMedical() {
 
   function basculerLangue(langue: string) {
     setLangues((l) => (l.includes(langue) ? l.filter((x) => x !== langue) : [...l, langue]));
-  }
-
-  function ajouterSoin() {
-    const valeur = nouveauSoin.trim();
-    if (!valeur || soins.includes(valeur)) return;
-    setSoins((s) => [...s, valeur]);
-    setNouveauSoin("");
   }
 
   // L'intitulé suffit à ajouter la ligne : exiger aussi l'établissement
@@ -144,11 +137,12 @@ export default function EtapeProfilMedical() {
     if (enCours) return;
     setErreur(null);
     if (!specialiteId) return setErreur("Choisissez votre spécialité.");
-    // Les tarifs vivent dans leur propre table et sont écrits au fil de la
+    // Les soins vivent dans leur propre table et sont écrits au fil de la
     // saisie : il reste à vérifier qu'au moins une ligne existe, sans quoi
-    // la fiche publique n'afficherait aucun prix.
+    // la fiche publique n'afficherait ni prix ni acte, et le patient
+    // n'aurait aucun motif à choisir en réservant.
     if (tarifs.length === 0)
-      return setErreur("Ajoutez au moins un tarif (ex. Consultation — 150000 GNF).");
+      return setErreur("Ajoutez au moins un soin (ex. Consultation — 150000 GNF).");
     setEnCours(true);
     const res = await enregistrerEtapeProfil({
       specialiteId,
@@ -157,7 +151,6 @@ export default function EtapeProfilMedical() {
       anneesExperience: experience ? Number(experience) : null,
       presentation,
       langues,
-      soins,
       diplomes,
       parcours,
       genre,
@@ -189,46 +182,6 @@ export default function EtapeProfilMedical() {
           <option key={s.id} value={s.id}>{s.nom}</option>
         ))}
       </select>
-
-      {/* Juste après la spécialité : c'est la même question posée en plus
-          précis, et le médecin est déjà dans le bon état d'esprit. */}
-      <label className={etiquette}>Soins et actes proposés</label>
-      <div className="flex gap-2">
-        <input
-          className={champ}
-          placeholder="Ex. Échographie cardiaque"
-          value={nouveauSoin}
-          onChange={(e) => setNouveauSoin(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              ajouterSoin();
-            }
-          }}
-        />
-        <button
-          type="button"
-          onClick={ajouterSoin}
-          className="flex-none rounded-xl border border-[#CDE6F2] bg-teal-soft px-4 text-[13px] font-bold text-blue"
-        >
-          + Ajouter
-        </button>
-      </div>
-      {soins.length > 0 && (
-        <div className="mt-2 flex flex-wrap gap-2">
-          {soins.map((soin) => (
-            <button
-              key={soin}
-              type="button"
-              title="Retirer"
-              onClick={() => setSoins((s) => s.filter((x) => x !== soin))}
-              className="rounded-full border border-[#DCE4EA] bg-[#EEF2F5] px-[13px] py-2 text-xs font-bold text-[#3A4A55]"
-            >
-              {soin} ✕
-            </button>
-          ))}
-        </div>
-      )}
 
       <label className={etiquette}>Numéro d’ordre médical</label>
       <input
@@ -272,10 +225,12 @@ export default function EtapeProfilMedical() {
       />
 
       {/* Juste après « À propos », comme sur la fiche publique. */}
-      <label className={etiquette}>Tarifs *</label>
+      <label className={etiquette}>Soins, actes et tarifs *</label>
       <p className="-mt-0.5 mb-2 text-[11.5px] text-muted">
-        Ajoutez autant de lignes que nécessaire (consultation, consultation le dimanche, suivi…).
-        Payés sur place par le patient. Chaque ligne est enregistrée immédiatement.
+        Chaque ligne est un soin que vous proposez (consultation, suivi, vaccination, échographie…)
+        : c’est cette liste que le patient voit sur votre fiche et dans laquelle il choisit le motif
+        de sa consultation. Les tarifs sont payés sur place. Laissez le prix vide si le montant
+        dépend du cas. Chaque ligne est enregistrée immédiatement.
       </p>
       <GrilleTarifs medecinId={medecinId} onChangement={rechargerTarifs} visiteDomicile={visiteDomicile} />
 

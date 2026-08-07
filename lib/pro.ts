@@ -939,9 +939,14 @@ export function useAbonnement(): {
 
 /* ===== Profil enrichi du médecin ===== */
 
+/**
+ * Ni `tarif_consultation` (0023) ni `soins_et_actes` (0027) ne figurent
+ * ici : ce sont des valeurs DÉRIVÉES de `tarifs_medecin`, maintenues par
+ * trigger. Les écrire à la main ferait diverger la fiche publique de ce
+ * que le patient peut réellement réserver — le bug que la 0027 corrige.
+ */
 export async function enregistrerProfilMedecin(d: {
   presentation?: string;
-  soins?: string[];
   langues?: string[];
   /** « femme » | « homme » | "" pour ne pas préciser. */
   genre?: string;
@@ -964,7 +969,6 @@ export async function enregistrerProfilMedecin(d: {
   if (!auth.user) return { erreur: "Session expirée." };
   const maj: Record<string, unknown> = {};
   if (d.presentation !== undefined) maj.presentation = d.presentation;
-  if (d.soins !== undefined) maj.soins_et_actes = d.soins;
   if (d.langues !== undefined) maj.langues = d.langues;
   // Chaîne vide = « non précisé » : la colonne accepte uniquement
   // 'femme'/'homme' ou NULL (contrainte check en base).

@@ -191,7 +191,11 @@ export async function enregistrerEtapeProfil(d: {
   anneesExperience?: number | null;
   presentation?: string;
   langues?: string[];
-  soins?: string[];
+  /*
+   * Pas de `soins` : depuis la 0027, `medecins.soins_et_actes` est dérivée
+   * de `tarifs_medecin` par trigger. Les actes se saisissent dans la
+   * grille, écrite ligne à ligne par GrilleTarifs.
+   */
   /** Numéro d'inscription à l'Ordre, affiché sur la fiche publique. */
   numeroOrdre?: string;
   /** Registre du Commerce et du Crédit Mobilier. */
@@ -209,7 +213,6 @@ export async function enregistrerEtapeProfil(d: {
   if (d.anneesExperience !== undefined) maj.annees_experience = d.anneesExperience;
   if (d.presentation !== undefined) maj.presentation = d.presentation;
   if (d.langues !== undefined) maj.langues = d.langues;
-  if (d.soins !== undefined) maj.soins_et_actes = d.soins;
   if (d.numeroOrdre !== undefined) maj.numero_ordre = d.numeroOrdre || null;
   if (d.rccm !== undefined) maj.rccm = d.rccm || null;
   if (d.genre !== undefined) maj.genre = d.genre === "" ? null : d.genre;

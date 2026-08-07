@@ -45,11 +45,10 @@ interface RecapMedecin {
   rccm: string;
   visiteDomicile: boolean;
   zoneDomicile: string;
-  tarifs: { libelle: string; montant: number }[];
+  tarifs: { libelle: string; montant: number | null }[];
   experience: number | null;
   presentation: string;
   langues: string[];
-  soins: string[];
   assurances: string[];
   diplomes: { titre: string; lieu: string }[];
   parcours: { lieu: string; duree: string }[];
@@ -173,7 +172,7 @@ export default function EtapeRecap() {
           supabase
             .from("medecins")
             .select(
-              "civilite, numero_ordre, rccm, visite_domicile, zone_domicile, annees_experience, presentation, langues, soins_et_actes, diplomes, parcours, commune, quartier, localisation, telephone_secretariat, photo_url, specialites ( nom ), villes ( nom ), horaires_types ( jour_semaine, heure_debut, heure_fin ), tarifs_medecin ( libelle, montant, position ), medecin_assurances ( assurances ( libelle ) )"
+              "civilite, numero_ordre, rccm, visite_domicile, zone_domicile, annees_experience, presentation, langues, diplomes, parcours, commune, quartier, localisation, telephone_secretariat, photo_url, specialites ( nom ), villes ( nom ), horaires_types ( jour_semaine, heure_debut, heure_fin ), tarifs_medecin ( libelle, montant, position ), medecin_assurances ( assurances ( libelle ) )"
             )
             .eq("id", auth.user.id)
             .maybeSingle(),
@@ -192,7 +191,6 @@ export default function EtapeRecap() {
             annees_experience: number | null;
             presentation: string | null;
             langues: string[];
-            soins_et_actes: string[];
             diplomes: { titre: string; lieu: string }[] | null;
             parcours: { lieu: string; duree: string }[] | null;
             commune: string | null;
@@ -203,7 +201,7 @@ export default function EtapeRecap() {
             specialites: { nom: string } | null;
             villes: { nom: string } | null;
             horaires_types: { jour_semaine: number; heure_debut: string; heure_fin: string }[];
-            tarifs_medecin: { libelle: string; montant: number; position: number }[];
+            tarifs_medecin: { libelle: string; montant: number | null; position: number }[];
             medecin_assurances: { assurances: { libelle: string } | null }[] | null;
           };
           setMedecin({
@@ -219,7 +217,6 @@ export default function EtapeRecap() {
             experience: ligne.annees_experience,
             presentation: ligne.presentation ?? "",
             langues: ligne.langues ?? [],
-            soins: ligne.soins_et_actes ?? [],
             assurances: (ligne.medecin_assurances ?? [])
               .map((a) => a.assurances?.libelle ?? "")
               .filter(Boolean),
@@ -300,13 +297,15 @@ export default function EtapeRecap() {
         <>
           <Section titre="🩺 Profil médical" modifier={`${base}/profil`}>
             <Ligne label="Spécialité" valeur={medecin.specialite} />
-            <Ligne label="Soins et actes" valeur={medecin.soins.join(", ")} />
             <Ligne label="N° d’ordre" valeur={medecin.numeroOrdre} />
             <Ligne label="RCCM" valeur={medecin.rccm} />
+            {/* Les soins ET leurs prix en une seule ligne : ils ne font
+                qu'un depuis la 0027, et le pro doit relire exactement ce
+                que le patient pourra choisir en réservant. */}
             <Ligne
-              label="Tarifs"
+              label="Soins, actes et tarifs"
               valeur={medecin.tarifs
-                .map((t) => `${t.libelle} — ${formatGNF(t.montant)}`)
+                .map((t) => `${t.libelle} — ${t.montant === null ? "sur demande" : formatGNF(t.montant)}`)
                 .join(" · ")}
             />
             <Ligne label="Assurances acceptées" valeur={medecin.assurances.join(", ")} />

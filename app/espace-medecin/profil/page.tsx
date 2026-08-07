@@ -184,7 +184,6 @@ export default function ProfilMedecin() {
   }, []);
 
   // Surcharges locales (affichage immédiat) au-dessus du profil chargé
-  const [soinsLocaux, setSoinsLocaux] = useState<string[] | null>(null);
   const [languesLocales, setLanguesLocales] = useState<string[] | null>(null);
   const [diplomesLocaux, setDiplomesLocaux] = useState<{ titre: string; lieu: string }[] | null>(null);
   const [parcoursLocal, setParcoursLocal] = useState<{ lieu: string; duree: string }[] | null>(null);
@@ -199,7 +198,9 @@ export default function ProfilMedecin() {
   const localisation = lienMapsLocal ?? (medecin as { localisation?: string } | null)?.localisation ?? "";
   const estCoordonnees = sontDesCoordonnees(localisation);
   const profil = {
-    soins: soinsLocaux ?? medecinConnecte.soinsEtActes,
+    // Pas de `soins` ici : depuis la 0027, les soins et actes proposés SONT
+    // la grille tarifaire (carte « Soins, actes et tarifs »), et
+    // `medecins.soins_et_actes` en est dérivée par trigger.
     langues: languesLocales ?? medecinConnecte.langues,
     diplomes: diplomesLocaux ?? medecinConnecte.diplomes,
     parcours: parcoursLocal ?? medecinConnecte.parcours,
@@ -294,28 +295,18 @@ export default function ProfilMedecin() {
     else rechargerDocs();
   }
 
-  async function ajouterElement(cle: "soins" | "langues", question: string) {
+  async function ajouterLangue(question: string) {
     const valeur = window.prompt(question)?.trim();
-    if (!valeur) return;
-    const nouvelle = [...profil[cle], valeur];
-    if (cle === "soins") {
-      setSoinsLocaux(nouvelle);
-      signaler(await enregistrerProfilMedecin({ soins: nouvelle }));
-    } else {
-      setLanguesLocales(nouvelle);
-      signaler(await enregistrerProfilMedecin({ langues: nouvelle }));
-    }
+    if (!valeur || profil.langues.includes(valeur)) return;
+    const nouvelle = [...profil.langues, valeur];
+    setLanguesLocales(nouvelle);
+    signaler(await enregistrerProfilMedecin({ langues: nouvelle }));
   }
 
-  async function retirerElement(cle: "soins" | "langues", valeur: string) {
-    const nouvelle = profil[cle].filter((x) => x !== valeur);
-    if (cle === "soins") {
-      setSoinsLocaux(nouvelle);
-      signaler(await enregistrerProfilMedecin({ soins: nouvelle }));
-    } else {
-      setLanguesLocales(nouvelle);
-      signaler(await enregistrerProfilMedecin({ langues: nouvelle }));
-    }
+  async function retirerLangue(valeur: string) {
+    const nouvelle = profil.langues.filter((x) => x !== valeur);
+    setLanguesLocales(nouvelle);
+    signaler(await enregistrerProfilMedecin({ langues: nouvelle }));
   }
 
   /*
@@ -741,10 +732,10 @@ export default function ProfilMedecin() {
           </div>
 
           <div className="card2">
-            <h4>💰 Tarifs</h4>
+            <h4>🩺 Soins, actes et tarifs</h4>
             <p className="muted" style={{ fontSize: 11.5, margin: "-4px 0 11px", lineHeight: 1.5 }}>
-              Affichés sur votre fiche juste après « À propos ». Le premier sert de tarif de
-              référence dans les résultats de recherche.
+              Cette liste est celle que le patient voit sur votre fiche, et dans laquelle il choisit
+              son motif en réservant. Laissez le prix vide si le montant dépend du cas.
             </p>
             <GrilleTarifs
               medecinId={medecinConnecte.id}
@@ -826,30 +817,6 @@ export default function ProfilMedecin() {
           </div>
 
           <div className="card2">
-            <h4>🩺 Soins et actes</h4>
-            <div className="chips">
-              {profil.soins.map((soin) => (
-                <button
-                  key={soin}
-                  type="button"
-                  className="chip grey"
-                  title="Retirer"
-                  onClick={() => retirerElement("soins", soin)}
-                >
-                  {soin} ✕
-                </button>
-              ))}
-              <button
-                type="button"
-                className="chip"
-                onClick={() => ajouterElement("soins", "Nom du soin ou de l'acte à ajouter :")}
-              >
-                + Ajouter
-              </button>
-            </div>
-          </div>
-
-          <div className="card2">
             <h4>🎓 Diplôme et formation</h4>
             {profil.diplomes.length === 0 && (
               <p className="muted" style={{ fontSize: 12.5 }}>
@@ -916,12 +883,12 @@ export default function ProfilMedecin() {
                   type="button"
                   className="chip grey"
                   title="Retirer"
-                  onClick={() => retirerElement("langues", langue)}
+                  onClick={() => retirerLangue(langue)}
                 >
                   {langue} ✕
                 </button>
               ))}
-              <button type="button" className="chip" onClick={() => ajouterElement("langues", "Langue à ajouter :")}>
+              <button type="button" className="chip" onClick={() => ajouterLangue("Langue à ajouter :")}>
                 + Ajouter
               </button>
             </div>
@@ -1020,13 +987,13 @@ export default function ProfilMedecin() {
           {champsIdentite("w")}
         </div>
 
-        {/* Tarifs */}
+        {/* Soins, actes et tarifs */}
         <div className="mb-4 rounded-2xl border border-line bg-white p-5">
-          <h3 className="mb-1 text-[15px] font-extrabold">💰 Tarifs</h3>
+          <h3 className="mb-1 text-[15px] font-extrabold">🩺 Soins, actes et tarifs</h3>
           <p className="mb-3 text-[12.5px] text-muted">
-            Affichés sur votre fiche juste après « À propos ». La première ligne sert de tarif de
-            référence : c’est elle qui apparaît sur les cartes de résultat et dans le panneau de
-            réservation.
+            Chaque ligne est un soin que vous proposez : c’est cette liste que le patient voit sur
+            votre fiche, et dans laquelle il choisit le motif de sa consultation en réservant.
+            Laissez le prix vide si le montant dépend du cas — l’acte s’affichera « sur demande ».
           </p>
           <GrilleTarifs
             medecinId={medecinConnecte.id}
@@ -1109,31 +1076,6 @@ export default function ProfilMedecin() {
               <b>Privé.</b> Ces documents sont visibles uniquement par l’administrateur lors de la
               validation. Ils ne sont jamais affichés aux patients.
             </div>
-          </div>
-        </div>
-
-        {/* Soins et actes */}
-        <div className="mb-4 rounded-2xl border border-line bg-white p-5">
-          <h3 className="mb-3 text-[15px] font-extrabold">🩺 Soins et actes proposés</h3>
-          <div className="flex flex-wrap gap-2">
-            {profil.soins.map((soin) => (
-              <button
-                key={soin}
-                type="button"
-                title="Retirer"
-                onClick={() => retirerElement("soins", soin)}
-                className="rounded-full border border-[#DCE4EA] bg-[#EEF2F5] px-[14px] py-2 text-xs font-bold text-[#3A4A55] hover:border-red"
-              >
-                {soin} ✕
-              </button>
-            ))}
-            <button
-              type="button"
-              onClick={() => ajouterElement("soins", "Nom du soin ou de l'acte à ajouter :")}
-              className="rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
-            >
-              + Ajouter
-            </button>
           </div>
         </div>
 
@@ -1224,7 +1166,7 @@ export default function ProfilMedecin() {
                 key={langue}
                 type="button"
                 title="Retirer"
-                onClick={() => retirerElement("langues", langue)}
+                onClick={() => retirerLangue(langue)}
                 className="rounded-full border border-[#DCE4EA] bg-[#EEF2F5] px-[14px] py-2 text-xs font-bold text-[#3A4A55] hover:border-red"
               >
                 {langue} ✕
@@ -1232,7 +1174,7 @@ export default function ProfilMedecin() {
             ))}
             <button
               type="button"
-              onClick={() => ajouterElement("langues", "Langue à ajouter :")}
+              onClick={() => ajouterLangue("Langue à ajouter :")}
               className="rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
             >
               + Ajouter

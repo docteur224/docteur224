@@ -12,6 +12,12 @@ import { creerClientNavigateur } from "@/lib/supabase/client";
  * réservation, mais elle est désormais DÉRIVÉE du premier tarif de la
  * grille par un trigger : rien à synchroniser ici, et les deux ne peuvent
  * plus diverger.
+ *
+ * Depuis la 0027, cette grille est aussi LA liste des soins et actes
+ * proposés : chaque ligne est un motif que le patient pourra choisir en
+ * réservant, et `medecins.soins_et_actes` en découle par le même trigger.
+ * Un acte sans prix ferme (vaccination, dépistage sur devis) porte un
+ * `montant` nul et s'annonce « tarif sur demande ».
  */
 
 /** Plafond aligné sur le trigger `tarifs_medecin_limite`. */
@@ -29,17 +35,28 @@ export const LIBELLES_LIEU: Record<LieuTarif, string> = {
 export interface TarifMedecin {
   id: string;
   libelle: string;
-  montant: number;
+  /** `null` = tarif sur demande : l'acte est proposé, son prix n'est pas ferme. */
+  montant: number | null;
   position: number;
   lieu: LieuTarif;
 }
 
-interface Ligne {
-  id: string;
-  libelle: string;
-  montant: number;
-  position: number;
-  lieu: LieuTarif;
+type Ligne = TarifMedecin;
+
+/**
+ * La ligne dont le montant sert de prix de référence — celui que
+ * `medecins.tarif_consultation` recopie, donc celui qu'affichent les cartes
+ * de résultat et le panneau de réservation.
+ *
+ * C'est la règle du trigger `tarifs_medecin_synchro` (0027) écrite une
+ * seule fois : première ligne TARIFÉE valable au cabinet, à défaut la
+ * première tarifée tout court. Sans cette fonction, l'écran désignerait la
+ * première ligne de la grille, que la base ignore dès qu'elle est « sur
+ * demande » ou réservée au domicile.
+ */
+export function ligneDeReference(tarifs: TarifMedecin[]): TarifMedecin | null {
+  const tarifes = tarifs.filter((t) => t.montant !== null);
+  return tarifes.find((t) => t.lieu === "cabinet" || t.lieu === "tous") ?? tarifes[0] ?? null;
 }
 
 export function useTarifsMedecin(medecinId: string | undefined): {
@@ -79,7 +96,7 @@ export function useTarifsMedecin(medecinId: string | undefined): {
 
 export async function ajouterTarif(
   libelle: string,
-  montant: number,
+  montant: number | null,
   position: number,
   lieu: LieuTarif = "cabinet"
 ): Promise<{ erreur?: string }> {
@@ -99,7 +116,7 @@ export async function ajouterTarif(
  */
 export async function modifierTarif(
   id: string,
-  maj: { libelle?: string; montant?: number; position?: number; lieu?: LieuTarif }
+  maj: { libelle?: string; montant?: number | null; position?: number; lieu?: LieuTarif }
 ): Promise<{ erreur?: string }> {
   const { data, error } = await creerClientNavigateur()
     .from("tarifs_medecin")

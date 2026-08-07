@@ -191,10 +191,11 @@ export default function EtapeLieu() {
               qu’il ne réserve.
             </p>
 
-            <label className={etiquette}>Tarifs applicables</label>
+            <label className={etiquette}>Soins et tarifs applicables</label>
             <p className="-mt-0.5 mb-2 text-[11.5px] text-muted">
-              Ajoutez le prix d’une visite à domicile et précisez, pour chaque ligne, où elle
-              s’applique.
+              Ajoutez les actes que vous pratiquez à domicile et précisez, pour chaque ligne, où
+              elle s’applique. Le patient ne se verra proposer, en réservant, que les soins
+              valables au lieu qu’il aura choisi.
             </p>
             <GrilleTarifs medecinId={medecinId} visiteDomicile />
           </div>

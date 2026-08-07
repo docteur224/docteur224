@@ -58,8 +58,12 @@ export default function FormulaireReservation({
   /** Le praticien se déplace-t-il ? Sans cela, aucun choix n'est proposé. */
   visiteDomicile?: boolean;
   zoneDomicile?: string;
-  /** Grille tarifaire : elle sert aussi de liste des soins proposés. */
-  tarifs?: { libelle: string; montant: number; lieu: LieuConsultation | "tous" }[];
+  /**
+   * Soins et actes proposés par le praticien, avec leur prix : depuis la
+   * 0027 c'est la liste unique, celle qu'affiche aussi sa fiche publique.
+   * `montant` vaut `null` quand le prix n'est pas ferme.
+   */
+  tarifs?: { libelle: string; montant: number | null; lieu: LieuConsultation | "tous" }[];
 }) {
   const router = useRouter();
   const { profil, chargement } = useProfilConnecte();
@@ -92,7 +96,18 @@ export default function FormulaireReservation({
    */
   const soins = tarifs.filter((t) => t.lieu === lieu || t.lieu === "tous");
   const soin = soins.find((t) => t.libelle === soinChoisi) ?? null;
-  const tarifAffiche = soin?.montant ?? tarif;
+  /*
+   * Ce que le bandeau de gratuité annonce comme montant à régler. Trois cas,
+   * et un `??` naïf en confondrait deux : aucun soin retenu → le tarif de
+   * référence du praticien ; soin retenu et tarifé → son prix ; soin retenu
+   * SANS prix ferme → rien. Écrire `soin?.montant ?? tarif` afficherait le
+   * prix de la consultation en face d'un acte que le médecin a justement
+   * refusé de tarifer.
+   */
+  const montantARegler = soin ? soin.montant : tarif;
+  const libelleARegler = soin
+    ? `${soin.libelle}${montantARegler === null ? "" : ` (${formatGNF(montantARegler)})`}`
+    : "La consultation";
 
   const nouveauValide =
     nouveau.nom.trim() !== "" && nouveau.prenom.trim() !== "" && nouveau.dateNaissance !== "";
@@ -297,14 +312,22 @@ export default function FormulaireReservation({
             <div className="mt-[14px] rounded-xl border border-line bg-bg px-[13px] py-3">
               <div className="flex items-center justify-between gap-3 text-[13.5px]">
                 <b>{soin.libelle}</b>
-                <span className="flex-none font-extrabold text-blue">
-                  {formatGNF(soin.montant)}
-                </span>
+                {soin.montant === null ? (
+                  <span className="flex-none text-[12.5px] font-bold italic text-muted">
+                    Sur demande
+                  </span>
+                ) : (
+                  <span className="flex-none font-extrabold text-blue">
+                    {formatGNF(soin.montant)}
+                  </span>
+                )}
               </div>
               <p className="mt-1 text-[11.5px] text-muted">
-                {lieu === "domicile"
-                  ? "Ce tarif comprend la consultation et le déplacement du médecin."
-                  : "Tarif de ce soin au cabinet, réglé sur place."}
+                {soin.montant === null
+                  ? "Le prix de cet acte dépend du cas : le praticien vous le communiquera avant de le pratiquer."
+                  : lieu === "domicile"
+                    ? "Ce tarif comprend la consultation et le déplacement du médecin."
+                    : "Tarif de ce soin au cabinet, réglé sur place."}
               </p>
             </div>
           )}
@@ -349,7 +372,7 @@ export default function FormulaireReservation({
       <span aria-hidden>✅</span>
       <div>
         <b>Réservation gratuite.</b>{" "}
-        {soin ? `${soin.libelle} (${formatGNF(tarifAffiche)})` : "La consultation"} se règle{" "}
+        {libelleARegler} se règle{" "}
         <b>{lieu === "domicile" ? "sur place, à la fin de la visite" : "sur place, chez le médecin"}</b>.
         Aucun paiement en ligne n’est requis.
       </div>

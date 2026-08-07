@@ -54,14 +54,17 @@ export interface Medecin {
   anneesExperience: number;
   /**
    * Tarif de référence en GNF, payé sur place. Recopié depuis la première
-   * ligne de `tarifs` par un trigger — voir migration 0023.
+   * ligne TARIFÉE de `tarifs` par un trigger — voir migrations 0023 et 0027.
    */
   tarifConsultation: number;
   /**
-   * Grille tarifaire complète, dans l'ordre choisi par le médecin.
-   * `lieu` dit où la ligne s'applique : cabinet, domicile ou les deux.
+   * Soins et actes proposés, dans l'ordre choisi par le médecin : depuis la
+   * 0027, cette grille est la liste unique des actes, et c'est en elle que
+   * le patient choisit son motif en réservant. `lieu` dit où la ligne
+   * s'applique (cabinet, domicile ou les deux) et `montant` vaut `null`
+   * quand le prix n'est pas ferme (« sur demande »).
    */
-  tarifs: { libelle: string; montant: number; lieu: LieuConsultation | "tous" }[];
+  tarifs: { libelle: string; montant: number | null; lieu: LieuConsultation | "tous" }[];
   note: number;
   nbAvis: number;
   /** Prochaine disponibilité affichée sur les cartes (pastille verte ou ambre) */
@@ -70,6 +73,11 @@ export interface Medecin {
   /** « lat, lon » relevé au GPS, ou lien Google Maps collé. "" si non renseigné. */
   localisation: string;
   aPropos: string;
+  /**
+   * Libellés de `tarifs`, dédoublonnés — valeur dérivée en base depuis la
+   * 0027. Conservée pour les écrans qui n'ont besoin que des intitulés
+   * (dossier admin) ; la fiche publique affiche la grille elle-même.
+   */
   soinsEtActes: string[];
   diplomes: { titre: string; lieu: string }[];
   parcours: { lieu: string; duree: string }[];

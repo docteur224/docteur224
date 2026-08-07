@@ -6,6 +6,7 @@ import {
   LIBELLES_LIEU,
   MAX_TARIFS,
   ajouterTarif,
+  ligneDeReference,
   modifierTarif,
   supprimerTarif,
   useTarifsMedecin,
@@ -13,24 +14,37 @@ import {
 } from "@/lib/tarifs";
 
 /*
- * Grille tarifaire éditable, partagée par l'étape « Profil médical » du
- * parcours d'inscription et par /espace-medecin/profil : le médecin doit
- * retrouver exactement le même outil des deux côtés, sinon l'un des deux
- * finit par diverger.
+ * Grille des soins, actes et tarifs — partagée par l'étape « Profil
+ * médical » du parcours d'inscription et par /espace-medecin/profil : le
+ * médecin doit retrouver exactement le même outil des deux côtés, sinon
+ * l'un des deux finit par diverger.
+ *
+ * Depuis la 0027, cette grille est la SEULE liste des actes proposés :
+ * chaque ligne devient un motif choisissable dans le formulaire de
+ * réservation, et `medecins.soins_et_actes` en est dérivée par trigger.
+ * Avant cela, deux listes coexistaient et le patient pouvait lire quatre
+ * soins sur la fiche pour n'en réserver que deux.
  *
  * Chaque ligne est écrite en base immédiatement (comme la galerie de
  * photos), ce qui rend le parcours d'inscription reprenable sans état à
  * resynchroniser.
  *
- * La PREMIÈRE ligne est le tarif de référence : c'est elle que le trigger
- * `tarifs_medecin_synchro` recopie dans `medecins.tarif_consultation`,
- * donc celle qu'affichent les cartes de résultat et le panneau de
- * réservation. L'écran le dit, sans quoi le médecin croirait que l'ordre
- * est décoratif.
+ * Le montant est FACULTATIF : un acte dont le prix dépend du cas
+ * (vaccination, dépistage) s'annonce « sur demande » plutôt que de
+ * disparaître de la liste ou d'afficher un chiffre inventé.
+ *
+ * Le tarif de référence — celui que le trigger recopie dans
+ * `medecins.tarif_consultation`, donc celui des cartes de résultat et du
+ * panneau de réservation — n'est pas forcément la première ligne : c'est
+ * la première ligne TARIFÉE valable au cabinet (`ligneDeReference`).
+ * L'écran le désigne, sans quoi le médecin croirait que l'ordre est
+ * décoratif.
  */
 
 const CHAMP =
   "w-full rounded-xl border border-line bg-white p-[11px] text-[13px] outline-none focus:border-teal";
+
+const SUR_DEMANDE = "Tarif sur demande — vous l’annoncerez au patient.";
 
 export default function GrilleTarifs({
   medecinId,
@@ -65,11 +79,11 @@ export default function GrilleTarifs({
 
   async function ajouter() {
     const nom = libelle.trim();
-    const prix = Number(montant);
+    const prix = montant ? Number(montant) : null;
     setErreur(null);
-    if (!nom) return setErreur("Donnez un intitulé au tarif (ex. Consultation).");
-    if (!montant || Number.isNaN(prix) || prix <= 0)
-      return setErreur("Indiquez un montant en GNF.");
+    if (!nom) return setErreur("Donnez un intitulé au soin (ex. Consultation).");
+    if (prix !== null && (Number.isNaN(prix) || prix <= 0))
+      return setErreur("Indiquez un montant en GNF, ou laissez la case vide.");
     if (complete) return setErreur(`Grille limitée à ${MAX_TARIFS} lignes.`);
     setEnCours(true);
     const res = await ajouterTarif(nom, prix, tarifs.length, visiteDomicile ? lieu : "cabinet");
@@ -95,9 +109,15 @@ export default function GrilleTarifs({
     apresEcriture();
   }
 
-  async function retarifer(id: string, valeur: string, initial: number) {
-    const prix = Number(valeur.replace(/\D/g, ""));
-    if (!prix || prix <= 0 || prix === initial) return;
+  /**
+   * Vider la case ne remet pas le prix à zéro : elle repasse l'acte en
+   * « sur demande ». Un montant de 0 GNF annoncerait une gratuité.
+   */
+  async function retarifer(id: string, valeur: string, initial: number | null) {
+    const chiffres = valeur.replace(/\D/g, "");
+    const prix = chiffres ? Number(chiffres) : null;
+    if (prix === initial) return;
+    if (prix !== null && prix <= 0) return;
     const res = await modifierTarif(id, { montant: prix });
     if (res.erreur) return setErreur(res.erreur);
     apresEcriture();
@@ -110,11 +130,13 @@ export default function GrilleTarifs({
     apresEcriture();
   }
 
+  const reference = ligneDeReference(tarifs);
+
   return (
     <div className={mobile ? "" : "mt-1"}>
       {tarifs.length === 0 ? (
         <p className="text-[12.5px] text-muted">
-          Aucun tarif pour le moment. Ajoutez au moins votre consultation standard.
+          Aucun soin pour le moment. Ajoutez au moins votre consultation standard.
         </p>
       ) : (
         <div className="flex flex-col gap-2">
@@ -127,22 +149,23 @@ export default function GrilleTarifs({
                 <input
                   className={CHAMP}
                   defaultValue={tarif.libelle}
-                  aria-label={`Intitulé du tarif ${index + 1}`}
+                  aria-label={`Intitulé du soin ${index + 1}`}
                   onBlur={(e) => renommer(tarif.id, e.target.value, tarif.libelle)}
                 />
                 <div className="flex items-center gap-2 sm:w-[210px] sm:flex-none">
                   <input
                     className={CHAMP}
                     inputMode="numeric"
-                    defaultValue={String(tarif.montant)}
-                    aria-label={`Montant du tarif ${index + 1} en GNF`}
+                    placeholder="Sur demande"
+                    defaultValue={tarif.montant === null ? "" : String(tarif.montant)}
+                    aria-label={`Montant du soin ${index + 1} en GNF`}
                     onBlur={(e) => retarifer(tarif.id, e.target.value, tarif.montant)}
                   />
                   <span className="flex-none text-[12px] font-bold text-muted">GNF</span>
                   <button
                     type="button"
                     onClick={() => retirer(tarif.id)}
-                    aria-label={`Retirer le tarif ${tarif.libelle}`}
+                    aria-label={`Retirer le soin ${tarif.libelle}`}
                     className="flex-none text-[11.5px] font-bold text-red hover:underline"
                   >
                     Retirer
@@ -169,9 +192,11 @@ export default function GrilleTarifs({
                 </div>
               )}
               <p className="mt-1.5 text-[11px] text-muted">
-                {index === 0
-                  ? `Tarif de référence — ${formatGNF(tarif.montant)} s’affiche sur votre fiche et dans les résultats de recherche.`
-                  : formatGNF(tarif.montant)}
+                {tarif.montant === null
+                  ? SUR_DEMANDE
+                  : tarif.id === reference?.id
+                    ? `Tarif de référence — ${formatGNF(tarif.montant)} s’affiche sur votre fiche et dans les résultats de recherche.`
+                    : formatGNF(tarif.montant)}
               </p>
             </div>
           ))}
@@ -182,8 +207,8 @@ export default function GrilleTarifs({
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <input
             className={CHAMP}
-            placeholder="Intitulé — ex. Consultation le dimanche"
-            aria-label="Intitulé du nouveau tarif"
+            placeholder="Soin ou acte — ex. Vaccination"
+            aria-label="Intitulé du nouveau soin"
             value={libelle}
             onChange={(e) => setLibelle(e.target.value)}
             onKeyDown={(e) => {
@@ -196,8 +221,8 @@ export default function GrilleTarifs({
           <input
             className={`${CHAMP} sm:w-[150px] sm:flex-none`}
             inputMode="numeric"
-            placeholder="Ex. 50000"
-            aria-label="Montant du nouveau tarif en GNF"
+            placeholder="Prix — ou vide"
+            aria-label="Montant du nouveau soin en GNF (facultatif)"
             value={montant}
             onChange={(e) => setMontant(e.target.value.replace(/\D/g, ""))}
             onKeyDown={(e) => {
@@ -233,7 +258,7 @@ export default function GrilleTarifs({
       )}
       {complete && (
         <p className="mt-2 text-[12px] text-muted">
-          Grille complète — retirez une ligne pour en ajouter une autre.
+          Liste complète ({MAX_TARIFS} soins) — retirez-en un pour en ajouter un autre.
         </p>
       )}
       {erreur && (

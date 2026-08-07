@@ -24,6 +24,12 @@ import {
  * en-tête d'identité avec badges, onglets, corps enrichi (à propos, soins,
  * diplômes, parcours, assurances, photos, infos pratiques, localisation)
  * et panneau de réservation collant à droite.
+ *
+ * « Tarifs » et « Soins et actes » étaient deux sections distinctes,
+ * nourries par deux sources qui ne se parlaient pas : le patient pouvait
+ * lire quatre soins et n'en réserver que deux. Depuis la 0027 il n'y en a
+ * plus qu'une, la grille tarifaire, dont les libellés SONT les actes
+ * proposés — un acte sans prix ferme s'y affiche « sur demande ».
  */
 
 function TitreSection({ children }: { children: React.ReactNode }) {
@@ -197,7 +203,14 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
         }`}
       >
         <b className="min-w-0 font-bold">{tarif.libelle}</b>
-        <span className="flex-none font-extrabold text-blue">{formatGNF(tarif.montant)}</span>
+        {/* Un acte peut être proposé sans prix ferme (vaccination,
+            dépistage) : on l'annonce « sur demande » plutôt que de le
+            taire — le patient peut le réserver, il doit donc le voir. */}
+        {tarif.montant === null ? (
+          <span className="flex-none text-[12px] font-bold italic text-muted">Sur demande</span>
+        ) : (
+          <span className="flex-none font-extrabold text-blue">{formatGNF(tarif.montant)}</span>
+        )}
       </div>
     ));
 
@@ -367,20 +380,11 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
 
           {grilleTarifs && (
             <>
-              <div className="section-t">Tarifs</div>
+              <div className="section-t">Soins, actes et tarifs</div>
               {grilleTarifs}
             </>
           )}
           {blocDomicile}
-
-          <div className="section-t">Soins et actes</div>
-          <div className="chips">
-            {medecin.soinsEtActes.map((soin) => (
-              <span key={soin} className="chip grey">
-                {soin}
-              </span>
-            ))}
-          </div>
 
           <div className="section-t">Diplôme et formation</div>
           {medecin.diplomes.map((d) => (
@@ -544,23 +548,11 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
 
             {grilleTarifs && (
               <>
-                <TitreSection>Tarifs</TitreSection>
+                <TitreSection>Soins, actes et tarifs</TitreSection>
                 {grilleTarifs}
               </>
             )}
             {blocDomicile}
-
-            <TitreSection>Soins et actes</TitreSection>
-            <div className="flex flex-wrap gap-2">
-              {medecin.soinsEtActes.map((soin) => (
-                <span
-                  key={soin}
-                  className="rounded-full border border-[#DCE4EA] bg-[#EEF2F5] px-[14px] py-2 text-xs font-bold text-[#3A4A55]"
-                >
-                  {soin}
-                </span>
-              ))}
-            </div>
 
             <TitreSection>Diplôme et formation</TitreSection>
             {medecin.diplomes.map((d) => (
