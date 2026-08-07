@@ -259,6 +259,14 @@ export const PRIORITE_SPECIALITES: string[] = [
 
 
 /**
+ * Nombre de spécialités montrées d'emblée sur l'accueil.
+ *
+ * Quatorze : deux rangées pleines de sept sur la grille web, et de quoi
+ * défiler sans fin sur le carrousel mobile. Au-delà, « Voir plus » déplie.
+ */
+export const SPECIALITES_ACCUEIL = 14;
+
+/**
  * Spécialités mises en avant sur l'accueil.
  *
  * Le référentiel complet n'a pas sa place sur la page d'accueil : la section
@@ -276,7 +284,7 @@ export const PRIORITE_SPECIALITES: string[] = [
 export function specialitesEnAvant<T extends { nom: string }>(
   specialites: T[],
   medecinsParSpecialite: Map<string, number>,
-  minimum = 12
+  minimum = SPECIALITES_ACCUEIL
 ): T[] {
   const rangs = new Map(PRIORITE_SPECIALITES.map((nom, i) => [normaliser(nom), i]));
   const compter = (s: T) => medecinsParSpecialite.get(normaliser(s.nom)) ?? 0;

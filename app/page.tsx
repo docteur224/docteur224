@@ -5,6 +5,7 @@ import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import PiedPageMobile from "@/components/mobile/PiedPageMobile";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
 import AvatarMedecin from "@/components/site/AvatarMedecin";
+import GrilleSpecialites from "@/components/site/GrilleSpecialites";
 import RechercheAccueil, {
   RechercheAccueilMobile,
 } from "@/components/site/RechercheAccueil";
@@ -74,20 +75,7 @@ export default async function Accueil() {
         </div>
         <div className="pad">
           <div className="section-t">Spécialités courantes</div>
-          <div className="chips scroll">
-            {specialitesVedette.slice(0, 5).map((s) => (
-              <Link
-                key={s.nom}
-                href={`/resultats?specialite=${encodeURIComponent(s.nom)}`}
-                className="speccard"
-              >
-                <span className="em" aria-hidden>
-                  {s.emoji}
-                </span>
-                <b>{s.nom}</b>
-              </Link>
-            ))}
-          </div>
+          <GrilleSpecialites specialites={specialitesVedette} variante="mobile" />
 
           <div className="section-t">Comment ça marche</div>
           <div className="steps">
@@ -230,20 +218,7 @@ export default async function Accueil() {
           <p className="mt-[7px] text-center text-sm text-muted">
             Accédez directement aux spécialités les plus demandées.
           </p>
-          <div className="mt-[26px] flex flex-wrap justify-center gap-3">
-            {specialitesVedette.map((s) => (
-              <Link
-                key={s.nom}
-                href={`/resultats?specialite=${encodeURIComponent(s.nom)}`}
-                className="flex min-w-[104px] flex-col items-center gap-[7px] rounded-[14px] border border-line bg-white px-5 py-4 transition hover:-translate-y-0.5 hover:shadow-[0_8px_18px_rgba(16,59,80,.1)]"
-              >
-                <span className="text-[26px]" aria-hidden>
-                  {s.emoji}
-                </span>
-                <b className="text-[13px] font-bold">{s.nom}</b>
-              </Link>
-            ))}
-          </div>
+          <GrilleSpecialites specialites={specialitesVedette} variante="web" />
         </div>
       </section>
 
