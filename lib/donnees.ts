@@ -3,6 +3,7 @@ import type { Etablissement, Medecin } from "@/types";
 import { creneauReservable, depuisISO, versISO } from "@/lib/dates";
 import { JOURS_NOMS, horairesParJour, resumeHeures, resumeJours } from "@/lib/horaires";
 import { emojiSpecialite } from "@/lib/icones-specialites";
+import { cleGeo, type ReferencesGeo } from "@/lib/carte";
 import { trierParDemande } from "@/lib/catalogue-specialites";
 
 /*
@@ -445,6 +446,44 @@ export async function chargerSpecialites(): Promise<{ id: string; nom: string; e
 export async function chargerVilles(): Promise<string[]> {
   const { data } = await clientPublic().from("villes").select("nom").order("nom");
   return (data ?? []).map((v) => v.nom);
+}
+
+/**
+ * Centres des villes et des communes (migration 0026), servant de repli à la
+ * carte des médecins quand le praticien n'a pas relevé sa position GPS.
+ *
+ * Les deux tables sont lues en une fois et indexées par nom normalisé :
+ * `medecins.commune` est du **texte libre** (règle posée en 0023, un
+ * référentiel incomplet ne doit pas bloquer une inscription), donc la
+ * jointure ne peut se faire que sur le libellé — « Manéah » saisi sans
+ * accent doit retrouver sa commune.
+ */
+export async function chargerReferencesGeo(): Promise<ReferencesGeo> {
+  const sb = clientPublic();
+  const [villes, communes] = await Promise.all([
+    sb.from("villes").select("id, nom, latitude, longitude"),
+    sb.from("communes").select("ville_id, nom, latitude, longitude"),
+  ]);
+
+  const nomVille = new Map<string, string>();
+  const references: ReferencesGeo = { villes: {}, communes: {} };
+
+  for (const v of villes.data ?? []) {
+    nomVille.set(v.id, v.nom);
+    if (v.latitude != null && v.longitude != null) {
+      references.villes[cleGeo(v.nom)] = { lat: v.latitude, lon: v.longitude };
+    }
+  }
+  for (const c of communes.data ?? []) {
+    if (c.latitude == null || c.longitude == null) continue;
+    const ville = nomVille.get(c.ville_id);
+    if (!ville) continue;
+    references.communes[`${cleGeo(ville)}|${cleGeo(c.nom)}`] = {
+      lat: c.latitude,
+      lon: c.longitude,
+    };
+  }
+  return references;
 }
 
 /**

@@ -11,7 +11,10 @@ import RechercheResultats, {
 } from "@/components/site/RechercheResultats";
 import AvatarMedecin from "@/components/site/AvatarMedecin";
 import CarteResultatMobile from "@/components/site/CarteResultatMobile";
+import BandeauResultats from "@/components/mobile/BandeauResultats";
+import CarteMedecins from "@/components/mobile/CarteMedecins";
 import PopupAvis from "@/components/site/PopupAvis";
+import { positionMedecin, type PointCarte } from "@/lib/carte";
 import {
   construireGroupes,
   construireGroupesAvances,
@@ -27,6 +30,7 @@ import {
   chargerLangues,
   chargerMedecins,
   chargerNomsRecherche,
+  chargerReferencesGeo,
   chargerSpecialites,
   chargerTypesEtablissement,
   chargerVilles,
@@ -70,6 +74,9 @@ export default async function Resultats({
   const langues = versTableau(sp.langue);
   const noteMin = typeof sp.note === "string" ? Number(sp.note) : 0;
   const tri = typeof sp.tri === "string" ? sp.tri : "";
+  /* Liste ou carte — l'état vit dans l'URL : le bouton Retour du téléphone
+     ramène à la liste, et une carte se partage par lien. */
+  const vueCarte = sp.vue === "carte";
 
   const [
     medecins,
@@ -82,6 +89,7 @@ export default async function Resultats({
     refNoms,
     avecNotes,
     avecGenre,
+    referencesGeo,
   ] = await Promise.all([
     chargerMedecins({
       specialite,
@@ -103,6 +111,7 @@ export default async function Resultats({
     chargerNomsRecherche(),
     existeMedecinNote(),
     existeGenreRenseigne(),
+    chargerReferencesGeo(),
   ]);
   const getEtablissement = (id: string) => etablissements.find((e) => e.id === id);
 
@@ -182,14 +191,67 @@ export default async function Resultats({
     else parametresCourants.set(cle, valeur);
   }
 
+  /* Bascule liste ↔ carte : mêmes filtres de part et d'autre, et `page` est
+     abandonnée au passage — la carte porte tout le résultat, revenir à la
+     liste sur la page 7 d'une recherche qu'on vient de recadrer n'aurait
+     aucun sens. */
+  const parametresCarte = new URLSearchParams(parametresCourants);
+  parametresCarte.set("vue", "carte");
+  const lienCarte = `/resultats?${parametresCarte.toString()}`;
+  const parametresListe = new URLSearchParams(parametresCourants);
+  parametresListe.delete("vue");
+  const lienListe = parametresListe.toString()
+    ? `/resultats?${parametresListe.toString()}`
+    : "/resultats";
+
+  /*
+   * Repères de la carte, calculés ici pour toute la liste filtrée (et non
+   * pour la seule page affichée) : la carte est justement l'écran où l'on
+   * veut voir l'ensemble d'un coup. Les praticiens sans position — ni GPS,
+   * ni commune ni ville connue du référentiel — sont comptés à part plutôt
+   * que posés au hasard.
+   */
+  const emojiParSpecialite = new Map(refSpecialites.map((s) => [s.nom, s.emoji]));
+  const pointsCarte: PointCarte[] = [];
+  let sansPosition = 0;
+  if (vueCarte) {
+    for (const m of liste) {
+      const position = positionMedecin(m, referencesGeo);
+      if (!position) {
+        sansPosition++;
+        continue;
+      }
+      const etab = getEtablissement(m.etablissementId);
+      const lieu = [m.quartier, m.commune].filter(Boolean).join(", ");
+      pointsCarte.push({
+        ...position,
+        id: m.id,
+        nom: nomComplet(m),
+        specialite: m.specialite,
+        emoji: emojiParSpecialite.get(m.specialite) ?? "🩺",
+        photoUrl: m.photoUrl,
+        initiales: m.initiales,
+        gradient: m.gradient,
+        adresse: [etab?.nom, lieu, m.ville].filter(Boolean).join(" · "),
+        lieuApproximatif: m.commune || m.ville,
+        note: m.note,
+        nbAvis: m.nbAvis,
+        dispoLabel: m.disponibilite.label,
+        dispoAujourdhui: m.disponibilite.type === "aujourdhui",
+      });
+    }
+  }
+
   // Prochaine disponibilité réelle de chaque médecin affiché : on lit les
   // créneaux déjà réservés (une requête par médecin, en parallèle) au lieu de
   // supposer la journée vide — sinon toutes les cartes proposent les mêmes
   // heures, y compris celles qui viennent d'être prises.
+  // Inutile en vue carte : les vignettes n'affichent pas d'heure, et c'est
+  // une requête par praticien qu'on s'épargne.
   const jours = prochainsJours([], 14);
   const disponibilites = new Map<string, { dateISO: string; heures: string[] } | null>(
     await Promise.all(
-      listePage.map(async (m) => {
+      (vueCarte ? [] : listePage).map(async (m) => {
         let etats: Map<string, EtatCreneau>;
         try {
           etats = await chargerIndisponibilites(m.id, jours[0]?.iso, jours.at(-1)?.iso);
@@ -214,12 +276,23 @@ export default async function Resultats({
       {/* ================= VERSION MOBILE (écran « resultats » de la maquette mobile) ================= */}
       <div className="with-tabbar md:hidden">
         <EnTeteMobile
-          retour="/"
+          retour={vueCarte ? lienListe : "/"}
           titre={`${specialite || "Médecins"} · ${ville || "Conakry"}`}
           sousTitre={`${liste.length} médecin${liste.length > 1 ? "s" : ""} disponible${
             liste.length > 1 ? "s" : ""
           }`}
         />
+        {vueCarte ? (
+          /* La carte est une couche fixe sous la barre haute : rien de ce
+             qui suit ne serait visible, et le charger coûterait des requêtes
+             pour rien. */
+          <CarteMedecins
+            points={pointsCarte}
+            sansPosition={sansPosition}
+            lienListe={lienListe}
+          />
+        ) : (
+          <>
         <RechercheResultatsMobile
           specialite={specialite}
           ville={ville}
@@ -234,7 +307,8 @@ export default async function Resultats({
         <div className="px-[18px] pt-3">
           <FiltresAvances boutons={boutonsMobile} />
         </div>
-        <div className="pad" style={{ paddingTop: 14 }}>
+        <BandeauResultats total={liste.length} lienCarte={lienCarte} />
+        <div className="pad" style={{ paddingTop: 10 }}>
           {liste.length === 0 && (
             <div className="card2" style={{ textAlign: "center", padding: 24 }}>
               <div style={{ fontSize: 30 }} aria-hidden>
@@ -283,6 +357,8 @@ export default async function Resultats({
             libelle="médecins"
           />
         </div>
+          </>
+        )}
         {/* La tabbar manquait sur cet écran : on s'y retrouvait sans aucune
             navigation vers l'accueil, les RDV ou le compte. */}
         <TabBarMobile role="public" />
