@@ -21,10 +21,13 @@ export default function RechercheAccueil({
   villes: string[];
   nomsMedecins: string[];
 }) {
+  /* 900 px plutôt que 780 : les trois champs et le bouton respirent —
+     « Médecin ou établissement » repliait son libellé sur deux lignes — sans
+     déborder la colonne de contenu de la page, calée à 1020 px. */
   return (
     <form
       action="/resultats"
-      className="relative mx-auto mt-7 flex max-w-[780px] flex-col items-stretch gap-1 rounded-2xl bg-white p-2 text-ink shadow-[0_18px_40px_rgba(0,0,0,.22)] md:flex-row md:items-center"
+      className="relative mx-auto mt-7 flex max-w-[900px] flex-col items-stretch gap-1 rounded-2xl bg-white p-2 text-ink shadow-[0_18px_40px_rgba(0,0,0,.22)] md:flex-row md:items-center"
     >
       <ChampAutocomplete
         nom="specialite"

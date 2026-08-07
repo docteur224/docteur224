@@ -114,24 +114,40 @@ export default async function Resultats({
   const groupeDispo = groupeDisponibilite();
   const nomsSpecialites = refSpecialites.map((s) => s.nom);
 
-  // Icônes par groupe, pour les boutons de la barre mobile (un bouton par
-  // groupe : avec 20 assureurs par exemple, on ouvre un popup dédié plutôt
-  // que de dérouler 20 pastilles à plat dans la barre).
+  // Icônes des boutons restés seuls dans la barre mobile.
   const ICONES_GROUPE: Record<string, string> = {
-    Établissement: "🏥",
-    "Assurance acceptée": "💳",
     Note: "⭐",
     "Trier par": "↕",
   };
+  /*
+   * Barre mobile : trois boutons au lieu de six.
+   *
+   * « Disponibilités » avait son propre bouton alors que le popup « Filtres »
+   * ouvre déjà ce groupe (construireGroupesAvances le place en tête) — deux
+   * chemins vers le même filtre, dont l'un pouvait contredire l'autre à
+   * l'écran. « Établissement » et « Assurance acceptée » le rejoignent : ce
+   * sont des critères de tri de fond, pas des raccourcis, et six pastilles
+   * sur trois rangées repoussaient les résultats sous la ligne de flottaison.
+   *
+   * « Note » et « Trier par » restent à part : ce sont les deux gestes qu'on
+   * refait sans arrêt en comparant des praticiens.
+   */
+  const DANS_FILTRES = new Set(["type", "assurance"]);
   const boutonsMobile: BoutonFiltre[] = [
-    { cle: "filtres", icone: "⚙", label: "Filtres", groupes: groupesAvances },
-    { cle: "dispo", icone: "📅", label: "Disponibilités", groupes: [groupeDispo] },
-    ...groupes.map((g) => ({
-      cle: g.param,
-      icone: ICONES_GROUPE[g.titre] ?? "🔎",
-      label: g.titre,
-      groupes: [g],
-    })),
+    {
+      cle: "filtres",
+      icone: "⚙",
+      label: "Filtres",
+      groupes: [...groupesAvances, ...groupes.filter((g) => DANS_FILTRES.has(g.param))],
+    },
+    ...groupes
+      .filter((g) => !DANS_FILTRES.has(g.param))
+      .map((g) => ({
+        cle: g.param,
+        icone: ICONES_GROUPE[g.titre] ?? "🔎",
+        label: g.titre,
+        groupes: [g],
+      })),
   ];
 
   // Le type d'établissement vit dans la table etablissements : ce filtre-ci
