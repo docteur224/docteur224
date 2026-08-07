@@ -19,6 +19,7 @@ import { CIVILITES } from "@/lib/civilites";
 import ChampTelephoneGN from "@/components/site/ChampTelephoneGN";
 import { chargerEtablissementParId } from "@/lib/donnees";
 import { enregistrerHorairesHebdo } from "@/lib/inscription-pro";
+import { trierParDemande } from "@/lib/catalogue-specialites";
 import { creerClientNavigateur } from "@/lib/supabase/client";
 import {
   MESSAGE_TELEPHONE_GN,
@@ -138,7 +139,7 @@ export default function ProfilMedecin() {
       if (!auth.user) return;
       const [{ data: specs }, { data: vls }, { data: m }, { data: u }, { data: h }] =
         await Promise.all([
-          supabase.from("specialites").select("id, nom").order("nom"),
+          supabase.from("specialites").select("id, nom"),
           supabase.from("villes").select("id, nom").order("nom"),
           supabase
             .from("medecins")
@@ -154,7 +155,8 @@ export default function ProfilMedecin() {
             .eq("medecin_id", auth.user.id),
         ]);
       if (!actif) return;
-      setSpecialites(specs ?? []);
+      // Les plus consultées en tête, comme partout ailleurs sur le site.
+      setSpecialites(trierParDemande(specs ?? [], (s) => s.nom));
       setVilles(vls ?? []);
       setJours(h && h.length > 0 ? depuisPlages(h) : JOURS_DEFAUT);
       if (m) {

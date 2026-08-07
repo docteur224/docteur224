@@ -7,6 +7,7 @@ import { useInscription } from "@/components/inscription/ContexteInscription";
 import GrilleTarifs from "@/components/pro/GrilleTarifs";
 import { avancerEtape, enregistrerEtapeProfil } from "@/lib/inscription-pro";
 import { useAssurancesMedecin } from "@/lib/pro";
+import { trierParDemande } from "@/lib/catalogue-specialites";
 import { creerClientNavigateur } from "@/lib/supabase/client";
 import { useTarifsMedecin } from "@/lib/tarifs";
 
@@ -73,11 +74,13 @@ export default function EtapeProfilMedical() {
     (async () => {
       const supabase = creerClientNavigateur();
       const [{ data: refs }, { data: auth }] = await Promise.all([
-        supabase.from("specialites").select("id,nom").order("nom"),
+        supabase.from("specialites").select("id,nom"),
         supabase.auth.getUser(),
       ]);
       if (!actif) return;
-      setSpecialites(refs ?? []);
+      // Les plus consultées en tête : sur 76 entrées, l'ordre alphabétique
+      // enterrait « Médecine générale » au milieu de la liste.
+      setSpecialites(trierParDemande(refs ?? [], (s) => s.nom));
       if (!auth.user) return;
       setMedecinId(auth.user.id);
       const { data: m } = await supabase

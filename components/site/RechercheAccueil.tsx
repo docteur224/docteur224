@@ -39,7 +39,7 @@ export default function RechercheAccueil({
         nom="ville"
         libelle="Ville"
         icone="📍"
-        placeholder="Ex. Kankan"
+        placeholder="Ex. Conakry"
         valeurInitiale=""
         suggestions={villes}
         taille="hero"

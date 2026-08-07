@@ -281,19 +281,43 @@ export const SPECIALITES_ACCUEIL = 14;
  * @param medecinsParSpecialite nombre de professionnels par nom de spécialité
  *   NORMALISÉ (voir `normaliser`), pour ne pas dépendre de la casse.
  */
+const RANGS = new Map(PRIORITE_SPECIALITES.map((nom, i) => [normaliser(nom), i]));
+
+/** Place d'une spécialité dans PRIORITE ; hors liste, elle passe après. */
+function rang(nom: string): number {
+  return RANGS.get(normaliser(nom)) ?? Number.MAX_SAFE_INTEGER;
+}
+
+/**
+ * Ordonne une liste de spécialités par demande, puis alphabétiquement.
+ *
+ * Partout où le patient ou le professionnel choisit une spécialité — bandeau
+ * de recherche, filtres de résultats, formulaires d'inscription — le tri
+ * alphabétique mettait « Addictologie » et « Anatomopathologie » avant
+ * « Médecine générale ». Un référentiel de 76 entrées rend ce détail
+ * coûteux : ce qu'on cherche neuf fois sur dix doit être en tête.
+ */
+export function trierParDemande<T>(items: T[], nomDe: (item: T) => string): T[] {
+  return [...items].sort((a, b) => {
+    const rangA = rang(nomDe(a));
+    const rangB = rang(nomDe(b));
+    if (rangA !== rangB) return rangA - rangB;
+    return nomDe(a).localeCompare(nomDe(b), "fr");
+  });
+}
+
 export function specialitesEnAvant<T extends { nom: string }>(
   specialites: T[],
   medecinsParSpecialite: Map<string, number>,
   minimum = SPECIALITES_ACCUEIL
 ): T[] {
-  const rangs = new Map(PRIORITE_SPECIALITES.map((nom, i) => [normaliser(nom), i]));
   const compter = (s: T) => medecinsParSpecialite.get(normaliser(s.nom)) ?? 0;
 
   function classer(a: T, b: T) {
     // Le rang éditorial prime sur le nombre de praticiens : c'est le motif de
     // consultation qui guide le patient, pas la taille de l'annuaire.
-    const rangA = rangs.get(normaliser(a.nom)) ?? Number.MAX_SAFE_INTEGER;
-    const rangB = rangs.get(normaliser(b.nom)) ?? Number.MAX_SAFE_INTEGER;
+    const rangA = rang(a.nom);
+    const rangB = rang(b.nom);
     if (rangA !== rangB) return rangA - rangB;
     if (compter(b) !== compter(a)) return compter(b) - compter(a);
     return a.nom.localeCompare(b.nom, "fr");

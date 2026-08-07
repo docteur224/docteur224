@@ -4,7 +4,7 @@ import { useState } from "react";
 import AdminShell from "@/components/admin/AdminShell";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import Pagination, { usePagination } from "@/components/site/Pagination";
-import { envoyerAnnonce, useAnnonces } from "@/lib/admin";
+import { envoyerAnnonce, useAnnonces, useListeContenu } from "@/lib/admin";
 
 /*
  * Annonces — reproduit l'écran « admin-annonces » de la maquette web :
@@ -21,7 +21,14 @@ const SEGMENTS = [
   "Tous les utilisateurs",
 ];
 
-const VILLES = ["Toutes les villes", "Conakry", "Kankan", "Labé", "Kindia", "N'Zérékoré", "Boké"];
+/*
+ * Le ciblage par ville lit le référentiel plutôt qu'une liste figée : celle
+ * qui était codée ici proposait « Boké », absente de la base, et écrivait
+ * « N'Zérékoré » là où le référentiel dit « Nzérékoré » — deux ciblages qui
+ * ne désignaient personne. Une ville ajoutée dans Paramètres apparaît
+ * désormais ici sans intervention.
+ */
+const TOUTES_VILLES = "Toutes les villes";
 
 const CANAUX = ["SMS", "E-mail", "Notification in-app"];
 
@@ -31,8 +38,10 @@ const MESSAGE_DEFAUT =
 export default function AnnoncesAdmin() {
   const { annonces, recharger } = useAnnonces();
   const pagi = usePagination(annonces, 10);
+  const { liste: villesReferencees } = useListeContenu("villes");
+  const villes = [TOUTES_VILLES, ...villesReferencees];
   const [segment, setSegment] = useState(SEGMENTS[0]);
-  const [ville, setVille] = useState(VILLES[0]);
+  const [ville, setVille] = useState(TOUTES_VILLES);
   const [canaux, setCanaux] = useState<string[]>(["SMS", "E-mail"]);
   const [message, setMessage] = useState(MESSAGE_DEFAUT);
 
@@ -44,7 +53,7 @@ export default function AnnoncesAdmin() {
 
   function envoyer() {
     if (!message.trim() || canaux.length === 0) return;
-    const cible = ville === VILLES[0] ? segment : `${segment} · ${ville}`;
+    const cible = ville === TOUTES_VILLES ? segment : `${segment} · ${ville}`;
     envoyerAnnonce(message.trim(), cible, canaux).then(() => recharger());
     setMessage("");
   }
@@ -72,7 +81,7 @@ export default function AnnoncesAdmin() {
             <div className="fldm">
               <label>Ville (optionnel)</label>
               <select className="v" value={ville} onChange={(e) => setVille(e.target.value)}>
-                {VILLES.map((v) => (
+                {villes.map((v) => (
                   <option key={v}>{v}</option>
                 ))}
               </select>
@@ -169,7 +178,7 @@ export default function AnnoncesAdmin() {
           <div>
             <label className={etiquette}>Filtrer par ville (optionnel)</label>
             <select value={ville} onChange={(e) => setVille(e.target.value)} className={champ}>
-              {VILLES.map((v) => (
+              {villes.map((v) => (
                 <option key={v}>{v}</option>
               ))}
             </select>

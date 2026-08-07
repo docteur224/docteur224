@@ -18,23 +18,28 @@ function normaliser(texte: string) {
 }
 
 /**
- * Filtre commun : sous-chaîne insensible à la casse et aux accents, liste
- * plafonnée. Les doublons sont retirés — deux établissements peuvent porter
- * le même nom, et proposer deux fois la même ligne n'aide personne (en plus
- * de créer des clés React identiques).
+ * Filtre commun : sous-chaîne insensible à la casse et aux accents. Les
+ * doublons sont retirés — deux établissements peuvent porter le même nom, et
+ * proposer deux fois la même ligne n'aide personne (en plus de créer des
+ * clés React identiques).
+ *
+ * Pas de plafond : il en existait un de huit entrées, hérité d'un référentiel
+ * qui en comptait autant. Avec 76 spécialités, il donnait l'impression, champ
+ * vide, que la liste s'arrêtait à la lettre A — alors que tout apparaissait
+ * dès qu'on tapait. Ce qui dépasse défile, ce qui est demandé vient en tête
+ * (voir `trierParDemande`).
+ *
+ * Le champ « Médecin ou établissement » reste l'exception : il n'ouvre sa
+ * liste qu'à la frappe (`aLaFrappe`), un annuaire entier n'ayant rien à faire
+ * dans un menu déroulant.
  */
-function filtrerSuggestions(
-  valeur: string,
-  suggestions: string[],
-  aLaFrappe: boolean,
-  maximum: number
-) {
+function filtrerSuggestions(valeur: string, suggestions: string[], aLaFrappe: boolean) {
   const saisie = normaliser(valeur.trim());
   if (aLaFrappe && !saisie) return [];
   const liste = saisie
     ? suggestions.filter((s) => normaliser(s).includes(saisie))
     : suggestions;
-  return [...new Set(liste)].slice(0, maximum);
+  return [...new Set(liste)];
 }
 
 /** Referme la liste au clic hors du champ (sinon elle flotte sur la page). */
@@ -85,7 +90,7 @@ export default function ChampAutocomplete({
   useFermetureAuClicExterieur(conteneur, () => setOuvert(false));
 
   const filtrees = useMemo(
-    () => filtrerSuggestions(valeur, suggestions, aLaFrappe, 8),
+    () => filtrerSuggestions(valeur, suggestions, aLaFrappe),
     [valeur, suggestions, aLaFrappe]
   );
 
@@ -142,10 +147,10 @@ export default function ChampAutocomplete({
           />
         </span>
       </label>
-      {/* max-h 300 px : les 8 suggestions affichées au maximum tiennent en
-          entier, sans demi-ligne coupée en bas. */}
+      {/* La liste n'est plus plafonnée : sa hauteur l'est, et le reste
+          défile. 60 vh au plus pour qu'elle ne déborde jamais de l'écran. */}
       {ouvert && filtrees.length > 0 && (
-        <ul className="absolute left-0 right-0 top-full z-30 mt-1 max-h-[300px] overflow-auto rounded-xl border border-line bg-white py-1 shadow-[0_10px_26px_rgba(16,59,80,.14)]">
+        <ul className="absolute left-0 right-0 top-full z-30 mt-1 max-h-[min(60vh,420px)] overflow-auto rounded-xl border border-line bg-white py-1 shadow-[0_10px_26px_rgba(16,59,80,.14)]">
           {filtrees.map((s, i) => (
             <li key={s}>
               <button
@@ -190,7 +195,7 @@ export function ChampMobile({
   useFermetureAuClicExterieur(conteneur, () => setOuvert(false));
 
   const filtrees = useMemo(
-    () => filtrerSuggestions(valeur, suggestions, aLaFrappe, 6),
+    () => filtrerSuggestions(valeur, suggestions, aLaFrappe),
     [valeur, suggestions, aLaFrappe]
   );
 

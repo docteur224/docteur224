@@ -194,7 +194,9 @@
   /* Variante hors héros (page de résultats) : ombre discrète sur fond clair. */
   .searchbox-compact { margin: 12px 18px 0; box-shadow: 0 3px 12px rgba(16, 59, 80, 0.09); border: 1px solid var(--line); }
   /* Liste de suggestions (autocomplétion) sous un champ de recherche */
-  .autolist { position: absolute; left: 0; right: 0; top: 100%; z-index: 40; margin-top: 4px; max-height: 210px; overflow: auto; list-style: none; padding: 4px 0; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 24px rgba(16, 59, 80, 0.16); }
+  /* max-height : la liste n'est plus plafonnée en nombre d'entrées, elle
+     défile. 50 vh pour rester au-dessus du clavier virtuel. */
+  .autolist { position: absolute; left: 0; right: 0; top: 100%; z-index: 40; margin-top: 4px; max-height: min(50vh, 300px); overflow: auto; list-style: none; padding: 4px 0; background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 24px rgba(16, 59, 80, 0.16); }
   .autolist button { display: block; width: 100%; text-align: left; padding: 9px 14px; font-size: 13px; font-family: inherit; color: var(--ink); background: none; border: 0; cursor: pointer; }
   .autolist button:hover, .autolist button:focus { background: var(--teal-soft); color: var(--blue); }
   .field { display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-radius: 11px; }

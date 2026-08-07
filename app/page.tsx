@@ -195,15 +195,17 @@ export default async function Accueil() {
 
         <div className="relative mt-[30px] flex justify-center gap-[42px]">
           <div>
-            <b className="block text-2xl font-extrabold">320+</b>
+            <b className="block text-2xl font-extrabold">200+</b>
             <small className="text-xs font-semibold opacity-80">Médecins inscrits</small>
           </div>
           <div>
-            <b className="block text-2xl font-extrabold">8</b>
+            {/* Compté sur le référentiel : une ville ajoutée dans l'espace
+                admin se voit ici, au lieu d'un chiffre figé qui dérive. */}
+            <b className="block text-2xl font-extrabold">{villes.length}</b>
             <small className="text-xs font-semibold opacity-80">Villes couvertes</small>
           </div>
           <div>
-            <b className="block text-2xl font-extrabold">15 000+</b>
+            <b className="block text-2xl font-extrabold">500+</b>
             <small className="text-xs font-semibold opacity-80">Patients accompagnés</small>
           </div>
         </div>

@@ -3,6 +3,7 @@ import type { Etablissement, Medecin } from "@/types";
 import { creneauReservable, depuisISO, versISO } from "@/lib/dates";
 import { JOURS_NOMS, horairesParJour, resumeHeures, resumeJours } from "@/lib/horaires";
 import { emojiSpecialite } from "@/lib/icones-specialites";
+import { trierParDemande } from "@/lib/catalogue-specialites";
 
 /*
  * Couche de données publique (remplace lib/mock-data.ts) : lit les vraies
@@ -423,12 +424,22 @@ export async function chargerEtablissementParId(id: string): Promise<Etablisseme
   return data ? versEtablissementUI(data as unknown as LigneEtablissement) : undefined;
 }
 
+/**
+ * Référentiel des spécialités, les plus consultées en tête.
+ *
+ * L'ordre vient de `trierParDemande` et non de la base : un `order("nom")`
+ * ferait remonter « Addictologie » avant « Médecine générale » dans tous les
+ * menus déroulants du site.
+ */
 export async function chargerSpecialites(): Promise<{ id: string; nom: string; emoji: string }[]> {
   const { data } = await clientPublic().from("specialites").select("id, nom, emoji").order("nom");
   // Filet de sécurité pour les lignes créées avant que l'écran admin ne
   // renseigne l'emoji : mieux vaut une icône déduite du nom qu'un stéthoscope
   // par défaut, qui donnait la même vignette à toutes les spécialités ajoutées.
-  return (data ?? []).map((s) => ({ ...s, emoji: s.emoji ?? emojiSpecialite(s.nom) }));
+  return trierParDemande(
+    (data ?? []).map((s) => ({ ...s, emoji: s.emoji ?? emojiSpecialite(s.nom) })),
+    (s) => s.nom
+  );
 }
 
 export async function chargerVilles(): Promise<string[]> {

@@ -13,6 +13,7 @@ import ChampCommune from "@/components/site/ChampCommune";
 import ChampMotDePasse from "@/components/site/ChampMotDePasse";
 import ChampTelephoneGN from "@/components/site/ChampTelephoneGN";
 import { inscrireProfessionnel } from "@/lib/auth";
+import { trierParDemande } from "@/lib/catalogue-specialites";
 import { creerClientNavigateur } from "@/lib/supabase/client";
 import Stepper from "@/components/inscription/Stepper";
 import { etapesPour, useParcoursInscription } from "@/lib/inscription-pro";
@@ -70,7 +71,12 @@ export default function InscriptionProfessionnel() {
   const [villes, setVilles] = useState<Reference[]>([]);
   useEffect(() => {
     const supabase = creerClientNavigateur();
-    supabase.from("specialites").select("id,nom").order("nom").then(({ data }) => setSpecialites(data ?? []));
+    supabase
+      .from("specialites")
+      .select("id,nom")
+      // Les plus consultées en tête plutôt que par ordre alphabétique : sur
+      // 76 entrées, un médecin généraliste ne doit pas dérouler jusqu'au M.
+      .then(({ data }) => setSpecialites(trierParDemande(data ?? [], (s) => s.nom)));
     supabase.from("villes").select("id,nom").order("nom").then(({ data }) => setVilles(data ?? []));
   }, []);
 
