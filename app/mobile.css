@@ -649,16 +649,9 @@
   .carte-bascule { position: absolute; left: 50%; transform: translateX(-50%); bottom: var(--bas); z-index: 500; display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 999px; background: var(--blue); color: #fff; font-size: 13.5px; font-weight: 800; box-shadow: 0 8px 22px rgba(16, 59, 80, 0.32); }
   .carte-bascule:active { background: var(--blue-deep); }
 
-  /* --- repères --- */
-  .carte-icone { background: none; border: 0; }
-  .carte-pin { position: relative; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50% 50% 50% 4px; transform: rotate(-45deg); background: var(--teal); border: 2px solid #fff; box-shadow: 0 4px 8px rgba(16, 59, 80, 0.35); transition: transform 0.14s, background 0.14s; }
-  .carte-pin i { transform: rotate(45deg); font-style: normal; font-size: 15px; line-height: 1; }
-  /* Position déduite de la commune : contour tireté, pour que « à peu près
-     là » se voie avant même d'ouvrir la vignette. */
-  .carte-pin.approx { background: #7fa9bd; border-style: dashed; }
-  .carte-pin.on { background: var(--blue); transform: rotate(-45deg) scale(1.22); }
-  .carte-grappe { display: grid; place-items: center; border-radius: 50%; background: var(--blue); color: #fff; font-size: 13px; font-weight: 800; border: 3px solid rgba(255, 255, 255, 0.9); box-shadow: 0 4px 10px rgba(16, 59, 80, 0.3); }
-  .carte-moi { display: block; width: 18px; height: 18px; border-radius: 50%; background: #2e9cca; border: 3px solid #fff; box-shadow: 0 0 0 4px rgba(46, 156, 202, 0.28); }
+  /* Les styles des repères et l'habillage de Leaflet vivent dans
+     globals.css : le web a la même carte, et les enfermer ici les aurait
+     réservés au téléphone. */
 
   /* --- bande de vignettes --- */
   .carte-bande { position: absolute; left: 0; right: 0; bottom: calc(var(--bas) + 52px); z-index: 500; display: flex; gap: 10px; padding: 0 14px; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
@@ -679,15 +672,6 @@
   .carte-meta b { color: var(--amber); font-weight: 800; }
   .carte-cta { display: block; margin-top: 9px; padding: 9px; border-radius: 10px; background: var(--teal); color: #fff; text-align: center; font-size: 12.5px; font-weight: 800; }
 
-  /* --- habillage Leaflet --- */
-  .carte-hote .leaflet-container { font: inherit; background: var(--bg); }
-  .carte-hote .leaflet-control-attribution { font-size: 9px; padding: 1px 5px; background: rgba(255, 255, 255, 0.8); }
-  .carte-hote .leaflet-control-zoom { border: none; box-shadow: 0 4px 14px rgba(16, 59, 80, 0.18); margin: 10px 12px 0 0; }
-  .carte-hote .leaflet-control-zoom a { width: 34px; height: 34px; line-height: 34px; color: var(--blue); border-bottom-color: var(--line); }
-}
-
-@media (max-width: 767px) and (prefers-reduced-motion: reduce) {
-  .carte-pin { transition: none; }
 }
 
 @keyframes ping-map {

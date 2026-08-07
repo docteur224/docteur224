@@ -150,6 +150,8 @@ export interface PointCarte extends PositionMedecin {
   lieuApproximatif: string;
   note: number;
   nbAvis: number;
+  /** 0 si le praticien ne l'a pas renseigné — la fiche l'omet alors. */
+  anneesExperience: number;
   /*
    * Disponibilité telle qu'annoncée sur les cartes de la liste, déduite des
    * horaires-types. La carte ne descend volontairement pas jusqu'à l'heure

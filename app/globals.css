@@ -51,6 +51,121 @@ body {
   font-family: var(--font-jakarta), system-ui, sans-serif;
 }
 
+/* =====================================================================
+   CARTE DES MÉDECINS — repères et habillage de Leaflet
+   ---------------------------------------------------------------------
+   Ces règles sont globales et non enfermées dans le bloc mobile : les
+   deux versions partagent la même carte (components/site/utiliser-carte),
+   le téléphone en plein écran et le web en vue jumelée. Elles visent du
+   DOM fabriqué par Leaflet, hors de portée des classes utilitaires.
+   ===================================================================== */
+.carte-icone {
+  background: none;
+  border: 0;
+}
+.carte-pin {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50% 50% 50% 4px;
+  transform: rotate(-45deg);
+  background: var(--teal);
+  border: 2px solid #fff;
+  box-shadow: 0 4px 8px rgba(16, 59, 80, 0.35);
+  transition: transform 0.14s, background 0.14s;
+}
+.carte-pin i {
+  transform: rotate(45deg);
+  font-style: normal;
+  font-size: 15px;
+  line-height: 1;
+}
+/* Position déduite de la commune : contour tireté, pour que « à peu près
+   là » se voie avant même d'ouvrir la fiche. */
+.carte-pin.approx {
+  background: #7fa9bd;
+  border-style: dashed;
+}
+/* Survolé depuis la liste (web) : grossi, mais pas encore choisi. */
+.carte-pin.gros {
+  transform: rotate(-45deg) scale(1.16);
+}
+.carte-pin.on {
+  background: var(--blue);
+  transform: rotate(-45deg) scale(1.22);
+}
+.carte-grappe {
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--blue);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  border: 3px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 10px rgba(16, 59, 80, 0.3);
+  transition: transform 0.14s;
+}
+/* Le groupe qui contient le praticien survolé ou choisi : sans ce repère,
+   survoler une fiche encore agglomérée ne produisait rien à l'écran. */
+.carte-grappe.on {
+  background: var(--teal);
+  transform: scale(1.12);
+}
+.carte-moi {
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #2e9cca;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 4px rgba(46, 156, 202, 0.28);
+}
+
+.leaflet-container {
+  font: inherit;
+  background: var(--bg);
+}
+.leaflet-control-attribution {
+  font-size: 9px;
+  padding: 1px 5px;
+  background: rgba(255, 255, 255, 0.8);
+}
+.leaflet-control-zoom {
+  border: none;
+  box-shadow: 0 4px 14px rgba(16, 59, 80, 0.18);
+  margin: 10px 12px 0 0;
+}
+.leaflet-control-zoom a {
+  width: 34px;
+  height: 34px;
+  line-height: 34px;
+  color: var(--blue);
+  border-bottom-color: var(--line);
+}
+.carte-bulle.leaflet-tooltip {
+  border: none;
+  border-radius: 9px;
+  padding: 6px 10px;
+  background: var(--blue);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 6px 16px rgba(16, 59, 80, 0.3);
+}
+.carte-bulle.leaflet-tooltip-top::before {
+  border-top-color: var(--blue);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .carte-pin,
+  .carte-grappe {
+    transition: none;
+  }
+}
+
 /* Apparition de la coche verte sur l'écran de confirmation (cf. maquettes). */
 @keyframes pop {
   0% {

@@ -13,6 +13,7 @@ import AvatarMedecin from "@/components/site/AvatarMedecin";
 import CarteResultatMobile from "@/components/site/CarteResultatMobile";
 import BandeauResultats from "@/components/mobile/BandeauResultats";
 import CarteMedecins from "@/components/mobile/CarteMedecins";
+import CarteResultatsWeb from "@/components/site/CarteResultatsWeb";
 import PopupAvis from "@/components/site/PopupAvis";
 import { positionMedecin, type PointCarte } from "@/lib/carte";
 import {
@@ -236,6 +237,7 @@ export default async function Resultats({
         lieuApproximatif: m.commune || m.ville,
         note: m.note,
         nbAvis: m.nbAvis,
+        anneesExperience: m.anneesExperience,
         dispoLabel: m.disponibilite.label,
         dispoAujourdhui: m.disponibilite.type === "aujourdhui",
       });
@@ -364,19 +366,27 @@ export default async function Resultats({
         <TabBarMobile role="public" />
       </div>
 
-      {/* ================= VERSION WEB (inchangée) ================= */}
+      {/* ================= VERSION WEB ================= */}
       <div className="hidden md:block">
       {/* En-tête : fil d'Ariane + titre + formulaire de recherche pré-rempli,
           puis la barre de filtres avancés (popups « Filtres » et
           « Disponibilités »). Le formulaire remplace les anciennes pastilles
           spécialité/ville, qui répétaient la recherche sans permettre de la
-          modifier. */}
+          modifier.
+
+          En vue jumelée, l'en-tête s'élargit avec les résultats pour garder
+          le même bord gauche — le laisser à 1020 px le recentrait à 210 px
+          quand la liste commence à 30. Le formulaire, lui, est centré dans
+          son conteneur (`mx-auto` dans RechercheResultats) : on le borne
+          donc à sa propre largeur, sinon il partait au milieu d'une bande
+          vide, très loin du titre. */}
       <div className="border-b border-line bg-white px-[30px] py-[22px]">
-        <div className="mx-auto max-w-[1020px]">
+        <div className={`mx-auto ${vueCarte ? "max-w-[1600px]" : "max-w-[1020px]"}`}>
           <div className="text-xs font-semibold text-muted">
             <Link href="/">Accueil</Link> › Recherche
           </div>
           <h2 className="mt-1 text-xl font-extrabold">{titre}</h2>
+          <div className={vueCarte ? "max-w-[880px]" : ""}>
           <RechercheResultats
             specialite={specialite}
             ville={ville}
@@ -411,15 +421,43 @@ export default async function Resultats({
               </span>
             ))}
           </div>
+          </div>
         </div>
       </div>
 
-      <div className="mx-auto grid max-w-[1020px] gap-6 px-[30px] py-[26px] lg:grid-cols-[244px_1fr]">
+      <div
+        className={`mx-auto grid gap-6 px-[30px] py-[26px] lg:grid-cols-[244px_1fr] ${
+          vueCarte ? "max-w-[1600px]" : "max-w-[1020px]"
+        }`}
+      >
         {/* Colonne de filtres — état porté par l'URL (voir FiltresResultats) */}
         <FiltresWeb groupes={groupes} />
 
-        {/* Liste des résultats */}
+        {vueCarte ? (
+          /* Vue jumelée : la liste et la carte se répondent. Elle porte tout
+             le résultat et se pagine côté client — voir le composant. */
+          <CarteResultatsWeb
+            points={pointsCarte}
+            sansPosition={sansPosition}
+            lienListe={lienListe}
+          />
+        ) : (
+        /* Liste des résultats */
         <div className="flex flex-col gap-[14px]">
+          <div className="flex flex-wrap items-center gap-3">
+            <b className="text-[15px] font-extrabold">
+              {liste.length} résultat{liste.length > 1 ? "s" : ""}
+            </b>
+            {liste.length > 0 && (
+              <Link
+                href={lienCarte}
+                scroll={false}
+                className="ml-auto inline-flex items-center gap-2 rounded-[11px] border-[1.5px] border-line bg-white px-[14px] py-[9px] text-[12.5px] font-bold text-blue transition-colors hover:bg-teal-soft"
+              >
+                <span aria-hidden>🗺️</span> Afficher la carte
+              </Link>
+            )}
+          </div>
           {liste.length === 0 && (
             <div className="rounded-2xl border border-line bg-white p-8 text-center">
               <div className="text-3xl" aria-hidden>
@@ -522,6 +560,7 @@ export default async function Resultats({
             libelle="médecins"
           />
         </div>
+        )}
       </div>
       </div>
     </div>
