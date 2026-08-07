@@ -878,6 +878,34 @@ export function useSpecialitesAdmin(): {
   return { specialites: donnees, recharger };
 }
 
+/**
+ * Retire une spécialité du référentiel.
+ *
+ * `medecins.specialite_id` la référence sans `on delete` : Postgres refuse
+ * donc la suppression tant qu'un praticien y est rattaché. C'est le bon
+ * comportement — effacer la spécialité viderait sa fiche — mais le code
+ * d'erreur brut n'apprendrait rien à l'admin, d'où le message explicite.
+ */
+export async function retirerSpecialite(id: string, nom: string): Promise<{ erreur?: string }> {
+  const { data, error } = await creerClientNavigateur()
+    .from("specialites")
+    .delete()
+    .eq("id", id)
+    .select("id");
+  if (error) {
+    return {
+      erreur:
+        error.code === "23503"
+          ? `« ${nom} » ne peut pas être retirée : des professionnels y sont rattachés.`
+          : "Suppression refusée : le référentiel est réservé aux administrateurs.",
+    };
+  }
+  // Un DELETE bloqué par la RLS ne lève rien : il touche zéro ligne.
+  if (!data || data.length === 0) return { erreur: "Suppression refusée." };
+  await tracerAudit("A retiré une spécialité du référentiel", nom);
+  return {};
+}
+
 /** Corrige l'icône d'une spécialité déjà référencée. */
 export async function changerEmojiSpecialite(
   id: string,

@@ -11,6 +11,7 @@ import {
 import {
   ajouterAListeContenu,
   changerEmojiSpecialite,
+  retirerSpecialite,
   suggererEmojiSpecialite,
   useSpecialitesAdmin,
 } from "@/lib/admin";
@@ -28,8 +29,6 @@ import {
  * Les spécialités déjà ouvertes disparaissent des suggestions : les reproposer
  * ne mènerait qu'à un doublon refusé par la contrainte d'unicité.
  */
-
-const SUGGESTIONS_AFFICHEES = 8;
 
 /** Palette d'icônes, en survol d'un bouton. Sert à l'ajout comme à la retouche. */
 function ChoixEmoji({
@@ -107,11 +106,14 @@ export default function SpecialitesProposees() {
     [specialites]
   );
 
+  // Liste entière, sans plafond : la limiter à quelques entrées donnait
+  // l'impression, champ vide, que le catalogue s'arrêtait à la lettre A.
+  // Le déroulé fait défiler ce qui dépasse.
   const suggestions = useMemo(() => {
     const saisie = normaliser(nom.trim());
     return CATALOGUE_SPECIALITES.filter(
       (s) => !dejaOuvertes.has(normaliser(s)) && (!saisie || normaliser(s).includes(saisie))
-    ).slice(0, SUGGESTIONS_AFFICHEES);
+    );
   }, [nom, dejaOuvertes]);
 
   const doublon = nom.trim() !== "" && dejaOuvertes.has(normaliser(nom.trim()));
@@ -165,6 +167,14 @@ export default function SpecialitesProposees() {
     champ.current?.blur();
   }
 
+  async function retirer(id: string, nomSpecialite: string) {
+    if (!window.confirm(`Retirer « ${nomSpecialite} » des spécialités proposées ?`)) return;
+    setErreur(null);
+    const { erreur: refus } = await retirerSpecialite(id, nomSpecialite);
+    if (refus) return setErreur(refus);
+    recharger();
+  }
+
   async function corriger(id: string, nomSpecialite: string, choisi: string) {
     setRetouche(null);
     setErreur(null);
@@ -177,17 +187,31 @@ export default function SpecialitesProposees() {
     <>
       <div className="flex flex-wrap gap-2">
         {specialites.map((specialite) => (
-          <span key={specialite.id} className="relative">
+          <span
+            key={specialite.id}
+            className="relative flex items-center rounded-full border border-[#CDE6F2] bg-teal-soft"
+          >
+            {/* Deux actions sur une même puce : changer l'icône (le libellé)
+                et retirer la spécialité (la croix). */}
             <button
               type="button"
               title="Changer l’icône"
               onClick={() => setRetouche(retouche === specialite.id ? null : specialite.id)}
-              className="rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue transition-colors hover:border-teal"
+              className="rounded-l-full py-2 pl-[14px] pr-1.5 text-xs font-bold text-blue transition-colors hover:text-teal"
             >
               <span aria-hidden className="mr-1">
                 {specialite.emoji}
               </span>
               {specialite.nom}
+            </button>
+            <button
+              type="button"
+              title="Retirer"
+              aria-label={`Retirer ${specialite.nom}`}
+              onClick={() => retirer(specialite.id, specialite.nom)}
+              className="rounded-r-full py-2 pl-1 pr-[12px] text-xs font-bold text-[#7C93A3] transition-colors hover:text-red"
+            >
+              ✕
             </button>
             {retouche === specialite.id && (
               <ChoixEmoji
@@ -253,7 +277,7 @@ export default function SpecialitesProposees() {
                 className="w-full rounded-[11px] border border-line bg-white px-[13px] py-2.5 text-[13px] outline-none focus:border-teal"
               />
               {suggestions.length > 0 && (
-                <ul className="absolute left-0 right-0 top-full z-20 mt-1 max-h-[280px] overflow-auto rounded-xl border border-line bg-white py-1 shadow-[0_10px_26px_rgba(16,59,80,.14)]">
+                <ul className="absolute left-0 right-0 top-full z-20 mt-1 max-h-[min(60vh,420px)] overflow-auto rounded-xl border border-line bg-white py-1 shadow-[0_10px_26px_rgba(16,59,80,.14)]">
                   {suggestions.map((suggestion) => (
                     <li key={suggestion}>
                       <button

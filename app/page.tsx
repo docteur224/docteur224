@@ -17,6 +17,7 @@ import {
   chargerVilles,
   nomComplet,
 } from "@/lib/donnees";
+import { compterParSpecialite, specialitesEnAvant } from "@/lib/catalogue-specialites";
 
 /** Les vedettes et référentiels sont relus au plus toutes les 60 s. */
 export const revalidate = 60;
@@ -38,6 +39,14 @@ export default async function Accueil() {
   // Suggestions du bandeau de recherche : le référentiel complet, pas
   // seulement les vedettes affichées plus bas.
   const nomsSpecialites = specialites.map((s) => s.nom);
+  // La grille « Trouvez le bon spécialiste » ne montre que les spécialités
+  // où un professionnel est inscrit, les plus consultées d'abord : le
+  // référentiel entier y ferait un mur de vignettes dont la plupart mènent
+  // à une page de résultats vide.
+  const specialitesVedette = specialitesEnAvant(
+    specialites,
+    compterParSpecialite(tousMedecins)
+  );
   const medecinsEnVedette = tousMedecins.slice(0, 3);
   const etablissementsEnVedette = tousEtablissements.slice(0, 3);
   const getEtablissement = (id: string) => tousEtablissements.find((e) => e.id === id);
@@ -66,7 +75,7 @@ export default async function Accueil() {
         <div className="pad">
           <div className="section-t">Spécialités courantes</div>
           <div className="chips scroll">
-            {specialites.slice(0, 5).map((s) => (
+            {specialitesVedette.slice(0, 5).map((s) => (
               <Link
                 key={s.nom}
                 href={`/resultats?specialite=${encodeURIComponent(s.nom)}`}
@@ -222,7 +231,7 @@ export default async function Accueil() {
             Accédez directement aux spécialités les plus demandées.
           </p>
           <div className="mt-[26px] flex flex-wrap justify-center gap-3">
-            {specialites.map((s) => (
+            {specialitesVedette.map((s) => (
               <Link
                 key={s.nom}
                 href={`/resultats?specialite=${encodeURIComponent(s.nom)}`}

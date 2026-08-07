@@ -51,7 +51,9 @@ const RACINES: [racine: string, emoji: string][] = [
   ["orthodont", "🦷"],
   ["medecine traditionnelle", "🌿"],
   ["medecine generale", "🩺"],
-  ["medecine interne", "🩺"],
+  // Distincte du stéthoscope de la médecine générale : les deux se côtoient
+  // en tête de l'accueil, deux vignettes identiques y feraient doublon.
+  ["medecine interne", "🧑‍⚕️"],
   ["medecine du travail", "👷"],
   ["medecine du sport", "🏃"],
   ["medecine legale", "⚖️"],
