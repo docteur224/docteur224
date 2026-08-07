@@ -2,6 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { creerClientNavigateur } from "@/lib/supabase/client";
+import {
+  devinerEmojiSpecialite,
+  emojiDeSecours,
+  emojiSpecialite,
+} from "@/lib/icones-specialites";
 
 /*
  * Couche de données de l'espace administrateur : validations, modération,
@@ -784,11 +789,111 @@ export function useListeContenu(cle: CleListeContenu): { liste: string[]; rechar
   return { liste: donnees, recharger };
 }
 
-export async function ajouterAListeContenu(cle: CleListeContenu, valeur: string): Promise<void> {
-  await creerClientNavigateur()
-    .from(cle)
-    .insert(cle === "assurances" ? { libelle: valeur } : { nom: valeur });
+/**
+ * Ajoute une entrée à un référentiel.
+ *
+ * `emoji` ne concerne que les spécialités : la colonne existe sur cette seule
+ * table, et la laisser vide revenait à afficher le même stéthoscope pour
+ * toutes les spécialités ajoutées après le seed.
+ */
+export async function ajouterAListeContenu(
+  cle: CleListeContenu,
+  valeur: string,
+  emoji?: string
+): Promise<{ erreur?: string }> {
+  // Un insert par branche plutôt qu'une ligne construite à l'avance : les
+  // colonnes diffèrent d'une table à l'autre, et le client Supabase type
+  // chaque appel à partir de la table visée.
+  const client = creerClientNavigateur();
+  const { error } =
+    cle === "assurances"
+      ? await client.from(cle).insert({ libelle: valeur })
+      : cle === "specialites"
+        ? await client.from(cle).insert({ nom: valeur, emoji: emoji ?? emojiSpecialite(valeur) })
+        : await client.from(cle).insert({ nom: valeur });
+  if (error) {
+    return {
+      erreur:
+        error.code === "23505"
+          ? "Cette entrée existe déjà."
+          : "Ajout refusé : le référentiel est réservé aux administrateurs.",
+    };
+  }
   await tracerAudit("A ajouté une entrée de référentiel", `${cle} · ${valeur}`);
+  return {};
+}
+
+/**
+ * Icône suggérée pour une spécialité en cours de saisie.
+ *
+ * Le dictionnaire répond seul dans la quasi-totalité des cas, sans réseau ni
+ * latence. La route serveur — donc l'IA, donc un appel facturé — n'est
+ * sollicitée que pour un nom qu'il ne reconnaît pas.
+ */
+export async function suggererEmojiSpecialite(nom: string): Promise<string> {
+  const connu = devinerEmojiSpecialite(nom);
+  if (connu) return connu;
+  try {
+    const reponse = await fetch("/api/admin/emoji-specialite", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nom }),
+    });
+    const { emoji } = (await reponse.json()) as { emoji?: string };
+    if (reponse.ok && emoji) return emoji;
+  } catch {
+    // Hors ligne ou route indisponible : la pastille de secours suffit,
+    // l'admin peut de toute façon corriger l'icône à la main.
+  }
+  return emojiDeSecours(nom);
+}
+
+/* ===== Spécialités (liste plate, mais porteuse d'une icône) ===== */
+
+export interface SpecialiteAdmin {
+  id: string;
+  nom: string;
+  emoji: string;
+}
+
+/**
+ * Comme `useListeContenu("specialites")`, mais en conservant l'icône : l'écran
+ * d'administration affiche la vignette telle que les patients la verront sur
+ * l'accueil, ce qu'une simple liste de noms ne permettait pas.
+ */
+export function useSpecialitesAdmin(): {
+  specialites: SpecialiteAdmin[];
+  recharger: () => void;
+} {
+  const { donnees, recharger } = utiliserRequete<SpecialiteAdmin[]>([], async () => {
+    const { data } = await creerClientNavigateur()
+      .from("specialites")
+      .select("id, nom, emoji")
+      .order("nom");
+    return ((data ?? []) as { id: string; nom: string; emoji: string | null }[]).map((s) => ({
+      ...s,
+      emoji: s.emoji ?? emojiSpecialite(s.nom),
+    }));
+  });
+  return { specialites: donnees, recharger };
+}
+
+/** Corrige l'icône d'une spécialité déjà référencée. */
+export async function changerEmojiSpecialite(
+  id: string,
+  nom: string,
+  emoji: string
+): Promise<{ erreur?: string }> {
+  const { data, error } = await creerClientNavigateur()
+    .from("specialites")
+    .update({ emoji })
+    .eq("id", id)
+    .select("id");
+  if (error) return { erreur: "Modification refusée : le référentiel est réservé aux administrateurs." };
+  // Un UPDATE bloqué par la RLS ne lève rien : il touche zéro ligne.
+  if (!data || data.length === 0) return { erreur: "Modification refusée." };
+  await tracerAudit("A modifié l'icône d'une spécialité", `${nom} · ${emoji}`);
+  return {};
 }
 
 /* ===== Communes (référentiel rattaché à une ville, migration 0023) ===== */

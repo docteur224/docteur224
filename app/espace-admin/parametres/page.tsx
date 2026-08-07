@@ -5,6 +5,7 @@ import AdminShell from "@/components/admin/AdminShell";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import Interrupteur from "@/components/patient/Interrupteur";
 import CommunesCouvertes from "@/components/admin/CommunesCouvertes";
+import SpecialitesProposees from "@/components/admin/SpecialitesProposees";
 import {
   ajouterAListeContenu,
   useListeContenu,
@@ -19,8 +20,9 @@ import {
  * est tracée dans le journal d'audit.
  */
 
+// Les spécialités portent une icône : elles ont leur propre carte
+// (SpecialitesProposees), avec liste de suggestions et choix de l'emoji.
 const LISTES: { cle: CleListeContenu; titre: string; question: string }[] = [
-  { cle: "specialites", titre: "Spécialités proposées", question: "Spécialité à ajouter :" },
   { cle: "villes", titre: "Villes couvertes", question: "Ville à ajouter :" },
   { cle: "assurances", titre: "Assurances référencées", question: "Assurance à ajouter :" },
 ];
@@ -30,7 +32,7 @@ function CarteListe({ cle, titre, question }: (typeof LISTES)[number]) {
 
   function ajouter() {
     const valeur = window.prompt(question)?.trim();
-    if (valeur) ajouterAListeContenu(cle, valeur).then(recharger);
+    if (valeur) ajouterAListeContenu(cle, valeur).then(() => recharger());
   }
 
   return (
@@ -92,6 +94,8 @@ export default function ParametresAdmin() {
       </div>
 
       <div className="pad">
+      <SpecialitesProposees />
+
       {LISTES.map((liste) => (
         <CarteListe key={liste.cle} {...liste} />
       ))}

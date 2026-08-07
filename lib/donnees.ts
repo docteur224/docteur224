@@ -2,6 +2,7 @@ import { createClient } from "@supabase/supabase-js";
 import type { Etablissement, Medecin } from "@/types";
 import { creneauReservable, depuisISO, versISO } from "@/lib/dates";
 import { JOURS_NOMS, horairesParJour, resumeHeures, resumeJours } from "@/lib/horaires";
+import { emojiSpecialite } from "@/lib/icones-specialites";
 
 /*
  * Couche de données publique (remplace lib/mock-data.ts) : lit les vraies
@@ -424,7 +425,10 @@ export async function chargerEtablissementParId(id: string): Promise<Etablisseme
 
 export async function chargerSpecialites(): Promise<{ id: string; nom: string; emoji: string }[]> {
   const { data } = await clientPublic().from("specialites").select("id, nom, emoji").order("nom");
-  return (data ?? []).map((s) => ({ ...s, emoji: s.emoji ?? "🩺" }));
+  // Filet de sécurité pour les lignes créées avant que l'écran admin ne
+  // renseigne l'emoji : mieux vaut une icône déduite du nom qu'un stéthoscope
+  // par défaut, qui donnait la même vignette à toutes les spécialités ajoutées.
+  return (data ?? []).map((s) => ({ ...s, emoji: s.emoji ?? emojiSpecialite(s.nom) }));
 }
 
 export async function chargerVilles(): Promise<string[]> {
