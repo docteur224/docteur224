@@ -25,6 +25,7 @@ const LIENS = [
   { href: "/espace-medecin/statistiques", icone: "📈", label: "Statistiques" },
   { href: "/espace-medecin/equipe", icone: "🧑‍💼", label: "Mes assistant(e)s" },
   { href: "/espace-medecin/abonnement", icone: "💳", label: "Mon abonnement" },
+  { href: "/espace-medecin/paiements", icone: "🧾", label: "Mes paiements" },
   { href: "/espace-medecin/profil", icone: "👤", label: "Mon profil" },
 ];
 

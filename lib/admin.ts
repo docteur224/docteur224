@@ -1335,63 +1335,11 @@ export function useConfigAbonnements(): {
   return { tarifs: donnees, enregistrer, recharger };
 }
 
-/**
- * Compteurs financiers réels. Le règlement des abonnements passe par
- * `paiements_abonnement` (migration 0040) : les versements sont déclarés par
- * les professionnels et rapprochés ici. Les consultations, elles, se règlent
- * toujours sur place chez le médecin.
+/*
+ * Les compteurs financiers vivent désormais dans `useKpiFinances()`, qui les
+ * calcule en SQL en un seul aller-retour (fonction `kpi_finances`, migration
+ * 0042) au lieu de cinq requêtes additionnées dans le navigateur.
  */
-export interface CompteursFinances {
-  abonnementsActifs: number;
-  paiementsEnAttente: number;
-  encaisseCeMois: number;
-}
-
-export function useCompteursFinances(): CompteursFinances {
-  const { donnees } = utiliserRequete<CompteursFinances>(
-    { abonnementsActifs: 0, paiementsEnAttente: 0, encaisseCeMois: 0 },
-    async () => {
-      const supabase = creerClientNavigateur();
-      const debutMois = new Date();
-      debutMois.setDate(1);
-      debutMois.setHours(0, 0, 0, 0);
-      // L'encaissé du mois compte les DEUX familles : un mois où la
-      // plateforme n'a vendu que des SMS afficherait sinon 0.
-      const [
-        { count: actifs },
-        { count: attenteAbo },
-        { count: attenteSms },
-        { data: abosConfirmes },
-        { data: smsConfirmes },
-      ] = await Promise.all([
-        supabase.from("abonnements").select("id", { count: "exact", head: true }).eq("statut", "actif"),
-        supabase
-          .from("paiements_abonnement")
-          .select("id", { count: "exact", head: true })
-          .eq("statut", "en_attente"),
-        supabase.from("achats_sms").select("id", { count: "exact", head: true }).eq("statut", "en_attente"),
-        supabase
-          .from("paiements_abonnement")
-          .select("montant_gnf")
-          .eq("statut", "confirme")
-          .gte("decide_le", debutMois.toISOString()),
-        supabase
-          .from("achats_sms")
-          .select("prix_gnf")
-          .eq("statut", "paye")
-          .gte("valide_le", debutMois.toISOString()),
-      ]);
-      return {
-        abonnementsActifs: actifs ?? 0,
-        paiementsEnAttente: (attenteAbo ?? 0) + (attenteSms ?? 0),
-        encaisseCeMois:
-          (abosConfirmes ?? []).reduce((t, p) => t + (p.montant_gnf ?? 0), 0) +
-          (smsConfirmes ?? []).reduce((t, a) => t + (a.prix_gnf ?? 0), 0),
-      };
-    }
-  );
-  return donnees;
-}
 
 /* ===== Paiements à rapprocher ===== */
 
@@ -1568,26 +1516,259 @@ export function useComptesEncaissement(): {
   return { comptes: donnees, enregistrer, recharger };
 }
 
-/* ===== Remboursements & litiges =====
- * Le paiement en ligne n'est pas encore actif (consultations réglées sur
- * place) : il n'existe donc pas encore de transactions à rembourser en base.
- * La liste reste vide jusqu'au branchement du paiement (Orange Money / MoMo).
+/* ===== Historique financier ===== */
+
+export type FamilleFinance = "abonnement" | "recharge" | "remboursement";
+
+/**
+ * Une ligne de l'historique, quelle que soit sa provenance. Les trois tables
+ * répondent à la même question — « qui a payé quoi, quand, et où en est-on » —
+ * et les mêler dans une seule liste évite à l'admin de recouper trois écrans.
  */
-
-export interface Remboursement {
+export interface LigneFinance {
   id: string;
-  titre: string;
-  detail: string;
-  initiales: string;
-  gradient: string;
+  famille: FamilleFinance;
+  nom: string;
+  objet: string;
+  montantGnf: number;
+  moyen: string;
+  reference: string;
+  /** en_attente | confirme | refuse | annule | rembourse */
+  statut: string;
+  /** Date qui fait foi pour cette ligne : décision si elle a eu lieu, sinon demande. */
+  date: string;
+  motif: string;
+  /** Remboursements seulement : le versement sur lequel ils portent. */
+  sourceId?: string;
 }
 
-export function useRemboursements(): Remboursement[] {
-  return [];
+const nomUtilisateur = (u: { nom?: string; prenom?: string } | null) =>
+  `${u?.prenom ?? ""} ${u?.nom ?? ""}`.trim() || "Compte supprimé";
+
+/**
+ * Tout l'historique des mouvements, du plus récent au plus ancien.
+ *
+ * Les trois requêtes sont bornées à 300 lignes chacune et fusionnées ici : à
+ * l'échelle où se trouve la plateforme, c'est un aller-retour contre trois
+ * écrans à recouper. Le jour où le volume l'exigera, c'est cette fonction —
+ * et elle seule — qui deviendra une vue paginée en SQL.
+ */
+export function useHistoriqueFinances(): { lignes: LigneFinance[]; recharger: () => void } {
+  const { donnees, recharger } = utiliserRequete<LigneFinance[]>([], async () => {
+    const supabase = creerClientNavigateur();
+    const [{ data: abos }, { data: sms }, { data: rembours }] = await Promise.all([
+      supabase
+        .from("paiements_abonnement")
+        .select(
+          "id, formule, periode, montant_gnf, moyen, reference, statut, motif_refus, cree_le, decide_le, utilisateurs!paiements_abonnement_titulaire_id_fkey ( nom, prenom )"
+        )
+        .order("cree_le", { ascending: false })
+        .limit(300),
+      supabase
+        .from("achats_sms")
+        .select(
+          "id, segments, prix_gnf, moyen_paiement, reference, statut, motif_refus, cree_le, valide_le, utilisateurs!achats_sms_titulaire_id_fkey ( nom, prenom )"
+        )
+        .order("cree_le", { ascending: false })
+        .limit(300),
+      supabase
+        .from("remboursements")
+        .select(
+          "id, montant_gnf, motif, cree_le, paiement_id, achat_sms_id, utilisateurs!remboursements_titulaire_id_fkey ( nom, prenom )"
+        )
+        .order("cree_le", { ascending: false })
+        .limit(300),
+    ]);
+
+    const lignes: LigneFinance[] = [
+      ...(abos ?? []).map((p) => ({
+        id: p.id,
+        famille: "abonnement" as const,
+        nom: nomUtilisateur(p.utilisateurs as unknown as { nom?: string; prenom?: string } | null),
+        objet: `Abonnement ${p.formule} ${p.periode === "annuel" ? "annuel" : "mensuel"}`,
+        montantGnf: p.montant_gnf,
+        moyen: p.moyen ?? "",
+        reference: p.reference ?? "",
+        statut: p.statut,
+        date: p.decide_le ?? p.cree_le,
+        motif: p.motif_refus ?? "",
+      })),
+      ...(sms ?? []).map((a) => ({
+        id: a.id,
+        famille: "recharge" as const,
+        nom: nomUtilisateur(a.utilisateurs as unknown as { nom?: string; prenom?: string } | null),
+        objet: `Recharge ${a.segments.toLocaleString("fr-FR")} SMS`,
+        montantGnf: a.prix_gnf,
+        moyen: a.moyen_paiement ?? "",
+        reference: a.reference ?? "",
+        // `achats_sms` dit « payé » là où un abonnement dit « confirmé » :
+        // sans cette traduction, le filtre « Confirmés » raterait les SMS.
+        statut: a.statut === "paye" ? "confirme" : a.statut,
+        date: a.valide_le ?? a.cree_le,
+        motif: a.motif_refus ?? "",
+      })),
+      ...(rembours ?? []).map((r) => ({
+        id: r.id,
+        famille: "remboursement" as const,
+        nom: nomUtilisateur(r.utilisateurs as unknown as { nom?: string; prenom?: string } | null),
+        objet: r.paiement_id ? "Remboursement d’abonnement" : "Remboursement de recharge",
+        montantGnf: r.montant_gnf,
+        moyen: "",
+        reference: "",
+        statut: "rembourse",
+        date: r.cree_le,
+        motif: r.motif ?? "",
+        // Rattacher le remboursement à SON versement, et non au titulaire :
+        // c'est la seule façon de savoir ce qu'il reste à rendre sur celui-ci
+        // quand un professionnel en a plusieurs.
+        sourceId: (r.paiement_id ?? r.achat_sms_id) as string,
+      })),
+    ];
+    return lignes.sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
+  });
+  return { lignes: donnees, recharger };
 }
 
-export async function validerRemboursement(remboursement: Remboursement): Promise<void> {
-  await tracerAudit("A validé un remboursement", remboursement.titre);
+/* ===== Abonnements en portefeuille ===== */
+
+export interface AbonnementAdmin {
+  id: string;
+  titulaireId: string;
+  nom: string;
+  role: string;
+  formule: string;
+  periode: string;
+  statut: string;
+  dateDebut: string;
+  dateFin: string | null;
+  /**
+   * Échéance dans moins de 30 jours. Calculé ICI et non à l'affichage : le
+   * linter React refuse `Date.now()` pendant le rendu — une valeur qui change
+   * à chaque re-rendu n'a rien à faire dans du JSX.
+   */
+  echeanceProche: boolean;
+}
+
+export function useAbonnementsAdmin(): { abonnements: AbonnementAdmin[]; recharger: () => void } {
+  const { donnees, recharger } = utiliserRequete<AbonnementAdmin[]>([], async () => {
+    const { data } = await creerClientNavigateur()
+      .from("abonnements")
+      .select(
+        "id, titulaire_id, formule, periode, statut, date_debut, date_fin, type_titulaire, utilisateurs!abonnements_titulaire_id_fkey ( nom, prenom )"
+      )
+      .order("date_debut", { ascending: false })
+      .limit(500);
+    return (data ?? []).map((a) => ({
+      id: a.id,
+      titulaireId: a.titulaire_id,
+      nom: nomUtilisateur(a.utilisateurs as unknown as { nom?: string; prenom?: string } | null),
+      role: a.type_titulaire,
+      formule: a.formule,
+      periode: a.periode,
+      statut: a.statut,
+      dateDebut: a.date_debut,
+      dateFin: a.date_fin,
+      echeanceProche:
+        a.statut === "actif" &&
+        a.date_fin !== null &&
+        new Date(a.date_fin).getTime() - Date.now() < 30 * 86400000,
+    }));
+  });
+  return { abonnements: donnees, recharger };
+}
+
+/* ===== Indicateurs ===== */
+
+export interface KpiFinances {
+  revenuMois: number;
+  revenuTotal: number;
+  rembourseMois: number;
+  rembourseTotal: number;
+  attenteNb: number;
+  attenteMontant: number;
+  abonnements: Record<string, number>;
+  /** Revenu récurrent mensuel : l'annuel ramené au douzième. */
+  mrr: number;
+  echeances30j: number;
+  serie: { mois: string; revenu: number }[];
+}
+
+const KPI_VIDE: KpiFinances = {
+  revenuMois: 0,
+  revenuTotal: 0,
+  rembourseMois: 0,
+  rembourseTotal: 0,
+  attenteNb: 0,
+  attenteMontant: 0,
+  abonnements: {},
+  mrr: 0,
+  echeances30j: 0,
+  serie: [],
+};
+
+export function useKpiFinances(): { kpi: KpiFinances; recharger: () => void } {
+  const { donnees, recharger } = utiliserRequete<KpiFinances>(KPI_VIDE, async () => {
+    const { data } = await creerClientNavigateur().rpc("kpi_finances");
+    if (!data) return KPI_VIDE;
+    const k = data as Record<string, unknown>;
+    return {
+      revenuMois: (k.revenuMois as number) ?? 0,
+      revenuTotal: (k.revenuTotal as number) ?? 0,
+      rembourseMois: (k.rembourseMois as number) ?? 0,
+      rembourseTotal: (k.rembourseTotal as number) ?? 0,
+      attenteNb: (k.attenteNb as number) ?? 0,
+      attenteMontant: (k.attenteMontant as number) ?? 0,
+      abonnements: (k.abonnements as Record<string, number>) ?? {},
+      mrr: (k.mrr as number) ?? 0,
+      echeances30j: (k.echeances30j as number) ?? 0,
+      serie: (k.serie as { mois: string; revenu: number }[]) ?? [],
+    };
+  });
+  return { kpi: donnees, recharger };
+}
+
+/* ===== Remboursement et résiliation ===== */
+
+/**
+ * Rembourse tout ou partie d'un versement encaissé. Le plafond est vérifié
+ * côté serveur : l'écran propose le reste dû, il ne le décide pas.
+ */
+export async function rembourserPaiement(
+  ligne: { id: string; famille: FamilleFinance; nom: string; reference: string },
+  montantGnf: number,
+  motif: string
+): Promise<{ erreur?: string }> {
+  const { error } = await creerClientNavigateur().rpc("rembourser_paiement", {
+    p_famille: ligne.famille === "recharge" ? "recharge" : "abonnement",
+    p_id: ligne.id,
+    p_montant: montantGnf,
+    p_motif: motif,
+  });
+  if (error) {
+    const refus = error.code === "42501" || /administration financière/i.test(error.message);
+    return { erreur: refus ? await messageRefus() : error.message };
+  }
+  await tracerAudit(
+    "A remboursé un versement",
+    `${ligne.nom} · ${ligne.reference || "sans référence"} · ${montantGnf} GNF`
+  );
+  return {};
+}
+
+export async function resilierAbonnement(
+  abonnement: AbonnementAdmin,
+  motif: string
+): Promise<{ erreur?: string }> {
+  const { error } = await creerClientNavigateur().rpc("resilier_abonnement", {
+    p_titulaire: abonnement.titulaireId,
+    p_motif: motif,
+  });
+  if (error) {
+    const refus = error.code === "42501" || /administration financière/i.test(error.message);
+    return { erreur: refus ? await messageRefus() : error.message };
+  }
+  await tracerAudit("A résilié un abonnement", `${abonnement.nom} · ${abonnement.formule}`);
+  return {};
 }
 
 /** Lecture/écriture de réglages booléens arbitraires (parametres_plateforme). */

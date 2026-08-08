@@ -13,7 +13,7 @@ import { creerClientNavigateur } from "@/lib/supabase/client";
  */
 
 export type CodeMoyen = "orange_money" | "mtn_momo" | "carte";
-export type StatutPaiement = "en_attente" | "confirme" | "refuse" | "annule";
+export type StatutPaiement = "en_attente" | "confirme" | "refuse" | "annule" | "rembourse";
 
 export interface MoyenPaiement {
   code: CodeMoyen;
@@ -54,6 +54,7 @@ export const LIBELLES_STATUT: Record<StatutPaiement, string> = {
   confirme: "Confirmé",
   refuse: "Non confirmé",
   annule: "Annulé",
+  rembourse: "Remboursé",
 };
 
 function versPaiement(l: Record<string, unknown>): Paiement {
@@ -263,4 +264,133 @@ export async function declarerReferenceRecharge(
 export async function annulerRecharge(id: string): Promise<{ erreur?: string }> {
   const { error } = await creerClientNavigateur().rpc("annuler_achat_sms", { p_id: id });
   return error ? { erreur: error.message } : {};
+}
+
+/* ===== Historique du professionnel ===== */
+
+export type FamillePaiement = "abonnement" | "recharge" | "remboursement";
+
+export interface MouvementPaiement {
+  id: string;
+  famille: FamillePaiement;
+  objet: string;
+  montantGnf: number;
+  moyen: string;
+  reference: string;
+  statut: StatutPaiement;
+  date: string;
+  motif: string;
+}
+
+/**
+ * Tout ce que le professionnel a payé, quelle qu'en soit la nature.
+ *
+ * Il ne raisonne pas en « tables » : il veut savoir ce qui est sorti de sa
+ * poche et où en est chaque versement. Abonnements, recharges et
+ * remboursements arrivent donc dans une seule liste, la plus récente d'abord.
+ */
+export function useHistoriquePaiements(): {
+  mouvements: MouvementPaiement[];
+  /** Somme réellement encaissée par la plateforme, remboursements déduits. */
+  totalPaye: number;
+  totalEnAttente: number;
+  totalRembourse: number;
+  chargement: boolean;
+  recharger: () => void;
+} {
+  const [mouvements, setMouvements] = useState<MouvementPaiement[]>([]);
+  const [charge, setCharge] = useState(false);
+  const [version, setVersion] = useState(0);
+
+  useEffect(() => {
+    let actif = true;
+    (async () => {
+      const supabase = creerClientNavigateur();
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user || !actif) return;
+      const uid = auth.user.id;
+
+      const [{ data: abos }, { data: sms }, { data: rembours }] = await Promise.all([
+        supabase
+          .from("paiements_abonnement")
+          .select("*")
+          .eq("titulaire_id", uid)
+          .order("cree_le", { ascending: false })
+          .limit(200),
+        supabase
+          .from("achats_sms")
+          .select("*")
+          .eq("titulaire_id", uid)
+          .order("cree_le", { ascending: false })
+          .limit(200),
+        supabase
+          .from("remboursements")
+          .select("*")
+          .eq("titulaire_id", uid)
+          .order("cree_le", { ascending: false })
+          .limit(200),
+      ]);
+      if (!actif) return;
+
+      const lignes: MouvementPaiement[] = [
+        ...(abos ?? []).map((p) => ({
+          id: p.id,
+          famille: "abonnement" as const,
+          objet: `Abonnement ${p.formule === "premium" ? "Premium" : p.formule} · ${
+            p.periode === "annuel" ? "annuel" : "mensuel"
+          }`,
+          montantGnf: p.montant_gnf,
+          moyen: p.moyen ?? "",
+          reference: p.reference ?? "",
+          statut: p.statut as StatutPaiement,
+          date: p.decide_le ?? p.cree_le,
+          motif: p.motif_refus ?? "",
+        })),
+        ...(sms ?? []).map((a) => ({
+          id: a.id,
+          famille: "recharge" as const,
+          objet: `Recharge ${a.segments.toLocaleString("fr-FR")} SMS`,
+          montantGnf: a.prix_gnf,
+          moyen: a.moyen_paiement ?? "",
+          reference: a.reference ?? "",
+          // « payé » côté achats, « confirmé » côté abonnements : une seule
+          // langue à l'écran, sinon le filtre trie mal.
+          statut: (a.statut === "paye" ? "confirme" : a.statut) as StatutPaiement,
+          date: a.valide_le ?? a.cree_le,
+          motif: a.motif_refus ?? "",
+        })),
+        ...(rembours ?? []).map((r) => ({
+          id: r.id,
+          famille: "remboursement" as const,
+          objet: r.paiement_id ? "Remboursement d’abonnement" : "Remboursement de recharge",
+          montantGnf: r.montant_gnf,
+          moyen: "",
+          reference: "",
+          statut: "rembourse" as StatutPaiement,
+          date: r.cree_le,
+          motif: r.motif ?? "",
+        })),
+      ].sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
+
+      setMouvements(lignes);
+      setCharge(true);
+    })();
+    return () => {
+      actif = false;
+    };
+  }, [version]);
+
+  const somme = (f: (m: MouvementPaiement) => boolean) =>
+    mouvements.filter(f).reduce((t, m) => t + m.montantGnf, 0);
+
+  return {
+    mouvements,
+    totalPaye:
+      somme((m) => m.famille !== "remboursement" && m.statut === "confirme") -
+      somme((m) => m.famille === "remboursement"),
+    totalEnAttente: somme((m) => m.statut === "en_attente"),
+    totalRembourse: somme((m) => m.famille === "remboursement"),
+    chargement: !charge,
+    recharger: () => setVersion((v) => v + 1),
+  };
 }

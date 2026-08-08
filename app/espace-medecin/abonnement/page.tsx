@@ -476,7 +476,17 @@ export default function AbonnementMedecin() {
 
       {historique.length > 0 && (
         <div className="mt-4 rounded-2xl border border-line bg-white p-5">
-          <h3 className="mb-1 text-[15px] font-extrabold">Mes paiements</h3>
+          <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
+            <h3 className="text-[15px] font-extrabold">Derniers paiements</h3>
+            {/* Cette carte ne montre que les cinq derniers : l'historique
+                complet, ses filtres et ses reçus vivent sur leur propre écran. */}
+            <a
+              href="/espace-medecin/paiements"
+              className="text-[12.5px] font-bold text-teal hover:underline"
+            >
+              Tout l’historique et mes reçus →
+            </a>
+          </div>
           {historique.map((p) => (
             <div
               key={p.id}
