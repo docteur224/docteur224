@@ -212,3 +212,55 @@ export async function annulerPaiement(id: string): Promise<{ erreur?: string }> 
   });
   return error ? { erreur: error.message } : {};
 }
+
+/* ===== Recharges SMS (migration 0041) ===== */
+
+/**
+ * Même modèle que l'abonnement : le client désigne un pack, le serveur relit
+ * les segments et le prix. `achats_sms` n'accepte plus d'insertion directe —
+ * elle laissait déclarer 10 000 segments à 1 GNF.
+ */
+export async function demanderRecharge(choix: {
+  packId: string;
+  moyen: CodeMoyen;
+  numero?: string;
+}): Promise<{ paiement?: Paiement; erreur?: string }> {
+  const { data, error } = await creerClientNavigateur().rpc("creer_achat_sms", {
+    p_pack_id: choix.packId,
+    p_moyen: choix.moyen,
+    p_numero: choix.numero ?? null,
+  });
+  if (error) return { erreur: error.message };
+  const l = data as Record<string, unknown>;
+  return {
+    paiement: {
+      id: l.id as string,
+      formule: l.nom as string,
+      periode: "",
+      montantGnf: l.montant_gnf as number,
+      moyen: l.moyen as CodeMoyen,
+      numeroPayeur: choix.numero ?? "",
+      reference: l.reference as string,
+      referenceOperateur: "",
+      statut: "en_attente",
+      motifRefus: "",
+      creeLe: new Date().toISOString(),
+    },
+  };
+}
+
+export async function declarerReferenceRecharge(
+  id: string,
+  reference: string
+): Promise<{ erreur?: string }> {
+  const { error } = await creerClientNavigateur().rpc("declarer_reference_achat", {
+    p_id: id,
+    p_reference: reference,
+  });
+  return error ? { erreur: error.message } : {};
+}
+
+export async function annulerRecharge(id: string): Promise<{ erreur?: string }> {
+  const { error } = await creerClientNavigateur().rpc("annuler_achat_sms", { p_id: id });
+  return error ? { erreur: error.message } : {};
+}

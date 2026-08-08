@@ -1355,36 +1355,54 @@ export function useCompteursFinances(): CompteursFinances {
       const debutMois = new Date();
       debutMois.setDate(1);
       debutMois.setHours(0, 0, 0, 0);
-      const [{ count: actifs }, { count: attente }, { data: confirmes }] = await Promise.all([
+      // L'encaissé du mois compte les DEUX familles : un mois où la
+      // plateforme n'a vendu que des SMS afficherait sinon 0.
+      const [
+        { count: actifs },
+        { count: attenteAbo },
+        { count: attenteSms },
+        { data: abosConfirmes },
+        { data: smsConfirmes },
+      ] = await Promise.all([
         supabase.from("abonnements").select("id", { count: "exact", head: true }).eq("statut", "actif"),
         supabase
           .from("paiements_abonnement")
           .select("id", { count: "exact", head: true })
           .eq("statut", "en_attente"),
+        supabase.from("achats_sms").select("id", { count: "exact", head: true }).eq("statut", "en_attente"),
         supabase
           .from("paiements_abonnement")
           .select("montant_gnf")
           .eq("statut", "confirme")
           .gte("decide_le", debutMois.toISOString()),
+        supabase
+          .from("achats_sms")
+          .select("prix_gnf")
+          .eq("statut", "paye")
+          .gte("valide_le", debutMois.toISOString()),
       ]);
       return {
         abonnementsActifs: actifs ?? 0,
-        paiementsEnAttente: attente ?? 0,
-        encaisseCeMois: (confirmes ?? []).reduce((t, p) => t + (p.montant_gnf ?? 0), 0),
+        paiementsEnAttente: (attenteAbo ?? 0) + (attenteSms ?? 0),
+        encaisseCeMois:
+          (abosConfirmes ?? []).reduce((t, p) => t + (p.montant_gnf ?? 0), 0) +
+          (smsConfirmes ?? []).reduce((t, a) => t + (a.prix_gnf ?? 0), 0),
       };
     }
   );
   return donnees;
 }
 
-/* ===== Paiements d'abonnement à rapprocher ===== */
+/* ===== Paiements à rapprocher ===== */
 
 export interface PaiementARapprocher {
   id: string;
+  /** Ce qui est acheté décide de la fonction à appeler pour confirmer. */
+  famille: "abonnement" | "recharge";
   nom: string;
   role: string;
-  formule: string;
-  periode: string;
+  /** « Premium mensuel » ou « 500 SMS ». */
+  objet: string;
   montantGnf: number;
   moyen: string;
   numeroPayeur: string;
@@ -1394,60 +1412,93 @@ export interface PaiementARapprocher {
 }
 
 /**
- * La file de l'admin Finance : les versements déclarés, les plus anciens
- * d'abord — un professionnel qui a payé attend son activation.
+ * La file de l'admin Finance : tous les versements déclarés, abonnements ET
+ * recharges SMS, les plus anciens d'abord — un professionnel qui a payé
+ * attend son activation.
  *
- * La jointure est NOMMÉE (`utilisateurs!paiements_abonnement_titulaire_id_fkey`)
- * par prudence : dès qu'une seconde FK relierait cette table à `utilisateurs`
- * (`decide_par` en est déjà une), PostgREST renverrait PGRST201 et l'écran
- * afficherait une file vide sans la moindre erreur.
+ * Une seule file pour les deux familles : le geste de l'admin est le même
+ * (retrouver le versement sur le compte marchand, puis trancher), et deux
+ * cartes jumelles l'obligeraient à surveiller deux endroits.
+ *
+ * Les jointures sont NOMMÉES par prudence : chaque table porte une seconde FK
+ * vers `utilisateurs` (`decide_par`, `valide_par`), et PostgREST renverrait
+ * alors PGRST201 — l'écran afficherait une file vide sans la moindre erreur.
  */
 export function usePaiementsARapprocher(): {
   paiements: PaiementARapprocher[];
   recharger: () => void;
 } {
   const { donnees, recharger } = utiliserRequete<PaiementARapprocher[]>([], async () => {
-    const { data } = await creerClientNavigateur()
-      .from("paiements_abonnement")
-      .select(
-        "id, formule, periode, montant_gnf, moyen, numero_payeur, reference, reference_operateur, cree_le, type_titulaire, utilisateurs!paiements_abonnement_titulaire_id_fkey ( nom, prenom )"
-      )
-      .eq("statut", "en_attente")
-      .order("cree_le", { ascending: true });
-    return (data ?? []).map((p) => {
-      const u = p.utilisateurs as unknown as { nom?: string; prenom?: string } | null;
-      return {
+    const supabase = creerClientNavigateur();
+    const nomDe = (u: { nom?: string; prenom?: string } | null) =>
+      `${u?.prenom ?? ""} ${u?.nom ?? ""}`.trim() || "Compte supprimé";
+
+    const [{ data: abonnements }, { data: recharges }] = await Promise.all([
+      supabase
+        .from("paiements_abonnement")
+        .select(
+          "id, formule, periode, montant_gnf, moyen, numero_payeur, reference, reference_operateur, cree_le, type_titulaire, utilisateurs!paiements_abonnement_titulaire_id_fkey ( nom, prenom )"
+        )
+        .eq("statut", "en_attente"),
+      supabase
+        .from("achats_sms")
+        .select(
+          "id, segments, prix_gnf, moyen_paiement, numero_payeur, reference, reference_paiement, cree_le, utilisateurs!achats_sms_titulaire_id_fkey ( nom, prenom, role )"
+        )
+        .eq("statut", "en_attente"),
+    ]);
+
+    const lignes: PaiementARapprocher[] = [
+      ...(abonnements ?? []).map((p) => ({
         id: p.id,
-        nom: `${u?.prenom ?? ""} ${u?.nom ?? ""}`.trim() || "Compte supprimé",
+        famille: "abonnement" as const,
+        nom: nomDe(p.utilisateurs as unknown as { nom?: string; prenom?: string } | null),
         role: p.type_titulaire,
-        formule: p.formule,
-        periode: p.periode,
+        objet: `Abonnement ${p.formule} ${p.periode === "annuel" ? "annuel" : "mensuel"}`,
         montantGnf: p.montant_gnf,
         moyen: p.moyen,
         numeroPayeur: p.numero_payeur ?? "",
         reference: p.reference,
         referenceOperateur: p.reference_operateur ?? "",
         creeLe: p.cree_le,
-      };
-    });
+      })),
+      ...(recharges ?? []).map((a) => {
+        const u = a.utilisateurs as unknown as { nom?: string; prenom?: string; role?: string } | null;
+        return {
+          id: a.id,
+          famille: "recharge" as const,
+          nom: nomDe(u),
+          role: u?.role ?? "",
+          objet: `Recharge ${a.segments.toLocaleString("fr-FR")} SMS`,
+          montantGnf: a.prix_gnf,
+          moyen: a.moyen_paiement ?? "",
+          numeroPayeur: a.numero_payeur ?? "",
+          reference: a.reference ?? "",
+          referenceOperateur: a.reference_paiement ?? "",
+          creeLe: a.cree_le,
+        };
+      }),
+    ];
+    return lignes.sort((a, b) => a.creeLe.localeCompare(b.creeLe));
   });
   return { paiements: donnees, recharger };
 }
 
 /**
  * Confirme la réception d'un versement : c'est CE geste qui active
- * l'abonnement, côté serveur. L'écran n'écrit jamais dans `abonnements`.
+ * l'abonnement ou crédite les SMS, côté serveur. L'écran n'écrit jamais
+ * lui-même dans `abonnements` ni dans les compteurs.
  */
 export async function confirmerPaiement(paiement: PaiementARapprocher): Promise<{ erreur?: string }> {
-  const { error } = await creerClientNavigateur().rpc("confirmer_paiement_abonnement", {
-    p_id: paiement.id,
-    p_reference_operateur: paiement.referenceOperateur || null,
-  });
+  const { error } = await creerClientNavigateur().rpc(
+    paiement.famille === "abonnement" ? "confirmer_paiement_abonnement" : "confirmer_achat_sms",
+    { p_id: paiement.id, p_reference_operateur: paiement.referenceOperateur || null }
+  );
   if (error) {
     const refus = error.code === "42501" || /administration financière/i.test(error.message);
     return { erreur: refus ? await messageRefus() : error.message };
   }
-  await tracerAudit("A confirmé un paiement d'abonnement", `${paiement.nom} · ${paiement.reference}`);
+  await tracerAudit("A confirmé un paiement", `${paiement.nom} · ${paiement.objet} · ${paiement.reference}`);
   return {};
 }
 
@@ -1456,15 +1507,15 @@ export async function refuserPaiement(
   paiement: PaiementARapprocher,
   motif: string
 ): Promise<{ erreur?: string }> {
-  const { error } = await creerClientNavigateur().rpc("refuser_paiement_abonnement", {
-    p_id: paiement.id,
-    p_motif: motif,
-  });
+  const { error } = await creerClientNavigateur().rpc(
+    paiement.famille === "abonnement" ? "refuser_paiement_abonnement" : "refuser_achat_sms",
+    { p_id: paiement.id, p_motif: motif }
+  );
   if (error) {
     const refus = error.code === "42501" || /administration financière/i.test(error.message);
     return { erreur: refus ? await messageRefus() : error.message };
   }
-  await tracerAudit("A refusé un paiement d'abonnement", `${paiement.nom} · ${paiement.reference}`);
+  await tracerAudit("A refusé un paiement", `${paiement.nom} · ${paiement.objet} · ${paiement.reference}`);
   return {};
 }
 

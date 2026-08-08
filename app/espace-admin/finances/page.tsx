@@ -195,7 +195,7 @@ export default function FinancesAdmin() {
           </div>
 
           <div className="card2" style={{ marginTop: 12 }}>
-            <h4>Paiements d’abonnement · {paiements.length}</h4>
+            <h4>Versements à rapprocher · {paiements.length}</h4>
             {message && (
               <p style={{ fontSize: 12.5, fontWeight: 700, color: "var(--blue)" }}>{message}</p>
             )}
@@ -211,7 +211,8 @@ export default function FinancesAdmin() {
                     {p.nom} · {formatGNF(p.montantGnf)}
                   </b>
                   <small>
-                    {LIBELLE_MOYEN[p.moyen] ?? p.moyen} · réf. {p.reference} · {dateCourte(p.creeLe)}
+                    {p.objet} · {(LIBELLE_MOYEN[p.moyen] ?? p.moyen) || "moyen non précisé"} · réf.{" "}
+                    {p.reference || "—"} · {dateCourte(p.creeLe)}
                     {p.numeroPayeur ? ` · ${p.numeroPayeur}` : ""}
                     {p.referenceOperateur ? ` · ${p.referenceOperateur}` : ""}
                   </small>
@@ -364,7 +365,7 @@ export default function FinancesAdmin() {
 
       <div className="mb-4 rounded-2xl border border-line bg-white p-5">
         <h3 className="mb-1 text-[15px] font-extrabold">
-          Paiements d’abonnement · {paiements.length} à rapprocher
+          Versements à rapprocher · {paiements.length}
         </h3>
         <p className="mb-2 text-[12.5px] text-muted">
           Vérifiez la réception du versement sur le compte marchand avant de confirmer :
@@ -382,11 +383,11 @@ export default function FinancesAdmin() {
           >
             <div className="min-w-0 flex-1">
               <b className="block text-sm font-extrabold">
-                {p.nom} · {p.formule} {p.periode === "annuel" ? "annuel" : "mensuel"}
+                {p.nom} · {p.objet}
               </b>
               <small className="text-xs text-muted">
-                {LIBELLE_MOYEN[p.moyen] ?? p.moyen} · réf. <b>{p.reference}</b> ·{" "}
-                {dateCourte(p.creeLe)}
+                {(LIBELLE_MOYEN[p.moyen] ?? p.moyen) || "moyen non précisé"} · réf.{" "}
+                <b>{p.reference || "—"}</b> · {dateCourte(p.creeLe)}
                 {p.numeroPayeur ? ` · depuis le ${p.numeroPayeur}` : " · numéro non précisé"}
                 {p.referenceOperateur
                   ? ` · transaction ${p.referenceOperateur}`

@@ -7,8 +7,11 @@ import { formaterTelephoneGN, telephoneGuineenValide } from "@/lib/telephone";
 import {
   HABILLAGE_MOYEN,
   annulerPaiement,
+  annulerRecharge,
   declarerReference,
+  declarerReferenceRecharge,
   demanderPaiement,
+  demanderRecharge,
   estMobileMoney,
   type CodeMoyen,
   type MoyenPaiement,
@@ -51,24 +54,39 @@ const SOUS_TITRE: Record<CodeMoyen, string> = {
   carte: "Lien de paiement sécurisé par e-mail",
 };
 
+/**
+ * Ce qui est acheté. Deux produits se règlent de la même façon mais ne se
+ * récapitulent pas pareil : un abonnement se choisit au mois ou à l'année,
+ * une recharge est une quantité de SMS à prix fixe. Le reste du parcours —
+ * moyen, instructions, confirmation — est rigoureusement identique.
+ */
+export type AchatPaye =
+  | {
+      type: "abonnement";
+      formule: string;
+      libelle: string;
+      periode: "mensuel" | "annuel";
+      /** Absent en reprise : la périodicité déjà payée ne se rejoue pas. */
+      onPeriode?: (p: "mensuel" | "annuel") => void;
+      prix: { mensuel: number; annuel: number };
+    }
+  | {
+      type: "recharge";
+      packId: string;
+      libelle: string;
+      segments: number;
+      montantGnf: number;
+    };
+
 export default function DialoguePaiement({
   onFermer,
-  formule,
-  libelleFormule,
-  periode,
-  onPeriode,
-  prix,
+  achat,
   moyens,
   reprise = null,
   apres,
 }: {
   onFermer: () => void;
-  formule: string;
-  libelleFormule: string;
-  periode: "mensuel" | "annuel";
-  /** Laissé libre : l'appelant garde la maîtrise de la période affichée. */
-  onPeriode?: (p: "mensuel" | "annuel") => void;
-  prix: { mensuel: number; annuel: number };
+  achat: AchatPaye;
   moyens: MoyenPaiement[];
   /** Demande déjà ouverte : on rouvre alors directement les instructions. */
   reprise?: Paiement | null;
@@ -102,8 +120,21 @@ export default function DialoguePaiement({
     return () => window.removeEventListener("keydown", surTouche);
   }, [onFermer]);
 
-  const montant = paiement?.montantGnf ?? (periode === "annuel" ? prix.annuel : prix.mensuel);
-  const economie = prix.mensuel * 12 - prix.annuel;
+  /*
+   * Les deux faces de l'union, sorties une fois pour toutes : TypeScript ne
+   * sait pas rétrécir `achat` sur un `abonnement ? … : …` écrit plus bas.
+   */
+  const abonnement = achat.type === "abonnement" ? achat : null;
+  const recharge = achat.type === "recharge" ? achat : null;
+  const segments = recharge?.segments ?? 0;
+  const periode = abonnement?.periode ?? "mensuel";
+  const montant =
+    paiement?.montantGnf ??
+    (abonnement
+      ? periode === "annuel"
+        ? abonnement.prix.annuel
+        : abonnement.prix.mensuel
+      : (recharge?.montantGnf ?? 0));
   const compte = moyens.find((m) => m.code === moyen) ?? null;
   const coordonneesManquantes = !!compte && estMobileMoney(compte.code) && !compte.numeroMarchand;
   const numeroValide = telephoneGuineenValide(numero);
@@ -129,12 +160,17 @@ export default function DialoguePaiement({
     if (!moyen || enCours) return;
     setEnCours(true);
     setErreur("");
-    const res = await demanderPaiement({
-      formule,
-      periode,
-      moyen,
-      numero: estMobileMoney(moyen) ? numero : undefined,
-    });
+    const numeroVerse = estMobileMoney(moyen) ? numero : undefined;
+    const res = abonnement
+      ? await demanderPaiement({
+          formule: abonnement.formule,
+          periode: abonnement.periode,
+          moyen,
+          numero: numeroVerse,
+        })
+      : recharge
+        ? await demanderRecharge({ packId: recharge.packId, moyen, numero: numeroVerse })
+        : { erreur: "Achat inconnu." };
     setEnCours(false);
     if (res.erreur || !res.paiement) {
       setErreur(res.erreur ?? "Demande impossible.");
@@ -150,9 +186,11 @@ export default function DialoguePaiement({
     if (!paiement || enCours) return;
     setEnCours(true);
     setErreur("");
-    const res = referenceOperateur.trim()
-      ? await declarerReference(paiement.id, referenceOperateur.trim())
-      : {};
+    const res = !referenceOperateur.trim()
+      ? {}
+      : abonnement
+        ? await declarerReference(paiement.id, referenceOperateur.trim())
+        : await declarerReferenceRecharge(paiement.id, referenceOperateur.trim());
     setEnCours(false);
     if (res.erreur) {
       setErreur(res.erreur);
@@ -165,7 +203,9 @@ export default function DialoguePaiement({
   async function renoncer() {
     if (!paiement || enCours) return;
     setEnCours(true);
-    const res = await annulerPaiement(paiement.id);
+    const res = abonnement
+      ? await annulerPaiement(paiement.id)
+      : await annulerRecharge(paiement.id);
     setEnCours(false);
     if (res.erreur) {
       setErreur(res.erreur);
@@ -187,7 +227,7 @@ export default function DialoguePaiement({
     <div
       role="dialog"
       aria-modal="true"
-      aria-label={`Paiement de l’abonnement ${libelleFormule}`}
+      aria-label={`Paiement — ${achat.libelle}`}
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 md:items-start md:overflow-y-auto md:p-6"
       onClick={(e) => {
         if (e.target === e.currentTarget) onFermer();
@@ -199,11 +239,17 @@ export default function DialoguePaiement({
         <div className="border-b border-line p-4 pb-3">
           <div className="flex items-start justify-between gap-3">
             <h4 className="text-[15.5px] font-extrabold">
-              {etape === "confirme" ? "Demande enregistrée" : `Abonnement ${libelleFormule}`}
+              {etape === "confirme"
+                ? "Demande enregistrée"
+                : abonnement
+                  ? `Abonnement ${abonnement.libelle}`
+                  : achat.libelle}
               <span className="mt-0.5 block text-[12px] font-semibold text-muted">
                 {etape === "confirme"
                   ? "Nous vérifions votre règlement"
-                  : `${periode === "annuel" ? "Facturation annuelle" : "Facturation mensuelle"} · ${formatGNF(montant)}`}
+                  : abonnement
+                    ? `${periode === "annuel" ? "Facturation annuelle" : "Facturation mensuelle"} · ${formatGNF(montant)}`
+                    : `Crédit ponctuel · ${formatGNF(montant)}`}
               </span>
             </h4>
             <button
@@ -241,46 +287,71 @@ export default function DialoguePaiement({
           {/* ================= 1. Récapitulatif ================= */}
           {etape === "recap" && (
             <>
-              <div role="radiogroup" aria-label="Périodicité" className="grid gap-2">
-                {(
-                  [
-                    ["mensuel", "Mensuel", prix.mensuel, "par mois"],
-                    ["annuel", "Annuel", prix.annuel, "par an"],
-                  ] as ["mensuel" | "annuel", string, number, string][]
-                ).map(([valeur, libelle, somme, unite]) => (
-                  <button
-                    key={valeur}
-                    type="button"
-                    role="radio"
-                    aria-checked={periode === valeur}
-                    onClick={() => onPeriode?.(valeur)}
-                    disabled={!onPeriode}
-                    className={`flex items-center justify-between gap-3 rounded-[14px] border-[1.5px] p-[13px] text-left transition-colors ${
-                      periode === valeur
-                        ? "border-teal bg-teal-soft"
-                        : "border-line bg-white hover:bg-bg"
-                    }`}
-                  >
+              {abonnement ? (
+                <div role="radiogroup" aria-label="Périodicité" className="grid gap-2">
+                  {(
+                    [
+                      ["mensuel", "Mensuel", abonnement.prix.mensuel, "par mois"],
+                      ["annuel", "Annuel", abonnement.prix.annuel, "par an"],
+                    ] as ["mensuel" | "annuel", string, number, string][]
+                  ).map(([valeur, libelle, somme, unite]) => (
+                    <button
+                      key={valeur}
+                      type="button"
+                      role="radio"
+                      aria-checked={periode === valeur}
+                      onClick={() => abonnement.onPeriode?.(valeur)}
+                      disabled={!abonnement.onPeriode}
+                      className={`flex items-center justify-between gap-3 rounded-[14px] border-[1.5px] p-[13px] text-left transition-colors ${
+                        periode === valeur
+                          ? "border-teal bg-teal-soft"
+                          : "border-line bg-white hover:bg-bg"
+                      }`}
+                    >
+                      <span>
+                        <b className="block text-[13.5px] font-extrabold">{libelle}</b>
+                        {valeur === "annuel" &&
+                          abonnement.prix.mensuel * 12 - abonnement.prix.annuel > 0 && (
+                            <small className="text-[11.5px] font-bold text-green">
+                              Économisez{" "}
+                              {formatGNF(abonnement.prix.mensuel * 12 - abonnement.prix.annuel)}
+                            </small>
+                          )}
+                        {valeur === "mensuel" && (
+                          <small className="text-[11.5px] text-muted">Sans engagement</small>
+                        )}
+                      </span>
+                      <span className="flex-none text-right">
+                        <b className="block text-[15px] font-extrabold text-blue">
+                          {formatGNF(somme)}
+                        </b>
+                        <small className="text-[11px] text-muted">{unite}</small>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                /*
+                 * Une recharge n'a pas de périodicité à comparer : ce qui aide
+                 * à décider, c'est le prix au SMS — c'est lui qui distingue un
+                 * pack d'un autre, et il n'apparaissait qu'en petit sur la liste.
+                 */
+                <div className="grid gap-2">
+                  <div className="flex items-center justify-between gap-3 rounded-[14px] border-[1.5px] border-teal bg-teal-soft p-[13px]">
                     <span>
-                      <b className="block text-[13.5px] font-extrabold">{libelle}</b>
-                      {valeur === "annuel" && economie > 0 && (
-                        <small className="text-[11.5px] font-bold text-green">
-                          Économisez {formatGNF(economie)}
-                        </small>
-                      )}
-                      {valeur === "mensuel" && (
-                        <small className="text-[11.5px] text-muted">Sans engagement</small>
-                      )}
-                    </span>
-                    <span className="flex-none text-right">
-                      <b className="block text-[15px] font-extrabold text-blue">
-                        {formatGNF(somme)}
+                      <b className="block text-[13.5px] font-extrabold">
+                        {segments.toLocaleString("fr-FR")} SMS
                       </b>
-                      <small className="text-[11px] text-muted">{unite}</small>
+                      <small className="text-[11.5px] text-muted">
+                        {Math.round(montant / Math.max(segments, 1))} GNF le SMS
+                      </small>
                     </span>
-                  </button>
-                ))}
-              </div>
+                    <b className="flex-none text-[15px] font-extrabold text-blue">
+                      {formatGNF(montant)}
+                    </b>
+                  </div>
+                </div>
+              )}
 
               <div className="mt-3 flex items-center justify-between rounded-xl bg-bg px-[14px] py-3">
                 <b className="text-[13px]">Total à payer</b>
@@ -288,8 +359,19 @@ export default function DialoguePaiement({
               </div>
 
               <p className="mt-3 text-[11.5px] leading-relaxed text-muted">
-                🔒 Votre abonnement passe en <b>{libelleFormule}</b> dès que le règlement est
-                confirmé par notre équipe. La prise de rendez-vous reste gratuite pour vos patients.
+                {abonnement ? (
+                  <>
+                    🔒 Votre abonnement passe en <b>{abonnement.libelle}</b> dès que le règlement
+                    est confirmé par notre équipe. La prise de rendez-vous reste gratuite pour vos
+                    patients.
+                  </>
+                ) : (
+                  <>
+                    🔒 Vos <b>{segments.toLocaleString("fr-FR")} SMS</b> sont crédités dès que
+                    le règlement est confirmé par notre équipe. Les crédits achetés ne se périment
+                    pas au changement de mois.
+                  </>
+                )}
               </p>
             </>
           )}
@@ -491,15 +573,32 @@ export default function DialoguePaiement({
                 <p className="max-w-[380px] text-[12.5px] leading-relaxed text-muted">
                   {estMobileMoney(paiement.moyen) ? (
                     <>
-                      Votre abonnement <b>{libelleFormule}</b> sera activé dès que notre équipe
-                      aura rapproché le versement. Vous recevrez une notification — inutile de
-                      payer une seconde fois.
+                      {abonnement ? (
+                        <>
+                          Votre abonnement <b>{abonnement.libelle}</b> sera activé
+                        </>
+                      ) : (
+                        <>
+                          Vos <b>{segments.toLocaleString("fr-FR")} SMS</b> seront crédités
+                        </>
+                      )}{" "}
+                      dès que notre équipe aura rapproché le versement. Vous recevrez une
+                      notification — inutile de payer une seconde fois.
                     </>
                   ) : (
                     <>
                       Nous vous envoyons le lien de paiement sécurisé à l’adresse e-mail de votre
-                      compte. Votre abonnement <b>{libelleFormule}</b> sera activé après le
-                      règlement.
+                      compte.{" "}
+                      {abonnement ? (
+                        <>
+                          Votre abonnement <b>{abonnement.libelle}</b> sera activé
+                        </>
+                      ) : (
+                        <>
+                          Vos <b>{segments.toLocaleString("fr-FR")} SMS</b> seront crédités
+                        </>
+                      )}{" "}
+                      après le règlement.
                     </>
                   )}
                 </p>
@@ -507,7 +606,9 @@ export default function DialoguePaiement({
 
               <dl className="grid gap-1.5 rounded-[14px] bg-bg p-[13px] text-[12.5px]">
                 {[
-                  ["Formule", `${libelleFormule} · ${periode === "annuel" ? "annuel" : "mensuel"}`],
+                  abonnement
+                    ? ["Formule", `${abonnement.libelle} · ${periode === "annuel" ? "annuel" : "mensuel"}`]
+                    : ["Recharge", `${segments.toLocaleString("fr-FR")} SMS`],
                   ["Montant", formatGNF(paiement.montantGnf)],
                   ["Moyen", moyens.find((m) => m.code === paiement.moyen)?.libelle ?? "—"],
                   ["Référence", paiement.reference],

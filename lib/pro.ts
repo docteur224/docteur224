@@ -10,6 +10,7 @@ import {
   type MedecinAvecPlages,
 } from "@/lib/donnees";
 import { versISO } from "@/lib/dates";
+import type { Paiement } from "@/lib/paiements";
 import { JOURS_NOMS, horairesParJour, resumeHeures, resumeJours } from "@/lib/horaires";
 
 /*
@@ -1171,9 +1172,11 @@ export function useRappelsEtSms(): {
   preferences: PreferencesRappels;
   etat: EtatSms | null;
   packs: PackSms[];
-  achatsEnAttente: number;
+  /** Recharge dont le versement n'est pas encore rapproché. Il n'y en a jamais deux. */
+  achatEnAttente: (Paiement & { segments: number }) | null;
+  /** Demandes closes, pour que le professionnel retrouve ce qu'il a réglé. */
+  historiqueAchats: (Paiement & { segments: number })[];
   enregistrerPreferences: (p: PreferencesRappels) => Promise<{ erreur?: string }>;
-  commanderPack: (packId: string) => Promise<{ erreur?: string }>;
   recharger: () => void;
 } {
   const DEFAUT: PreferencesRappels = {
@@ -1185,7 +1188,7 @@ export function useRappelsEtSms(): {
   const [preferences, setPreferences] = useState<PreferencesRappels>(DEFAUT);
   const [etat, setEtat] = useState<EtatSms | null>(null);
   const [packs, setPacks] = useState<PackSms[]>([]);
-  const [achatsEnAttente, setAchatsEnAttente] = useState(0);
+  const [achats, setAchats] = useState<(Paiement & { segments: number })[]>([]);
   const [version, setVersion] = useState(0);
 
   useEffect(() => {
@@ -1200,16 +1203,18 @@ export function useRappelsEtSms(): {
        * porte des abonnements en double, hérités d'amorçages répétés. Une
        * anomalie de données ne doit pas éteindre l'écran du professionnel.
        */
-      const [{ data: pref }, { data: consos }, { data: cat }, { count }] = await Promise.all([
-        supabase.from("preferences_rappels").select("*").eq("titulaire_id", auth.user.id).maybeSingle(),
-        supabase.from("consommation_sms_mois").select("*").eq("titulaire_id", auth.user.id).limit(1),
-        supabase.from("packs_sms").select("id, nom, segments, prix_gnf").eq("actif", true).order("ordre"),
-        supabase
-          .from("achats_sms")
-          .select("id", { count: "exact", head: true })
-          .eq("titulaire_id", auth.user.id)
-          .eq("statut", "en_attente"),
-      ]);
+      const [{ data: pref }, { data: consos }, { data: cat }, { data: lignesAchats }] =
+        await Promise.all([
+          supabase.from("preferences_rappels").select("*").eq("titulaire_id", auth.user.id).maybeSingle(),
+          supabase.from("consommation_sms_mois").select("*").eq("titulaire_id", auth.user.id).limit(1),
+          supabase.from("packs_sms").select("id, nom, segments, prix_gnf").eq("actif", true).order("ordre"),
+          supabase
+            .from("achats_sms")
+            .select("*")
+            .eq("titulaire_id", auth.user.id)
+            .order("cree_le", { ascending: false })
+            .limit(20),
+        ]);
       if (!actif) return;
       if (pref) {
         setPreferences({
@@ -1233,7 +1238,28 @@ export function useRappelsEtSms(): {
           : null
       );
       setPacks((cat ?? []).map((p) => ({ id: p.id, nom: p.nom, segments: p.segments, prixGnf: p.prix_gnf })));
-      setAchatsEnAttente(count ?? 0);
+      /*
+       * Une recharge se règle exactement comme un abonnement : on la remonte
+       * sous la même forme, pour que le dialogue de paiement puisse la
+       * reprendre sans connaître la table dont elle vient.
+       */
+      setAchats(
+        (lignesAchats ?? []).map((a) => ({
+          id: a.id,
+          formule: `${a.segments.toLocaleString("fr-FR")} SMS`,
+          periode: "",
+          montantGnf: a.prix_gnf,
+          moyen: (a.moyen_paiement ?? "orange_money") as Paiement["moyen"],
+          numeroPayeur: a.numero_payeur ?? "",
+          reference: a.reference ?? "",
+          referenceOperateur: a.reference_paiement ?? "",
+          // `achats_sms` dit « payé » là où un abonnement dit « confirmé ».
+          statut: (a.statut === "paye" ? "confirme" : a.statut) as Paiement["statut"],
+          motifRefus: a.motif_refus ?? "",
+          creeLe: a.cree_le,
+          segments: a.segments,
+        }))
+      );
     })();
     return () => {
       actif = false;
@@ -1258,36 +1284,18 @@ export function useRappelsEtSms(): {
   }
 
   /*
-   * Commande une recharge. Le statut reste « en attente » : la policy
-   * `ins_achats_sms` l'exige, et seul un admin Finance peut la faire passer à
-   * « payé » après réception. Aucune passerelle de paiement n'est branchée —
-   * le crédit ne s'attribue donc pas tout seul.
+   * La commande d'une recharge ne vit plus ici : elle passe par
+   * `demanderRecharge()` (lib/paiements), qui relit segments et prix en base.
+   * `achats_sms` n'a plus de policy INSERT — un client qui déclarait son
+   * propre prix était la faille que la 0040 avait déjà fermée ailleurs.
    */
-  async function commanderPack(packId: string): Promise<{ erreur?: string }> {
-    const supabase = creerClientNavigateur();
-    const { data: auth } = await supabase.auth.getUser();
-    if (!auth.user) return { erreur: "Session expirée." };
-    const pack = packs.find((p) => p.id === packId);
-    if (!pack) return { erreur: "Recharge inconnue." };
-    const { error } = await supabase.from("achats_sms").insert({
-      titulaire_id: auth.user.id,
-      pack_id: pack.id,
-      segments: pack.segments,
-      prix_gnf: pack.prixGnf,
-      statut: "en_attente",
-    });
-    if (error) return { erreur: error.message };
-    setVersion((v) => v + 1);
-    return {};
-  }
-
   return {
     preferences,
     etat,
     packs,
-    achatsEnAttente,
+    achatEnAttente: achats.find((a) => a.statut === "en_attente") ?? null,
+    historiqueAchats: achats.filter((a) => a.statut !== "en_attente").slice(0, 5),
     enregistrerPreferences,
-    commanderPack,
     recharger: () => setVersion((v) => v + 1),
   };
 }

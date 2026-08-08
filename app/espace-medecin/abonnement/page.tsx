@@ -278,6 +278,12 @@ export default function AbonnementMedecin() {
             </div>
           </div>
 
+          {/* Rappels et crédits SMS : la carte n'existait que sur ordinateur,
+              donc le bouton de recharge — et maintenant son paiement — était
+              hors d'atteinte depuis un téléphone. Son balisage est déjà
+              responsive (grilles `sm:`), il tient dans la colonne mobile. */}
+          <RappelsEtSms />
+
           {historique.length > 0 && (
             <div className="card2">
               <h4>Mes paiements</h4>
@@ -514,19 +520,20 @@ export default function AbonnementMedecin() {
           une dans chacune en créerait deux, dont une invisible. */}
       {aRegler && (
         <DialoguePaiement
-          formule={aRegler.formule}
-          libelleFormule={nomFormule(aRegler.formule)}
-          /* En reprise, c'est la périodicité DÉJÀ payée qui compte, pas celle
-             que la bascule de l'écran affiche au moment du clic. */
-          periode={
-            aRegler.reprise && enAttente?.periode === "annuel"
-              ? "annuel"
-              : aRegler.reprise
-                ? "mensuel"
-                : periode
-          }
-          onPeriode={aRegler.reprise ? undefined : setPeriodeVue}
-          prix={TARIFS[aRegler.formule]}
+          achat={{
+            type: "abonnement",
+            formule: aRegler.formule,
+            libelle: nomFormule(aRegler.formule),
+            /* En reprise, c'est la périodicité DÉJÀ payée qui compte, pas
+               celle que la bascule de l'écran affiche au moment du clic. */
+            periode: !aRegler.reprise
+              ? periode
+              : enAttente?.periode === "annuel"
+                ? "annuel"
+                : "mensuel",
+            onPeriode: aRegler.reprise ? undefined : setPeriodeVue,
+            prix: TARIFS[aRegler.formule],
+          }}
           moyens={moyens}
           reprise={aRegler.reprise ? enAttente : null}
           onFermer={() => setARegler(null)}
