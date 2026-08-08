@@ -11,16 +11,18 @@ import TopNav from "@/components/site/TopNav";
 import { refuserSession, seConnecter } from "@/lib/auth";
 
 /*
- * Connexion — authentification réelle Supabase. Les onglets de rôle sont
- * conservés visuellement (maquette), mais la redirection suit le rôle réel
- * du compte, lu dans la table `utilisateurs`.
+ * Connexion — authentification réelle Supabase.
+ *
+ * Un seul formulaire, sans sélecteur de rôle : la redirection suit le rôle
+ * réel du compte, lu dans `utilisateurs`. Les cinq onglets « Je me connecte en
+ * tant que » de la maquette ne décidaient rien — un cabinet qui cliquait
+ * « Clinique » arrivait au même endroit — et ils ignoraient le rôle
+ * `assistant`, qui n'y figurait pas.
  *
  * Cet écran est la porte du public : il ne délivre PAS de session
  * administrateur. Un compte admin qui s'y identifie voit sa session refermée
  * aussitôt et se fait renvoyer vers /espace-admin/connexion.
  */
-
-const ROLES = ["Patient", "Médecin", "Clinique", "Hôpital", "Cabinet"];
 
 /** `?retour=…` : l'écran d'où l'on venait, pour y revenir après connexion. */
 function CibleRetour({ children }: { children: (retour: string | null) => React.ReactNode }) {
@@ -41,7 +43,6 @@ export default function Connexion() {
 
 function EcranConnexion({ retour }: { retour: string | null }) {
   const router = useRouter();
-  const [role, setRole] = useState(ROLES[0]);
   const [email, setEmail] = useState("");
   const [motDePasse, setMotDePasse] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);
@@ -103,21 +104,6 @@ function EcranConnexion({ retour }: { retour: string | null }) {
       <EnTeteMobile retour="/" actions={false} />
       <div className="authwrap md:hidden">
         <Logo variante="compact" hauteur={72} lien={null} className="mx-auto mb-5 block w-fit" />
-        <div className="eyebrow2" style={{ marginTop: 8 }}>
-          Je me connecte en tant que
-        </div>
-        <div className="rtabs">
-          {ROLES.map((r) => (
-            <button
-              key={r}
-              type="button"
-              onClick={() => setRole(r)}
-              className={`rtab${role === r ? " on" : ""}`}
-            >
-              {r}
-            </button>
-          ))}
-        </div>
         <h2 style={{ marginBottom: 4 }}>Connexion</h2>
         <div className="sub">Accédez à votre espace Docteur 224.</div>
         {messageErreur}
@@ -158,25 +144,11 @@ function EcranConnexion({ retour }: { retour: string | null }) {
         <div className="flex flex-col justify-center px-6 py-10 sm:px-[50px] sm:py-[54px]">
           <div className="mx-auto w-full max-w-[520px]">
             <Logo variante="compact" hauteur={86} lien={null} className="mx-auto mb-7 block w-fit" />
-            <div className="mb-[10px] text-center text-[11px] font-extrabold uppercase tracking-[0.12em] text-muted">
-              Je me connecte en tant que
-            </div>
-            <div className="mb-[22px] flex flex-wrap gap-2">
-              {ROLES.map((r) => (
-                <button
-                  key={r}
-                  type="button"
-                  onClick={() => setRole(r)}
-                  className={`rounded-full border-[1.5px] px-4 py-[9px] text-[13px] font-bold ${
-                    role === r ? "border-blue bg-blue text-white" : "border-line bg-white text-muted"
-                  }`}
-                >
-                  {r}
-                </button>
-              ))}
-            </div>
             <h3 className="text-[22px] font-extrabold tracking-[-0.3px]">Connexion à mon compte</h3>
-            <p className="mb-6 mt-1.5 text-[13.5px] text-muted">Accédez à votre espace Docteur 224.</p>
+            <p className="mb-6 mt-1.5 text-[13.5px] text-muted">
+              Patients et professionnels : le même formulaire. Vous arrivez directement dans votre
+              espace.
+            </p>
             {messageErreur}
             <label className="mb-1.5 mt-0.5 block text-[12.5px] font-bold text-ink">E-mail</label>
             <input

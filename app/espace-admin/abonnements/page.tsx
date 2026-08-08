@@ -17,8 +17,10 @@ interface ConfigAbonnements {
   standardAnnuel: string;
   premiumMensuel: string;
   premiumAnnuel: string;
+  palierStructure: string;
   palierCabinet: string;
   palierClinique: string;
+  palierHopital: string;
   periodeGratuite: boolean;
   essaiGratuit: boolean;
   orangeMoney: boolean;
@@ -37,6 +39,27 @@ const CLES_REGLAGES = ["periode_gratuite", "essai_gratuit", "orange_money", "mtn
  * réglages de lancement et de paiement. « 💾 Enregistrer » persiste la
  * configuration en local et trace l'action dans le journal d'audit.
  */
+
+/*
+ * Les quatre paliers établissement, dans l'ordre de la grille.
+ *
+ * « Structure » est le palier d'entrée ouvert aux postes et centres de santé,
+ * cabinets de soins infirmiers, kinés et opticiens : à 800 000 GNF/mois, le
+ * palier cabinet mettait tout ce segment hors de portée. Et « Hôpital »
+ * s'affichait « Sur devis », sans champ de saisie, alors que la base facturait
+ * bien un montant — l'admin ne pouvait le corriger que par SQL.
+ *
+ * La colonne « Médecins » décrit la taille visée : c'est elle qui guide la
+ * requalification d'une structure qui grandit. À l'inscription, le palier
+ * découle du type déclaré (voir `lib/types-etablissement`), la structure
+ * n'ayant encore aucun médecin rattaché.
+ */
+const PALIERS: { cle: keyof ConfigAbonnements; nom: string; medecins: string }[] = [
+  { cle: "palierStructure", nom: "Structure de proximité", medecins: "0–3" },
+  { cle: "palierCabinet", nom: "Cabinet / plateau technique", medecins: "1–3" },
+  { cle: "palierClinique", nom: "Clinique / centre médical", medecins: "4–15" },
+  { cle: "palierHopital", nom: "Hôpital / centre hospitalier", medecins: "16+" },
+];
 
 const LANCEMENT: { cle: keyof ConfigAbonnements; titre: string; detail?: string }[] = [
   {
@@ -70,8 +93,10 @@ export default function AbonnementsAdmin() {
     standardAnnuel: fmt(tarif("standard")?.prixAnnuel ?? 0),
     premiumMensuel: fmt(tarif("premium")?.prixMensuel ?? 0),
     premiumAnnuel: fmt(tarif("premium")?.prixAnnuel ?? 0),
+    palierStructure: `${fmt(tarif("structure")?.prixMensuel ?? 0)} / mois`,
     palierCabinet: `${fmt(tarif("cabinet")?.prixMensuel ?? 0)} / mois`,
     palierClinique: `${fmt(tarif("clinique")?.prixMensuel ?? 0)} / mois`,
+    palierHopital: `${fmt(tarif("hopital")?.prixMensuel ?? 0)} / mois`,
     periodeGratuite: reglagesExtra["periode_gratuite"] ?? true,
     essaiGratuit: reglagesExtra["essai_gratuit"] ?? true,
     orangeMoney: reglagesExtra["orange_money"] ?? true,
@@ -95,8 +120,10 @@ export default function AbonnementsAdmin() {
     const resultats = await Promise.all([
       enregistrerTarif("standard", { prixMensuel: parseGNF(valeurs.standardMensuel), prixAnnuel: parseGNF(valeurs.standardAnnuel) }),
       enregistrerTarif("premium", { prixMensuel: parseGNF(valeurs.premiumMensuel), prixAnnuel: parseGNF(valeurs.premiumAnnuel) }),
+      enregistrerTarif("structure", { prixMensuel: parseGNF(valeurs.palierStructure) }),
       enregistrerTarif("cabinet", { prixMensuel: parseGNF(valeurs.palierCabinet) }),
       enregistrerTarif("clinique", { prixMensuel: parseGNF(valeurs.palierClinique) }),
+      enregistrerTarif("hopital", { prixMensuel: parseGNF(valeurs.palierHopital) }),
       ecrireReglageBool("periode_gratuite", valeurs.periodeGratuite),
       ecrireReglageBool("essai_gratuit", valeurs.essaiGratuit),
       ecrireReglageBool("orange_money", valeurs.orangeMoney),
@@ -106,7 +133,7 @@ export default function AbonnementsAdmin() {
     if (!messages.length) {
       await tracerAudit(
         "A modifié la configuration des abonnements",
-        `Standard ${valeurs.standardMensuel} · Premium ${valeurs.premiumMensuel} · Cabinet ${valeurs.palierCabinet} · Clinique ${valeurs.palierClinique}`
+        `Standard ${valeurs.standardMensuel} · Premium ${valeurs.premiumMensuel} · Structure ${valeurs.palierStructure} · Cabinet ${valeurs.palierCabinet} · Clinique ${valeurs.palierClinique} · Hôpital ${valeurs.palierHopital}`
       );
     }
     // Les interrupteurs sont dérivés de `reglagesExtra`, lu une seule fois au
@@ -211,37 +238,21 @@ export default function AbonnementsAdmin() {
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>Cabinet</td>
-                  <td>1–3</td>
-                  <td>
-                    <input
-                      className="inp"
-                      style={{ marginBottom: 0, padding: "6px 8px", fontSize: 12 }}
-                      value={valeurs.palierCabinet}
-                      onChange={(e) => modifier("palierCabinet", e.target.value)}
-                      aria-label="Tarif palier Cabinet"
-                    />
-                  </td>
-                </tr>
-                <tr>
-                  <td>Clinique</td>
-                  <td>4–15</td>
-                  <td>
-                    <input
-                      className="inp"
-                      style={{ marginBottom: 0, padding: "6px 8px", fontSize: 12 }}
-                      value={valeurs.palierClinique}
-                      onChange={(e) => modifier("palierClinique", e.target.value)}
-                      aria-label="Tarif palier Clinique"
-                    />
-                  </td>
-                </tr>
-                <tr>
-                  <td>Hôpital</td>
-                  <td>16+</td>
-                  <td>Sur devis</td>
-                </tr>
+                {PALIERS.map((palier) => (
+                  <tr key={palier.cle}>
+                    <td>{palier.nom}</td>
+                    <td>{palier.medecins}</td>
+                    <td>
+                      <input
+                        className="inp"
+                        style={{ marginBottom: 0, padding: "6px 8px", fontSize: 12 }}
+                        value={valeurs[palier.cle] as string}
+                        onChange={(e) => modifier(palier.cle, e.target.value)}
+                        aria-label={`Tarif palier ${palier.nom}`}
+                      />
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
             <div className="privnote info">
@@ -406,47 +417,29 @@ export default function AbonnementsAdmin() {
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td className={caseTab}>Cabinet</td>
-                <td className={caseTab}>1–3</td>
-                <td className={caseTab}>
-                  <input
-                    value={valeurs.palierCabinet}
-                    onChange={(e) => modifier("palierCabinet", e.target.value)}
-                    aria-label="Tarif palier Cabinet"
-                    className={cellule}
-                  />
-                </td>
-              </tr>
-              <tr>
-                <td className={caseTab}>Clinique</td>
-                <td className={caseTab}>4–15</td>
-                <td className={caseTab}>
-                  <input
-                    value={valeurs.palierClinique}
-                    onChange={(e) => modifier("palierClinique", e.target.value)}
-                    aria-label="Tarif palier Clinique"
-                    className={cellule}
-                  />
-                </td>
-              </tr>
-              <tr>
-                <td className={caseTab}>Hôpital / Grand centre</td>
-                <td className={caseTab}>16+</td>
-                <td className={caseTab}>
-                  <div className="rounded-[9px] border border-line bg-bg px-2 py-1.5 text-[13px] text-muted">
-                    Sur devis
-                  </div>
-                </td>
-              </tr>
+              {PALIERS.map((palier) => (
+                <tr key={palier.cle}>
+                  <td className={caseTab}>{palier.nom}</td>
+                  <td className={caseTab}>{palier.medecins}</td>
+                  <td className={caseTab}>
+                    <input
+                      value={valeurs[palier.cle] as string}
+                      onChange={(e) => modifier(palier.cle, e.target.value)}
+                      aria-label={`Tarif palier ${palier.nom}`}
+                      className={cellule}
+                    />
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
         <div className="mt-[14px] flex items-start gap-[9px] rounded-[11px] bg-teal-soft px-[13px] py-[11px] text-[12.5px] font-semibold leading-relaxed text-blue">
           <span aria-hidden>ℹ️</span>
           <div>
-            Un médecin couvert par le plan de son établissement ne paie pas en plus (pas de
-            double facturation).
+            Le palier de départ découle du type déclaré à l’inscription ; requalifiez une structure
+            qui grandit. Un médecin couvert par le plan de son établissement ne paie pas en plus
+            (pas de double facturation).
           </div>
         </div>
       </div>

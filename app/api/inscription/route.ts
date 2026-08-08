@@ -5,6 +5,7 @@ import {
   telephoneGuineenValide,
   versTelephoneInternational,
 } from "@/lib/telephone";
+import { normaliserTypeEtablissement } from "@/lib/types-etablissement";
 
 /*
  * Inscription (patient ou professionnel) côté serveur.
@@ -90,7 +91,9 @@ export async function POST(request: Request) {
     const { error: e2 } = await admin.from("etablissements").insert({
       gestionnaire_id: id,
       nom: corps.nomEtablissement || nom || "Établissement",
-      type: corps.typeEtablissement || "Clinique privée",
+      // Le type détermine le palier facturé : une chaîne libre laisserait un
+      // hôpital se déclarer d'un type inventé et payer le palier le plus bas.
+      type: normaliserTypeEtablissement(corps.typeEtablissement as string | undefined),
       ville_id: corps.villeId || null,
       commune: corps.commune || null,
       statut: "en_attente",

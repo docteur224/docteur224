@@ -23,7 +23,7 @@ const PROFILS = [
     icone: "👨‍⚕️",
     titre: "Professionnel de santé",
     texte:
-      "Médecin, clinique, hôpital ou cabinet : laissez vos patients réserver en ligne, gratuitement.",
+      "Praticien ou établissement de santé : laissez vos patients réserver en ligne, gratuitement.",
     bouton: "Rejoindre la plateforme →",
   },
 ];
@@ -60,7 +60,7 @@ export default function ChoixInscription() {
             <span className="tx">
               <b>Professionnel de santé</b>
               <small>
-                Médecin, clinique, hôpital ou cabinet. Laissez vos patients réserver en ligne.
+                Praticien ou établissement de santé. Laissez vos patients réserver en ligne.
               </small>
             </span>
             <span className="ar" aria-hidden>

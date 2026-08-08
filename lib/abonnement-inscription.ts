@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { palierPourType } from "@/lib/types-etablissement";
 
 /*
  * Règles d'ouverture de l'abonnement à l'inscription professionnelle.
@@ -22,12 +23,20 @@ export type FormuleMedecin = (typeof FORMULES_MEDECIN)[number];
 export const PERIODES = ["mensuel", "annuel"] as const;
 export type Periode = (typeof PERIODES)[number];
 
-/** Palier facturé à une structure, déduit du type saisi dans sa fiche. */
-export function formuleEtablissement(typeEtablissement: string | null): string {
-  const type = (typeEtablissement ?? "").toLowerCase();
-  if (type.includes("hôpital") || type.includes("hopital")) return "hopital";
-  if (type.includes("clinique")) return "clinique";
-  return "cabinet";
+/** Paliers facturés aux structures, du plus léger au plus lourd. */
+export const FORMULES_ETABLISSEMENT = ["structure", "cabinet", "clinique", "hopital"] as const;
+export type FormuleEtablissement = (typeof FORMULES_ETABLISSEMENT)[number];
+
+/**
+ * Palier facturé à une structure, déduit du type saisi dans sa fiche.
+ *
+ * La correspondance est déclarée type par type dans `lib/types-etablissement`
+ * — elle n'est plus devinée par recherche de sous-chaîne, qui classait
+ * « Polyclinique » en palier clinique par coïncidence et tout type inconnu en
+ * palier cabinet.
+ */
+export function formuleEtablissement(typeEtablissement: string | null): FormuleEtablissement {
+  return palierPourType(typeEtablissement);
 }
 
 export interface EtatGratuite {

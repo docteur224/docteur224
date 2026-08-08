@@ -19,6 +19,11 @@ import Stepper from "@/components/inscription/Stepper";
 import { etapesPour, useParcoursInscription } from "@/lib/inscription-pro";
 import { MESSAGE_TELEPHONE_GN, telephoneGuineenValide } from "@/lib/telephone";
 import { CIVILITES } from "@/lib/civilites";
+import {
+  GROUPES_TYPES_ETABLISSEMENT,
+  TYPE_ETABLISSEMENT_DEFAUT,
+  trouverTypeEtablissement,
+} from "@/lib/types-etablissement";
 
 /*
  * Inscription professionnel — étape 1 (« Compte ») du parcours multi-étapes :
@@ -30,23 +35,20 @@ import { CIVILITES } from "@/lib/civilites";
  * est renvoyé directement à son étape courante.
  */
 
-type Profil = "praticien" | "clinique" | "hopital" | "cabinet";
+/*
+ * Deux profils seulement, parce que le reste du parcours n'en connaît que
+ * deux : `typeCompte` vaut « medecin » ou « etablissement », et rien
+ * d'autre. Les quatre anciens onglets (Praticien / Clinique / Hôpital /
+ * Cabinet) ne faisaient varier qu'un libellé et une chaîne `type` — devenue
+ * ici un menu déroulant, qui couvre les vingt structures de santé guinéennes
+ * au lieu de trois.
+ */
+type Profil = "praticien" | "etablissement";
 
 const ONGLETS: { id: Profil; nom: string }[] = [
   { id: "praticien", nom: "🩺 Praticien" },
-  { id: "clinique", nom: "🏥 Clinique" },
-  { id: "hopital", nom: "🏨 Hôpital" },
-  { id: "cabinet", nom: "🏢 Cabinet" },
+  { id: "etablissement", nom: "🏥 Établissement de santé" },
 ];
-
-const CHAMPS_ETABLISSEMENT: Record<
-  Exclude<Profil, "praticien">,
-  { label: string; placeholder: string; type: string }
-> = {
-  clinique: { label: "Nom de la clinique *", placeholder: "Ex. Clinique Ambroise Paré", type: "Clinique privée" },
-  hopital: { label: "Nom de l'hôpital *", placeholder: "Ex. Hôpital Donka", type: "Hôpital public" },
-  cabinet: { label: "Nom du cabinet *", placeholder: "Ex. Cabinet Médical du Centre", type: "Cabinet médical" },
-};
 
 interface Reference {
   id: string;
@@ -83,6 +85,7 @@ export default function InscriptionProfessionnel() {
   const [civilite, setCivilite] = useState("Dr");
   const [nom, setNom] = useState("");
   const [prenom, setPrenom] = useState("");
+  const [typeEtablissement, setTypeEtablissement] = useState(TYPE_ETABLISSEMENT_DEFAUT);
   const [nomEtablissement, setNomEtablissement] = useState("");
   const [specialiteId, setSpecialiteId] = useState("");
   const [villeId, setVilleId] = useState("");
@@ -100,6 +103,10 @@ export default function InscriptionProfessionnel() {
   // c'est la première du référentiel qui sera envoyée (comportement du
   // menu déroulant, dont l'option affichée est la première).
   const villeChoisie = villeId || villes[0]?.id;
+
+  // L'exemple suit le type choisi : « Ex. Hôpital Donka » n'aide pas un poste
+  // de santé à nommer sa structure.
+  const exempleNom = trouverTypeEtablissement(typeEtablissement)?.exemple ?? "";
 
   /*
    * Le bouton « Continuer » reste grisé tant que le dossier n'est pas
@@ -140,7 +147,7 @@ export default function InscriptionProfessionnel() {
       email: email.trim(),
       motDePasse,
       specialiteId: praticien ? specialiteId || specialites[0]?.id : undefined,
-      typeEtablissement: praticien ? undefined : CHAMPS_ETABLISSEMENT[profil as Exclude<Profil, "praticien">].type,
+      typeEtablissement: praticien ? undefined : typeEtablissement,
       nomEtablissement: praticien ? undefined : nomEtablissement.trim(),
       villeId: villeChoisie,
       commune: commune.trim(),
@@ -223,10 +230,25 @@ export default function InscriptionProfessionnel() {
                   compte.
                 </div>
               </div>
-              <div className="flabel">{CHAMPS_ETABLISSEMENT[profil].label}</div>
+              <div className="flabel">Type d&apos;établissement *</div>
+              <select
+                className="selm"
+                aria-label="Type d'établissement"
+                value={typeEtablissement}
+                onChange={(e) => setTypeEtablissement(e.target.value)}
+              >
+                {GROUPES_TYPES_ETABLISSEMENT.map((groupe) => (
+                  <optgroup key={groupe.titre} label={groupe.titre}>
+                    {groupe.types.map((t) => (
+                      <option key={t.valeur} value={t.valeur}>{t.valeur}</option>
+                    ))}
+                  </optgroup>
+                ))}
+              </select>
+              <div className="flabel">Nom de l&apos;établissement *</div>
               <input
                 className="inp"
-                placeholder={CHAMPS_ETABLISSEMENT[profil].placeholder}
+                placeholder={`Ex. ${exempleNom}`}
                 value={nomEtablissement}
                 onChange={(e) => setNomEtablissement(e.target.value)}
               />
@@ -371,10 +393,25 @@ export default function InscriptionProfessionnel() {
                     compte.
                   </div>
                 </div>
-                <label className={etiquette}>{CHAMPS_ETABLISSEMENT[profil].label}</label>
+                <label className={etiquette}>Type d&apos;établissement *</label>
+                <select
+                  className={champ}
+                  aria-label="Type d'établissement"
+                  value={typeEtablissement}
+                  onChange={(e) => setTypeEtablissement(e.target.value)}
+                >
+                  {GROUPES_TYPES_ETABLISSEMENT.map((groupe) => (
+                    <optgroup key={groupe.titre} label={groupe.titre}>
+                      {groupe.types.map((t) => (
+                        <option key={t.valeur} value={t.valeur}>{t.valeur}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+                <label className={etiquette}>Nom de l&apos;établissement *</label>
                 <input
                   className={champ}
-                  placeholder={CHAMPS_ETABLISSEMENT[profil].placeholder}
+                  placeholder={`Ex. ${exempleNom}`}
                   value={nomEtablissement}
                   onChange={(e) => setNomEtablissement(e.target.value)}
                 />
