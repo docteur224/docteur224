@@ -1228,6 +1228,55 @@ async function messageRefus(): Promise<string> {
   return ERREUR_DROIT_FINANCE;
 }
 
+export interface ConsommationSmsFormule {
+  formule: string;
+  abonnes: number;
+  quotaTotal: number;
+  consommes: number;
+  coutGnf: number;
+}
+
+/**
+ * Consommation SMS du mois en cours, agrégée par formule.
+ *
+ * Ce que l'admin doit voir : ce qu'il devra à l'agrégateur ce mois-ci, et
+ * quelles formules approchent de leur quota — c'est le signe d'un palier mal
+ * calibré, à corriger avant qu'il ne coûte plus qu'il ne rapporte.
+ *
+ * La vue `consommation_sms_mois` applique la RLS de l'appelant : un admin sans
+ * le sous-rôle Finance ne verra rien, ce qui est voulu (spec C.7.10).
+ */
+export function useConsommationSms(): { formules: ConsommationSmsFormule[]; total: ConsommationSmsFormule } {
+  const { donnees } = utiliserRequete<ConsommationSmsFormule[]>([], async () => {
+    const { data } = await creerClientNavigateur()
+      .from("consommation_sms_mois")
+      .select("formule, quota_sms, consommes, cout_gnf");
+    const lignes = (data ?? []) as { formule: string; quota_sms: number; consommes: number; cout_gnf: number }[];
+    const parFormule = new Map<string, ConsommationSmsFormule>();
+    for (const l of lignes) {
+      const acc = parFormule.get(l.formule) ?? { formule: l.formule, abonnes: 0, quotaTotal: 0, consommes: 0, coutGnf: 0 };
+      acc.abonnes += 1;
+      acc.quotaTotal += l.quota_sms;
+      acc.consommes += l.consommes;
+      acc.coutGnf += l.cout_gnf;
+      parFormule.set(l.formule, acc);
+    }
+    return [...parFormule.values()].sort((a, b) => b.coutGnf - a.coutGnf);
+  });
+
+  const total = donnees.reduce(
+    (t, f) => ({
+      formule: "Total",
+      abonnes: t.abonnes + f.abonnes,
+      quotaTotal: t.quotaTotal + f.quotaTotal,
+      consommes: t.consommes + f.consommes,
+      coutGnf: t.coutGnf + f.coutGnf,
+    }),
+    { formule: "Total", abonnes: 0, quotaTotal: 0, consommes: 0, coutGnf: 0 }
+  );
+  return { formules: donnees, total };
+}
+
 export interface LigneTarif {
   formule: string;
   prixMensuel: number;

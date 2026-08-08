@@ -1,0 +1,23 @@
+-- Quotas SMS ramenés au coût réel du SMS en Guinée : 150 GNF chez l'agrégateur.
+--
+-- CORRECTION PONCTUELLE — à n'appliquer qu'une fois. Elle écrase des valeurs
+-- commerciales : rejouée après un réglage depuis /espace-admin/abonnements,
+-- elle l'annulerait.
+--
+-- Les quotas venaient de la grille d'origine (cabinet à 800 000, hôpital à
+-- 4 000 000/mois) et n'avaient jamais été redescendus quand les prix l'ont
+-- été. À 150 GNF le SMS, trois paliers travaillaient à perte si leur quota
+-- était consommé :
+--
+--   cabinet   1 000 SMS = 150 000 GNF pour 150 000 GNF encaissés →  0 de marge
+--   clinique  5 000 SMS = 750 000 GNF pour 250 000 GNF encaissés → −500 000
+--   hôpital  15 000 SMS = 2 250 000 GNF pour 500 000 GNF encaissés → −1 750 000
+--
+-- Règle retenue : un SMS inclus par tranche de 500 GNF d'abonnement mensuel,
+-- soit 30 % du prix en coût SMS et 70 % de marge brute sur chaque formule.
+-- Les prix ne bougent pas, ils sont calibrés pour le marché.
+--
+-- Le quota s'entend PAR MOIS, y compris pour un abonnement annuel : c'est la
+-- lecture qui découle de la règle ci-dessus, adossée au prix mensuel. La 0034
+-- l'inscrit dans le compteur.
+update tarifs_plateforme set quota_sms = prix_mensuel / 500;

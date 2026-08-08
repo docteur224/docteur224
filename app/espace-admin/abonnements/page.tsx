@@ -10,7 +10,9 @@ import {
   lireReglagesBool,
   tracerAudit,
   useConfigAbonnements,
+  useConsommationSms,
 } from "@/lib/admin";
+import { COUT_SEGMENT_GNF } from "@/lib/sms";
 
 interface ConfigAbonnements {
   standardMensuel: string;
@@ -149,8 +151,18 @@ const LANCEMENT: { cle: keyof ConfigAbonnements; titre: string; detail?: string 
  */
 const NOTE_NEUTRALISE = "Sans effet tant que la période gratuite de lancement est active.";
 
+const NOM_FORMULE: Record<string, string> = {
+  standard: "Standard",
+  premium: "Premium",
+  structure: "Structure de proximité",
+  cabinet: "Cabinet / plateau technique",
+  clinique: "Clinique / centre médical",
+  hopital: "Hôpital / centre hospitalier",
+};
+
 export default function AbonnementsAdmin() {
   const { tarifs, enregistrer: enregistrerTarif } = useConfigAbonnements();
+  const { formules: consoSms, total: consoTotal } = useConsommationSms();
   const [reglagesExtra, setReglagesExtra] = useState<Record<string, boolean>>({});
   useEffect(() => {
     lireReglagesBool(CLES_REGLAGES).then(setReglagesExtra);
@@ -536,6 +548,67 @@ export default function AbonnementsAdmin() {
             sans plafond. Un médecin couvert par le plan de son établissement ne paie pas en plus
             (pas de double facturation).
           </div>
+        </div>
+      </div>
+
+      <div className="mb-4 rounded-2xl border border-line bg-white p-5">
+        <h3 className="mb-1 text-[15px] font-extrabold">Consommation SMS du mois</h3>
+        <p className="mb-[14px] text-[12.5px] text-muted">
+          Ce que la plateforme doit à l’agrégateur ce mois-ci, à {fmt(COUT_SEGMENT_GNF)} GNF le
+          segment. Le compteur se remet à zéro le 1er.
+        </p>
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-[13px]">
+            <thead>
+              <tr>
+                {["Formule", "Abonnés", "Quota du mois", "Consommés", "Coût (GNF)"].map((th) => (
+                  <th key={th} className={enTete}>
+                    {th}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {consoSms.length === 0 && (
+                <tr>
+                  <td className={`${caseTab} text-muted`} colSpan={5}>
+                    Aucun SMS envoyé ce mois-ci.
+                  </td>
+                </tr>
+              )}
+              {consoSms.map((f) => {
+                // Au-delà de 80 % du quota global d'une formule, le palier est
+                // sous-dimensionné : c'est le moment de le corriger, pas quand
+                // les dépassements arrivent.
+                const part = f.quotaTotal > 0 ? f.consommes / f.quotaTotal : 0;
+                return (
+                  <tr key={f.formule}>
+                    <td className={caseTab}>{NOM_FORMULE[f.formule] ?? f.formule}</td>
+                    <td className={caseTab}>{f.abonnes}</td>
+                    <td className={caseTab}>{fmt(f.quotaTotal)}</td>
+                    <td className={`${caseTab} ${part >= 0.8 ? "font-bold text-amber" : ""}`}>
+                      {fmt(f.consommes)}
+                      {part >= 0.8 && ` (${Math.round(part * 100)} %)`}
+                    </td>
+                    <td className={caseTab}>{fmt(f.coutGnf)}</td>
+                  </tr>
+                );
+              })}
+              {consoSms.length > 0 && (
+                <tr>
+                  <td className={caseTab}>
+                    <b>Total</b>
+                  </td>
+                  <td className={caseTab}>{consoTotal.abonnes}</td>
+                  <td className={caseTab}>{fmt(consoTotal.quotaTotal)}</td>
+                  <td className={caseTab}>{fmt(consoTotal.consommes)}</td>
+                  <td className={caseTab}>
+                    <b>{fmt(consoTotal.coutGnf)}</b>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
