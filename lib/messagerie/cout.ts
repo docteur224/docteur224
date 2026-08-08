@@ -1,16 +1,9 @@
-import { createClient } from "@supabase/supabase-js";
-
 /*
- * Comptage et enregistrement des SMS.
+ * Coût d'un SMS : découpage en segments, tel que l'agrégateur le facture.
  *
- * Rien n'envoie encore de SMS : aucun agrégateur n'est branché. Ce module pose
- * le compteur AVANT, parce qu'un envoi branché sans décompte donne une facture
- * sans plafond — à 150 GNF le segment, un rappel automatique parti en boucle
- * coûte plus cher que l'abonnement annuel qu'il sert.
- *
- * Le contrôle de quota lui-même vit en base (`enregistrer_sms`, migration
- * 0034) : un garde-fou côté application s'oublie au premier chemin de code
- * nouveau, une fonction que rien d'autre ne peut contourner, non.
+ * Module pur, sans accès réseau ni base : il sert aussi bien à décompter un
+ * envoi qu'à prévenir, au moment de rédiger un gabarit, qu'un accent va
+ * doubler la facture. L'envoi lui-même vit dans `lib/messagerie/index.ts`.
  */
 
 /** Tarif agrégateur guinéen, par segment. */
@@ -78,47 +71,4 @@ export function alerteCout(texte: string): string | null {
   const alternatif = mesurerSms(sansAccents);
   if (!alternatif.gsm7 || alternatif.segments >= mesure.segments) return null;
   return `Ce message part en UCS-2 (${mesure.segments} segments). Sans les caractères hors alphabet GSM il en ferait ${alternatif.segments}, soit ${(mesure.coutGnf - alternatif.coutGnf).toLocaleString("fr-FR")} GNF de moins par envoi.`;
-}
-
-function clientAdmin() {
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  });
-}
-
-export interface ResultatEnvoi {
-  id?: string;
-  segments: number;
-  erreur?: string;
-}
-
-/**
- * Journalise un envoi et débite le quota. À appeler côté SERVEUR uniquement —
- * `enregistrer_sms` n'est accordée qu'au service_role (migration 0035).
- *
- * Rend une erreur plutôt que de lever : un quota épuisé est un cas de
- * fonctionnement normal en fin de mois, pas un incident.
- */
-export async function enregistrerEnvoiSms(params: {
-  titulaireId: string;
-  destinataire: string;
-  motif: string;
-  texte: string;
-  statut?: "envoye" | "echec" | "simule";
-  reference?: string;
-  erreur?: string;
-}): Promise<ResultatEnvoi> {
-  const { segments } = mesurerSms(params.texte);
-  const { data, error } = await clientAdmin().rpc("enregistrer_sms", {
-    p_titulaire: params.titulaireId,
-    p_destinataire: params.destinataire,
-    p_motif: params.motif,
-    p_segments: segments,
-    p_cout_unitaire: COUT_SEGMENT_GNF,
-    p_statut: params.statut ?? "envoye",
-    p_reference: params.reference ?? null,
-    p_erreur: params.erreur ?? null,
-  });
-  if (error) return { segments, erreur: error.message };
-  return { id: data as string, segments };
 }

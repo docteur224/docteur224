@@ -1135,3 +1135,160 @@ export function useDocumentsValidation(): { documents: { id: string; type: strin
   }, [version]);
   return { documents, recharger: () => setVersion((v) => v + 1) };
 }
+
+/* ===== Rappels et crédits SMS ===== */
+
+export interface PreferencesRappels {
+  rappelsActifs: boolean;
+  smsAutorise: boolean;
+  whatsappAutorise: boolean;
+  delaiHeures: number;
+}
+
+export interface PackSms {
+  id: string;
+  nom: string;
+  segments: number;
+  prixGnf: number;
+}
+
+export interface EtatSms {
+  quota: number;
+  consommes: number;
+  restants: number;
+  credits: number;
+  coutGnf: number;
+  whatsapp: number;
+}
+
+/**
+ * Rappels et consommation du professionnel connecté.
+ *
+ * Le SMS est refusé par défaut (migration 0036) : c'est son quota qui est
+ * débité, il doit l'avoir demandé. WhatsApp est autorisé d'emblée — il coûte
+ * une fraction du prix et reste soumis au choix du patient.
+ */
+export function useRappelsEtSms(): {
+  preferences: PreferencesRappels;
+  etat: EtatSms | null;
+  packs: PackSms[];
+  achatsEnAttente: number;
+  enregistrerPreferences: (p: PreferencesRappels) => Promise<{ erreur?: string }>;
+  commanderPack: (packId: string) => Promise<{ erreur?: string }>;
+  recharger: () => void;
+} {
+  const DEFAUT: PreferencesRappels = {
+    rappelsActifs: true,
+    smsAutorise: false,
+    whatsappAutorise: true,
+    delaiHeures: 24,
+  };
+  const [preferences, setPreferences] = useState<PreferencesRappels>(DEFAUT);
+  const [etat, setEtat] = useState<EtatSms | null>(null);
+  const [packs, setPacks] = useState<PackSms[]>([]);
+  const [achatsEnAttente, setAchatsEnAttente] = useState(0);
+  const [version, setVersion] = useState(0);
+
+  useEffect(() => {
+    let actif = true;
+    (async () => {
+      const supabase = creerClientNavigateur();
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user || !actif) return;
+      /*
+       * `limit(1)` et non `maybeSingle()` : celui-ci lève dès qu'il trouve
+       * plus d'une ligne, et un titulaire peut en avoir plusieurs — la base
+       * porte des abonnements en double, hérités d'amorçages répétés. Une
+       * anomalie de données ne doit pas éteindre l'écran du professionnel.
+       */
+      const [{ data: pref }, { data: consos }, { data: cat }, { count }] = await Promise.all([
+        supabase.from("preferences_rappels").select("*").eq("titulaire_id", auth.user.id).maybeSingle(),
+        supabase.from("consommation_sms_mois").select("*").eq("titulaire_id", auth.user.id).limit(1),
+        supabase.from("packs_sms").select("id, nom, segments, prix_gnf").eq("actif", true).order("ordre"),
+        supabase
+          .from("achats_sms")
+          .select("id", { count: "exact", head: true })
+          .eq("titulaire_id", auth.user.id)
+          .eq("statut", "en_attente"),
+      ]);
+      if (!actif) return;
+      if (pref) {
+        setPreferences({
+          rappelsActifs: pref.rappels_actifs,
+          smsAutorise: pref.sms_autorise,
+          whatsappAutorise: pref.whatsapp_autorise,
+          delaiHeures: pref.delai_heures,
+        });
+      }
+      const conso = consos?.[0];
+      setEtat(
+        conso
+          ? {
+              quota: conso.quota_sms,
+              consommes: conso.consommes,
+              restants: conso.restants,
+              credits: conso.credits,
+              coutGnf: conso.cout_gnf,
+              whatsapp: conso.whatsapp,
+            }
+          : null
+      );
+      setPacks((cat ?? []).map((p) => ({ id: p.id, nom: p.nom, segments: p.segments, prixGnf: p.prix_gnf })));
+      setAchatsEnAttente(count ?? 0);
+    })();
+    return () => {
+      actif = false;
+    };
+  }, [version]);
+
+  async function enregistrerPreferences(p: PreferencesRappels): Promise<{ erreur?: string }> {
+    const supabase = creerClientNavigateur();
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) return { erreur: "Session expirée." };
+    const { error } = await supabase.from("preferences_rappels").upsert({
+      titulaire_id: auth.user.id,
+      rappels_actifs: p.rappelsActifs,
+      sms_autorise: p.smsAutorise,
+      whatsapp_autorise: p.whatsappAutorise,
+      delai_heures: p.delaiHeures,
+      maj_le: new Date().toISOString(),
+    });
+    if (error) return { erreur: error.message };
+    setPreferences(p);
+    return {};
+  }
+
+  /*
+   * Commande une recharge. Le statut reste « en attente » : la policy
+   * `ins_achats_sms` l'exige, et seul un admin Finance peut la faire passer à
+   * « payé » après réception. Aucune passerelle de paiement n'est branchée —
+   * le crédit ne s'attribue donc pas tout seul.
+   */
+  async function commanderPack(packId: string): Promise<{ erreur?: string }> {
+    const supabase = creerClientNavigateur();
+    const { data: auth } = await supabase.auth.getUser();
+    if (!auth.user) return { erreur: "Session expirée." };
+    const pack = packs.find((p) => p.id === packId);
+    if (!pack) return { erreur: "Recharge inconnue." };
+    const { error } = await supabase.from("achats_sms").insert({
+      titulaire_id: auth.user.id,
+      pack_id: pack.id,
+      segments: pack.segments,
+      prix_gnf: pack.prixGnf,
+      statut: "en_attente",
+    });
+    if (error) return { erreur: error.message };
+    setVersion((v) => v + 1);
+    return {};
+  }
+
+  return {
+    preferences,
+    etat,
+    packs,
+    achatsEnAttente,
+    enregistrerPreferences,
+    commanderPack,
+    recharger: () => setVersion((v) => v + 1),
+  };
+}

@@ -5,6 +5,7 @@ import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { formatGNF } from "@/lib/format";
 import { useState } from "react";
 import { useAbonnement } from "@/lib/pro";
+import RappelsEtSms from "@/components/medecin/RappelsEtSms";
 
 /*
  * Mon abonnement — reproduit l'écran « med-abonnement » de la maquette web
@@ -309,6 +310,12 @@ export default function AbonnementMedecin() {
             )}
           </div>
         </div>
+      </div>
+
+      {/* Rappels et crédits SMS : ce que l'abonnement finance vraiment côté
+          patients, et de quoi recharger quand le quota du mois est épuisé. */}
+      <div className="mt-4">
+        <RappelsEtSms />
       </div>
       </div>
     </MedecinShell>

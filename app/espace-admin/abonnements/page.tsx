@@ -12,7 +12,7 @@ import {
   useConfigAbonnements,
   useConsommationSms,
 } from "@/lib/admin";
-import { COUT_SEGMENT_GNF } from "@/lib/sms";
+import { COUT_SEGMENT_GNF } from "@/lib/messagerie/cout";
 
 interface ConfigAbonnements {
   standardMensuel: string;
