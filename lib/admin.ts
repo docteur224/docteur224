@@ -1335,21 +1335,186 @@ export function useConfigAbonnements(): {
   return { tarifs: donnees, enregistrer, recharger };
 }
 
-/** Compteurs financiers réels — pas de paiement en ligne actif pour l'instant,
- * donc seuls les abonnements (payés hors-ligne, suivis manuellement) sont réels. */
+/**
+ * Compteurs financiers réels. Le règlement des abonnements passe par
+ * `paiements_abonnement` (migration 0040) : les versements sont déclarés par
+ * les professionnels et rapprochés ici. Les consultations, elles, se règlent
+ * toujours sur place chez le médecin.
+ */
 export interface CompteursFinances {
   abonnementsActifs: number;
+  paiementsEnAttente: number;
+  encaisseCeMois: number;
 }
 
 export function useCompteursFinances(): CompteursFinances {
-  const { donnees } = utiliserRequete<CompteursFinances>({ abonnementsActifs: 0 }, async () => {
-    const { count } = await creerClientNavigateur()
-      .from("abonnements")
-      .select("id", { count: "exact", head: true })
-      .eq("statut", "actif");
-    return { abonnementsActifs: count ?? 0 };
-  });
+  const { donnees } = utiliserRequete<CompteursFinances>(
+    { abonnementsActifs: 0, paiementsEnAttente: 0, encaisseCeMois: 0 },
+    async () => {
+      const supabase = creerClientNavigateur();
+      const debutMois = new Date();
+      debutMois.setDate(1);
+      debutMois.setHours(0, 0, 0, 0);
+      const [{ count: actifs }, { count: attente }, { data: confirmes }] = await Promise.all([
+        supabase.from("abonnements").select("id", { count: "exact", head: true }).eq("statut", "actif"),
+        supabase
+          .from("paiements_abonnement")
+          .select("id", { count: "exact", head: true })
+          .eq("statut", "en_attente"),
+        supabase
+          .from("paiements_abonnement")
+          .select("montant_gnf")
+          .eq("statut", "confirme")
+          .gte("decide_le", debutMois.toISOString()),
+      ]);
+      return {
+        abonnementsActifs: actifs ?? 0,
+        paiementsEnAttente: attente ?? 0,
+        encaisseCeMois: (confirmes ?? []).reduce((t, p) => t + (p.montant_gnf ?? 0), 0),
+      };
+    }
+  );
   return donnees;
+}
+
+/* ===== Paiements d'abonnement à rapprocher ===== */
+
+export interface PaiementARapprocher {
+  id: string;
+  nom: string;
+  role: string;
+  formule: string;
+  periode: string;
+  montantGnf: number;
+  moyen: string;
+  numeroPayeur: string;
+  reference: string;
+  referenceOperateur: string;
+  creeLe: string;
+}
+
+/**
+ * La file de l'admin Finance : les versements déclarés, les plus anciens
+ * d'abord — un professionnel qui a payé attend son activation.
+ *
+ * La jointure est NOMMÉE (`utilisateurs!paiements_abonnement_titulaire_id_fkey`)
+ * par prudence : dès qu'une seconde FK relierait cette table à `utilisateurs`
+ * (`decide_par` en est déjà une), PostgREST renverrait PGRST201 et l'écran
+ * afficherait une file vide sans la moindre erreur.
+ */
+export function usePaiementsARapprocher(): {
+  paiements: PaiementARapprocher[];
+  recharger: () => void;
+} {
+  const { donnees, recharger } = utiliserRequete<PaiementARapprocher[]>([], async () => {
+    const { data } = await creerClientNavigateur()
+      .from("paiements_abonnement")
+      .select(
+        "id, formule, periode, montant_gnf, moyen, numero_payeur, reference, reference_operateur, cree_le, type_titulaire, utilisateurs!paiements_abonnement_titulaire_id_fkey ( nom, prenom )"
+      )
+      .eq("statut", "en_attente")
+      .order("cree_le", { ascending: true });
+    return (data ?? []).map((p) => {
+      const u = p.utilisateurs as unknown as { nom?: string; prenom?: string } | null;
+      return {
+        id: p.id,
+        nom: `${u?.prenom ?? ""} ${u?.nom ?? ""}`.trim() || "Compte supprimé",
+        role: p.type_titulaire,
+        formule: p.formule,
+        periode: p.periode,
+        montantGnf: p.montant_gnf,
+        moyen: p.moyen,
+        numeroPayeur: p.numero_payeur ?? "",
+        reference: p.reference,
+        referenceOperateur: p.reference_operateur ?? "",
+        creeLe: p.cree_le,
+      };
+    });
+  });
+  return { paiements: donnees, recharger };
+}
+
+/**
+ * Confirme la réception d'un versement : c'est CE geste qui active
+ * l'abonnement, côté serveur. L'écran n'écrit jamais dans `abonnements`.
+ */
+export async function confirmerPaiement(paiement: PaiementARapprocher): Promise<{ erreur?: string }> {
+  const { error } = await creerClientNavigateur().rpc("confirmer_paiement_abonnement", {
+    p_id: paiement.id,
+    p_reference_operateur: paiement.referenceOperateur || null,
+  });
+  if (error) {
+    const refus = error.code === "42501" || /administration financière/i.test(error.message);
+    return { erreur: refus ? await messageRefus() : error.message };
+  }
+  await tracerAudit("A confirmé un paiement d'abonnement", `${paiement.nom} · ${paiement.reference}`);
+  return {};
+}
+
+/** Refus : le motif est obligatoire, la fonction serveur le vérifie aussi. */
+export async function refuserPaiement(
+  paiement: PaiementARapprocher,
+  motif: string
+): Promise<{ erreur?: string }> {
+  const { error } = await creerClientNavigateur().rpc("refuser_paiement_abonnement", {
+    p_id: paiement.id,
+    p_motif: motif,
+  });
+  if (error) {
+    const refus = error.code === "42501" || /administration financière/i.test(error.message);
+    return { erreur: refus ? await messageRefus() : error.message };
+  }
+  await tracerAudit("A refusé un paiement d'abonnement", `${paiement.nom} · ${paiement.reference}`);
+  return {};
+}
+
+/* ===== Coordonnées d'encaissement ===== */
+
+export interface CompteEncaissement {
+  code: string;
+  libelle: string;
+  numeroMarchand: string;
+  codeUssd: string;
+}
+
+/**
+ * Où les professionnels doivent verser. Tant que le numéro marchand est vide,
+ * l'écran de paiement ne peut donner aucune consigne : c'est le premier
+ * réglage à faire avant d'ouvrir le paiement.
+ */
+export function useComptesEncaissement(): {
+  comptes: CompteEncaissement[];
+  enregistrer: (code: string, numeroMarchand: string) => Promise<{ erreur?: string }>;
+  recharger: () => void;
+} {
+  const { donnees, recharger } = utiliserRequete<CompteEncaissement[]>([], async () => {
+    const { data } = await creerClientNavigateur()
+      .from("comptes_encaissement")
+      .select("code, libelle, numero_marchand, code_ussd")
+      .order("ordre");
+    return (data ?? []).map((c) => ({
+      code: c.code,
+      libelle: c.libelle,
+      numeroMarchand: c.numero_marchand ?? "",
+      codeUssd: c.code_ussd ?? "",
+    }));
+  });
+
+  async function enregistrer(code: string, numeroMarchand: string): Promise<{ erreur?: string }> {
+    const { data, error } = await creerClientNavigateur()
+      .from("comptes_encaissement")
+      .update({ numero_marchand: numeroMarchand.trim() || null })
+      .eq("code", code)
+      .select("code");
+    if (error) return { erreur: error.message };
+    // Même piège que les tarifs : un UPDATE refusé par la RLS ne renvoie ni
+    // erreur ni ligne, et l'écran annoncerait « enregistré » sans rien changer.
+    if (!data?.length) return { erreur: await messageRefus() };
+    recharger();
+    return {};
+  }
+
+  return { comptes: donnees, enregistrer, recharger };
 }
 
 /* ===== Remboursements & litiges =====

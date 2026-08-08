@@ -45,6 +45,7 @@ interface ConfigAbonnements {
   essaiGratuit: boolean;
   orangeMoney: boolean;
   mtnMomo: boolean;
+  carteBancaire: boolean;
 }
 
 const fmt = (n: number) => n.toLocaleString("fr-FR").replace(/ | /g, " ");
@@ -63,7 +64,13 @@ const parseBorne = (t: string): number | null => {
 const fmtBorne = (n: number | null | undefined) => (n === null || n === undefined ? "" : String(n));
 
 /** Clés des réglages booléens de l'écran, dans `parametres_plateforme`. */
-const CLES_REGLAGES = ["periode_gratuite", "essai_gratuit", "orange_money", "mtn_momo"];
+const CLES_REGLAGES = [
+  "periode_gratuite",
+  "essai_gratuit",
+  "orange_money",
+  "mtn_momo",
+  "carte_bancaire",
+];
 
 /*
  * Abonnements — reproduit l'écran « admin-abonnements » de la maquette web
@@ -139,8 +146,19 @@ const LANCEMENT: { cle: keyof ConfigAbonnements; titre: string; detail?: string 
     detail: "Aucune facturation des professionnels pendant la phase pilote",
   },
   { cle: "essaiGratuit", titre: "Essai gratuit à l'inscription", detail: "30 jours" },
+  /*
+   * Ces trois interrupteurs commandent les tuiles de l'écran de paiement
+   * (migration 0040) : éteindre un moyen le retire du choix des
+   * professionnels, et la fonction serveur refuse toute demande le citant.
+   * Les numéros marchands, eux, se saisissent dans /espace-admin/finances.
+   */
   { cle: "orangeMoney", titre: "Paiement Orange Money" },
   { cle: "mtnMomo", titre: "Paiement MTN MoMo" },
+  {
+    cle: "carteBancaire",
+    titre: "Paiement par carte bancaire",
+    detail: "Lien de paiement envoyé par e-mail",
+  },
 ];
 
 /*
@@ -188,6 +206,7 @@ export default function AbonnementsAdmin() {
     essaiGratuit: reglagesExtra["essai_gratuit"] ?? true,
     orangeMoney: reglagesExtra["orange_money"] ?? true,
     mtnMomo: reglagesExtra["mtn_momo"] ?? true,
+    carteBancaire: reglagesExtra["carte_bancaire"] ?? true,
   };
   const [brouillon, setBrouillon] = useState<ConfigAbonnements | null>(null);
   const [enregistre, setEnregistre] = useState(false);
@@ -225,6 +244,7 @@ export default function AbonnementsAdmin() {
       ecrireReglageBool("essai_gratuit", valeurs.essaiGratuit),
       ecrireReglageBool("orange_money", valeurs.orangeMoney),
       ecrireReglageBool("mtn_momo", valeurs.mtnMomo),
+      ecrireReglageBool("carte_bancaire", valeurs.carteBancaire),
     ]);
     const messages = [...new Set(resultats.map((r) => r.erreur).filter(Boolean))] as string[];
     if (!messages.length) {

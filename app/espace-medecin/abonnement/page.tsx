@@ -2,9 +2,11 @@
 
 import MedecinShell from "@/components/medecin/MedecinShell";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
+import DialoguePaiement from "@/components/pro/DialoguePaiement";
 import { formatGNF } from "@/lib/format";
 import { useState } from "react";
 import { useAbonnement } from "@/lib/pro";
+import { LIBELLES_STATUT, usePaiements } from "@/lib/paiements";
 import RappelsEtSms from "@/components/medecin/RappelsEtSms";
 
 /*
@@ -12,6 +14,11 @@ import RappelsEtSms from "@/components/medecin/RappelsEtSms";
  * (spec C.4.4) : abonnement en cours, bascule Mensuel / Annuel, formules
  * Standard et Premium. Le choix est écrit dans la table `abonnements`.
  * Rappel spec : la prise de RDV reste gratuite pour les patients.
+ *
+ * Choisir une formule ouvre le dialogue de paiement (migration 0040) — sauf
+ * quand rien n'est facturé : pendant la période gratuite de lancement ou un
+ * essai, présenter un écran de règlement ferait payer ce qui est offert. Le
+ * choix est alors enregistré directement, comme avant.
  */
 
 
@@ -50,6 +57,15 @@ export default function AbonnementMedecin() {
   const [periodeVue, setPeriodeVue] = useState<"mensuel" | "annuel" | null>(null);
   const periode = periodeVue ?? ((abonnement?.periode as "mensuel" | "annuel") ?? "mensuel");
   const [message, setMessage] = useState("");
+  const { moyens, paiements, enAttente, gratuit, recharger: rechargerPaiements } = usePaiements();
+  /*
+   * Ce que le dialogue doit régler : `null` = fermé. On y garde la formule
+   * plutôt qu'un simple booléen, parce qu'on peut demander Premium tout en
+   * étant encore Standard — c'est même le cas normal.
+   */
+  const [aRegler, setARegler] = useState<{ formule: "standard" | "premium"; reprise: boolean } | null>(
+    null
+  );
 
   const prix = (f: string) => {
     const t = tarifs.find((x) => x.formule === f);
@@ -62,8 +78,15 @@ export default function AbonnementMedecin() {
   const finAbo = abonnement?.dateFin ?? "";
 
   async function choisir(f: "standard" | "premium") {
-    const res = await changerFormule(f, periode);
-    setMessage(res.erreur ? `⚠️ ${res.erreur}` : "✓ Abonnement mis à jour");
+    setMessage("");
+    if (gratuit) {
+      // Rien à encaisser : le statut est calculé côté serveur d'après les
+      // réglages de gratuité, l'écran n'a pas à réclamer un règlement.
+      const res = await changerFormule(f, periode);
+      setMessage(res.erreur ? `⚠️ ${res.erreur}` : "✓ Formule mise à jour — rien à payer pour l’instant");
+      return;
+    }
+    setARegler({ formule: f, reprise: false });
   }
 
   const libelleFormule = formule === "premium" ? "Premium" : "Standard";
@@ -83,6 +106,64 @@ export default function AbonnementMedecin() {
     annule: { label: "Annulé", ok: false },
   };
   const etat = STATUTS[abonnement?.statut ?? ""] ?? { label: "Aucun", ok: false };
+
+  const nomFormule = (f: string) => (f === "premium" ? "Premium" : "Standard");
+  const dateCourte = (iso: string) =>
+    new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
+  /* Les demandes closes ; celle en cours a son propre bandeau, juste au-dessus. */
+  const historique = paiements.filter((p) => p.statut !== "en_attente").slice(0, 5);
+
+  /*
+   * Le bouton d'une carte de formule dit trois choses différentes, et les
+   * deux rendus doivent dire la même : c'est déjà votre formule / son
+   * paiement est en cours / choisissez-la. Sans le cas du milieu, un médecin
+   * qui a déjà versé recliquerait « Choisir Premium » et ouvrirait une
+   * seconde demande pour un seul versement.
+   */
+  const etatBouton = (f: "standard" | "premium") => {
+    if (formule === f) return { libelle: "Formule actuelle", action: null };
+    if (enAttente && enAttente.formule === f) {
+      return {
+        libelle: "Paiement en cours →",
+        action: () => setARegler({ formule: f, reprise: true }),
+      };
+    }
+    return { libelle: `Choisir ${nomFormule(f)}`, action: () => choisir(f) };
+  };
+
+  const boutonMobile = (f: "standard" | "premium") => {
+    const b = etatBouton(f);
+    return b.action ? (
+      <button type="button" className="btnm gh" style={{ width: "100%" }} onClick={b.action}>
+        {b.libelle}
+      </button>
+    ) : (
+      <button type="button" className="btnm" style={{ width: "100%" }} disabled>
+        {b.libelle}
+      </button>
+    );
+  };
+
+  const boutonWeb = (f: "standard" | "premium") => {
+    const b = etatBouton(f);
+    return b.action ? (
+      <button
+        type="button"
+        onClick={b.action}
+        className="w-full rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg"
+      >
+        {b.libelle}
+      </button>
+    ) : (
+      <button
+        type="button"
+        disabled
+        className="w-full cursor-default rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white"
+      >
+        {b.libelle}
+      </button>
+    );
+  };
 
   return (
     <MedecinShell>
@@ -110,6 +191,40 @@ export default function AbonnementMedecin() {
               </div>
             </div>
           </div>
+
+          {/* Règlement en cours : tant qu'il n'est pas rapproché, l'abonnement
+              ci-dessus n'a pas bougé — le dire évite un second versement. */}
+          {enAttente && (
+            <div className="card2">
+              <h4>Règlement en cours</h4>
+              <div className="setrow">
+                <div>
+                  <b>
+                    {nomFormule(enAttente.formule)} ·{" "}
+                    {enAttente.periode === "annuel" ? "Annuel" : "Mensuel"}
+                  </b>
+                  <small>
+                    {formatGNF(enAttente.montantGnf)} · réf. {enAttente.reference}
+                  </small>
+                </div>
+                <span className="pill soon">En attente</span>
+              </div>
+              <button
+                type="button"
+                className="btnm"
+                style={{ width: "100%" }}
+                onClick={() =>
+                  setARegler({
+                    formule: enAttente.formule === "premium" ? "premium" : "standard",
+                    reprise: true,
+                  })
+                }
+              >
+                Voir les instructions de paiement
+              </button>
+            </div>
+          )}
+
           <div className="card2">
             <h4>Changer de formule</h4>
             {message && <p style={{ color: "var(--green)", fontSize: 12.5, fontWeight: 700 }}>{message}</p>}
@@ -143,20 +258,7 @@ export default function AbonnementMedecin() {
                   <li key={avantage}>{avantage}</li>
                 ))}
               </ul>
-              {formule === "standard" ? (
-                <button type="button" className="btnm" style={{ width: "100%" }} disabled>
-                  Formule actuelle
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="btnm gh"
-                  style={{ width: "100%" }}
-                  onClick={() => choisir("standard")}
-                >
-                  Choisir Standard
-                </button>
-              )}
+              {boutonMobile("standard")}
             </div>
             <div className={`plan${formule === "premium" ? " cur" : ""}`}>
               {formule === "premium" && <span className="tag">Actuel</span>}
@@ -172,22 +274,35 @@ export default function AbonnementMedecin() {
                   <li key={avantage}>{i === 1 ? <b>{avantage}</b> : avantage}</li>
                 ))}
               </ul>
-              {formule === "premium" ? (
-                <button type="button" className="btnm" style={{ width: "100%" }} disabled>
-                  Formule actuelle
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="btnm gh"
-                  style={{ width: "100%" }}
-                  onClick={() => choisir("premium")}
-                >
-                  Choisir Premium
-                </button>
-              )}
+              {boutonMobile("premium")}
             </div>
           </div>
+
+          {historique.length > 0 && (
+            <div className="card2">
+              <h4>Mes paiements</h4>
+              {historique.map((p) => (
+                <div key={p.id} className="setrow">
+                  <div>
+                    <b>
+                      {nomFormule(p.formule)} · {formatGNF(p.montantGnf)}
+                    </b>
+                    <small>
+                      {dateCourte(p.creeLe)} · réf. {p.reference}
+                      {p.motifRefus ? ` · ${p.motifRefus}` : ""}
+                    </small>
+                  </div>
+                  <span
+                    className={`pill${
+                      p.statut === "confirme" ? " ok" : p.statut === "refuse" ? " bad" : " lock"
+                    }`}
+                  >
+                    {LIBELLES_STATUT[p.statut]}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -223,6 +338,38 @@ export default function AbonnementMedecin() {
           </div>
         </div>
       </div>
+
+      {/* Règlement en cours. Il ne change rien à la carte ci-dessus tant qu'il
+          n'est pas rapproché : le dire ici évite un second versement. */}
+      {enAttente && (
+        <div className="mb-4 flex flex-wrap items-center gap-[14px] rounded-2xl border-[1.5px] border-amber bg-amber-soft p-5">
+          <span aria-hidden className="text-xl">
+            ⏳
+          </span>
+          <div className="min-w-0 flex-1">
+            <b className="block text-[13.5px] font-extrabold text-amber">
+              Règlement en cours · {nomFormule(enAttente.formule)}{" "}
+              {enAttente.periode === "annuel" ? "annuel" : "mensuel"}
+            </b>
+            <small className="text-xs font-semibold text-amber">
+              {formatGNF(enAttente.montantGnf)} · référence {enAttente.reference} — votre formule
+              change dès que notre équipe confirme la réception.
+            </small>
+          </div>
+          <button
+            type="button"
+            onClick={() =>
+              setARegler({
+                formule: enAttente.formule === "premium" ? "premium" : "standard",
+                reprise: true,
+              })
+            }
+            className="rounded-[9px] bg-amber px-[14px] py-2 text-[12.5px] font-bold text-white transition-opacity hover:opacity-90"
+          >
+            Instructions de paiement
+          </button>
+        </div>
+      )}
 
       <div className="rounded-2xl border border-line bg-white p-5">
         <h3 className="mb-[14px] text-[15px] font-extrabold">Changer de formule</h3>
@@ -279,23 +426,7 @@ export default function AbonnementMedecin() {
                 </li>
               ))}
             </ul>
-            {formule === "standard" ? (
-              <button
-                type="button"
-                disabled
-                className="w-full cursor-default rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white"
-              >
-                Formule actuelle
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => choisir("standard")}
-                className="w-full rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg"
-              >
-                Choisir Standard
-              </button>
-            )}
+            {boutonWeb("standard")}
           </div>
 
           {/* Premium */}
@@ -326,26 +457,50 @@ export default function AbonnementMedecin() {
                 </li>
               ))}
             </ul>
-            {formule === "premium" ? (
-              <button
-                type="button"
-                disabled
-                className="w-full cursor-default rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white"
-              >
-                Formule actuelle
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={() => choisir("premium")}
-                className="w-full rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg"
-              >
-                Choisir Premium
-              </button>
-            )}
+            {boutonWeb("premium")}
           </div>
         </div>
+
+        <p className="mt-3 text-[11.5px] leading-relaxed text-muted">
+          {gratuit
+            ? "🎁 Aucun règlement n’est demandé pendant la période gratuite : changez de formule librement."
+            : "💳 Règlement par Orange Money, MTN Mobile Money ou carte bancaire. Votre formule change une fois le versement confirmé par notre équipe."}
+        </p>
       </div>
+
+      {historique.length > 0 && (
+        <div className="mt-4 rounded-2xl border border-line bg-white p-5">
+          <h3 className="mb-1 text-[15px] font-extrabold">Mes paiements</h3>
+          {historique.map((p) => (
+            <div
+              key={p.id}
+              className="flex flex-wrap items-center gap-3 border-b border-line py-[13px] last:border-b-0"
+            >
+              <div className="min-w-0 flex-1">
+                <b className="block text-[13.5px]">
+                  {nomFormule(p.formule)} · {p.periode === "annuel" ? "annuel" : "mensuel"} ·{" "}
+                  {formatGNF(p.montantGnf)}
+                </b>
+                <small className="text-xs text-muted">
+                  {dateCourte(p.creeLe)} · réf. {p.reference}
+                  {p.motifRefus ? ` · ${p.motifRefus}` : ""}
+                </small>
+              </div>
+              <span
+                className={`rounded-lg px-[9px] py-1 text-[11px] font-bold ${
+                  p.statut === "confirme"
+                    ? "bg-green-soft text-green"
+                    : p.statut === "refuse"
+                      ? "bg-red-soft text-red"
+                      : "bg-bg text-muted"
+                }`}
+              >
+                {LIBELLES_STATUT[p.statut]}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Rappels et crédits SMS : ce que l'abonnement finance vraiment côté
           patients, et de quoi recharger quand le quota du mois est épuisé. */}
@@ -353,6 +508,31 @@ export default function AbonnementMedecin() {
         <RappelsEtSms />
       </div>
       </div>
+
+      {/* Monté UNE fois, hors des blocs mobile et web : c'est une surcouche
+          plein écran, et l'écran rend toujours les deux versions — en poser
+          une dans chacune en créerait deux, dont une invisible. */}
+      {aRegler && (
+        <DialoguePaiement
+          formule={aRegler.formule}
+          libelleFormule={nomFormule(aRegler.formule)}
+          /* En reprise, c'est la périodicité DÉJÀ payée qui compte, pas celle
+             que la bascule de l'écran affiche au moment du clic. */
+          periode={
+            aRegler.reprise && enAttente?.periode === "annuel"
+              ? "annuel"
+              : aRegler.reprise
+                ? "mensuel"
+                : periode
+          }
+          onPeriode={aRegler.reprise ? undefined : setPeriodeVue}
+          prix={TARIFS[aRegler.formule]}
+          moyens={moyens}
+          reprise={aRegler.reprise ? enAttente : null}
+          onFermer={() => setARegler(null)}
+          apres={rechargerPaiements}
+        />
+      )}
     </MedecinShell>
   );
 }
