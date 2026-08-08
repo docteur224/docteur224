@@ -16,19 +16,32 @@ import RappelsEtSms from "@/components/medecin/RappelsEtSms";
 
 
 
-const AVANTAGES_STANDARD = [
-  "Profil & fiche enrichie",
-  "Agenda & gestion des RDV",
-  "Disponibilités & créneaux",
-  "1 assistant(e)",
-];
-
-const AVANTAGES_PREMIUM = [
-  "Tout le Standard",
-  "Mise en avant (en vedette)",
-  "Priorité dans la recherche",
-  "Plus de photos & d'assistant(e)s",
-  "Statistiques avancées · quota SMS",
+/*
+ * Le quota SMS est LU dans la grille tarifaire, pas écrit ici.
+ *
+ * La carte annonçait « Statistiques avancées · quota SMS » sous Premium et
+ * rien sous Standard, ce qui laissait croire que le Standard n'en avait
+ * aucun — il en a 100 par mois. Et la mention étant en dur, elle a survécu
+ * telle quelle au recalage des quotas : un chiffre affiché doit venir de la
+ * même source que celui qui sera appliqué.
+ *
+ * « par mois » est explicite parce que la carte peut afficher un prix annuel :
+ * sans ça, « 200 SMS » se lit comme 200 pour l'année.
+ */
+const avantages = (formule: "standard" | "premium", quotaSms: number): string[] => [
+  ...(formule === "standard"
+    ? ["Profil & fiche enrichie", "Agenda & gestion des RDV", "Disponibilités & créneaux", "1 assistant(e)"]
+    : [
+        "Tout le Standard",
+        "Mise en avant (en vedette)",
+        "Priorité dans la recherche",
+        "Plus de photos & d'assistant(e)s",
+        "Statistiques avancées",
+      ]),
+  `${quotaSms.toLocaleString("fr-FR")} SMS inclus par mois`,
+  // WhatsApp ne consomme pas le quota : c'est l'argument qui rend les rappels
+  // abordables, et il n'apparaissait nulle part.
+  "Rappels WhatsApp hors quota",
 ];
 
 export default function AbonnementMedecin() {
@@ -43,6 +56,9 @@ export default function AbonnementMedecin() {
     return { mensuel: t?.prixMensuel ?? 0, annuel: t?.prixAnnuel ?? 0 };
   };
   const TARIFS = { standard: prix("standard"), premium: prix("premium") };
+  const quota = (f: string) => tarifs.find((x) => x.formule === f)?.quotaSms ?? 0;
+  const AVANTAGES_STANDARD = avantages("standard", quota("standard"));
+  const AVANTAGES_PREMIUM = avantages("premium", quota("premium"));
   const finAbo = abonnement?.dateFin ?? "";
 
   async function choisir(f: "standard" | "premium") {
