@@ -17,10 +17,14 @@ interface ConfigAbonnements {
   standardAnnuel: string;
   premiumMensuel: string;
   premiumAnnuel: string;
-  palierStructure: string;
-  palierCabinet: string;
-  palierClinique: string;
-  palierHopital: string;
+  structureMensuel: string;
+  structureAnnuel: string;
+  cabinetMensuel: string;
+  cabinetAnnuel: string;
+  cliniqueMensuel: string;
+  cliniqueAnnuel: string;
+  hopitalMensuel: string;
+  hopitalAnnuel: string;
   periodeGratuite: boolean;
   essaiGratuit: boolean;
   orangeMoney: boolean;
@@ -53,13 +57,29 @@ const CLES_REGLAGES = ["periode_gratuite", "essai_gratuit", "orange_money", "mtn
  * requalification d'une structure qui grandit. À l'inscription, le palier
  * découle du type déclaré (voir `lib/types-etablissement`), la structure
  * n'ayant encore aucun médecin rattaché.
+ *
+ * Le tarif annuel est saisissable au même titre que le mensuel. L'écran ne
+ * proposait que le mensuel alors que « annuel » est une période valide pour un
+ * établissement : les prix annuels des paliers sont restés à leur valeur
+ * d'amorçage pendant que les mensuels changeaient, et une structure qui
+ * choisissait l'année se voyait facturer un montant sans rapport avec le sien.
  */
-const PALIERS: { cle: keyof ConfigAbonnements; nom: string; medecins: string }[] = [
-  { cle: "palierStructure", nom: "Structure de proximité", medecins: "0–3" },
-  { cle: "palierCabinet", nom: "Cabinet / plateau technique", medecins: "1–3" },
-  { cle: "palierClinique", nom: "Clinique / centre médical", medecins: "4–15" },
-  { cle: "palierHopital", nom: "Hôpital / centre hospitalier", medecins: "16+" },
-];
+const PALIERS = [
+  { formule: "structure", nom: "Structure de proximité", medecins: "0–3", mensuel: "structureMensuel", annuel: "structureAnnuel" },
+  { formule: "cabinet", nom: "Cabinet / plateau technique", medecins: "1–3", mensuel: "cabinetMensuel", annuel: "cabinetAnnuel" },
+  { formule: "clinique", nom: "Clinique / centre médical", medecins: "4–15", mensuel: "cliniqueMensuel", annuel: "cliniqueAnnuel" },
+  { formule: "hopital", nom: "Hôpital / centre hospitalier", medecins: "16+", mensuel: "hopitalMensuel", annuel: "hopitalAnnuel" },
+] as const satisfies readonly {
+  formule: string;
+  nom: string;
+  medecins: string;
+  mensuel: keyof ConfigAbonnements;
+  annuel: keyof ConfigAbonnements;
+}[];
+
+/** Uniquement les clés des paliers : le spread de `config` ne doit pas
+ *  prétendre porter `standardMensuel` & co, qu'il écraserait. */
+type ClePalier = (typeof PALIERS)[number]["mensuel" | "annuel"];
 
 const LANCEMENT: { cle: keyof ConfigAbonnements; titre: string; detail?: string }[] = [
   {
@@ -93,10 +113,12 @@ export default function AbonnementsAdmin() {
     standardAnnuel: fmt(tarif("standard")?.prixAnnuel ?? 0),
     premiumMensuel: fmt(tarif("premium")?.prixMensuel ?? 0),
     premiumAnnuel: fmt(tarif("premium")?.prixAnnuel ?? 0),
-    palierStructure: `${fmt(tarif("structure")?.prixMensuel ?? 0)} / mois`,
-    palierCabinet: `${fmt(tarif("cabinet")?.prixMensuel ?? 0)} / mois`,
-    palierClinique: `${fmt(tarif("clinique")?.prixMensuel ?? 0)} / mois`,
-    palierHopital: `${fmt(tarif("hopital")?.prixMensuel ?? 0)} / mois`,
+    ...(Object.fromEntries(
+      PALIERS.flatMap((p) => [
+        [p.mensuel, fmt(tarif(p.formule)?.prixMensuel ?? 0)],
+        [p.annuel, fmt(tarif(p.formule)?.prixAnnuel ?? 0)],
+      ])
+    ) as Record<ClePalier, string>),
     periodeGratuite: reglagesExtra["periode_gratuite"] ?? true,
     essaiGratuit: reglagesExtra["essai_gratuit"] ?? true,
     orangeMoney: reglagesExtra["orange_money"] ?? true,
@@ -120,10 +142,12 @@ export default function AbonnementsAdmin() {
     const resultats = await Promise.all([
       enregistrerTarif("standard", { prixMensuel: parseGNF(valeurs.standardMensuel), prixAnnuel: parseGNF(valeurs.standardAnnuel) }),
       enregistrerTarif("premium", { prixMensuel: parseGNF(valeurs.premiumMensuel), prixAnnuel: parseGNF(valeurs.premiumAnnuel) }),
-      enregistrerTarif("structure", { prixMensuel: parseGNF(valeurs.palierStructure) }),
-      enregistrerTarif("cabinet", { prixMensuel: parseGNF(valeurs.palierCabinet) }),
-      enregistrerTarif("clinique", { prixMensuel: parseGNF(valeurs.palierClinique) }),
-      enregistrerTarif("hopital", { prixMensuel: parseGNF(valeurs.palierHopital) }),
+      ...PALIERS.map((p) =>
+        enregistrerTarif(p.formule, {
+          prixMensuel: parseGNF(valeurs[p.mensuel] as string),
+          prixAnnuel: parseGNF(valeurs[p.annuel] as string),
+        })
+      ),
       ecrireReglageBool("periode_gratuite", valeurs.periodeGratuite),
       ecrireReglageBool("essai_gratuit", valeurs.essaiGratuit),
       ecrireReglageBool("orange_money", valeurs.orangeMoney),
@@ -133,7 +157,11 @@ export default function AbonnementsAdmin() {
     if (!messages.length) {
       await tracerAudit(
         "A modifié la configuration des abonnements",
-        `Standard ${valeurs.standardMensuel} · Premium ${valeurs.premiumMensuel} · Structure ${valeurs.palierStructure} · Cabinet ${valeurs.palierCabinet} · Clinique ${valeurs.palierClinique} · Hôpital ${valeurs.palierHopital}`
+        [
+          `Standard ${valeurs.standardMensuel}`,
+          `Premium ${valeurs.premiumMensuel}`,
+          ...PALIERS.map((p) => `${p.nom} ${valeurs[p.mensuel]}/mois · ${valeurs[p.annuel]}/an`),
+        ].join(" · ")
       );
     }
     // Les interrupteurs sont dérivés de `reglagesExtra`, lu une seule fois au
@@ -233,22 +261,35 @@ export default function AbonnementsAdmin() {
               <thead>
                 <tr>
                   <th>Palier</th>
-                  <th>Médecins</th>
-                  <th>Tarif/mois</th>
+                  <th>Mensuel</th>
+                  <th>Annuel</th>
                 </tr>
               </thead>
               <tbody>
                 {PALIERS.map((palier) => (
-                  <tr key={palier.cle}>
-                    <td>{palier.nom}</td>
-                    <td>{palier.medecins}</td>
+                  <tr key={palier.formule}>
+                    <td>
+                      {palier.nom}
+                      <small className="muted" style={{ display: "block", fontSize: 10.5 }}>
+                        {palier.medecins} médecins
+                      </small>
+                    </td>
                     <td>
                       <input
                         className="inp"
                         style={{ marginBottom: 0, padding: "6px 8px", fontSize: 12 }}
-                        value={valeurs[palier.cle] as string}
-                        onChange={(e) => modifier(palier.cle, e.target.value)}
-                        aria-label={`Tarif palier ${palier.nom}`}
+                        value={valeurs[palier.mensuel] as string}
+                        onChange={(e) => modifier(palier.mensuel, e.target.value)}
+                        aria-label={`${palier.nom} mensuel`}
+                      />
+                    </td>
+                    <td>
+                      <input
+                        className="inp"
+                        style={{ marginBottom: 0, padding: "6px 8px", fontSize: 12 }}
+                        value={valeurs[palier.annuel] as string}
+                        onChange={(e) => modifier(palier.annuel, e.target.value)}
+                        aria-label={`${palier.nom} annuel`}
                       />
                     </td>
                   </tr>
@@ -409,7 +450,7 @@ export default function AbonnementsAdmin() {
           <table className="w-full border-collapse text-[13px]">
             <thead>
               <tr>
-                {["Palier", "Médecins", "Tarif (GNF)"].map((th) => (
+                {["Palier", "Médecins", "Mensuel (GNF)", "Annuel (GNF)"].map((th) => (
                   <th key={th} className={enTete}>
                     {th}
                   </th>
@@ -418,14 +459,22 @@ export default function AbonnementsAdmin() {
             </thead>
             <tbody>
               {PALIERS.map((palier) => (
-                <tr key={palier.cle}>
+                <tr key={palier.formule}>
                   <td className={caseTab}>{palier.nom}</td>
                   <td className={caseTab}>{palier.medecins}</td>
                   <td className={caseTab}>
                     <input
-                      value={valeurs[palier.cle] as string}
-                      onChange={(e) => modifier(palier.cle, e.target.value)}
-                      aria-label={`Tarif palier ${palier.nom}`}
+                      value={valeurs[palier.mensuel] as string}
+                      onChange={(e) => modifier(palier.mensuel, e.target.value)}
+                      aria-label={`${palier.nom} mensuel`}
+                      className={cellule}
+                    />
+                  </td>
+                  <td className={caseTab}>
+                    <input
+                      value={valeurs[palier.annuel] as string}
+                      onChange={(e) => modifier(palier.annuel, e.target.value)}
+                      aria-label={`${palier.nom} annuel`}
                       className={cellule}
                     />
                   </td>
