@@ -15,22 +15,28 @@ import {
 interface ConfigAbonnements {
   standardMensuel: string;
   standardAnnuel: string;
+  standardSms: string;
   premiumMensuel: string;
   premiumAnnuel: string;
+  premiumSms: string;
   structureMensuel: string;
   structureAnnuel: string;
+  structureSms: string;
   structureMin: string;
   structureMax: string;
   cabinetMensuel: string;
   cabinetAnnuel: string;
+  cabinetSms: string;
   cabinetMin: string;
   cabinetMax: string;
   cliniqueMensuel: string;
   cliniqueAnnuel: string;
+  cliniqueSms: string;
   cliniqueMin: string;
   cliniqueMax: string;
   hopitalMensuel: string;
   hopitalAnnuel: string;
+  hopitalSms: string;
   hopitalMin: string;
   hopitalMax: string;
   periodeGratuite: boolean;
@@ -83,24 +89,46 @@ const CLES_REGLAGES = ["periode_gratuite", "essai_gratuit", "orange_money", "mtn
  * établissement : les prix annuels des paliers sont restés à leur valeur
  * d'amorçage pendant que les mensuels changeaient, et une structure qui
  * choisissait l'année se voyait facturer un montant sans rapport avec le sien.
+ *
+ * Le quota SMS fait partie du plan tarifaire : il porte le coût variable de
+ * l'offre. Il était figé à l'amorçage alors que les prix bougeaient, ce qui
+ * pouvait mettre un palier à perte — un quota de 15 000 SMS dépasse le prix de
+ * l'abonnement dès que le SMS coûte plus de 33 GNF.
  */
 const PALIERS = [
-  { formule: "structure", nom: "Structure de proximité", mensuel: "structureMensuel", annuel: "structureAnnuel", min: "structureMin", max: "structureMax" },
-  { formule: "cabinet", nom: "Cabinet / plateau technique", mensuel: "cabinetMensuel", annuel: "cabinetAnnuel", min: "cabinetMin", max: "cabinetMax" },
-  { formule: "clinique", nom: "Clinique / centre médical", mensuel: "cliniqueMensuel", annuel: "cliniqueAnnuel", min: "cliniqueMin", max: "cliniqueMax" },
-  { formule: "hopital", nom: "Hôpital / centre hospitalier", mensuel: "hopitalMensuel", annuel: "hopitalAnnuel", min: "hopitalMin", max: "hopitalMax" },
+  { formule: "structure", nom: "Structure de proximité", mensuel: "structureMensuel", annuel: "structureAnnuel", sms: "structureSms", min: "structureMin", max: "structureMax" },
+  { formule: "cabinet", nom: "Cabinet / plateau technique", mensuel: "cabinetMensuel", annuel: "cabinetAnnuel", sms: "cabinetSms", min: "cabinetMin", max: "cabinetMax" },
+  { formule: "clinique", nom: "Clinique / centre médical", mensuel: "cliniqueMensuel", annuel: "cliniqueAnnuel", sms: "cliniqueSms", min: "cliniqueMin", max: "cliniqueMax" },
+  { formule: "hopital", nom: "Hôpital / centre hospitalier", mensuel: "hopitalMensuel", annuel: "hopitalAnnuel", sms: "hopitalSms", min: "hopitalMin", max: "hopitalMax" },
 ] as const satisfies readonly {
   formule: string;
   nom: string;
   mensuel: keyof ConfigAbonnements;
   annuel: keyof ConfigAbonnements;
+  sms: keyof ConfigAbonnements;
   min: keyof ConfigAbonnements;
   max: keyof ConfigAbonnements;
 }[];
 
-/** Uniquement les clés des paliers : le spread de `config` ne doit pas
- *  prétendre porter `standardMensuel` & co, qu'il écraserait. */
-type ClePalier = (typeof PALIERS)[number]["mensuel" | "annuel" | "min" | "max"];
+/** Les deux formules médecin, décrites comme les paliers pour que les deux
+ *  tables se génèrent au lieu d'être écrites ligne à ligne. */
+const FORMULES_MEDECIN = [
+  { formule: "standard", nom: "Standard", miseEnAvant: false, mensuel: "standardMensuel", annuel: "standardAnnuel", sms: "standardSms" },
+  { formule: "premium", nom: "Premium", miseEnAvant: true, mensuel: "premiumMensuel", annuel: "premiumAnnuel", sms: "premiumSms" },
+] as const satisfies readonly {
+  formule: string;
+  nom: string;
+  miseEnAvant: boolean;
+  mensuel: keyof ConfigAbonnements;
+  annuel: keyof ConfigAbonnements;
+  sms: keyof ConfigAbonnements;
+}[];
+
+/** Uniquement les clés de tarif : le spread de `config` ne doit pas prétendre
+ *  porter les booléens de réglage, qu'il écraserait. */
+type CleTarif =
+  | (typeof PALIERS)[number]["mensuel" | "annuel" | "sms" | "min" | "max"]
+  | (typeof FORMULES_MEDECIN)[number]["mensuel" | "annuel" | "sms"];
 
 const LANCEMENT: { cle: keyof ConfigAbonnements; titre: string; detail?: string }[] = [
   {
@@ -130,18 +158,20 @@ export default function AbonnementsAdmin() {
 
   const tarif = (f: string) => tarifs.find((t) => t.formule === f);
   const config: ConfigAbonnements = {
-    standardMensuel: fmt(tarif("standard")?.prixMensuel ?? 0),
-    standardAnnuel: fmt(tarif("standard")?.prixAnnuel ?? 0),
-    premiumMensuel: fmt(tarif("premium")?.prixMensuel ?? 0),
-    premiumAnnuel: fmt(tarif("premium")?.prixAnnuel ?? 0),
-    ...(Object.fromEntries(
-      PALIERS.flatMap((p) => [
+    ...(Object.fromEntries([
+      ...FORMULES_MEDECIN.flatMap((f) => [
+        [f.mensuel, fmt(tarif(f.formule)?.prixMensuel ?? 0)],
+        [f.annuel, fmt(tarif(f.formule)?.prixAnnuel ?? 0)],
+        [f.sms, fmt(tarif(f.formule)?.quotaSms ?? 0)],
+      ]),
+      ...PALIERS.flatMap((p) => [
         [p.mensuel, fmt(tarif(p.formule)?.prixMensuel ?? 0)],
         [p.annuel, fmt(tarif(p.formule)?.prixAnnuel ?? 0)],
+        [p.sms, fmt(tarif(p.formule)?.quotaSms ?? 0)],
         [p.min, fmtBorne(tarif(p.formule)?.medecinsMin)],
         [p.max, fmtBorne(tarif(p.formule)?.medecinsMax)],
-      ])
-    ) as Record<ClePalier, string>),
+      ]),
+    ]) as Record<CleTarif, string>),
     periodeGratuite: reglagesExtra["periode_gratuite"] ?? true,
     essaiGratuit: reglagesExtra["essai_gratuit"] ?? true,
     orangeMoney: reglagesExtra["orange_money"] ?? true,
@@ -163,12 +193,18 @@ export default function AbonnementsAdmin() {
     setEnvoi(true);
     setErreur(null);
     const resultats = await Promise.all([
-      enregistrerTarif("standard", { prixMensuel: parseGNF(valeurs.standardMensuel), prixAnnuel: parseGNF(valeurs.standardAnnuel) }),
-      enregistrerTarif("premium", { prixMensuel: parseGNF(valeurs.premiumMensuel), prixAnnuel: parseGNF(valeurs.premiumAnnuel) }),
+      ...FORMULES_MEDECIN.map((f) =>
+        enregistrerTarif(f.formule, {
+          prixMensuel: parseGNF(valeurs[f.mensuel] as string),
+          prixAnnuel: parseGNF(valeurs[f.annuel] as string),
+          quotaSms: parseGNF(valeurs[f.sms] as string),
+        })
+      ),
       ...PALIERS.map((p) =>
         enregistrerTarif(p.formule, {
           prixMensuel: parseGNF(valeurs[p.mensuel] as string),
           prixAnnuel: parseGNF(valeurs[p.annuel] as string),
+          quotaSms: parseGNF(valeurs[p.sms] as string),
           medecinsMin: parseBorne(valeurs[p.min] as string),
           medecinsMax: parseBorne(valeurs[p.max] as string),
         })
@@ -183,11 +219,12 @@ export default function AbonnementsAdmin() {
       await tracerAudit(
         "A modifié la configuration des abonnements",
         [
-          `Standard ${valeurs.standardMensuel}`,
-          `Premium ${valeurs.premiumMensuel}`,
+          ...FORMULES_MEDECIN.map(
+            (f) => `${f.nom} ${valeurs[f.mensuel]}/mois · ${valeurs[f.annuel]}/an · ${valeurs[f.sms]} SMS`
+          ),
           ...PALIERS.map(
             (p) =>
-              `${p.nom} (${valeurs[p.min] || 0}–${valeurs[p.max] || "∞"} médecins) ${valeurs[p.mensuel]}/mois · ${valeurs[p.annuel]}/an`
+              `${p.nom} (${valeurs[p.min] || 0}–${valeurs[p.max] || "∞"} médecins) ${valeurs[p.mensuel]}/mois · ${valeurs[p.annuel]}/an · ${valeurs[p.sms]} SMS`
           ),
         ].join(" · ")
       );
@@ -229,51 +266,26 @@ export default function AbonnementsAdmin() {
                   <th>Formule</th>
                   <th>Mensuel</th>
                   <th>Annuel</th>
+                  <th>SMS</th>
                 </tr>
               </thead>
               <tbody>
-                <tr>
-                  <td>Standard</td>
-                  <td>
-                    <input
-                      className="inp"
-                      style={{ marginBottom: 0, padding: "6px 8px", fontSize: 12 }}
-                      value={valeurs.standardMensuel}
-                      onChange={(e) => modifier("standardMensuel", e.target.value)}
-                      aria-label="Standard mensuel"
-                    />
-                  </td>
-                  <td>
-                    <input
-                      className="inp"
-                      style={{ marginBottom: 0, padding: "6px 8px", fontSize: 12 }}
-                      value={valeurs.standardAnnuel}
-                      onChange={(e) => modifier("standardAnnuel", e.target.value)}
-                      aria-label="Standard annuel"
-                    />
-                  </td>
-                </tr>
-                <tr>
-                  <td>Premium</td>
-                  <td>
-                    <input
-                      className="inp"
-                      style={{ marginBottom: 0, padding: "6px 8px", fontSize: 12 }}
-                      value={valeurs.premiumMensuel}
-                      onChange={(e) => modifier("premiumMensuel", e.target.value)}
-                      aria-label="Premium mensuel"
-                    />
-                  </td>
-                  <td>
-                    <input
-                      className="inp"
-                      style={{ marginBottom: 0, padding: "6px 8px", fontSize: 12 }}
-                      value={valeurs.premiumAnnuel}
-                      onChange={(e) => modifier("premiumAnnuel", e.target.value)}
-                      aria-label="Premium annuel"
-                    />
-                  </td>
-                </tr>
+                {FORMULES_MEDECIN.map((f) => (
+                  <tr key={f.formule}>
+                    <td>{f.nom}</td>
+                    {([f.mensuel, f.annuel, f.sms] as const).map((cle, i) => (
+                      <td key={cle}>
+                        <input
+                          className="inp"
+                          style={{ marginBottom: 0, padding: "6px 8px", fontSize: 12 }}
+                          value={valeurs[cle] as string}
+                          onChange={(e) => modifier(cle, e.target.value)}
+                          aria-label={`${f.nom} ${["mensuel", "annuel", "quota SMS"][i]}`}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
               </tbody>
             </table>
             <div className="setrow">
@@ -291,6 +303,7 @@ export default function AbonnementsAdmin() {
                   <th>Palier</th>
                   <th>Mensuel</th>
                   <th>Annuel</th>
+                  <th>SMS</th>
                 </tr>
               </thead>
               <tbody>
@@ -324,24 +337,17 @@ export default function AbonnementsAdmin() {
                         </span>
                       </span>
                     </td>
-                    <td>
-                      <input
-                        className="inp"
-                        style={{ marginBottom: 0, padding: "6px 8px", fontSize: 12 }}
-                        value={valeurs[palier.mensuel] as string}
-                        onChange={(e) => modifier(palier.mensuel, e.target.value)}
-                        aria-label={`${palier.nom} mensuel`}
-                      />
-                    </td>
-                    <td>
-                      <input
-                        className="inp"
-                        style={{ marginBottom: 0, padding: "6px 8px", fontSize: 12 }}
-                        value={valeurs[palier.annuel] as string}
-                        onChange={(e) => modifier(palier.annuel, e.target.value)}
-                        aria-label={`${palier.nom} annuel`}
-                      />
-                    </td>
+                    {([palier.mensuel, palier.annuel, palier.sms] as const).map((cle, i) => (
+                      <td key={cle}>
+                        <input
+                          className="inp"
+                          style={{ marginBottom: 0, padding: "6px 8px", fontSize: 12 }}
+                          value={valeurs[cle] as string}
+                          onChange={(e) => modifier(cle, e.target.value)}
+                          aria-label={`${palier.nom} ${["mensuel", "annuel", "quota SMS"][i]}`}
+                        />
+                      </td>
+                    ))}
                   </tr>
                 ))}
               </tbody>
@@ -429,7 +435,7 @@ export default function AbonnementsAdmin() {
           <table className="w-full border-collapse text-[13px]">
             <thead>
               <tr>
-                {["Formule", "Mensuel (GNF)", "Annuel (GNF)", "Mise en avant"].map((th) => (
+                {["Formule", "Mensuel (GNF)", "Annuel (GNF)", "SMS inclus", "Mise en avant"].map((th) => (
                   <th key={th} className={enTete}>
                     {th}
                   </th>
@@ -437,58 +443,34 @@ export default function AbonnementsAdmin() {
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td className={caseTab}>
-                  <b>Standard</b>
-                </td>
-                <td className={caseTab}>
-                  <input
-                    value={valeurs.standardMensuel}
-                    onChange={(e) => modifier("standardMensuel", e.target.value)}
-                    aria-label="Standard mensuel"
-                    className={cellule}
-                  />
-                </td>
-                <td className={caseTab}>
-                  <input
-                    value={valeurs.standardAnnuel}
-                    onChange={(e) => modifier("standardAnnuel", e.target.value)}
-                    aria-label="Standard annuel"
-                    className={cellule}
-                  />
-                </td>
-                <td className={caseTab}>
-                  <span className="rounded-lg bg-red-soft px-[9px] py-1 text-[11px] font-bold text-red">
-                    Non
-                  </span>
-                </td>
-              </tr>
-              <tr>
-                <td className={caseTab}>
-                  <b>Premium</b>
-                </td>
-                <td className={caseTab}>
-                  <input
-                    value={valeurs.premiumMensuel}
-                    onChange={(e) => modifier("premiumMensuel", e.target.value)}
-                    aria-label="Premium mensuel"
-                    className={cellule}
-                  />
-                </td>
-                <td className={caseTab}>
-                  <input
-                    value={valeurs.premiumAnnuel}
-                    onChange={(e) => modifier("premiumAnnuel", e.target.value)}
-                    aria-label="Premium annuel"
-                    className={cellule}
-                  />
-                </td>
-                <td className={caseTab}>
-                  <span className="rounded-lg bg-green-soft px-[9px] py-1 text-[11px] font-bold text-green">
-                    Incluse
-                  </span>
-                </td>
-              </tr>
+              {FORMULES_MEDECIN.map((f) => (
+                <tr key={f.formule}>
+                  <td className={caseTab}>
+                    <b>{f.nom}</b>
+                  </td>
+                  {([f.mensuel, f.annuel, f.sms] as const).map((cle, i) => (
+                    <td key={cle} className={caseTab}>
+                      <input
+                        value={valeurs[cle] as string}
+                        onChange={(e) => modifier(cle, e.target.value)}
+                        aria-label={`${f.nom} ${["mensuel", "annuel", "quota SMS"][i]}`}
+                        className={cellule}
+                      />
+                    </td>
+                  ))}
+                  <td className={caseTab}>
+                    {f.miseEnAvant ? (
+                      <span className="rounded-lg bg-green-soft px-[9px] py-1 text-[11px] font-bold text-green">
+                        Incluse
+                      </span>
+                    ) : (
+                      <span className="rounded-lg bg-red-soft px-[9px] py-1 text-[11px] font-bold text-red">
+                        Non
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -500,7 +482,7 @@ export default function AbonnementsAdmin() {
           <table className="w-full border-collapse text-[13px]">
             <thead>
               <tr>
-                {["Palier", "Médecins", "Mensuel (GNF)", "Annuel (GNF)"].map((th) => (
+                {["Palier", "Médecins", "Mensuel (GNF)", "Annuel (GNF)", "SMS inclus"].map((th) => (
                   <th key={th} className={enTete}>
                     {th}
                   </th>
@@ -531,22 +513,16 @@ export default function AbonnementsAdmin() {
                       />
                     </span>
                   </td>
-                  <td className={caseTab}>
-                    <input
-                      value={valeurs[palier.mensuel] as string}
-                      onChange={(e) => modifier(palier.mensuel, e.target.value)}
-                      aria-label={`${palier.nom} mensuel`}
-                      className={cellule}
-                    />
-                  </td>
-                  <td className={caseTab}>
-                    <input
-                      value={valeurs[palier.annuel] as string}
-                      onChange={(e) => modifier(palier.annuel, e.target.value)}
-                      aria-label={`${palier.nom} annuel`}
-                      className={cellule}
-                    />
-                  </td>
+                  {([palier.mensuel, palier.annuel, palier.sms] as const).map((cle, i) => (
+                    <td key={cle} className={caseTab}>
+                      <input
+                        value={valeurs[cle] as string}
+                        onChange={(e) => modifier(cle, e.target.value)}
+                        aria-label={`${palier.nom} ${["mensuel", "annuel", "quota SMS"][i]}`}
+                        className={cellule}
+                      />
+                    </td>
+                  ))}
                 </tr>
               ))}
             </tbody>

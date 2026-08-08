@@ -158,6 +158,116 @@ export function useMedecinsEnAttente(): { dossiers: DossierValidation[]; recharg
   return { dossiers: donnees, recharger };
 }
 
+export interface EtablissementInscrit {
+  id: string;
+  nom: string;
+  type: string;
+  ville: string | null;
+  statut: string;
+  /** Médecins réellement rattachés à la structure. */
+  medecins: number;
+  /** Palier facturé aujourd'hui, `null` si aucun abonnement ouvert. */
+  formule: string | null;
+  /**
+   * Palier suggéré, renseigné UNIQUEMENT quand l'effectif sort des bornes du
+   * palier courant. Nul veut dire « rien à requalifier », pas « inconnu ».
+   */
+  requalifierVers: string | null;
+}
+
+/**
+ * Toutes les structures inscrites, avec de quoi repérer celles à requalifier.
+ *
+ * Le palier est fixé au type déclaré à l'inscription, quand la structure n'a
+ * encore aucun médecin — il ne bouge jamais ensuite. On confronte donc
+ * l'effectif réel aux bornes saisies dans /espace-admin/abonnements : une
+ * clinique passée à 18 médecins doit relever du palier hôpital, et c'est à
+ * l'admin de la basculer.
+ */
+export function useEtablissementsInscrits(): {
+  etablissements: EtablissementInscrit[];
+  recharger: () => void;
+} {
+  const { donnees, recharger } = utiliserRequete<EtablissementInscrit[]>([], async () => {
+    const supabase = creerClientNavigateur();
+    const [{ data: etabs }, { data: tarifs }] = await Promise.all([
+      supabase
+        .from("etablissements")
+        .select("id, nom, type, statut, gestionnaire_id, villes ( nom ), medecins ( id )")
+        .is("etape_inscription", null)
+        .order("nom"),
+      supabase
+        .from("tarifs_plateforme")
+        .select("formule, medecins_min, medecins_max")
+        .not("medecins_min", "is", null)
+        .order("medecins_min"),
+    ]);
+    type L = {
+      id: string;
+      nom: string;
+      type: string;
+      statut: string;
+      gestionnaire_id: string | null;
+      villes: { nom: string } | null;
+      medecins: { id: string }[] | null;
+    };
+    const liste = (etabs ?? []) as unknown as L[];
+    if (liste.length === 0) return [];
+
+    // L'abonnement est porté par le gestionnaire, pas par la structure.
+    const gestionnaires = liste.map((e) => e.gestionnaire_id).filter((g): g is string => !!g);
+    const { data: abos } = gestionnaires.length
+      ? await supabase.from("abonnements").select("titulaire_id, formule").in("titulaire_id", gestionnaires)
+      : { data: [] };
+
+    const bornes = (tarifs ?? []) as { formule: string; medecins_min: number; medecins_max: number | null }[];
+
+    /*
+     * Le signal ne se déclenche QUE vers le haut : une structure qui a dépassé
+     * le plafond de son palier est sous-facturée, c'est ce qu'il faut voir.
+     *
+     * Deux cas volontairement muets.
+     *
+     * En dessous du minimum, il n'y a rien à signaler : une structure fraîchement
+     * inscrite a zéro médecin rattaché — c'est l'état NORMAL au départ, et
+     * proposer de la déclasser pour ça reviendrait à lui réclamer un palier
+     * moins cher le jour de son arrivée.
+     *
+     * Et on compare aux bornes du palier COURANT plutôt que de chercher un
+     * palier « attendu » à comparer par son nom : plusieurs paliers visent la
+     * même taille (structure 0–3 et cabinet 1–3 se recouvrent), et le premier
+     * trouvé classerait tous les cabinets de deux médecins comme mal placés.
+     */
+    function requalifierVers(formule: string | null, n: number): string | null {
+      if (!formule) return null;
+      const actuel = bornes.find((b) => b.formule === formule);
+      if (!actuel || actuel.medecins_max === null || n <= actuel.medecins_max) return null;
+      return (
+        bornes.find((b) => n >= b.medecins_min && (b.medecins_max === null || n <= b.medecins_max))
+          ?.formule ?? null
+      );
+    }
+
+    return liste.map((e) => {
+      const medecins = e.medecins?.length ?? 0;
+      const formule = (abos ?? []).find((a) => a.titulaire_id === e.gestionnaire_id)?.formule ?? null;
+      return {
+        id: e.id,
+        nom: e.nom,
+        type: e.type,
+        ville: e.villes?.nom ?? null,
+        statut: e.statut,
+        medecins,
+        formule,
+        // Un dossier encore en validation n'a pas à être requalifié : son palier
+        // n'est pas acquis, et l'admin le traite dans Validations.
+        requalifierVers: e.statut === "valide" ? requalifierVers(formule, medecins) : null,
+      };
+    });
+  });
+  return { etablissements: donnees, recharger };
+}
+
 export function useEtablissementsEnAttente(): { dossiers: DossierValidation[]; recharger: () => void } {
   const { donnees, recharger } = utiliserRequete<DossierValidation[]>([], async () => {
     const supabase = creerClientNavigateur();
@@ -1123,6 +1233,8 @@ export interface LigneTarif {
   prixMensuel: number;
   prixAnnuel: number;
   essaiJours: number;
+  /** SMS inclus dans la formule, par période facturée. */
+  quotaSms: number;
   /** Taille visée par un palier établissement ; nul pour une formule médecin. */
   medecinsMin: number | null;
   /** Nul = pas de plafond (le « + » de « 16+ »). */
@@ -1141,6 +1253,7 @@ export function useConfigAbonnements(): {
       prixMensuel: t.prix_mensuel,
       prixAnnuel: t.prix_annuel,
       essaiJours: t.essai_jours,
+      quotaSms: t.quota_sms,
       medecinsMin: t.medecins_min,
       medecinsMax: t.medecins_max,
     }));
@@ -1151,6 +1264,7 @@ export function useConfigAbonnements(): {
     if (d.prixMensuel !== undefined) maj.prix_mensuel = d.prixMensuel;
     if (d.prixAnnuel !== undefined) maj.prix_annuel = d.prixAnnuel;
     if (d.essaiJours !== undefined) maj.essai_jours = d.essaiJours;
+    if (d.quotaSms !== undefined) maj.quota_sms = d.quotaSms;
     // `null` est une valeur voulue (pas de plafond) : tester `!== undefined`
     // et non la véracité, sinon vider le champ n'effacerait jamais la borne.
     if (d.medecinsMin !== undefined) maj.medecins_min = d.medecinsMin;
