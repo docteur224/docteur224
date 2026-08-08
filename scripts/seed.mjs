@@ -65,10 +65,11 @@ const assurances = await inserer("assurances", [
 await inserer("tarifs_plateforme", [
   { formule: "standard", prix_mensuel: 250000, prix_annuel: 2500000, quota_sms: 100, essai_jours: 30 },
   { formule: "premium", prix_mensuel: 450000, prix_annuel: 4500000, quota_sms: 500, essai_jours: 30 },
-  { formule: "structure", prix_mensuel: 75000, prix_annuel: 750000, quota_sms: 300, essai_jours: 15 },
-  { formule: "cabinet", prix_mensuel: 800000, prix_annuel: 8000000, quota_sms: 1000, essai_jours: 15 },
-  { formule: "clinique", prix_mensuel: 2000000, prix_annuel: 20000000, quota_sms: 5000, essai_jours: 15 },
-  { formule: "hopital", prix_mensuel: 4000000, prix_annuel: 40000000, quota_sms: 15000, essai_jours: 15 },
+  // `medecins_max: null` sur le dernier palier = pas de plafond (« 16+ »).
+  { formule: "structure", prix_mensuel: 75000, prix_annuel: 750000, quota_sms: 300, essai_jours: 15, medecins_min: 0, medecins_max: 3 },
+  { formule: "cabinet", prix_mensuel: 800000, prix_annuel: 8000000, quota_sms: 1000, essai_jours: 15, medecins_min: 1, medecins_max: 3 },
+  { formule: "clinique", prix_mensuel: 2000000, prix_annuel: 20000000, quota_sms: 5000, essai_jours: 15, medecins_min: 4, medecins_max: 15 },
+  { formule: "hopital", prix_mensuel: 4000000, prix_annuel: 40000000, quota_sms: 15000, essai_jours: 15, medecins_min: 16, medecins_max: null },
 ], "formule");
 
 // ---------- Admin ----------

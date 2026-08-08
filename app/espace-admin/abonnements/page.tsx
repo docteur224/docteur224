@@ -19,12 +19,20 @@ interface ConfigAbonnements {
   premiumAnnuel: string;
   structureMensuel: string;
   structureAnnuel: string;
+  structureMin: string;
+  structureMax: string;
   cabinetMensuel: string;
   cabinetAnnuel: string;
+  cabinetMin: string;
+  cabinetMax: string;
   cliniqueMensuel: string;
   cliniqueAnnuel: string;
+  cliniqueMin: string;
+  cliniqueMax: string;
   hopitalMensuel: string;
   hopitalAnnuel: string;
+  hopitalMin: string;
+  hopitalMax: string;
   periodeGratuite: boolean;
   essaiGratuit: boolean;
   orangeMoney: boolean;
@@ -33,6 +41,18 @@ interface ConfigAbonnements {
 
 const fmt = (n: number) => n.toLocaleString("fr-FR").replace(/ | /g, " ");
 const parseGNF = (t: string) => Number(t.replace(/[^0-9]/g, "")) || 0;
+
+/*
+ * Bornes de taille d'un palier. Un champ vide n'est pas zéro : sur le maximum
+ * il vaut « pas de plafond » (le « + » de « 16+ »), et la colonne accepte NULL
+ * pour ça. `parseGNF` renverrait 0, donc un palier « 16–0 » que la contrainte
+ * de la 0032 refuse.
+ */
+const parseBorne = (t: string): number | null => {
+  const chiffres = t.replace(/[^0-9]/g, "");
+  return chiffres === "" ? null : Number(chiffres);
+};
+const fmtBorne = (n: number | null | undefined) => (n === null || n === undefined ? "" : String(n));
 
 /** Clés des réglages booléens de l'écran, dans `parametres_plateforme`. */
 const CLES_REGLAGES = ["periode_gratuite", "essai_gratuit", "orange_money", "mtn_momo"];
@@ -65,21 +85,22 @@ const CLES_REGLAGES = ["periode_gratuite", "essai_gratuit", "orange_money", "mtn
  * choisissait l'année se voyait facturer un montant sans rapport avec le sien.
  */
 const PALIERS = [
-  { formule: "structure", nom: "Structure de proximité", medecins: "0–3", mensuel: "structureMensuel", annuel: "structureAnnuel" },
-  { formule: "cabinet", nom: "Cabinet / plateau technique", medecins: "1–3", mensuel: "cabinetMensuel", annuel: "cabinetAnnuel" },
-  { formule: "clinique", nom: "Clinique / centre médical", medecins: "4–15", mensuel: "cliniqueMensuel", annuel: "cliniqueAnnuel" },
-  { formule: "hopital", nom: "Hôpital / centre hospitalier", medecins: "16+", mensuel: "hopitalMensuel", annuel: "hopitalAnnuel" },
+  { formule: "structure", nom: "Structure de proximité", mensuel: "structureMensuel", annuel: "structureAnnuel", min: "structureMin", max: "structureMax" },
+  { formule: "cabinet", nom: "Cabinet / plateau technique", mensuel: "cabinetMensuel", annuel: "cabinetAnnuel", min: "cabinetMin", max: "cabinetMax" },
+  { formule: "clinique", nom: "Clinique / centre médical", mensuel: "cliniqueMensuel", annuel: "cliniqueAnnuel", min: "cliniqueMin", max: "cliniqueMax" },
+  { formule: "hopital", nom: "Hôpital / centre hospitalier", mensuel: "hopitalMensuel", annuel: "hopitalAnnuel", min: "hopitalMin", max: "hopitalMax" },
 ] as const satisfies readonly {
   formule: string;
   nom: string;
-  medecins: string;
   mensuel: keyof ConfigAbonnements;
   annuel: keyof ConfigAbonnements;
+  min: keyof ConfigAbonnements;
+  max: keyof ConfigAbonnements;
 }[];
 
 /** Uniquement les clés des paliers : le spread de `config` ne doit pas
  *  prétendre porter `standardMensuel` & co, qu'il écraserait. */
-type ClePalier = (typeof PALIERS)[number]["mensuel" | "annuel"];
+type ClePalier = (typeof PALIERS)[number]["mensuel" | "annuel" | "min" | "max"];
 
 const LANCEMENT: { cle: keyof ConfigAbonnements; titre: string; detail?: string }[] = [
   {
@@ -117,6 +138,8 @@ export default function AbonnementsAdmin() {
       PALIERS.flatMap((p) => [
         [p.mensuel, fmt(tarif(p.formule)?.prixMensuel ?? 0)],
         [p.annuel, fmt(tarif(p.formule)?.prixAnnuel ?? 0)],
+        [p.min, fmtBorne(tarif(p.formule)?.medecinsMin)],
+        [p.max, fmtBorne(tarif(p.formule)?.medecinsMax)],
       ])
     ) as Record<ClePalier, string>),
     periodeGratuite: reglagesExtra["periode_gratuite"] ?? true,
@@ -146,6 +169,8 @@ export default function AbonnementsAdmin() {
         enregistrerTarif(p.formule, {
           prixMensuel: parseGNF(valeurs[p.mensuel] as string),
           prixAnnuel: parseGNF(valeurs[p.annuel] as string),
+          medecinsMin: parseBorne(valeurs[p.min] as string),
+          medecinsMax: parseBorne(valeurs[p.max] as string),
         })
       ),
       ecrireReglageBool("periode_gratuite", valeurs.periodeGratuite),
@@ -160,7 +185,10 @@ export default function AbonnementsAdmin() {
         [
           `Standard ${valeurs.standardMensuel}`,
           `Premium ${valeurs.premiumMensuel}`,
-          ...PALIERS.map((p) => `${p.nom} ${valeurs[p.mensuel]}/mois · ${valeurs[p.annuel]}/an`),
+          ...PALIERS.map(
+            (p) =>
+              `${p.nom} (${valeurs[p.min] || 0}–${valeurs[p.max] || "∞"} médecins) ${valeurs[p.mensuel]}/mois · ${valeurs[p.annuel]}/an`
+          ),
         ].join(" · ")
       );
     }
@@ -270,9 +298,31 @@ export default function AbonnementsAdmin() {
                   <tr key={palier.formule}>
                     <td>
                       {palier.nom}
-                      <small className="muted" style={{ display: "block", fontSize: 10.5 }}>
-                        {palier.medecins} médecins
-                      </small>
+                      <span style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
+                        <input
+                          className="inp"
+                          style={{ marginBottom: 0, padding: "4px 6px", fontSize: 11, width: 44 }}
+                          value={valeurs[palier.min] as string}
+                          onChange={(e) => modifier(palier.min, e.target.value)}
+                          aria-label={`${palier.nom} médecins minimum`}
+                          inputMode="numeric"
+                        />
+                        <span className="muted" style={{ fontSize: 11 }}>
+                          à
+                        </span>
+                        <input
+                          className="inp"
+                          style={{ marginBottom: 0, padding: "4px 6px", fontSize: 11, width: 44 }}
+                          value={valeurs[palier.max] as string}
+                          onChange={(e) => modifier(palier.max, e.target.value)}
+                          aria-label={`${palier.nom} médecins maximum`}
+                          placeholder="∞"
+                          inputMode="numeric"
+                        />
+                        <span className="muted" style={{ fontSize: 11 }}>
+                          médecins
+                        </span>
+                      </span>
                     </td>
                     <td>
                       <input
@@ -461,7 +511,26 @@ export default function AbonnementsAdmin() {
               {PALIERS.map((palier) => (
                 <tr key={palier.formule}>
                   <td className={caseTab}>{palier.nom}</td>
-                  <td className={caseTab}>{palier.medecins}</td>
+                  <td className={caseTab}>
+                    <span className="flex items-center gap-1.5">
+                      <input
+                        value={valeurs[palier.min] as string}
+                        onChange={(e) => modifier(palier.min, e.target.value)}
+                        aria-label={`${palier.nom} médecins minimum`}
+                        inputMode="numeric"
+                        className={`${cellule} !w-[52px] !min-w-0 text-center`}
+                      />
+                      <span className="text-[12px] text-muted">à</span>
+                      <input
+                        value={valeurs[palier.max] as string}
+                        onChange={(e) => modifier(palier.max, e.target.value)}
+                        aria-label={`${palier.nom} médecins maximum`}
+                        placeholder="∞"
+                        inputMode="numeric"
+                        className={`${cellule} !w-[52px] !min-w-0 text-center`}
+                      />
+                    </span>
+                  </td>
                   <td className={caseTab}>
                     <input
                       value={valeurs[palier.mensuel] as string}
@@ -486,8 +555,9 @@ export default function AbonnementsAdmin() {
         <div className="mt-[14px] flex items-start gap-[9px] rounded-[11px] bg-teal-soft px-[13px] py-[11px] text-[12.5px] font-semibold leading-relaxed text-blue">
           <span aria-hidden>ℹ️</span>
           <div>
-            Le palier de départ découle du type déclaré à l’inscription ; requalifiez une structure
-            qui grandit. Un médecin couvert par le plan de son établissement ne paie pas en plus
+            Le palier de départ découle du type déclaré à l’inscription ; les bornes de taille
+            servent à requalifier une structure qui grandit. Laissez le maximum vide pour un palier
+            sans plafond. Un médecin couvert par le plan de son établissement ne paie pas en plus
             (pas de double facturation).
           </div>
         </div>

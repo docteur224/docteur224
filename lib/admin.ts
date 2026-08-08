@@ -1123,6 +1123,10 @@ export interface LigneTarif {
   prixMensuel: number;
   prixAnnuel: number;
   essaiJours: number;
+  /** Taille visée par un palier établissement ; nul pour une formule médecin. */
+  medecinsMin: number | null;
+  /** Nul = pas de plafond (le « + » de « 16+ »). */
+  medecinsMax: number | null;
 }
 
 export function useConfigAbonnements(): {
@@ -1137,6 +1141,8 @@ export function useConfigAbonnements(): {
       prixMensuel: t.prix_mensuel,
       prixAnnuel: t.prix_annuel,
       essaiJours: t.essai_jours,
+      medecinsMin: t.medecins_min,
+      medecinsMax: t.medecins_max,
     }));
   });
 
@@ -1145,6 +1151,10 @@ export function useConfigAbonnements(): {
     if (d.prixMensuel !== undefined) maj.prix_mensuel = d.prixMensuel;
     if (d.prixAnnuel !== undefined) maj.prix_annuel = d.prixAnnuel;
     if (d.essaiJours !== undefined) maj.essai_jours = d.essaiJours;
+    // `null` est une valeur voulue (pas de plafond) : tester `!== undefined`
+    // et non la véracité, sinon vider le champ n'effacerait jamais la borne.
+    if (d.medecinsMin !== undefined) maj.medecins_min = d.medecinsMin;
+    if (d.medecinsMax !== undefined) maj.medecins_max = d.medecinsMax;
     const { data, error } = await creerClientNavigateur()
       .from("tarifs_plateforme")
       .update(maj)
