@@ -903,33 +903,32 @@ export function useAbonnement(): {
     };
   }, [version]);
 
+  /*
+   * Le changement de formule passe par le serveur, et non plus par une
+   * écriture directe.
+   *
+   * L'ancienne version faisait un UPDATE client sur `abonnements` en s'y
+   * attribuant `statut: "actif"` et une `date_fin` calculée dans le
+   * navigateur. La migration 0019 a retiré les policies d'écriture client
+   * précisément pour ça — sinon n'importe qui s'offrait un abonnement actif
+   * jusqu'en 2099 depuis sa console. Depuis, l'UPDATE ne touchait plus aucune
+   * ligne : Postgres ne renvoie pas d'erreur quand la RLS filtre tout, donc
+   * l'écran annonçait « ✓ Abonnement mis à jour » sans que rien ne change.
+   *
+   * On réutilise la route de l'étape « Abonnement » du parcours : elle fait
+   * déjà exactement ce qu'il faut — liste blanche des formules, palier imposé
+   * pour un établissement, et surtout `statut` et `date_fin` calculés côté
+   * serveur d'après les réglages de gratuité. Ce qui s'achète ne se déclare
+   * pas depuis le client.
+   */
   async function changerFormule(formule: string, periode: string): Promise<{ erreur?: string }> {
-    const supabase = creerClientNavigateur();
-    const { data: auth } = await supabase.auth.getUser();
-    if (!auth.user) return { erreur: "Session expirée." };
-    const { data: u } = await supabase.from("utilisateurs").select("role").eq("id", auth.user.id).single();
-    const tarif = tarifs.find((t) => t.formule === formule);
-    const dateFin = new Date(Date.now() + (periode === "annuel" ? 365 : 30) * 86400000);
-    // Remplace l'abonnement courant (pas d'historique de facturation pour l'instant)
-    const { data: existants } = await supabase.from("abonnements").select("id").eq("titulaire_id", auth.user.id);
-    let error;
-    if (existants && existants.length > 0) {
-      ({ error } = await supabase
-        .from("abonnements")
-        .update({ formule, periode, statut: "actif", date_fin: versISO(dateFin), quota_sms: tarif?.quotaSms ?? 0 })
-        .eq("id", existants[0].id));
-    } else {
-      ({ error } = await supabase.from("abonnements").insert({
-        titulaire_id: auth.user.id,
-        type_titulaire: u?.role === "etablissement" ? "etablissement" : "medecin",
-        formule,
-        periode,
-        statut: "actif",
-        date_fin: versISO(dateFin),
-        quota_sms: tarif?.quotaSms ?? 0,
-      }));
-    }
-    if (error) return { erreur: error.message };
+    const reponse = await fetch("/api/inscription/abonnement", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ formule, periode }),
+    });
+    const corps = await reponse.json().catch(() => ({ erreur: "Réponse illisible." }));
+    if (!reponse.ok) return { erreur: corps.erreur ?? "Changement impossible." };
     setVersion((v) => v + 1);
     return {};
   }

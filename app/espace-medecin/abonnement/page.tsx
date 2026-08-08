@@ -53,6 +53,21 @@ export default function AbonnementMedecin() {
   const libelleFormule = formule === "premium" ? "Premium" : "Standard";
   const libellePeriode = periode === "annuel" ? "Annuel" : "Mensuel";
 
+  /*
+   * L'écran affichait « Actif » en dur, quel que soit l'état réel — et il
+   * disait donc vrai par accident, puisque l'ancien code d'écriture s'attribuait
+   * `statut: "actif"` depuis le navigateur. Maintenant que le statut est
+   * calculé côté serveur d'après les réglages de gratuité, il faut le lire :
+   * pendant la phase pilote un abonnement est en « essai », pas « actif ».
+   */
+  const STATUTS: Record<string, { label: string; ok: boolean }> = {
+    actif: { label: "Actif", ok: true },
+    essai: { label: "Essai", ok: true },
+    expire: { label: "Expiré", ok: false },
+    annule: { label: "Annulé", ok: false },
+  };
+  const etat = STATUTS[abonnement?.statut ?? ""] ?? { label: "Aucun", ok: false };
+
   return (
     <MedecinShell>
       {/* ===== Version mobile (écran « m-med-abonnement » de la maquette mobile) ===== */}
@@ -66,9 +81,11 @@ export default function AbonnementMedecin() {
                 <b>
                   {libelleFormule} · {libellePeriode}
                 </b>
-                <small>{finAbo ? `Actif jusqu'au ${finAbo}` : "Aucun abonnement actif"}</small>
+                <small>
+                  {finAbo ? `Jusqu'au ${finAbo}` : abonnement ? "Sans échéance" : "Aucun abonnement"}
+                </small>
               </div>
-              <span className="pill ok">Actif</span>
+              <span className={`pill${etat.ok ? " ok" : ""}`}>{etat.label}</span>
             </div>
             <div className="privnote info">
               <span aria-hidden>ℹ️</span>
@@ -173,11 +190,13 @@ export default function AbonnementMedecin() {
               Formule {libelleFormule} · {libellePeriode}
             </b>
             <small className="text-xs text-muted">
-              {finAbo ? `Actif jusqu'au ${finAbo}` : "Aucun abonnement actif"}
+              {finAbo ? `Jusqu'au ${finAbo}` : abonnement ? "Sans échéance" : "Aucun abonnement"}
             </small>
           </div>
-          <span className="rounded-lg bg-green-soft px-[9px] py-1 text-[11px] font-bold text-green">
-            Actif
+          <span
+            className={`rounded-lg px-[9px] py-1 text-[11px] font-bold ${etat.ok ? "bg-green-soft text-green" : "bg-red-soft text-red"}`}
+          >
+            {etat.label}
           </span>
         </div>
         <div className="flex items-start gap-[9px] rounded-xl bg-teal-soft px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-blue">
