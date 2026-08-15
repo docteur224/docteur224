@@ -421,7 +421,7 @@ export default function FinancesAdmin() {
   );
 
   return (
-    <AdminShell>
+    <AdminShell permission="finance">
       {/* ===== Version mobile ===== */}
       <div className="md:hidden">
         <EnTeteMobile retour="/espace-admin/plus" titre="Finances" />

@@ -63,7 +63,7 @@ export default function AnnoncesAdmin() {
   const etiquette = "mb-1.5 block text-xs font-bold text-muted";
 
   return (
-    <AdminShell>
+    <AdminShell permission="pilotage">
       {/* ===== Version mobile (écran « m-admin-annonces » de la maquette mobile) ===== */}
       <div className="md:hidden">
         <EnTeteMobile retour="/espace-admin/plus" titre="Annonces" />

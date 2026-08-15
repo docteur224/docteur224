@@ -137,7 +137,7 @@ export default function UtilisateursAdmin() {
   );
 
   return (
-    <AdminShell>
+    <AdminShell permission="utilisateurs">
       {/* ===== Version mobile (écran « m-admin-users » de la maquette mobile) ===== */}
       <div className="md:hidden">
         <EnTeteMobile variante="marque" />

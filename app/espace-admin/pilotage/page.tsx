@@ -29,7 +29,7 @@ export default function PilotageAdmin() {
   const { vedettes, recharger } = useVedettes();
 
   return (
-    <AdminShell>
+    <AdminShell permission="pilotage">
       {/* ===== Version mobile (écran « m-admin-pilotage » de la maquette mobile) ===== */}
       <div className="md:hidden">
         <EnTeteMobile retour="/espace-admin/plus" titre="Pilotage & croissance" />

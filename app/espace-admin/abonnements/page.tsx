@@ -285,7 +285,7 @@ export default function AbonnementsAdmin() {
   const caseTab = "border-b border-line px-[10px] py-[9px]";
 
   return (
-    <AdminShell>
+    <AdminShell permission="finance">
       {/* ===== Version mobile (écran « m-admin-abonnements » de la maquette mobile) ===== */}
       <div className="md:hidden">
         <EnTeteMobile retour="/espace-admin/plus" titre="Abonnements" />

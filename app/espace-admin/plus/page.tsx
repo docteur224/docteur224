@@ -3,6 +3,8 @@
 import Link from "next/link";
 import AdminShell from "@/components/admin/AdminShell";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
+import { useDroitsAdmin } from "@/lib/admin";
+import { aPermission, PERMISSION_PAR_ROUTE } from "@/lib/permissions-admin";
 
 /*
  * Plus (hub mobile) — reproduit l'écran « m-admin-plus » de la maquette
@@ -11,7 +13,7 @@ import EnTeteMobile from "@/components/mobile/EnTeteMobile";
  * navigation principale.
  */
 
-const ENTREES = [
+const TOUTES_ENTREES = [
   { href: "/espace-admin/moderation", icone: "🚩", titre: "Modération", sous: "Signalements et avis" },
   { href: "/espace-admin/pilotage", icone: "🧭", titre: "Pilotage & croissance", sous: "Couverture, SMS, vedette" },
   { href: "/espace-admin/annonces", icone: "📢", titre: "Annonces", sous: "Diffuser un message" },
@@ -25,6 +27,14 @@ const ENTREES = [
 ];
 
 export default function PlusAdmin() {
+  // Même règle que la barre latérale web : ce hub ne propose que les sections
+  // que les permissions de l'administrateur lui ouvrent (migration 0043).
+  const { droits, chargement } = useDroitsAdmin();
+  const ENTREES = TOUTES_ENTREES.filter((e) => {
+    const requise = PERMISSION_PAR_ROUTE[e.href];
+    return !requise || chargement || aPermission(droits, requise);
+  });
+
   return (
     <AdminShell>
       {/* ===== Version mobile ===== */}

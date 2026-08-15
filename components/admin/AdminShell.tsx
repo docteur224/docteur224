@@ -6,6 +6,12 @@ import { usePathname, useRouter } from "next/navigation";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
 import { ESPACE_PAR_ROLE, seDeconnecter, type Role } from "@/lib/auth";
 import { useProfilConnecte } from "@/lib/patient";
+import { useDroitsAdmin } from "@/lib/admin";
+import {
+  aPermission,
+  PERMISSION_PAR_ROUTE,
+  type Permission,
+} from "@/lib/permissions-admin";
 import ClocheNotifications from "@/components/site/ClocheNotifications";
 
 /**
@@ -13,6 +19,11 @@ import ClocheNotifications from "@/components/site/ClocheNotifications";
  * .snav des scènes admin-* de la maquette web. Menu complet : Tableau de bord,
  * Validations, Modération, Utilisateurs, Établissements, Pilotage & croissance,
  * Annonces, Finances, Abonnements, Paramètres, Équipe admin, Journal d'audit.
+ *
+ * Depuis la migration 0043, le menu n'affiche que les sections ouvertes à
+ * l'administrateur connecté, et `permission` ferme la page elle-même : un
+ * lien masqué reste tapable dans la barre d'adresse. C'est une commodité
+ * d'affichage, pas la sécurité — celle-ci vit dans la RLS.
  */
 const LIENS = [
   { href: "/espace-admin", icone: "📊", label: "Tableau de bord" },
@@ -30,10 +41,18 @@ const LIENS = [
   { href: "/espace-admin/audit", icone: "📜", label: "Journal d'audit" },
 ];
 
-export default function AdminShell({ children }: { children: React.ReactNode }) {
+export default function AdminShell({
+  children,
+  permission,
+}: {
+  children: React.ReactNode;
+  /** Section dont la page relève ; absente, la page est ouverte à tout admin. */
+  permission?: Permission;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const { profil, chargement } = useProfilConnecte();
+  const { droits, chargement: chargementDroits } = useDroitsAdmin();
 
   // Garde d'accès : l'espace admin exige un compte admin. Elle manquait — comme
   // elle manquait à PatientShell — et TOUT visiteur, y compris anonyme, ouvrait
@@ -59,6 +78,16 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     );
   }
 
+  const liens = LIENS.filter((lien) => {
+    const requise = PERMISSION_PAR_ROUTE[lien.href];
+    // Tant que les droits ne sont pas lus, on montre le menu complet plutôt
+    // qu'un menu qui s'amputerait sous les yeux de l'administrateur.
+    return !requise || chargementDroits || aPermission(droits, requise);
+  });
+
+  const refuse = permission && !chargementDroits && !aPermission(droits, permission);
+  const contenu = refuse ? <SectionFermee /> : children;
+
   return (
     <div className="grid min-h-screen bg-bg lg:grid-cols-[236px_1fr]">
       <aside className="hidden border-b border-line bg-white px-4 py-[22px] md:block lg:border-b-0 lg:border-r">
@@ -81,7 +110,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           </div>
         </div>
         <nav className="flex flex-col gap-[3px]">
-          {LIENS.map((lien) => {
+          {liens.map((lien) => {
             const actif = pathname === lien.href;
             return (
               <Link
@@ -118,8 +147,36 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           </button>
         </nav>
       </aside>
-      <main className="with-tabbar overflow-auto md:px-[30px] md:py-[26px]">{children}</main>
+      <main className="with-tabbar overflow-auto md:px-[30px] md:py-[26px]">{contenu}</main>
       <TabBarMobile role="admin" />
+    </div>
+  );
+}
+
+/**
+ * Section fermée : on dit ce qui manque et à qui le demander, plutôt que de
+ * rediriger vers le tableau de bord — un écran qui se dérobe sans explication
+ * passe pour une panne.
+ */
+function SectionFermee() {
+  return (
+    <div className="grid place-items-center px-4 py-16 text-center">
+      <div className="max-w-[420px]">
+        <span aria-hidden className="text-[34px]">
+          🔒
+        </span>
+        <h2 className="mt-3 text-[17px] font-extrabold">Section réservée</h2>
+        <p className="mt-1.5 text-[13px] leading-relaxed text-muted">
+          Votre compte administrateur ne dispose pas de la permission nécessaire pour ouvrir
+          cette section. Demandez-la à un administrateur en charge de l’équipe.
+        </p>
+        <Link
+          href="/espace-admin"
+          className="mt-4 inline-block rounded-[11px] bg-teal px-[18px] py-2.5 text-[13px] font-bold text-white"
+        >
+          Retour au tableau de bord
+        </Link>
+      </div>
     </div>
   );
 }

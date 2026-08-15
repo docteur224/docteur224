@@ -490,7 +490,7 @@ export default function ValidationsAdmin() {
   );
 
   return (
-    <AdminShell>
+    <AdminShell permission="validations">
       {rejetEnCours && (
         <DialogueMotif
           dossier={rejetEnCours}

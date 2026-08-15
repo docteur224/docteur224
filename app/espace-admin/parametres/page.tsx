@@ -80,7 +80,7 @@ export default function ParametresAdmin() {
   const { reglages, basculer } = useReglagesPlateforme();
 
   return (
-    <AdminShell>
+    <AdminShell permission="parametres">
       {/* En-tête mobile (écran « m-admin-params » de la maquette mobile) */}
       <div className="md:hidden">
         <EnTeteMobile retour="/espace-admin/plus" titre="Paramètres" />

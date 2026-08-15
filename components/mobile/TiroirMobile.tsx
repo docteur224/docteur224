@@ -5,6 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { LIBELLE_ROLE, RACCOURCIS_PATIENT, menuDuRole } from "@/components/mobile/menus-roles";
 import { seDeconnecter } from "@/lib/auth";
+import { useDroitsAdmin } from "@/lib/admin";
+import { aPermission, PERMISSION_PAR_ROUTE } from "@/lib/permissions-admin";
 import type { ProfilConnecte } from "@/lib/patient";
 
 /**
@@ -27,8 +29,16 @@ export default function TiroirMobile({
   const router = useRouter();
   const pathname = usePathname();
   const { panneau, glissement } = useGlissementFermeture(fermer, ouvert);
-  const { role, entrees } = menuDuRole(profil.role);
+  const { role, entrees: toutes } = menuDuRole(profil.role);
   const initiales = `${profil.prenom.charAt(0)}${profil.nom.charAt(0)}`.toUpperCase() || "?";
+
+  // Miroir de la barre latérale web : un administrateur ne voit que les
+  // sections que ses permissions lui ouvrent (migration 0043).
+  const { droits, chargement: chargementDroits } = useDroitsAdmin(role === "admin");
+  const entrees = toutes.filter((e) => {
+    const requise = PERMISSION_PAR_ROUTE[e.href];
+    return !requise || chargementDroits || aPermission(droits, requise);
+  });
 
   // Fermeture au changement d'écran : sans cela, le tiroir resterait ouvert
   // par-dessus la page d'arrivée après un clic sur un lien.

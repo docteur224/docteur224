@@ -67,7 +67,7 @@ export default function ModerationAdmin() {
   );
 
   return (
-    <AdminShell>
+    <AdminShell permission="moderation">
       {/* ===== Version mobile (écran « m-admin-moderation » de la maquette mobile) ===== */}
       <div className="md:hidden">
         <EnTeteMobile retour="/espace-admin/plus" titre="Modération" />

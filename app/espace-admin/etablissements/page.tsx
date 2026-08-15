@@ -66,7 +66,7 @@ export default function EtablissementsAdmin() {
       : `1 structure à requalifier : son effectif dépasse le plafond de son palier d’abonnement, elle est donc sous-facturée.`;
 
   return (
-    <AdminShell>
+    <AdminShell permission="etablissements">
       {/* ===== Version mobile (écran « m-admin-etabs » de la maquette mobile) ===== */}
       <div className="md:hidden">
         <EnTeteMobile retour="/espace-admin/plus" titre="Établissements" />

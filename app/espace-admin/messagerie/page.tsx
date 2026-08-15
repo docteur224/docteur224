@@ -269,7 +269,7 @@ export default function MessagerieAdmin() {
   );
 
   return (
-    <AdminShell>
+    <AdminShell permission="messagerie">
       <div className="md:hidden">
         <EnTeteMobile retour="/espace-admin/plus" titre="Messagerie" />
         <div className="pad">{contenu}</div>

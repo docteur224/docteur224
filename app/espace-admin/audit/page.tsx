@@ -16,7 +16,7 @@ export default function AuditAdmin() {
   const pagi = usePagination(journal, 20);
 
   return (
-    <AdminShell>
+    <AdminShell permission="audit">
       {/* ===== Version mobile (écran « m-admin-audit » de la maquette mobile) ===== */}
       <div className="md:hidden">
         <EnTeteMobile retour="/espace-admin/plus" titre="Journal d'audit" />

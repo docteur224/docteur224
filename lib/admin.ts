@@ -1170,38 +1170,207 @@ export async function envoyerAnnonce(message: string, segment: string, canaux: s
   return {};
 }
 
-/* ===== Équipe admin (sous-rôles, spec C.7.10) ===== */
+/* ===== Équipe admin (permissions, spec C.7.10 — migration 0043) ===== */
 
 export interface AdminEquipe {
   id: string;
   nom: string;
   email: string;
-  sousRoles: string[];
+  permissions: string[];
+  /** actif | suspendu */
+  statut: string;
+  actif: boolean;
+  /** Compte indéboulonnable : toutes les permissions, jamais désactivable. */
+  principal: boolean;
+  creeLe: string;
+  derniereConnexion: string | null;
+  /**
+   * « À l'instant », « il y a 2 h », « 3 juillet 2026 » ou « Jamais ».
+   * Calculé ici et non à l'affichage : le linter React refuse `Date.now()`
+   * pendant le rendu — une valeur qui change à chaque re-rendu n'a rien à
+   * faire dans du JSX.
+   */
+  derniereConnexionLibelle: string;
 }
 
-export function useEquipeAdmin(): { admins: AdminEquipe[]; recharger: () => void } {
-  const { donnees, recharger } = utiliserRequete<AdminEquipe[]>([], async () => {
-    const { data } = await creerClientNavigateur()
-      .from("utilisateurs")
-      .select("id, nom, prenom, email, sous_roles_admin")
-      .eq("role", "admin");
-    return (data ?? []).map((u) => ({
+function libelleConnexion(iso: string | null): string {
+  if (!iso) return "Jamais";
+  const ecart = Date.now() - new Date(iso).getTime();
+  if (ecart < 60_000) return "À l’instant";
+  if (ecart < 3_600_000) return `il y a ${Math.floor(ecart / 60_000)} min`;
+  if (ecart < 86_400_000) return `il y a ${Math.floor(ecart / 3_600_000)} h`;
+  return new Date(iso).toLocaleDateString("fr-FR", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+/**
+ * L'équipe d'administration, dernière connexion comprise.
+ *
+ * Passe par la fonction `admins_equipe()` : « dernière connexion » vit dans
+ * `auth.users`, que la RLS n'expose à personne. Un SELECT sur `utilisateurs`
+ * ne pourrait donc pas dire qui s'est connecté, ni quand.
+ */
+export function useEquipeAdmin(): {
+  admins: AdminEquipe[];
+  chargement: boolean;
+  recharger: () => void;
+} {
+  const { donnees, recharger } = utiliserRequete<AdminEquipe[] | null>(null, async () => {
+    const { data } = await creerClientNavigateur().rpc("admins_equipe");
+    type L = {
+      id: string;
+      email: string;
+      nom: string | null;
+      prenom: string | null;
+      permissions: string[] | null;
+      statut: string;
+      principal: boolean;
+      cree_le: string;
+      derniere_connexion: string | null;
+    };
+    return ((data ?? []) as L[]).map((u) => ({
       id: u.id,
       nom: `${u.prenom ?? ""} ${u.nom ?? ""}`.trim() || u.email,
       email: u.email,
-      sousRoles: u.sous_roles_admin ?? [],
+      permissions: u.permissions ?? [],
+      statut: u.statut,
+      actif: u.statut === "actif",
+      principal: u.principal,
+      creeLe: u.cree_le,
+      derniereConnexion: u.derniere_connexion,
+      derniereConnexionLibelle: libelleConnexion(u.derniere_connexion),
     }));
   });
-  return { admins: donnees, recharger };
+  return { admins: donnees ?? [], chargement: donnees === null, recharger };
 }
 
-export async function majSousRoles(adminId: string, sousRoles: string[]): Promise<{ erreur?: string }> {
-  const { error } = await creerClientNavigateur()
+/** Droits de l'administrateur connecté — ce qui commande toute la console. */
+export interface DroitsAdmin {
+  id: string;
+  permissions: string[];
+  principal: boolean;
+}
+
+export function useDroitsAdmin(actif = true): { droits: DroitsAdmin | null; chargement: boolean } {
+  const { donnees } = utiliserRequete<{ pret: boolean; droits: DroitsAdmin | null }>(
+    { pret: false, droits: null },
+    async () => {
+      // `actif` évite la requête là où la réponse est connue d'avance : le
+      // tiroir mobile monte pour tous les rôles, et un patient n'a pas de
+      // droits d'administration à aller chercher.
+      if (!actif) return { pret: true, droits: null };
+      const supabase = creerClientNavigateur();
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) return { pret: true, droits: null };
+      const { data } = await supabase
+        .from("utilisateurs")
+        .select("id, role, statut, sous_roles_admin, admin_principal")
+        .eq("id", auth.user.id)
+        .maybeSingle();
+      // Un administrateur suspendu n'est plus administrateur : même règle
+      // qu'en base (`est_admin()`), sinon l'écran ouvrirait des sections que
+      // la RLS refuserait ensuite ligne par ligne.
+      if (!data || data.role !== "admin" || data.statut !== "actif") return { pret: true, droits: null };
+      return {
+        pret: true,
+        droits: {
+          id: data.id,
+          permissions: data.sous_roles_admin ?? [],
+          principal: Boolean(data.admin_principal),
+        },
+      };
+    },
+    [actif]
+  );
+  return { droits: donnees.droits, chargement: !donnees.pret };
+}
+
+/** Message rendu quand la RLS refuse une écriture sans lever d'erreur. */
+const REFUS_EQUIPE =
+  "Modification refusée : la gestion de l’équipe demande la permission « Équipe admin ».";
+
+/**
+ * Donne ou retire des permissions. Écrit directement dans `utilisateurs` :
+ * la RLS (`upd_utilisateurs_admin`) et le trigger `bloquer_escalade_role`
+ * portent toutes les règles — permission « Équipe admin » exigée, pas de
+ * modification de ses propres droits, compte principal intouchable.
+ */
+export async function majPermissionsAdmin(
+  admin: AdminEquipe,
+  permissions: string[]
+): Promise<{ erreur?: string }> {
+  const { data, error } = await creerClientNavigateur()
     .from("utilisateurs")
-    .update({ sous_roles_admin: sousRoles })
-    .eq("id", adminId);
-  if (!error) await tracerAudit("A modifié les sous-rôles d'un admin", sousRoles.join(", ") || "aucun");
-  return error ? { erreur: error.message } : {};
+    .update({ sous_roles_admin: permissions })
+    .eq("id", admin.id)
+    .select("id");
+  // Les refus du trigger remontent en clair, et en français : les afficher
+  // tels quels vaut mieux qu'un message générique qui masquerait la raison.
+  if (error) return { erreur: error.message };
+  // Un UPDATE bloqué par la RLS ne lève rien : il touche zéro ligne.
+  if (!data?.length) return { erreur: REFUS_EQUIPE };
+  await tracerAudit(
+    "A modifié les permissions d'un administrateur",
+    `${admin.nom} · ${permissions.join(", ") || "aucune permission"}`
+  );
+  return {};
+}
+
+async function appelEquipe(
+  url: string,
+  init: RequestInit,
+  echec: string
+): Promise<{ erreur?: string }> {
+  try {
+    const reponse = await fetch(url, init);
+    const corps = await reponse.json().catch(() => ({}));
+    return reponse.ok ? {} : { erreur: corps.erreur ?? echec };
+  } catch {
+    return { erreur: "Connexion impossible. Vérifiez votre réseau, puis réessayez." };
+  }
+}
+
+export interface NouveauCompteAdmin {
+  nomComplet: string;
+  email: string;
+  motDePasse: string;
+  permissions: string[];
+}
+
+/**
+ * Ouvre un compte administrateur. Passe par le serveur : créer un compte
+ * d'authentification exige la clé service_role, qu'aucune page ne détient.
+ */
+export async function creerCompteAdmin(compte: NouveauCompteAdmin): Promise<{ erreur?: string }> {
+  return appelEquipe(
+    "/api/admin/equipe",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(compte),
+    },
+    "La création du compte a échoué."
+  );
+}
+
+/** Désactive (ou réactive) un compte : le bannissement ferme sa session. */
+export async function majStatutAdmin(id: string, actif: boolean): Promise<{ erreur?: string }> {
+  return appelEquipe(
+    `/api/admin/equipe/${id}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ actif }),
+    },
+    "Le changement d’état a échoué."
+  );
+}
+
+export async function supprimerCompteAdmin(id: string): Promise<{ erreur?: string }> {
+  return appelEquipe(`/api/admin/equipe/${id}`, { method: "DELETE" }, "La suppression a échoué.");
 }
 
 /* ===== Configuration des abonnements (tarifs_plateforme) ===== */
