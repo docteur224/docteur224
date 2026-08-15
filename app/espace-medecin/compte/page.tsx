@@ -29,6 +29,12 @@ const ENTREES = [
     sous: "Comptes et permissions de l'équipe",
   },
   { href: "/espace-medecin/abonnement", icone: "💳", titre: "Mon abonnement", sous: "Formule Standard / Premium" },
+  {
+    href: "/espace-medecin/mon-compte",
+    icone: "🔐",
+    titre: "Mon compte",
+    sous: "Mot de passe, abonnement, suspension",
+  },
   { href: "/", icone: "↩️", titre: "Déconnexion", sous: "" },
 ];
 

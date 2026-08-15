@@ -18,6 +18,10 @@ export interface ProfilConnecte {
   prenom: string;
   email: string;
   telephone: string;
+  /** actif | suspendu — un compte suspendu garde sa session mais n'agit plus. */
+  statut: string;
+  /** Ancienneté du compte, affichée dans « Mon compte ». */
+  creeLe: string;
   dateNaissance?: string;
   genre?: string;
   villeId?: string | null;
@@ -34,7 +38,7 @@ async function chargerProfil(): Promise<ProfilConnecte | null> {
   if (!auth.user) return null;
   const { data: u } = await supabase
     .from("utilisateurs")
-    .select("id, role, nom, prenom, email, telephone")
+    .select("id, role, nom, prenom, email, telephone, statut, cree_le")
     .eq("id", auth.user.id)
     .single();
   if (!u) return null;
@@ -60,6 +64,8 @@ async function chargerProfil(): Promise<ProfilConnecte | null> {
     prenom: u.prenom ?? "",
     email: u.email,
     telephone: u.telephone ?? "",
+    statut: u.statut ?? "actif",
+    creeLe: u.cree_le,
     dateNaissance,
     genre,
     villeId,
@@ -216,24 +222,11 @@ export async function changerEmail(nouveau: string): Promise<{ erreur?: string; 
   return { ancien: auth.user.email ?? "" };
 }
 
-/**
- * Suppression du compte patient : anonymisation côté serveur (les
- * consultations passées appartiennent au dossier du médecin) puis
- * déconnexion. Voir app/api/compte/supprimer/route.ts.
+/*
+ * La fermeture de compte vit désormais dans lib/compte.ts (`fermerMonCompte`),
+ * commune aux cinq rôles : elle n'était ici que parce que seul le patient
+ * pouvait partir.
  */
-export async function supprimerMonCompte(): Promise<{ erreur?: string }> {
-  const reponse = await fetch("/api/compte/supprimer", { method: "POST" });
-  if (!reponse.ok) {
-    const { erreur } = await reponse
-      .json()
-      .catch(() => ({ erreur: "La suppression a échoué. Réessayez." }));
-    return { erreur };
-  }
-  await creerClientNavigateur().auth.signOut();
-  cacheProfil = undefined;
-  oublierProchainRendezVous();
-  return {};
-}
 
 /* ===== Paramètres (préférences de notification, en base) ===== */
 

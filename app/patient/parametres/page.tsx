@@ -1,18 +1,20 @@
 "use client";
 
+import Link from "next/link";
 import PatientShell from "@/components/patient/PatientShell";
 import Interrupteur from "@/components/patient/Interrupteur";
-import ChangerMotDePasse from "@/components/patient/ChangerMotDePasse";
-import ExporterMesDonnees from "@/components/patient/ExporterMesDonnees";
-import SupprimerCompte from "@/components/patient/SupprimerCompte";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { useParametresPatient } from "@/lib/patient";
 
 /*
  * Paramètres — reproduit l'écran « pat-params » de la maquette web :
- * notifications, langue et sécurité. Les interrupteurs sont persistés
- * dans la table `patients` (colonnes pref_*). La sécurité couvre le
- * changement de mot de passe et la suppression du compte.
+ * notifications et langue. Les interrupteurs sont persistés dans la table
+ * `patients` (colonnes pref_*).
+ *
+ * Tout ce qui touche au COMPTE lui-même — mot de passe, export des données,
+ * suspension, fermeture — a rejoint « Mon compte », l'écran commun aux cinq
+ * rôles. Deux endroits pour changer son mot de passe, c'était un de trop :
+ * seul le patient en avait un, et les corrections n'y arrivaient jamais.
  */
 export default function Parametres() {
   const { parametres, basculer } = useParametresPatient();
@@ -78,23 +80,14 @@ export default function Parametres() {
             </div>
           </div>
           <div className="card2">
-            <h4>Sécurité</h4>
-            <ChangerMotDePasse mobile />
-            <div className="setrow">
-              <div>
-                <b>Double authentification</b>
-                <small>Code par SMS</small>
-              </div>
-              <span style={{ fontSize: 10.5, fontWeight: 700, color: "var(--muted)" }}>
-                Bientôt
-              </span>
-            </div>
+            <h4>Mon compte</h4>
+            <p className="muted" style={{ fontSize: 12.5, marginBottom: 10 }}>
+              Mot de passe, export de vos données, suspension et fermeture du compte.
+            </p>
+            <Link href="/patient/mon-compte" className="btn block" style={{ display: "block", textAlign: "center" }}>
+              Ouvrir « Mon compte »
+            </Link>
           </div>
-          <div className="card2">
-            <h4>Mes données</h4>
-            <ExporterMesDonnees mobile />
-          </div>
-          <SupprimerCompte mobile />
         </div>
       </div>
 
@@ -161,27 +154,22 @@ export default function Parametres() {
       </div>
 
       <div className="mb-4 rounded-2xl border border-line bg-white p-5">
-        <h3 className="mb-1 text-[15px] font-extrabold">Sécurité</h3>
-        <div className="border-b border-line">
-          <ChangerMotDePasse />
-        </div>
-        <div className="flex items-center justify-between gap-[14px] py-[15px]">
+        <h3 className="mb-1 text-[15px] font-extrabold">Mon compte</h3>
+        <div className="flex flex-wrap items-center justify-between gap-[14px] py-[15px]">
           <div>
-            <b className="block text-[13.5px] font-bold">
-              Authentification à deux facteurs (2FA)
-            </b>
-            <small className="text-xs text-muted">Sécuriser la connexion par code SMS</small>
+            <b className="block text-[13.5px] font-bold">Sécurité, données et fermeture</b>
+            <small className="text-xs text-muted">
+              Mot de passe, export de vos données, suspension et fermeture du compte
+            </small>
           </div>
-          <span className="text-[11.5px] font-bold text-muted">Bientôt disponible</span>
+          <Link
+            href="/patient/mon-compte"
+            className="rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg"
+          >
+            Ouvrir « Mon compte »
+          </Link>
         </div>
       </div>
-
-      <div className="mb-4 rounded-2xl border border-line bg-white p-5">
-        <h3 className="mb-1 text-[15px] font-extrabold">Mes données</h3>
-        <ExporterMesDonnees />
-      </div>
-
-      <SupprimerCompte />
       </div>
     </PatientShell>
   );

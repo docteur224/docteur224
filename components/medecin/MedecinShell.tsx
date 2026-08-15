@@ -6,6 +6,8 @@ import { useEffect } from "react";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
 import { seDeconnecter } from "@/lib/auth";
 import { useContextePro } from "@/lib/pro";
+import { useProfilConnecte } from "@/lib/patient";
+import CompteSuspendu from "@/components/compte/CompteSuspendu";
 import { useParcoursInscription } from "@/lib/inscription-pro";
 import ClocheNotifications from "@/components/site/ClocheNotifications";
 
@@ -35,6 +37,7 @@ const LIENS = [
   { href: "/espace-medecin/abonnement", icone: "💳", label: "Mon abonnement", medecinSeul: true },
   { href: "/espace-medecin/paiements", icone: "🧾", label: "Mes paiements", medecinSeul: true },
   { href: "/espace-medecin/profil", icone: "👤", label: "Mon profil" },
+  { href: "/espace-medecin/mon-compte", icone: "🔐", label: "Mon compte" },
 ];
 
 export default function MedecinShell({
@@ -48,6 +51,7 @@ export default function MedecinShell({
   const pathname = usePathname();
   const router = useRouter();
   const { medecin, chargement, role } = useContextePro();
+  const { profil } = useProfilConnecte();
 
   // Garde d'accès : l'espace médecin exige un compte medecin ou assistant.
   // Sans ça, un patient (ou une session expirée) restait bloqué sur « Chargement… ».
@@ -140,6 +144,11 @@ export default function MedecinShell({
       <main className="with-tabbar overflow-auto md:px-[30px] md:py-[26px]">
         {enParcours ? (
           <p className="py-16 text-center text-[13px] text-muted">Redirection…</p>
+        ) : profil?.statut === "suspendu" ? (
+          // Compte mis en pause par son titulaire : l'espace se referme sur
+          // l'écran de réactivation. Laisser l'interface ouverte donnerait
+          // des boutons que la base refuse (migration 0045).
+          <CompteSuspendu role={profil.role} />
         ) : refuse ? (
           <EcranReserve />
         ) : (

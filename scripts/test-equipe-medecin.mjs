@@ -61,12 +61,36 @@ const medecin = await ouvrirSession("medecin1@test.docteur224.com", "test1234");
 const medecinId = (await medecin.client.auth.getUser()).data.user.id;
 const admin = await ouvrirSession("admin@docteur224.com", "alpha2308");
 
-// Le plafond d'origine est remis en place à la fin, quoi qu'il arrive.
-const { data: tarifDepart } = await service
-  .from("tarifs_plateforme")
-  .select("assistants_inclus")
-  .eq("formule", "standard")
+/*
+ * Point de départ imposé, et non supposé.
+ *
+ * Le scénario repose sur « Standard = 1 place, déjà prise » : un essai
+ * précédent interrompu en cours de route laisse un plafond relevé et des
+ * comptes de test rattachés, et tout le reste s'écroule sur un état qui
+ * n'a rien à voir avec le code. On remet donc la table avant de jouer.
+ *
+ * La suite s'approprie le plafond de Standard le temps de tourner et le
+ * repose à 1 en partant : elle crée et ferme des comptes, elle n'a pas sa
+ * place sur une base d'exploitation.
+ */
+const { data: medecin1 } = await service
+  .from("utilisateurs")
+  .select("id")
+  .eq("email", "medecin1@test.docteur224.com")
   .single();
+const { data: residus } = await service
+  .from("assistants")
+  .select("id, utilisateurs ( email )")
+  .eq("medecin_id", medecin1.id);
+for (const r of residus ?? []) {
+  const email = r.utilisateurs?.email ?? "";
+  if (email.startsWith("assistant1@")) continue; // celui du seed
+  await service.from("assistants").delete().eq("id", r.id);
+  await service.from("journal_audit").delete().eq("cible_id", r.id);
+  await service.auth.admin.deleteUser(r.id);
+  await service.from("utilisateurs").delete().eq("id", r.id);
+}
+await service.from("tarifs_plateforme").update({ assistants_inclus: 1 }).eq("formule", "standard");
 
 /* ---------- 1. Le plafond vient de la formule ---------- */
 {
@@ -350,10 +374,7 @@ const assistant = await ouvrirSession(emailAssistant, MDP_ASSISTANT);
 }
 
 /* ---------- Nettoyage ---------- */
-await service
-  .from("tarifs_plateforme")
-  .update({ assistants_inclus: tarifDepart?.assistants_inclus ?? 1 })
-  .eq("formule", "standard");
+await service.from("tarifs_plateforme").update({ assistants_inclus: 1 }).eq("formule", "standard");
 if (idAssistant) {
   await service.from("journal_audit").delete().eq("cible_id", idAssistant);
   await service.auth.admin.deleteUser(idAssistant);

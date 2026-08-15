@@ -13,6 +13,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * On procède donc par anonymisation + désactivation, la seule étape
  * irréversible — le bannissement — venant en dernier.
  *
+ * Vaut pour TOUS les rôles, y compris administrateur : le journal d'audit
+ * référence l'acteur de chaque décision, et un DELETE effacerait la trace
+ * de ce qu'il a fait.
+ *
  * À n'appeler qu'avec un client `service_role` : ces écritures traversent
  * la RLS et l'API auth admin.
  */
@@ -20,7 +24,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 const BANNISSEMENT_PERMANENT = "876000h"; // 100 ans
 const STATUTS_A_VENIR = ["en_attente", "confirme"];
 
-export type RoleSupprimable = "patient" | "medecin" | "etablissement" | "assistant";
+export type RoleSupprimable = "patient" | "medecin" | "etablissement" | "assistant" | "admin";
 
 /** Annule les rendez-vous futurs liés au compte ; le passé reste au dossier. */
 async function annulerRendezVousAVenir(
@@ -116,6 +120,10 @@ export async function supprimerCompte(
       email: emailAnonyme,
       telephone: null,
       statut: "supprime",
+      // Un compte fermé ne garde aucun droit : si la ligne était un jour
+      // rouverte, elle repartirait sans permission plutôt qu'avec les
+      // siennes. Sans effet sur les autres rôles, dont la liste est vide.
+      sous_roles_admin: [],
     })
     .eq("id", id);
   if (eUtilisateur) return { erreur: eUtilisateur.message };

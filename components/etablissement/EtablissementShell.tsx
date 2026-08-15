@@ -6,6 +6,8 @@ import { useEffect } from "react";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
 import { seDeconnecter } from "@/lib/auth";
 import { useEtablissementConnecte } from "@/lib/etablissement";
+import { useProfilConnecte } from "@/lib/patient";
+import CompteSuspendu from "@/components/compte/CompteSuspendu";
 import { useParcoursInscription } from "@/lib/inscription-pro";
 import ClocheNotifications from "@/components/site/ClocheNotifications";
 
@@ -22,12 +24,14 @@ const LIENS = [
   { href: "/espace-etablissement/statistiques", icone: "📈", label: "Statistiques" },
   { href: "/espace-etablissement/abonnement", icone: "💳", label: "Abonnement" },
   { href: "/espace-etablissement/compte", icone: "⚙️", label: "Compte & paramètres" },
+  { href: "/espace-etablissement/mon-compte", icone: "🔐", label: "Mon compte" },
 ];
 
 export default function EtablissementShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { etablissement } = useEtablissementConnecte();
+  const { profil } = useProfilConnecte();
 
   // Parcours d'inscription inachevé → retour à l'étape courante du wizard.
   const parcours = useParcoursInscription();
@@ -103,6 +107,8 @@ export default function EtablissementShell({ children }: { children: React.React
       <main className="with-tabbar overflow-auto md:px-[30px] md:py-[26px]">
         {enParcours ? (
           <p className="py-16 text-center text-[13px] text-muted">Redirection…</p>
+        ) : profil?.statut === "suspendu" ? (
+          <CompteSuspendu role={profil.role} />
         ) : (
           children
         )}

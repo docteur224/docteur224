@@ -30,6 +30,7 @@ export const MENUS: Record<RoleMenu, EntreeMenu[]> = {
     { href: "/patient/avis", icone: "⭐", label: "Mes avis" },
     { href: "/patient/notifications", icone: "🔔", label: "Notifications" },
     { href: "/patient/profil", icone: "👤", label: "Mon profil" },
+    { href: "/patient/mon-compte", icone: "🔐", label: "Mon compte" },
     { href: "/patient/parametres", icone: "⚙️", label: "Paramètres" },
   ],
   // components/medecin/MedecinShell.tsx
@@ -45,6 +46,7 @@ export const MENUS: Record<RoleMenu, EntreeMenu[]> = {
     { href: "/espace-medecin/abonnement", icone: "💳", label: "Mon abonnement" },
     { href: "/espace-medecin/paiements", icone: "🧾", label: "Mes paiements" },
     { href: "/espace-medecin/profil", icone: "👤", label: "Mon profil" },
+    { href: "/espace-medecin/mon-compte", icone: "🔐", label: "Mon compte" },
   ],
   // components/assistant/AssistantShell.tsx
   assistant: [
@@ -53,7 +55,8 @@ export const MENUS: Record<RoleMenu, EntreeMenu[]> = {
     { href: "/espace-assistant/creneaux", icone: "🕐", label: "Créneaux & dispos" },
     { href: "/espace-assistant/patients", icone: "👥", label: "Patients" },
     { href: "/espace-assistant/messages", icone: "💬", label: "Messagerie" },
-    { href: "/espace-assistant/compte", icone: "👤", label: "Mon compte" },
+    { href: "/espace-assistant/compte", icone: "👤", label: "Mes permissions" },
+    { href: "/espace-assistant/mon-compte", icone: "🔐", label: "Mon compte" },
   ],
   // components/etablissement/EtablissementShell.tsx
   etablissement: [
@@ -63,6 +66,7 @@ export const MENUS: Record<RoleMenu, EntreeMenu[]> = {
     { href: "/espace-etablissement/statistiques", icone: "📈", label: "Statistiques" },
     { href: "/espace-etablissement/abonnement", icone: "💳", label: "Abonnement" },
     { href: "/espace-etablissement/compte", icone: "⚙️", label: "Compte & paramètres" },
+    { href: "/espace-etablissement/mon-compte", icone: "🔐", label: "Mon compte" },
   ],
   // components/admin/AdminShell.tsx
   admin: [
@@ -79,6 +83,7 @@ export const MENUS: Record<RoleMenu, EntreeMenu[]> = {
     { href: "/espace-admin/parametres", icone: "⚙️", label: "Paramètres" },
     { href: "/espace-admin/equipe", icone: "🛡️", label: "Équipe admin" },
     { href: "/espace-admin/audit", icone: "📜", label: "Journal d'audit" },
+    { href: "/espace-admin/mon-compte", icone: "🔐", label: "Mon compte" },
   ],
 };
 

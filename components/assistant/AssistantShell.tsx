@@ -6,6 +6,8 @@ import { useEffect } from "react";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
 import { seDeconnecter } from "@/lib/auth";
 import { useContextePro } from "@/lib/pro";
+import { useProfilConnecte } from "@/lib/patient";
+import CompteSuspendu from "@/components/compte/CompteSuspendu";
 import ClocheNotifications from "@/components/site/ClocheNotifications";
 
 /**
@@ -22,13 +24,15 @@ const LIENS = [
   { href: "/espace-assistant/creneaux", icone: "🕐", label: "Créneaux & dispos" },
   { href: "/espace-assistant/patients", icone: "👥", label: "Patients" },
   { href: "/espace-assistant/messages", icone: "💬", label: "Messagerie" },
-  { href: "/espace-assistant/compte", icone: "👤", label: "Mon compte" },
+  { href: "/espace-assistant/compte", icone: "👤", label: "Mes permissions" },
+  { href: "/espace-assistant/mon-compte", icone: "🔐", label: "Mon compte" },
 ];
 
 export default function AssistantShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { medecin, utilisateur, chargement, role } = useContextePro();
+  const { profil } = useProfilConnecte();
 
   // Garde d'accès : l'espace assistant exige un compte assistant (ou médecin).
   useEffect(() => {
@@ -98,7 +102,12 @@ export default function AssistantShell({ children }: { children: React.ReactNode
           </button>
         </nav>
       </aside>
-      <main className="with-tabbar overflow-auto md:px-[30px] md:py-[26px]">{children}</main>
+      <main className="with-tabbar overflow-auto md:px-[30px] md:py-[26px]">
+        {/* Compte mis en pause par son titulaire : l'espace se referme sur
+            l'écran de réactivation. Laisser l'interface ouverte donnerait des
+            boutons que la base refuse (migration 0045). */}
+        {profil?.statut === "suspendu" ? <CompteSuspendu role={profil.role} /> : children}
+      </main>
       <TabBarMobile role="assistant" />
     </div>
   );

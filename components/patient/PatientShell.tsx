@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
+import CompteSuspendu from "@/components/compte/CompteSuspendu";
 import { ESPACE_PAR_ROLE, seDeconnecter, type Role } from "@/lib/auth";
 import { useProfilConnecte } from "@/lib/patient";
 import ClocheNotifications from "@/components/site/ClocheNotifications";
@@ -23,6 +24,7 @@ const LIENS = [
   { href: "/patient/avis", icone: "⭐", label: "Mes avis" },
   { href: "/patient/notifications", icone: "🔔", label: "Notifications" },
   { href: "/patient/profil", icone: "👤", label: "Mon profil" },
+  { href: "/patient/mon-compte", icone: "🔐", label: "Mon compte" },
   { href: "/patient/parametres", icone: "⚙️", label: "Paramètres" },
 ];
 
@@ -122,7 +124,9 @@ export default function PatientShell({ children }: { children: React.ReactNode }
           </button>
         </nav>
       </aside>
-      <main className="with-tabbar overflow-auto md:px-[30px] md:py-[26px]">{children}</main>
+      <main className="with-tabbar overflow-auto md:px-[30px] md:py-[26px]">
+        {profil?.statut === "suspendu" ? <CompteSuspendu role={profil.role} /> : children}
+      </main>
       <TabBarMobile role="public" />
     </div>
   );

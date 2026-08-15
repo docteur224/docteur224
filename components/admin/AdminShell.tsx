@@ -13,6 +13,7 @@ import {
   type Permission,
 } from "@/lib/permissions-admin";
 import ClocheNotifications from "@/components/site/ClocheNotifications";
+import CompteSuspendu from "@/components/compte/CompteSuspendu";
 
 /**
  * Coquille de l'espace administrateur — reproduit la structure .dash / .side /
@@ -39,6 +40,7 @@ const LIENS = [
   { href: "/espace-admin/parametres", icone: "⚙️", label: "Paramètres" },
   { href: "/espace-admin/equipe", icone: "🛡️", label: "Équipe admin" },
   { href: "/espace-admin/audit", icone: "📜", label: "Journal d'audit" },
+  { href: "/espace-admin/mon-compte", icone: "🔐", label: "Mon compte" },
 ];
 
 export default function AdminShell({
@@ -86,7 +88,17 @@ export default function AdminShell({
   });
 
   const refuse = permission && !chargementDroits && !aPermission(droits, permission);
-  const contenu = refuse ? <SectionFermee /> : children;
+  // Compte mis en pause par son titulaire : l'espace se referme sur l'écran
+  // de réactivation. Laisser l'interface ouverte donnerait des boutons que
+  // la base refuse (migration 0045).
+  const contenu =
+    profil?.statut === "suspendu" ? (
+      <CompteSuspendu role="admin" />
+    ) : refuse ? (
+      <SectionFermee />
+    ) : (
+      children
+    );
 
   return (
     <div className="grid min-h-screen bg-bg lg:grid-cols-[236px_1fr]">
