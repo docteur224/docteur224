@@ -62,6 +62,11 @@ let idNouveau = null;
 
 const principal = await ouvrirSession("admin@docteur224.com", "alpha2308");
 
+// Combien d'administrateurs AVANT le scénario : la plateforme en compte
+// autant que l'exploitant en a ouverts, un chiffre écrit en dur ici serait
+// périmé au premier compte créé pour de vrai.
+const equipeDepart = ((await principal.client.rpc("admins_equipe")).data ?? []).length;
+
 /* ---------- 1. La liste de l'équipe ---------- */
 {
   const { data } = await principal.client.rpc("admins_equipe");
@@ -140,7 +145,11 @@ const principal = await ouvrirSession("admin@docteur224.com", "alpha2308");
 const nouveau = await ouvrirSession(emailNouveau, MDP_NOUVEAU);
 {
   const { data } = await nouveau.client.rpc("admins_equipe");
-  test("Le nouvel admin voit l'équipe", (data ?? []).length === 2, `${data?.length} compte(s)`);
+  test(
+    "Le nouvel admin voit l'équipe",
+    (data ?? []).length === equipeDepart + 1,
+    `${data?.length} compte(s)`
+  );
 
   // Pas la permission « Équipe admin » : la RLS refuse sans lever d'erreur.
   const { data: maj } = await nouveau.client

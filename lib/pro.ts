@@ -10,6 +10,7 @@ import {
   type MedecinAvecPlages,
 } from "@/lib/donnees";
 import { versISO } from "@/lib/dates";
+import { colonnesPermissions } from "@/lib/permissions-assistant";
 import type { Paiement } from "@/lib/paiements";
 import { JOURS_NOMS, horairesParJour, resumeHeures, resumeJours } from "@/lib/horaires";
 
@@ -782,21 +783,22 @@ export interface AssistantEquipe {
   id: string;
   nom: string;
   prenom: string;
+  nomComplet: string;
   email: string;
+  /** actif | suspendu */
+  statut: string;
+  actif: boolean;
   permissions: PermissionsAssistante;
+  /** Les mêmes, sous forme de clés — c'est ce que le serveur attend. */
+  cles: string[];
 }
 
-const COLONNES_PERMISSION: Record<keyof PermissionsAssistante, string> = {
-  voirAgenda: "peut_voir_agenda",
-  confirmerAnnuler: "peut_confirmer_annuler",
-  reprogrammer: "peut_reprogrammer",
-  creerRdv: "peut_creer_rdv",
-  messagerie: "peut_messagerie",
-  gererCreneaux: "peut_gerer_creneaux",
-};
-
-export function useEquipe(medecinId: string | undefined): { assistants: AssistantEquipe[]; recharger: () => void } {
-  const [assistants, setAssistants] = useState<AssistantEquipe[]>([]);
+export function useEquipe(medecinId: string | undefined): {
+  assistants: AssistantEquipe[];
+  chargement: boolean;
+  recharger: () => void;
+} {
+  const [assistants, setAssistants] = useState<AssistantEquipe[] | null>(null);
   const [version, setVersion] = useState(0);
   useEffect(() => {
     if (!medecinId) return;
@@ -804,7 +806,7 @@ export function useEquipe(medecinId: string | undefined): { assistants: Assistan
     creerClientNavigateur()
       .from("assistants")
       .select(`id, peut_voir_agenda, peut_confirmer_annuler, peut_reprogrammer, peut_creer_rdv,
-               peut_messagerie, peut_gerer_creneaux, utilisateurs ( nom, prenom, email )`)
+               peut_messagerie, peut_gerer_creneaux, utilisateurs ( nom, prenom, email, statut )`)
       .eq("medecin_id", medecinId)
       .then(({ data }) => {
         if (!actif) return;
@@ -812,40 +814,176 @@ export function useEquipe(medecinId: string | undefined): { assistants: Assistan
           id: string;
           peut_voir_agenda: boolean; peut_confirmer_annuler: boolean; peut_reprogrammer: boolean;
           peut_creer_rdv: boolean; peut_messagerie: boolean; peut_gerer_creneaux: boolean;
-          utilisateurs: { nom: string | null; prenom: string | null; email: string } | null;
+          utilisateurs: { nom: string | null; prenom: string | null; email: string; statut: string } | null;
         };
-        setAssistants(((data ?? []) as unknown as L[]).map((a) => ({
-          id: a.id,
-          nom: a.utilisateurs?.nom ?? "",
-          prenom: a.utilisateurs?.prenom ?? "",
-          email: a.utilisateurs?.email ?? "",
-          permissions: {
-            voirAgenda: a.peut_voir_agenda,
-            confirmerAnnuler: a.peut_confirmer_annuler,
-            reprogrammer: a.peut_reprogrammer,
-            creerRdv: a.peut_creer_rdv,
-            messagerie: a.peut_messagerie,
-            gererCreneaux: a.peut_gerer_creneaux,
-          },
-        })));
+        setAssistants(
+          ((data ?? []) as unknown as L[])
+            // Un compte fermé garde sa ligne `utilisateurs` (l'historique des
+            // rendez-vous la référence) mais plus son rattachement : s'il
+            // apparaît encore ici, c'est une anomalie à ne pas afficher.
+            .filter((a) => a.utilisateurs && a.utilisateurs.statut !== "supprime")
+            .map((a) => {
+              const permissions: PermissionsAssistante = {
+                voirAgenda: a.peut_voir_agenda,
+                confirmerAnnuler: a.peut_confirmer_annuler,
+                reprogrammer: a.peut_reprogrammer,
+                creerRdv: a.peut_creer_rdv,
+                messagerie: a.peut_messagerie,
+                gererCreneaux: a.peut_gerer_creneaux,
+              };
+              const prenom = a.utilisateurs?.prenom ?? "";
+              const nom = a.utilisateurs?.nom ?? "";
+              return {
+                id: a.id,
+                nom,
+                prenom,
+                nomComplet: `${prenom} ${nom}`.trim() || (a.utilisateurs?.email ?? ""),
+                email: a.utilisateurs?.email ?? "",
+                statut: a.utilisateurs?.statut ?? "actif",
+                actif: (a.utilisateurs?.statut ?? "actif") === "actif",
+                permissions,
+                cles: (Object.keys(permissions) as (keyof PermissionsAssistante)[]).filter(
+                  (c) => permissions[c]
+                ),
+              };
+            })
+        );
       });
     return () => {
       actif = false;
     };
   }, [medecinId, version]);
-  return { assistants, recharger: () => setVersion((v) => v + 1) };
+  return {
+    assistants: assistants ?? [],
+    chargement: assistants === null,
+    recharger: () => setVersion((v) => v + 1),
+  };
 }
 
-export async function majPermissionAssistant(
+/**
+ * Places d'assistant(e) ouvertes par la formule du médecin (migration 0044).
+ *
+ * Lu en base et non déduit ici : c'est la MÊME fonction que celle appliquée
+ * par le trigger qui refuse un compte en trop. Un plafond affiché qui ne
+ * serait pas celui appliqué serait pire que pas de plafond du tout.
+ */
+export interface QuotaAssistants {
+  /** Formule en cours, `null` si aucun abonnement vivant. */
+  formule: string | null;
+  places: number;
+  occupees: number;
+  restantes: number;
+  complet: boolean;
+}
+
+export function useQuotaAssistants(version: number): QuotaAssistants | null {
+  const [quota, setQuota] = useState<QuotaAssistants | null>(null);
+  useEffect(() => {
+    let actif = true;
+    creerClientNavigateur()
+      .rpc("quota_assistants")
+      .then(({ data }) => {
+        if (!actif) return;
+        const l = (data ?? [])[0] as
+          | { formule: string | null; places: number; occupees: number }
+          | undefined;
+        const places = Number(l?.places) || 0;
+        const occupees = Number(l?.occupees) || 0;
+        setQuota({
+          formule: l?.formule ?? null,
+          places,
+          occupees,
+          restantes: Math.max(0, places - occupees),
+          complet: occupees >= places,
+        });
+      });
+    return () => {
+      actif = false;
+    };
+  }, [version]);
+  return quota;
+}
+
+/**
+ * Donne ou retire des permissions. Écrit directement dans `assistants` : la
+ * RLS (`mod_assistants_medecin`) porte la règle — seul le médecin titulaire
+ * touche à son équipe, et un(e) assistant(e) ne s'accorde rien.
+ */
+export async function majPermissionsAssistant(
   assistantId: string,
-  cle: keyof PermissionsAssistante,
-  valeur: boolean
+  permissions: string[]
 ): Promise<{ erreur?: string }> {
-  const { error } = await creerClientNavigateur()
+  const { data, error } = await creerClientNavigateur()
     .from("assistants")
-    .update({ [COLONNES_PERMISSION[cle]]: valeur })
-    .eq("id", assistantId);
-  return error ? { erreur: error.message } : {};
+    .update(colonnesPermissions(permissions))
+    .eq("id", assistantId)
+    .select("id");
+  if (error) return { erreur: error.message };
+  // Un UPDATE bloqué par la RLS ne lève rien : il touche zéro ligne.
+  if (!data?.length) {
+    return { erreur: "Modification refusée : cet(te) assistant(e) n’est pas rattaché(e) à votre compte." };
+  }
+  return {};
+}
+
+async function appelEquipeMedecin(
+  url: string,
+  init: RequestInit,
+  echec: string
+): Promise<{ erreur?: string }> {
+  try {
+    const reponse = await fetch(url, init);
+    const corps = await reponse.json().catch(() => ({}));
+    return reponse.ok ? {} : { erreur: corps.erreur ?? echec };
+  } catch {
+    return { erreur: "Connexion impossible. Vérifiez votre réseau, puis réessayez." };
+  }
+}
+
+export interface NouvelAssistant {
+  nomComplet: string;
+  email: string;
+  motDePasse: string;
+  permissions: string[];
+}
+
+/**
+ * Ouvre un compte assistant(e). Passe par le serveur : créer un compte
+ * d'authentification exige la clé service_role, et le plafond de la formule
+ * s'y vérifie avant que quoi que ce soit ne soit écrit.
+ */
+export async function creerAssistant(assistant: NouvelAssistant): Promise<{ erreur?: string }> {
+  return appelEquipeMedecin(
+    "/api/medecin/assistants",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(assistant),
+    },
+    "La création du compte a échoué."
+  );
+}
+
+/** Désactive (ou réactive) un compte : le bannissement ferme sa session. */
+export async function majStatutAssistant(id: string, actif: boolean): Promise<{ erreur?: string }> {
+  return appelEquipeMedecin(
+    `/api/medecin/assistants/${id}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ actif }),
+    },
+    "Le changement d’état a échoué."
+  );
+}
+
+/** Ferme le compte et libère la place de la formule. */
+export async function supprimerAssistant(id: string): Promise<{ erreur?: string }> {
+  return appelEquipeMedecin(
+    `/api/medecin/assistants/${id}`,
+    { method: "DELETE" },
+    "La fermeture du compte a échoué."
+  );
 }
 
 /* ===== Abonnement ===== */

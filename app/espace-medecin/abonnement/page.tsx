@@ -166,7 +166,7 @@ export default function AbonnementMedecin() {
   };
 
   return (
-    <MedecinShell>
+    <MedecinShell reserveAuMedecin>
       {/* ===== Version mobile (écran « m-med-abonnement » de la maquette mobile) ===== */}
       <div className="md:hidden">
         <EnTeteMobile retour="/espace-medecin/compte" titre="Mon abonnement" />

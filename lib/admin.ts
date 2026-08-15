@@ -1453,6 +1453,12 @@ export interface LigneTarif {
   essaiJours: number;
   /** SMS inclus dans la formule, par période facturée. */
   quotaSms: number;
+  /**
+   * Assistant(e)s qu'un médecin de cette formule peut rattacher (0044).
+   * Par médecin, y compris sur un palier établissement : un(e) assistant(e)
+   * dépend d'un praticien, jamais d'une structure.
+   */
+  assistantsInclus: number;
   /** Taille visée par un palier établissement ; nul pour une formule médecin. */
   medecinsMin: number | null;
   /** Nul = pas de plafond (le « + » de « 16+ »). */
@@ -1472,6 +1478,7 @@ export function useConfigAbonnements(): {
       prixAnnuel: t.prix_annuel,
       essaiJours: t.essai_jours,
       quotaSms: t.quota_sms,
+      assistantsInclus: t.assistants_inclus ?? 0,
       medecinsMin: t.medecins_min,
       medecinsMax: t.medecins_max,
     }));
@@ -1483,6 +1490,7 @@ export function useConfigAbonnements(): {
     if (d.prixAnnuel !== undefined) maj.prix_annuel = d.prixAnnuel;
     if (d.essaiJours !== undefined) maj.essai_jours = d.essaiJours;
     if (d.quotaSms !== undefined) maj.quota_sms = d.quotaSms;
+    if (d.assistantsInclus !== undefined) maj.assistants_inclus = d.assistantsInclus;
     // `null` est une valeur voulue (pas de plafond) : tester `!== undefined`
     // et non la véracité, sinon vider le champ n'effacerait jamais la borne.
     if (d.medecinsMin !== undefined) maj.medecins_min = d.medecinsMin;

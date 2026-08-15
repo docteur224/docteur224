@@ -122,7 +122,7 @@ export default function MesPaiements() {
     m.famille !== "remboursement" && (m.statut === "confirme" || m.statut === "rembourse");
 
   return (
-    <MedecinShell>
+    <MedecinShell reserveAuMedecin>
       {/* ===== Version mobile ===== */}
       <div className="md:hidden">
         <EnTeteMobile retour="/espace-medecin/abonnement" titre="Mes paiements" />

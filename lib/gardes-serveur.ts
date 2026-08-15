@@ -4,14 +4,15 @@ import { creerClientServeur } from "@/lib/supabase/server";
 import type { Permission } from "@/lib/permissions-admin";
 
 /*
- * Garde des routes d'administration qui ont besoin de la clé service_role
- * (création de compte, bannissement : l'API auth admin n'est pas accessible
- * depuis le navigateur).
+ * Gardes des routes qui ont besoin de la clé service_role (création de
+ * compte, bannissement : l'API auth admin n'est pas accessible depuis le
+ * navigateur).
  *
- * Cette clé traverse la RLS : c'est précisément pourquoi la permission de
- * l'appelant est relue EN BASE ici, jamais déduite de ce qu'il poste. Le
- * cheminement est toujours le même — session utilisateur pour savoir QUI
- * appelle, client service_role pour savoir ce qu'il a le droit de faire.
+ * Cette clé traverse la RLS : c'est précisément pourquoi le rôle et les
+ * droits de l'appelant sont relus EN BASE ici, jamais déduits de ce qu'il
+ * poste. Le cheminement est toujours le même — session utilisateur pour
+ * savoir QUI appelle, client service_role pour agir une fois seulement
+ * qu'on sait ce qu'il a le droit de faire.
  */
 
 export interface AccesAdmin {
@@ -66,6 +67,48 @@ export async function verifierAdmin(
   }
 
   return { acces: { admin, appelantId: auth.user.id, principal } };
+}
+
+export interface AccesMedecin {
+  admin: SupabaseClient;
+  medecinId: string;
+}
+
+/**
+ * Garde des routes de l'espace médecin.
+ *
+ * Un(e) assistant(e) est refusé(e) : il/elle travaille DANS l'équipe, il/elle
+ * ne la compose pas. La RLS le dit déjà (`mod_assistants_medecin` exige
+ * `medecin_id = auth.uid()`), mais ces routes emploient la clé service_role,
+ * qui la traverse — le contrôle doit donc être refait ici.
+ */
+export async function verifierMedecin(): Promise<
+  { acces: AccesMedecin } | { refus: NextResponse }
+> {
+  const session = await creerClientServeur();
+  const { data: auth } = await session.auth.getUser();
+  if (!auth.user) {
+    return {
+      refus: NextResponse.json({ erreur: "Session expirée — reconnectez-vous." }, { status: 401 }),
+    };
+  }
+
+  const admin = clientServiceRole();
+  const { data: appelant } = await admin
+    .from("utilisateurs")
+    .select("role, statut")
+    .eq("id", auth.user.id)
+    .maybeSingle();
+
+  if (appelant?.role !== "medecin" || appelant.statut !== "actif") {
+    return {
+      refus: NextResponse.json(
+        { erreur: "Réservé au médecin titulaire du compte." },
+        { status: 403 }
+      ),
+    };
+  }
+  return { acces: { admin, medecinId: auth.user.id } };
 }
 
 /**

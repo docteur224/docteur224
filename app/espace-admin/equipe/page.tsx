@@ -5,6 +5,7 @@ import AdminShell from "@/components/admin/AdminShell";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import Interrupteur from "@/components/patient/Interrupteur";
 import ChampMotDePasse from "@/components/site/ChampMotDePasse";
+import Dialogue from "@/components/site/Dialogue";
 import {
   creerCompteAdmin,
   majPermissionsAdmin,
@@ -73,6 +74,10 @@ const CHAMP =
   "w-full rounded-xl border border-line bg-white p-[13px] text-[13.5px] outline-none focus:border-teal";
 const ETIQUETTE = "mb-1.5 block text-[12.5px] font-bold";
 const AIDE = "mt-1.5 block text-[11.5px] leading-snug text-muted";
+const BOUTON_SECONDAIRE =
+  "flex-1 rounded-[11px] border-[1.5px] border-line bg-white px-[14px] py-3 text-[13px] font-bold text-blue transition-colors hover:bg-bg";
+const BOUTON_PRINCIPAL =
+  "flex-1 rounded-[11px] bg-teal px-[14px] py-3 text-[13px] font-bold text-white disabled:opacity-50";
 
 export default function EquipeAdmin() {
   const { admins, chargement, recharger } = useEquipeAdmin();
@@ -364,56 +369,6 @@ export default function EquipeAdmin() {
 
 /* ===================== Dialogues ===================== */
 
-/** Enveloppe commune : feuille montante sur téléphone, carte centrée sur web. */
-function Dialogue({
-  titre,
-  icone,
-  sousTitre,
-  onFermer,
-  children,
-}: {
-  titre: string;
-  icone: React.ReactNode;
-  sousTitre?: string;
-  onFermer: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={titre}
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 md:items-center md:overflow-y-auto md:p-6"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onFermer();
-      }}
-    >
-      <div className="flex max-h-[94vh] w-full flex-col rounded-t-2xl border border-line bg-white md:max-h-[90vh] md:max-w-[480px] md:rounded-2xl md:shadow-xl">
-        <div className="flex items-start gap-3 border-b border-line p-4">
-          <span aria-hidden className="text-[17px]">
-            {icone}
-          </span>
-          <h4 className="flex-1 text-[15.5px] font-extrabold">
-            {titre}
-            {sousTitre && (
-              <span className="mt-0.5 block text-[12px] font-semibold text-muted">{sousTitre}</span>
-            )}
-          </h4>
-          <button
-            type="button"
-            onClick={onFermer}
-            aria-label="Fermer"
-            className="flex-none rounded-lg px-2 py-1 text-lg text-muted hover:bg-bg"
-          >
-            ✕
-          </button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
-
 function DialogueCreation({
   onFermer,
   onCree,
@@ -452,11 +407,18 @@ function DialogueCreation({
       titre="Créer un compte administrateur"
       icone="👤+"
       onFermer={onFermer}
+      pied={
+        <>
+          <button type="button" onClick={onFermer} className={BOUTON_SECONDAIRE}>
+            Annuler
+          </button>
+          <button type="submit" form="form-admin" disabled={enCours} className={BOUTON_PRINCIPAL}>
+            {enCours ? "Création…" : "Créer le compte"}
+          </button>
+        </>
+      }
     >
-      {/* Le corps défile, les boutons restent visibles : sur un téléphone, un
-          « Créer le compte » sous la ligne de flottaison ne se trouve pas. */}
-      <form onSubmit={soumettre} className="flex min-h-0 flex-col">
-        <div className="min-h-0 flex-1 overflow-y-auto p-4">
+      <form id="form-admin" onSubmit={soumettre} className="p-4">
         <label className="mb-3 block">
           <span className={ETIQUETTE}>Nom complet</span>
           <input
@@ -534,24 +496,6 @@ function DialogueCreation({
               ⚠️ {erreur}
             </p>
           )}
-        </div>
-
-        <div className="flex flex-wrap gap-2.5 border-t border-line p-4">
-          <button
-            type="button"
-            onClick={onFermer}
-            className="flex-1 rounded-[11px] border-[1.5px] border-line bg-white px-[14px] py-3 text-[13px] font-bold text-blue transition-colors hover:bg-bg"
-          >
-            Annuler
-          </button>
-          <button
-            type="submit"
-            disabled={enCours}
-            className="flex-1 rounded-[11px] bg-teal px-[14px] py-3 text-[13px] font-bold text-white disabled:opacity-50"
-          >
-            {enCours ? "Création…" : "Créer le compte"}
-          </button>
-        </div>
       </form>
     </Dialogue>
   );
@@ -606,7 +550,7 @@ function DialogueActions({
       }
       onFermer={onFermer}
     >
-      <div className="overflow-y-auto">
+      <>
         {empeche && (
           <p className="border-b border-line bg-bg px-4 py-3 text-[12px] font-semibold text-muted">
             {empeche}
@@ -652,7 +596,7 @@ function DialogueActions({
             ne pourra plus se connecter. Les décisions qu’il a prises restent au journal d’audit.
           </p>
         )}
-      </div>
+      </>
     </Dialogue>
   );
 }
@@ -686,8 +630,29 @@ function DialoguePermissions({
       sousTitre={`Rôle actuel : ${roleCourant}`}
       icone="🛡️"
       onFermer={onFermer}
+      pied={
+        <>
+          <button type="button" onClick={onFermer} className={BOUTON_SECONDAIRE}>
+            {fige ? "Fermer" : "Annuler"}
+          </button>
+          {!fige && (
+            <button
+              type="button"
+              disabled={enCours}
+              onClick={async () => {
+                setEnCours(true);
+                await onEnregistrer(brouillon);
+                setEnCours(false);
+              }}
+              className={BOUTON_PRINCIPAL}
+            >
+              {enCours ? "Enregistrement…" : "Enregistrer"}
+            </button>
+          )}
+        </>
+      }
     >
-      <div className="min-h-0 flex-1 overflow-y-auto p-4">
+      <div className="p-4">
         {/* Les rôles ne sont que des raccourcis : ce qui est enregistré, et
             ce qui commande la base, reste la liste des permissions. */}
         <span className={ETIQUETTE}>Appliquer un rôle</span>
@@ -749,31 +714,6 @@ function DialoguePermissions({
             Verrouillé
           </span>
         </div>
-      </div>
-
-      {/* Boutons hors du défilement : la liste des permissions est longue. */}
-      <div className="flex flex-wrap gap-2.5 border-t border-line p-4">
-        <button
-          type="button"
-          onClick={onFermer}
-          className="flex-1 rounded-[11px] border-[1.5px] border-line bg-white px-[14px] py-3 text-[13px] font-bold text-blue transition-colors hover:bg-bg"
-        >
-          {fige ? "Fermer" : "Annuler"}
-        </button>
-        {!fige && (
-          <button
-            type="button"
-            disabled={enCours}
-            onClick={async () => {
-              setEnCours(true);
-              await onEnregistrer(brouillon);
-              setEnCours(false);
-            }}
-            className="flex-1 rounded-[11px] bg-teal px-[14px] py-3 text-[13px] font-bold text-white disabled:opacity-50"
-          >
-            {enCours ? "Enregistrement…" : "Enregistrer"}
-          </button>
-        )}
       </div>
     </Dialogue>
   );

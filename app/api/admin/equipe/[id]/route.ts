@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { tracerAuditServeur, verifierAdmin } from "@/lib/garde-admin";
+import { tracerAuditServeur, verifierAdmin } from "@/lib/gardes-serveur";
 
 /*
  * Désactivation, réactivation et fermeture d'un compte administrateur.

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { tracerAuditServeur, verifierAdmin } from "@/lib/garde-admin";
+import { tracerAuditServeur, verifierAdmin } from "@/lib/gardes-serveur";
 import { PERMISSIONS, libelleRole, type Permission } from "@/lib/permissions-admin";
 
 /*

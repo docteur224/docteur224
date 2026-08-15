@@ -18,27 +18,33 @@ interface ConfigAbonnements {
   standardMensuel: string;
   standardAnnuel: string;
   standardSms: string;
+  standardAssistants: string;
   premiumMensuel: string;
   premiumAnnuel: string;
   premiumSms: string;
+  premiumAssistants: string;
   structureMensuel: string;
   structureAnnuel: string;
   structureSms: string;
+  structureAssistants: string;
   structureMin: string;
   structureMax: string;
   cabinetMensuel: string;
   cabinetAnnuel: string;
   cabinetSms: string;
+  cabinetAssistants: string;
   cabinetMin: string;
   cabinetMax: string;
   cliniqueMensuel: string;
   cliniqueAnnuel: string;
   cliniqueSms: string;
+  cliniqueAssistants: string;
   cliniqueMin: string;
   cliniqueMax: string;
   hopitalMensuel: string;
   hopitalAnnuel: string;
   hopitalSms: string;
+  hopitalAssistants: string;
   hopitalMin: string;
   hopitalMax: string;
   periodeGratuite: boolean;
@@ -105,16 +111,17 @@ const CLES_REGLAGES = [
  * l'abonnement dès que le SMS coûte plus de 33 GNF.
  */
 const PALIERS = [
-  { formule: "structure", nom: "Structure de proximité", mensuel: "structureMensuel", annuel: "structureAnnuel", sms: "structureSms", min: "structureMin", max: "structureMax" },
-  { formule: "cabinet", nom: "Cabinet / plateau technique", mensuel: "cabinetMensuel", annuel: "cabinetAnnuel", sms: "cabinetSms", min: "cabinetMin", max: "cabinetMax" },
-  { formule: "clinique", nom: "Clinique / centre médical", mensuel: "cliniqueMensuel", annuel: "cliniqueAnnuel", sms: "cliniqueSms", min: "cliniqueMin", max: "cliniqueMax" },
-  { formule: "hopital", nom: "Hôpital / centre hospitalier", mensuel: "hopitalMensuel", annuel: "hopitalAnnuel", sms: "hopitalSms", min: "hopitalMin", max: "hopitalMax" },
+  { formule: "structure", nom: "Structure de proximité", mensuel: "structureMensuel", annuel: "structureAnnuel", sms: "structureSms", assistants: "structureAssistants", min: "structureMin", max: "structureMax" },
+  { formule: "cabinet", nom: "Cabinet / plateau technique", mensuel: "cabinetMensuel", annuel: "cabinetAnnuel", sms: "cabinetSms", assistants: "cabinetAssistants", min: "cabinetMin", max: "cabinetMax" },
+  { formule: "clinique", nom: "Clinique / centre médical", mensuel: "cliniqueMensuel", annuel: "cliniqueAnnuel", sms: "cliniqueSms", assistants: "cliniqueAssistants", min: "cliniqueMin", max: "cliniqueMax" },
+  { formule: "hopital", nom: "Hôpital / centre hospitalier", mensuel: "hopitalMensuel", annuel: "hopitalAnnuel", sms: "hopitalSms", assistants: "hopitalAssistants", min: "hopitalMin", max: "hopitalMax" },
 ] as const satisfies readonly {
   formule: string;
   nom: string;
   mensuel: keyof ConfigAbonnements;
   annuel: keyof ConfigAbonnements;
   sms: keyof ConfigAbonnements;
+  assistants: keyof ConfigAbonnements;
   min: keyof ConfigAbonnements;
   max: keyof ConfigAbonnements;
 }[];
@@ -122,8 +129,8 @@ const PALIERS = [
 /** Les deux formules médecin, décrites comme les paliers pour que les deux
  *  tables se génèrent au lieu d'être écrites ligne à ligne. */
 const FORMULES_MEDECIN = [
-  { formule: "standard", nom: "Standard", miseEnAvant: false, mensuel: "standardMensuel", annuel: "standardAnnuel", sms: "standardSms" },
-  { formule: "premium", nom: "Premium", miseEnAvant: true, mensuel: "premiumMensuel", annuel: "premiumAnnuel", sms: "premiumSms" },
+  { formule: "standard", nom: "Standard", miseEnAvant: false, mensuel: "standardMensuel", annuel: "standardAnnuel", sms: "standardSms", assistants: "standardAssistants" },
+  { formule: "premium", nom: "Premium", miseEnAvant: true, mensuel: "premiumMensuel", annuel: "premiumAnnuel", sms: "premiumSms", assistants: "premiumAssistants" },
 ] as const satisfies readonly {
   formule: string;
   nom: string;
@@ -131,13 +138,14 @@ const FORMULES_MEDECIN = [
   mensuel: keyof ConfigAbonnements;
   annuel: keyof ConfigAbonnements;
   sms: keyof ConfigAbonnements;
+  assistants: keyof ConfigAbonnements;
 }[];
 
 /** Uniquement les clés de tarif : le spread de `config` ne doit pas prétendre
  *  porter les booléens de réglage, qu'il écraserait. */
 type CleTarif =
-  | (typeof PALIERS)[number]["mensuel" | "annuel" | "sms" | "min" | "max"]
-  | (typeof FORMULES_MEDECIN)[number]["mensuel" | "annuel" | "sms"];
+  | (typeof PALIERS)[number]["mensuel" | "annuel" | "sms" | "assistants" | "min" | "max"]
+  | (typeof FORMULES_MEDECIN)[number]["mensuel" | "annuel" | "sms" | "assistants"];
 
 const LANCEMENT: { cle: keyof ConfigAbonnements; titre: string; detail?: string }[] = [
   {
@@ -193,11 +201,13 @@ export default function AbonnementsAdmin() {
         [f.mensuel, fmt(tarif(f.formule)?.prixMensuel ?? 0)],
         [f.annuel, fmt(tarif(f.formule)?.prixAnnuel ?? 0)],
         [f.sms, fmt(tarif(f.formule)?.quotaSms ?? 0)],
+        [f.assistants, String(tarif(f.formule)?.assistantsInclus ?? 0)],
       ]),
       ...PALIERS.flatMap((p) => [
         [p.mensuel, fmt(tarif(p.formule)?.prixMensuel ?? 0)],
         [p.annuel, fmt(tarif(p.formule)?.prixAnnuel ?? 0)],
         [p.sms, fmt(tarif(p.formule)?.quotaSms ?? 0)],
+        [p.assistants, String(tarif(p.formule)?.assistantsInclus ?? 0)],
         [p.min, fmtBorne(tarif(p.formule)?.medecinsMin)],
         [p.max, fmtBorne(tarif(p.formule)?.medecinsMax)],
       ]),
@@ -229,6 +239,7 @@ export default function AbonnementsAdmin() {
           prixMensuel: parseGNF(valeurs[f.mensuel] as string),
           prixAnnuel: parseGNF(valeurs[f.annuel] as string),
           quotaSms: parseGNF(valeurs[f.sms] as string),
+          assistantsInclus: parseGNF(valeurs[f.assistants] as string),
         })
       ),
       ...PALIERS.map((p) =>
@@ -236,6 +247,7 @@ export default function AbonnementsAdmin() {
           prixMensuel: parseGNF(valeurs[p.mensuel] as string),
           prixAnnuel: parseGNF(valeurs[p.annuel] as string),
           quotaSms: parseGNF(valeurs[p.sms] as string),
+          assistantsInclus: parseGNF(valeurs[p.assistants] as string),
           medecinsMin: parseBorne(valeurs[p.min] as string),
           medecinsMax: parseBorne(valeurs[p.max] as string),
         })
@@ -252,11 +264,12 @@ export default function AbonnementsAdmin() {
         "A modifié la configuration des abonnements",
         [
           ...FORMULES_MEDECIN.map(
-            (f) => `${f.nom} ${valeurs[f.mensuel]}/mois · ${valeurs[f.annuel]}/an · ${valeurs[f.sms]} SMS`
+            (f) =>
+              `${f.nom} ${valeurs[f.mensuel]}/mois · ${valeurs[f.annuel]}/an · ${valeurs[f.sms]} SMS · ${valeurs[f.assistants]} assistant(e)s`
           ),
           ...PALIERS.map(
             (p) =>
-              `${p.nom} (${valeurs[p.min] || 0}–${valeurs[p.max] || "∞"} médecins) ${valeurs[p.mensuel]}/mois · ${valeurs[p.annuel]}/an · ${valeurs[p.sms]} SMS`
+              `${p.nom} (${valeurs[p.min] || 0}–${valeurs[p.max] || "∞"} médecins) ${valeurs[p.mensuel]}/mois · ${valeurs[p.annuel]}/an · ${valeurs[p.sms]} SMS · ${valeurs[p.assistants]} assistant(e)s`
           ),
         ].join(" · ")
       );
@@ -299,20 +312,22 @@ export default function AbonnementsAdmin() {
                   <th>Mensuel</th>
                   <th>Annuel</th>
                   <th>SMS</th>
+                  <th>Assist.</th>
                 </tr>
               </thead>
               <tbody>
                 {FORMULES_MEDECIN.map((f) => (
                   <tr key={f.formule}>
                     <td>{f.nom}</td>
-                    {([f.mensuel, f.annuel, f.sms] as const).map((cle, i) => (
+                    {([f.mensuel, f.annuel, f.sms, f.assistants] as const).map((cle, i) => (
                       <td key={cle}>
                         <input
                           className="inp"
                           style={{ marginBottom: 0, padding: "6px 8px", fontSize: 12 }}
                           value={valeurs[cle] as string}
                           onChange={(e) => modifier(cle, e.target.value)}
-                          aria-label={`${f.nom} ${["mensuel", "annuel", "quota SMS"][i]}`}
+                          aria-label={`${f.nom} ${["mensuel", "annuel", "quota SMS", "assistants inclus"][i]}`}
+                          inputMode={i === 3 ? "numeric" : undefined}
                         />
                       </td>
                     ))}
@@ -336,6 +351,7 @@ export default function AbonnementsAdmin() {
                   <th>Mensuel</th>
                   <th>Annuel</th>
                   <th>SMS</th>
+                  <th>Assist.</th>
                 </tr>
               </thead>
               <tbody>
@@ -369,14 +385,15 @@ export default function AbonnementsAdmin() {
                         </span>
                       </span>
                     </td>
-                    {([palier.mensuel, palier.annuel, palier.sms] as const).map((cle, i) => (
+                    {([palier.mensuel, palier.annuel, palier.sms, palier.assistants] as const).map((cle, i) => (
                       <td key={cle}>
                         <input
                           className="inp"
                           style={{ marginBottom: 0, padding: "6px 8px", fontSize: 12 }}
                           value={valeurs[cle] as string}
                           onChange={(e) => modifier(cle, e.target.value)}
-                          aria-label={`${palier.nom} ${["mensuel", "annuel", "quota SMS"][i]}`}
+                          aria-label={`${palier.nom} ${["mensuel", "annuel", "quota SMS", "assistants inclus"][i]}`}
+                          inputMode={i === 3 ? "numeric" : undefined}
                         />
                       </td>
                     ))}
@@ -467,7 +484,14 @@ export default function AbonnementsAdmin() {
           <table className="w-full border-collapse text-[13px]">
             <thead>
               <tr>
-                {["Formule", "Mensuel (GNF)", "Annuel (GNF)", "SMS inclus", "Mise en avant"].map((th) => (
+                {[
+                  "Formule",
+                  "Mensuel (GNF)",
+                  "Annuel (GNF)",
+                  "SMS inclus",
+                  "Assistant(e)s",
+                  "Mise en avant",
+                ].map((th) => (
                   <th key={th} className={enTete}>
                     {th}
                   </th>
@@ -480,13 +504,14 @@ export default function AbonnementsAdmin() {
                   <td className={caseTab}>
                     <b>{f.nom}</b>
                   </td>
-                  {([f.mensuel, f.annuel, f.sms] as const).map((cle, i) => (
+                  {([f.mensuel, f.annuel, f.sms, f.assistants] as const).map((cle, i) => (
                     <td key={cle} className={caseTab}>
                       <input
                         value={valeurs[cle] as string}
                         onChange={(e) => modifier(cle, e.target.value)}
-                        aria-label={`${f.nom} ${["mensuel", "annuel", "quota SMS"][i]}`}
-                        className={cellule}
+                        aria-label={`${f.nom} ${["mensuel", "annuel", "quota SMS", "assistants inclus"][i]}`}
+                        inputMode={i === 3 ? "numeric" : undefined}
+                        className={i === 3 ? `${cellule} !min-w-[70px] text-center` : cellule}
                       />
                     </td>
                   ))}
@@ -506,6 +531,14 @@ export default function AbonnementsAdmin() {
             </tbody>
           </table>
         </div>
+        <div className="mt-[14px] flex items-start gap-[9px] rounded-[11px] bg-teal-soft px-[13px] py-[11px] text-[12.5px] font-semibold leading-relaxed text-blue">
+          <span aria-hidden>🧑‍💼</span>
+          <div>
+            <b>Assistant(e)s</b> : nombre de comptes qu’un médecin de cette formule peut ouvrir
+            depuis « Mes assistant(e)s ». Le relever ici suffit — la base applique le nouveau
+            plafond immédiatement, sans toucher aux comptes déjà créés.
+          </div>
+        </div>
       </div>
 
       <div className="mb-4 rounded-2xl border border-line bg-white p-5">
@@ -514,7 +547,14 @@ export default function AbonnementsAdmin() {
           <table className="w-full border-collapse text-[13px]">
             <thead>
               <tr>
-                {["Palier", "Médecins", "Mensuel (GNF)", "Annuel (GNF)", "SMS inclus"].map((th) => (
+                {[
+                  "Palier",
+                  "Médecins",
+                  "Mensuel (GNF)",
+                  "Annuel (GNF)",
+                  "SMS inclus",
+                  "Assistant(e)s",
+                ].map((th) => (
                   <th key={th} className={enTete}>
                     {th}
                   </th>
@@ -545,16 +585,19 @@ export default function AbonnementsAdmin() {
                       />
                     </span>
                   </td>
-                  {([palier.mensuel, palier.annuel, palier.sms] as const).map((cle, i) => (
-                    <td key={cle} className={caseTab}>
-                      <input
-                        value={valeurs[cle] as string}
-                        onChange={(e) => modifier(cle, e.target.value)}
-                        aria-label={`${palier.nom} ${["mensuel", "annuel", "quota SMS"][i]}`}
-                        className={cellule}
-                      />
-                    </td>
-                  ))}
+                  {([palier.mensuel, palier.annuel, palier.sms, palier.assistants] as const).map(
+                    (cle, i) => (
+                      <td key={cle} className={caseTab}>
+                        <input
+                          value={valeurs[cle] as string}
+                          onChange={(e) => modifier(cle, e.target.value)}
+                          aria-label={`${palier.nom} ${["mensuel", "annuel", "quota SMS", "assistants inclus"][i]}`}
+                          inputMode={i === 3 ? "numeric" : undefined}
+                          className={i === 3 ? `${cellule} !min-w-[70px] text-center` : cellule}
+                        />
+                      </td>
+                    )
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -566,7 +609,9 @@ export default function AbonnementsAdmin() {
             Le palier de départ découle du type déclaré à l’inscription ; les bornes de taille
             servent à requalifier une structure qui grandit. Laissez le maximum vide pour un palier
             sans plafond. Un médecin couvert par le plan de son établissement ne paie pas en plus
-            (pas de double facturation).
+            (pas de double facturation). La colonne <b>Assistant(e)s</b> s’entend{" "}
+            <b>par médecin</b> : un(e) assistant(e) est rattaché(e) à un praticien, jamais à une
+            structure.
           </div>
         </div>
       </div>
