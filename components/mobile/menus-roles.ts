@@ -71,6 +71,7 @@ export const MENUS: Record<RoleMenu, EntreeMenu[]> = {
   // components/admin/AdminShell.tsx
   admin: [
     { href: "/espace-admin", icone: "📊", label: "Tableau de bord" },
+    { href: "/espace-admin/nouveau-rdv", icone: "📞", label: "Prise de RDV" },
     { href: "/espace-admin/validations", icone: "✅", label: "Validations" },
     { href: "/espace-admin/moderation", icone: "🚩", label: "Modération" },
     { href: "/espace-admin/utilisateurs", icone: "👥", label: "Utilisateurs" },

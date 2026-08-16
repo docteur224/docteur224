@@ -14,6 +14,7 @@ import { aPermission, PERMISSION_PAR_ROUTE } from "@/lib/permissions-admin";
  */
 
 const TOUTES_ENTREES = [
+  { href: "/espace-admin/nouveau-rdv", icone: "📞", titre: "Prise de RDV", sous: "Réserver pour un appelant" },
   { href: "/espace-admin/moderation", icone: "🚩", titre: "Modération", sous: "Signalements et avis" },
   { href: "/espace-admin/pilotage", icone: "🧭", titre: "Pilotage & croissance", sous: "Couverture, SMS, vedette" },
   { href: "/espace-admin/annonces", icone: "📢", titre: "Annonces", sous: "Diffuser un message" },

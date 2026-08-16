@@ -28,6 +28,10 @@ import CompteSuspendu from "@/components/compte/CompteSuspendu";
  */
 const LIENS = [
   { href: "/espace-admin", icone: "📊", label: "Tableau de bord" },
+  // Ouvert à tout administrateur, comme le tableau de bord : répondre au
+  // téléphone n'est pas une section de la console, c'est le travail de
+  // l'équipe entière. Il n'a donc pas d'entrée dans PERMISSION_PAR_ROUTE.
+  { href: "/espace-admin/nouveau-rdv", icone: "📞", label: "Prise de RDV" },
   { href: "/espace-admin/validations", icone: "✅", label: "Validations" },
   { href: "/espace-admin/moderation", icone: "🚩", label: "Modération" },
   { href: "/espace-admin/utilisateurs", icone: "👥", label: "Utilisateurs" },

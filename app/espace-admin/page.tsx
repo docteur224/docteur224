@@ -49,6 +49,11 @@ export default function TableauDeBordAdmin() {
               <small>RDV ce mois</small>
             </div>
           </div>
+          {/* Le bouton n'existait que sur la version web : un opérateur qui
+              répond au téléphone depuis son mobile n'y avait pas accès. */}
+          <Link href="/espace-admin/nouveau-rdv" className="btn block" style={{ marginTop: 12 }}>
+            + RDV pour un patient
+          </Link>
           <div className="card2" style={{ marginTop: 12 }}>
             <h4>À traiter</h4>
             <div className="setrow">
@@ -109,8 +114,13 @@ export default function TableauDeBordAdmin() {
           </h2>
           <small className="text-[13px] text-muted">Vue d’ensemble de la plateforme</small>
         </div>
+        {/* Pointait sur /espace-medecin/nouveau-rdv : la garde de rôle de
+            MedecinShell renvoyait aussitôt l'administrateur ici, et cet
+            écran-là réserve de toute façon sur l'agenda du praticien
+            connecté. La console a le sien, qui commence par choisir le
+            praticien. */}
         <Link
-          href="/espace-medecin/nouveau-rdv"
+          href="/espace-admin/nouveau-rdv"
           className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
         >
           + RDV pour un patient
