@@ -63,10 +63,15 @@ const CHAMPS: Record<string, string> = {
   whatsappNumeroId: "whatsapp_numero_id",
   whatsappJeton: "whatsapp_jeton",
   coutWhatsappGnf: "cout_whatsapp_gnf",
+  emailFournisseur: "email_fournisseur",
+  emailUrl: "email_url",
+  emailCle: "email_cle",
+  emailExpediteur: "email_expediteur",
+  coutEmailGnf: "cout_email_gnf",
 };
 
 /** Un secret laissé vide n'efface pas celui déjà en base. */
-const SECRETS = new Set(["smsCle", "whatsappJeton"]);
+const SECRETS = new Set(["smsCle", "whatsappJeton", "emailCle"]);
 
 export async function POST(requete: Request) {
   const ctx = await verifierAdminFinance();
@@ -102,10 +107,14 @@ export async function POST(requete: Request) {
       waUrl: (maj.whatsapp_url ?? actuel.whatsapp.url) as string | null,
       waJeton: (maj.whatsapp_jeton ?? actuel.whatsapp.cle) as string | null,
       waNumero: (maj.whatsapp_numero_id ?? actuel.whatsapp.identifiant) as string | null,
+      mailUrl: (maj.email_url ?? actuel.email.url) as string | null,
+      mailCle: (maj.email_cle ?? actuel.email.cle) as string | null,
+      mailDe: (maj.email_expediteur ?? actuel.email.expediteur) as string | null,
     };
     const smsPret = !!(futur.url && futur.cle && futur.expediteur);
     const waPret = !!(futur.waUrl && futur.waJeton && futur.waNumero);
-    if (!smsPret && !waPret) {
+    const mailPret = !!(futur.mailUrl && futur.mailCle && futur.mailDe);
+    if (!smsPret && !waPret && !mailPret) {
       return NextResponse.json(
         { erreur: "Aucun canal n'est complètement configuré : le mode réel n'enverrait rien." },
         { status: 400 }
@@ -125,7 +134,9 @@ export async function POST(requete: Request) {
     p_details: {
       champs: Object.keys(maj)
         .filter((c) => c !== "maj_le" && c !== "maj_par")
-        .map((c) => (c === "sms_cle" || c === "whatsapp_jeton" ? `${c} (modifié)` : c))
+        .map((c) =>
+          c === "sms_cle" || c === "whatsapp_jeton" || c === "email_cle" ? `${c} (modifié)` : c
+        )
         .join(", "),
     },
   });
@@ -138,14 +149,17 @@ export async function PUT(requete: Request) {
   const ctx = await verifierAdminFinance();
   if (ctx.erreur) return ctx.erreur;
 
-  let corps: { destinataire?: string; canal?: "sms" | "whatsapp" };
+  let corps: { destinataire?: string; canal?: "sms" | "whatsapp" | "email" };
   try {
     corps = await requete.json();
   } catch {
     return NextResponse.json({ erreur: "Requête illisible." }, { status: 400 });
   }
   if (!corps.destinataire) {
-    return NextResponse.json({ erreur: "Renseignez un numéro de test." }, { status: 400 });
+    return NextResponse.json(
+      { erreur: "Renseignez un destinataire de test." },
+      { status: 400 }
+    );
   }
 
   // Le message d'essai est volontairement en GSM-7 pur : il doit mesurer la
@@ -156,6 +170,7 @@ export async function PUT(requete: Request) {
     motif: "test_configuration",
     texte: "Docteur 224 : message de test de la configuration. Aucune action requise.",
     canal: corps.canal,
+    sujet: "Docteur 224 — test de configuration",
   });
   return NextResponse.json({ resultat });
 }

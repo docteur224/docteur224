@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { creerClientNavigateur } from "@/lib/supabase/client";
 import { chargerMedecins, type MedecinAvecPlages } from "@/lib/donnees";
+import { cleGeo } from "@/lib/carte";
 import { versISO } from "@/lib/dates";
 
 /*
@@ -251,18 +252,54 @@ export function useProchainesDispos(medecinIds: string[]): {
  * que lorsqu'il est chargé : sans cela la liste se réordonnerait sous la
  * souris au retour de la requête.
  */
+/**
+ * Communes réellement couvertes dans une ville, dans l'ordre alphabétique.
+ *
+ * Déduites des praticiens eux-mêmes et NON du référentiel `communes` :
+ * `medecins.commune` est du texte libre depuis la migration 0023, et proposer
+ * une commune du référentiel où personne n'exerce ne ramènerait aucun
+ * résultat. Le regroupement se fait sur la clé normalisée (`cleGeo`), pour que
+ * « Matam » et « matam » ne fassent qu'une entrée ; le libellé affiché est le
+ * premier rencontré.
+ */
+export function useCommunesDeLaVille(
+  medecins: MedecinAvecPlages[],
+  ville: string
+): { cle: string; libelle: string; nb: number }[] {
+  return useMemo(() => {
+    if (!ville) return [];
+    const parCle = new Map<string, { cle: string; libelle: string; nb: number }>();
+    for (const m of medecins) {
+      if (m.ville !== ville || !m.commune?.trim()) continue;
+      const cle = cleGeo(m.commune);
+      const connue = parCle.get(cle);
+      if (connue) connue.nb += 1;
+      else parCle.set(cle, { cle, libelle: m.commune.trim(), nb: 1 });
+    }
+    return [...parCle.values()].sort((a, b) => a.libelle.localeCompare(b.libelle, "fr"));
+  }, [medecins, ville]);
+}
+
 export function useMedecinsFiltres(
   medecins: MedecinAvecPlages[],
-  filtres: { recherche: string; specialite: string; ville: string; domicile: boolean },
+  filtres: {
+    recherche: string;
+    specialite: string;
+    ville: string;
+    /** Clé normalisée (`cleGeo`), pas le libellé : la colonne est du texte libre. */
+    commune: string;
+    domicile: boolean;
+  },
   dispos: Map<string, DispoMedecin>,
   tri: "plus_tot" | "note"
 ): MedecinAvecPlages[] {
-  const { recherche, specialite, ville, domicile } = filtres;
+  const { recherche, specialite, ville, commune, domicile } = filtres;
   return useMemo(() => {
     const q = recherche.trim().toLowerCase();
     const liste = medecins.filter((m) => {
       if (specialite && m.specialite !== specialite) return false;
       if (ville && m.ville !== ville) return false;
+      if (commune && cleGeo(m.commune ?? "") !== commune) return false;
       if (domicile && !m.visiteDomicile) return false;
       if (!q) return true;
       return `${m.civilite} ${m.prenom} ${m.nom} ${m.specialite} ${m.ville} ${m.commune}`
@@ -282,7 +319,7 @@ export function useMedecinsFiltres(
     return [...liste].sort(
       (a, b) => quand(a.id).localeCompare(quand(b.id)) || b.note - a.note
     );
-  }, [medecins, recherche, specialite, ville, domicile, dispos, tri]);
+  }, [medecins, recherche, specialite, ville, commune, domicile, dispos, tri]);
 }
 
 /* ===== 3. Poser le rendez-vous ===== */
@@ -300,29 +337,113 @@ export interface DemandeRdv {
   nouvelleFiche?: { nom: string; prenom: string; telephone: string };
 }
 
+/** Ce qui est réellement parti chez le patient, canal par canal. */
+export interface EnvoiConfirmation {
+  canalTelephone: string | null;
+  telephone: string | null;
+  emailEnvoye: boolean;
+  email: string | null;
+  simule: boolean;
+  erreurs: string[];
+}
+
+/** Phrase à afficher à l'opérateur : ce que le patient a reçu, ou non. */
+export function resumeEnvoi(envoi: EnvoiConfirmation | null | undefined): string {
+  if (!envoi) return "";
+  const partis: string[] = [];
+  if (envoi.canalTelephone) {
+    partis.push(envoi.canalTelephone === "sms" ? "SMS" : "WhatsApp");
+  }
+  if (envoi.emailEnvoye) partis.push("e-mail");
+  if (partis.length === 0) {
+    return envoi.erreurs[0] ?? "Aucun message n’a pu être envoyé — prévenez l’appelant de vive voix.";
+  }
+  // « Simulé » n'est pas un détail à cacher : tant que la messagerie n'est pas
+  // en mode réel, le patient ne reçoit RIEN et l'opérateur doit le savoir.
+  return envoi.simule
+    ? `Confirmation ${partis.join(" + ")} préparée, mais la messagerie est en mode simulé : rien n’est parti.`
+    : `Confirmation envoyée par ${partis.join(" + ")}.`;
+}
+
+async function appelerRoute(
+  url: string,
+  init: RequestInit
+): Promise<{ id?: string; envoi?: EnvoiConfirmation; erreur?: string }> {
+  try {
+    const reponse = await fetch(url, {
+      ...init,
+      headers: { "Content-Type": "application/json", ...(init.headers ?? {}) },
+    });
+    const corps = await reponse.json().catch(() => ({}));
+    if (!reponse.ok) return { erreur: corps.erreur ?? "L’opération a échoué." };
+    return corps;
+  } catch {
+    return { erreur: "Connexion impossible. Vérifiez votre réseau, puis réessayez." };
+  }
+}
+
 /**
- * Une seule écriture : la base crée la fiche s'il le faut, pose le
- * rendez-vous, et inscrit la décision au journal d'audit. Les messages de
- * refus remontent en clair — ils sont rédigés en français par la fonction et
- * disent précisément ce qui a bloqué (créneau pris, praticien non validé…).
+ * Une seule écriture côté base — la fonction crée la fiche s'il le faut, pose
+ * le rendez-vous et inscrit la décision au journal d'audit — puis la
+ * confirmation part chez le patient.
+ *
+ * Le passage par une route serveur n'est pas un détour : l'envoi lit les
+ * secrets de l'agrégateur et appelle `enregistrer_message`, tous deux
+ * inaccessibles depuis le navigateur. Les messages de refus remontent en
+ * clair, rédigés en français par la fonction SQL.
  */
 export async function creerRdvCentreAppel(
   d: DemandeRdv
-): Promise<{ id?: string; erreur?: string }> {
-  const { data, error } = await creerClientNavigateur().rpc("creer_rdv_centre_appel", {
-    p_medecin_id: d.medecinId,
-    p_date: d.date,
-    p_heure: d.heure,
-    p_motif: d.motif || null,
-    p_lieu: d.lieu,
-    p_adresse_domicile: d.lieu === "domicile" ? d.adresseDomicile : null,
-    p_patient_cle: d.patientCle ?? null,
-    p_nouveau_nom: d.nouvelleFiche?.nom ?? null,
-    p_nouveau_prenom: d.nouvelleFiche?.prenom ?? null,
-    p_nouveau_telephone: d.nouvelleFiche?.telephone ?? null,
+): Promise<{ id?: string; envoi?: EnvoiConfirmation; erreur?: string }> {
+  return appelerRoute("/api/admin/rdv-centre-appel", {
+    method: "POST",
+    body: JSON.stringify({
+      medecinId: d.medecinId,
+      date: d.date,
+      heure: d.heure,
+      motif: d.motif,
+      lieu: d.lieu,
+      adresseDomicile: d.adresseDomicile,
+      patientCle: d.patientCle,
+      nouvelleFiche: d.nouvelleFiche,
+    }),
   });
-  if (error) return { erreur: error.message };
-  return { id: data as unknown as string };
+}
+
+/* ===== 3 bis. Reprendre un rendez-vous déjà posé ===== */
+
+/** Déplacer : le patient est prévenu du nouvel horaire. */
+export async function reprogrammerRdv(
+  id: string,
+  date: string,
+  heure: string,
+  motif?: string
+): Promise<{ envoi?: EnvoiConfirmation; erreur?: string }> {
+  return appelerRoute(`/api/admin/rdv-centre-appel/${id}`, {
+    method: "PUT",
+    body: JSON.stringify({ date, heure, motif }),
+  });
+}
+
+/** Annuler : le motif est obligatoire, le patient et le praticien sont prévenus. */
+export async function annulerRdv(
+  id: string,
+  motif: string
+): Promise<{ envoi?: EnvoiConfirmation; erreur?: string }> {
+  return appelerRoute(`/api/admin/rdv-centre-appel/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify({ motif }),
+  });
+}
+
+/**
+ * Supprimer définitivement. Aucun message n'est envoyé : la fonction SQL
+ * n'accepte qu'un rendez-vous DÉJÀ annulé, donc dont les intéressés ont déjà
+ * été prévenus. L'appel reste une RPC directe, rien n'a à sortir du serveur.
+ */
+export async function supprimerRdv(id: string): Promise<{ erreur?: string }> {
+  const { error } = await creerClientNavigateur().rpc("supprimer_rdv_centre_appel", { p_rdv: id });
+  return error ? { erreur: error.message } : {};
 }
 
 /* ===== 4. Main courante ===== */
@@ -382,6 +503,145 @@ export function useRdvRecents(): { rdvs: RdvRecent[]; recharger: () => void } {
   }, [version]);
   return { rdvs, recharger: () => setVersion((v) => v + 1) };
 }
+
+/* ===== 5. Les appels traités ===== */
+
+export interface AppelTraite {
+  id: string;
+  date: string;
+  heure: string;
+  patient: string;
+  typeFiche: TypeFiche;
+  /** Numéro à rappeler — celui du titulaire quand le RDV est pour un proche. */
+  telephone: string;
+  email: string;
+  /** Renseigné seulement pour un proche : le titulaire du compte. */
+  titulaire: string;
+  medecinId: string;
+  medecin: string;
+  medecinTelephone: string;
+  motif: string;
+  lieu: string;
+  adresseDomicile: string;
+  statut: string;
+  motifAnnulation: string;
+  source: string;
+  prisPar: string;
+  prisLe: string;
+  gradient: string;
+}
+
+/** Filtres d'état de la liste, dans l'ordre où l'opérateur les cherche. */
+export const FILTRES_APPELS = [
+  { cle: "", label: "Tous les états" },
+  { cle: "a_venir", label: "À venir" },
+  { cle: "confirme", label: "Confirmés" },
+  { cle: "passes", label: "Passés" },
+  { cle: "honore", label: "Honorés" },
+  { cle: "annule", label: "Annulés" },
+] as const;
+
+export const APPELS_PAR_PAGE = 15;
+
+export function useAppelsTraites(
+  recherche: string,
+  statut: string,
+  portee: "console" | "tous",
+  page: number
+): {
+  appels: AppelTraite[];
+  total: number;
+  chargement: boolean;
+  erreur: string;
+  recharger: () => void;
+} {
+  const [version, setVersion] = useState(0);
+  const [resultat, setResultat] = useState<{
+    cle: string;
+    appels: AppelTraite[];
+    total: number;
+    erreur: string;
+  } | null>(null);
+  const cle = `${recherche}#${statut}#${portee}#${page}#${version}`;
+
+  useEffect(() => {
+    let actif = true;
+    creerClientNavigateur()
+      .rpc("appels_centre_appel", {
+        p_recherche: recherche,
+        p_statut: statut,
+        p_portee: portee,
+        p_limite: APPELS_PAR_PAGE,
+        p_decalage: page * APPELS_PAR_PAGE,
+      })
+      .then(({ data, error }) => {
+        if (!actif) return;
+        const lignes = (data ?? []) as {
+          id: string;
+          jour: string;
+          heure: string;
+          patient: string;
+          type_fiche: TypeFiche;
+          telephone: string;
+          email: string;
+          titulaire: string;
+          medecin_id: string;
+          medecin: string;
+          medecin_telephone: string;
+          motif: string;
+          lieu: string;
+          adresse_domicile: string;
+          statut: string;
+          motif_annulation: string;
+          source: string;
+          pris_par: string;
+          pris_le: string;
+          total: number;
+        }[];
+        setResultat({
+          cle,
+          erreur: error?.message ?? "",
+          total: Number(lignes[0]?.total ?? 0),
+          appels: lignes.map((l) => ({
+            id: l.id,
+            date: l.jour,
+            heure: String(l.heure).slice(0, 5),
+            patient: l.patient,
+            typeFiche: l.type_fiche,
+            telephone: l.telephone,
+            email: l.email,
+            titulaire: l.titulaire,
+            medecinId: l.medecin_id,
+            medecin: l.medecin,
+            medecinTelephone: l.medecin_telephone,
+            motif: l.motif,
+            lieu: l.lieu,
+            adresseDomicile: l.adresse_domicile,
+            statut: l.statut,
+            motifAnnulation: l.motif_annulation,
+            source: l.source,
+            prisPar: l.pris_par,
+            prisLe: l.pris_le,
+            gradient: gradientPour(l.id),
+          })),
+        });
+      });
+    return () => {
+      actif = false;
+    };
+  }, [cle, recherche, statut, portee, page]);
+
+  const aJour = resultat?.cle === cle;
+  return {
+    appels: aJour ? resultat.appels : AUCUN_APPEL,
+    total: aJour ? resultat.total : 0,
+    chargement: !aJour,
+    erreur: aJour ? resultat.erreur : "",
+    recharger: () => setVersion((v) => v + 1),
+  };
+}
+
+const AUCUN_APPEL: AppelTraite[] = [];
 
 /* ===== Divers ===== */
 

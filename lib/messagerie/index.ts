@@ -1,7 +1,7 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { fournisseur } from "./fournisseurs";
 import { mesurerSms } from "./cout";
-import { configComplete, type Canal, type ConfigMessagerie } from "./types";
+import { configComplete, configDuCanal, type Canal, type ConfigMessagerie } from "./types";
 
 export * from "./types";
 export * from "./cout";
@@ -31,6 +31,7 @@ const CONFIG_DEFAUT: ConfigMessagerie = {
   canalDefaut: "whatsapp",
   sms: { fournisseur: null, url: null, identifiant: null, cle: null, expediteur: null, coutGnf: 150 },
   whatsapp: { fournisseur: null, url: null, identifiant: null, cle: null, expediteur: null, coutGnf: 20 },
+  email: { fournisseur: null, url: null, identifiant: null, cle: null, expediteur: null, coutGnf: 0 },
 };
 
 export async function lireConfigMessagerie(admin = clientAdmin()): Promise<ConfigMessagerie> {
@@ -55,6 +56,16 @@ export async function lireConfigMessagerie(admin = clientAdmin()): Promise<Confi
       expediteur: data.whatsapp_numero_id,
       coutGnf: data.cout_whatsapp_gnf ?? 20,
     },
+    email: {
+      fournisseur: data.email_fournisseur,
+      url: data.email_url,
+      // L'adresse d'expédition tient les deux rôles : elle identifie
+      // l'émetteur et c'est elle qui part dans l'en-tête `From`.
+      identifiant: data.email_expediteur,
+      cle: data.email_cle,
+      expediteur: data.email_expediteur,
+      coutGnf: data.cout_email_gnf ?? 0,
+    },
   };
 }
 
@@ -66,6 +77,8 @@ export interface DemandeEnvoi {
   texte: string;
   /** Omis : le canal par défaut de la plateforme. */
   canal?: Canal;
+  /** Objet de l'e-mail. Ignoré par les canaux SMS et WhatsApp. */
+  sujet?: string;
 }
 
 export interface ResultatEnvoi {
@@ -86,10 +99,10 @@ export async function envoyerMessage(demande: DemandeEnvoi): Promise<ResultatEnv
   const admin = clientAdmin();
   const config = await lireConfigMessagerie(admin);
   const canal = demande.canal ?? config.canalDefaut;
-  const canalConfig = canal === "sms" ? config.sms : config.whatsapp;
+  const canalConfig = configDuCanal(canal, config);
 
-  // Un message WhatsApp est facturé à la conversation, pas au segment : le
-  // découpage à 160 caractères n'a pas de sens pour lui.
+  // Un message WhatsApp est facturé à la conversation et un e-mail au
+  // message : le découpage à 160 caractères n'a de sens que pour le SMS.
   const segments = canal === "sms" ? mesurerSms(demande.texte).segments : 1;
 
   /*
@@ -100,7 +113,12 @@ export async function envoyerMessage(demande: DemandeEnvoi): Promise<ResultatEnv
    */
   const reel = config.mode === "reel" && configComplete(canal, config);
   const resultat = reel
-    ? await fournisseur(canalConfig.fournisseur).envoyer(demande.destinataire, demande.texte, canalConfig)
+    ? await fournisseur(canalConfig.fournisseur).envoyer(
+        demande.destinataire,
+        demande.texte,
+        canalConfig,
+        demande.sujet
+      )
     : { reference: `simule-${Date.now()}` };
 
   const statut = resultat.erreur ? "echec" : reel ? "envoye" : "simule";

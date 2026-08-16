@@ -5,6 +5,7 @@ import AdminShell from "@/components/admin/AdminShell";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { FOURNISSEURS_PAR_CANAL } from "@/lib/messagerie/catalogue";
 import { alerteCout, mesurerSms } from "@/lib/messagerie/cout";
+import type { Canal } from "@/lib/messagerie/types";
 
 /*
  * Messagerie — où sont posés les identifiants d'agrégateur SMS et WhatsApp.
@@ -21,7 +22,7 @@ import { alerteCout, mesurerSms } from "@/lib/messagerie/cout";
 
 interface ConfigPublique {
   mode: "simule" | "reel";
-  canal_defaut: "sms" | "whatsapp";
+  canal_defaut: Canal;
   sms_fournisseur: string | null;
   sms_url: string | null;
   sms_identifiant: string | null;
@@ -31,8 +32,13 @@ interface ConfigPublique {
   whatsapp_url: string | null;
   whatsapp_numero_id: string | null;
   cout_whatsapp_gnf: number;
+  email_fournisseur: string | null;
+  email_url: string | null;
+  email_expediteur: string | null;
+  cout_email_gnf: number;
   sms_cle_posee: boolean;
   whatsapp_jeton_pose: boolean;
+  email_cle_posee: boolean;
   maj_le: string | null;
 }
 
@@ -86,6 +92,7 @@ export default function MessagerieAdmin() {
         ...brouillon,
         coutSmsGnf: Number(valeur("coutSmsGnf", config?.cout_sms_gnf)) || 0,
         coutWhatsappGnf: Number(valeur("coutWhatsappGnf", config?.cout_whatsapp_gnf)) || 0,
+        coutEmailGnf: Number(valeur("coutEmailGnf", config?.cout_email_gnf)) || 0,
       }),
     });
     const { erreur: e } = await r.json();
@@ -96,7 +103,7 @@ export default function MessagerieAdmin() {
     recharger();
   }
 
-  async function tester(canal: "sms" | "whatsapp") {
+  async function tester(canal: Canal) {
     setResultatTest(null);
     setErreur(null);
     const r = await fetch("/api/admin/messagerie", {
@@ -158,10 +165,13 @@ export default function MessagerieAdmin() {
         >
           <option value="whatsapp">WhatsApp — le moins cher</option>
           <option value="sms">SMS</option>
+          <option value="email">E-mail</option>
         </select>
         <p className="text-[11.5px] text-muted">
           Le SMS reste le repli quand WhatsApp échoue, et le seul canal pour un patient qui ne l’a
-          pas. Le professionnel doit l’avoir autorisé.
+          pas. Le professionnel doit l’avoir autorisé. L’e-mail part <b>en plus</b> du canal
+          téléphonique dès qu’une adresse est connue : il ne le remplace pas — tout le monde n’a
+          pas de boîte mail, et personne ne la relève avant un rendez-vous.
         </p>
       </div>
 
@@ -243,15 +253,84 @@ export default function MessagerieAdmin() {
       </div>
 
       <div className={carte}>
+        <h3 className="mb-[14px] text-[15px] font-extrabold">
+          E-mail transactionnel{" "}
+          <span
+            className={`ml-1 rounded-lg px-[9px] py-1 text-[11px] font-bold ${config.email_cle_posee ? "bg-green-soft text-green" : "bg-red-soft text-red"}`}
+          >
+            {config.email_cle_posee ? "Clé posée" : "Clé absente"}
+          </span>
+        </h3>
+        <p className="mb-[14px] text-[12.5px] text-muted">
+          Confirmations et rappels envoyés par courriel, en complément du canal téléphonique. Un
+          fournisseur d’e-mail transactionnel est indispensable : envoyer depuis une boîte
+          ordinaire fait classer les messages en indésirables.
+        </p>
+        <label className={etiquette}>Fournisseur</label>
+        <select
+          className={champ}
+          value={valeur("emailFournisseur", config.email_fournisseur)}
+          onChange={(e) => modifier("emailFournisseur", e.target.value)}
+        >
+          <option value="">— Choisir —</option>
+          {FOURNISSEURS_PAR_CANAL.email.map((f) => (
+            <option key={f.valeur} value={f.valeur}>
+              {f.label}
+            </option>
+          ))}
+        </select>
+        <label className={etiquette}>URL de l’API</label>
+        <input
+          className={champ}
+          placeholder="https://api.resend.com/emails"
+          value={valeur("emailUrl", config.email_url)}
+          onChange={(e) => modifier("emailUrl", e.target.value)}
+        />
+        <label className={etiquette}>Adresse d’expédition</label>
+        <input
+          className={champ}
+          placeholder="Docteur 224 <rendezvous@docteur224.com>"
+          value={valeur("emailExpediteur", config.email_expediteur)}
+          onChange={(e) => modifier("emailExpediteur", e.target.value)}
+        />
+        <p className="-mt-1.5 mb-3 text-[11.5px] text-muted">
+          Le domaine doit être vérifié chez le fournisseur (SPF et DKIM), sans quoi les messages
+          n’arrivent pas.
+        </p>
+        <label className={etiquette}>Clé d’API</label>
+        <input
+          className={champ}
+          type="password"
+          placeholder={
+            config.email_cle_posee ? "Inchangée — laissez vide pour la conserver" : "Collez la clé"
+          }
+          value={brouillon.emailCle ?? ""}
+          onChange={(e) => modifier("emailCle", e.target.value)}
+        />
+        <label className={etiquette}>Coût d’un e-mail (GNF)</label>
+        <input
+          className={champ}
+          inputMode="numeric"
+          value={valeur("coutEmailGnf", config.cout_email_gnf)}
+          onChange={(e) => modifier("coutEmailGnf", e.target.value)}
+        />
+      </div>
+
+      <div className={carte}>
         <h3 className="mb-1 text-[15px] font-extrabold">Envoi d’essai</h3>
         <p className="mb-[14px] text-[12.5px] text-muted">
           Le message de test fait {mesure.segments} segment(s) en {mesure.gsm7 ? "GSM-7" : "UCS-2"}.
           {alerte && ` ${alerte}`}
         </p>
-        <label className={etiquette}>Numéro destinataire</label>
-        <input className={champ} placeholder="+224620000000" value={numeroTest} onChange={(e) => setNumeroTest(e.target.value)} />
+        <label className={etiquette}>Destinataire</label>
+        <input
+          className={champ}
+          placeholder="+224620000000 — ou une adresse e-mail"
+          value={numeroTest}
+          onChange={(e) => setNumeroTest(e.target.value)}
+        />
         <div className="flex flex-wrap gap-2">
-          {(["whatsapp", "sms"] as const).map((c) => (
+          {(["whatsapp", "sms", "email"] as const).map((c) => (
             <button
               key={c}
               type="button"
@@ -259,7 +338,7 @@ export default function MessagerieAdmin() {
               disabled={!numeroTest}
               className="rounded-[9px] border-[1.5px] border-line bg-white px-3 py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Tester en {c === "sms" ? "SMS" : "WhatsApp"}
+              Tester en {c === "sms" ? "SMS" : c === "email" ? "e-mail" : "WhatsApp"}
             </button>
           ))}
         </div>
@@ -272,7 +351,29 @@ export default function MessagerieAdmin() {
     <AdminShell permission="messagerie">
       <div className="md:hidden">
         <EnTeteMobile retour="/espace-admin/plus" titre="Messagerie" />
-        <div className="pad">{contenu}</div>
+        <div className="pad">
+          {contenu}
+          {/* Le bouton d'enregistrement n'existait que dans le bloc web : sur
+              téléphone, on pouvait modifier la configuration sans jamais
+              pouvoir la sauvegarder. */}
+          {!chargement && config && (
+            <>
+              <button
+                type="button"
+                onClick={enregistrer}
+                disabled={Object.keys(brouillon).length === 0 || envoi}
+                className="btn block"
+              >
+                {envoi ? "Enregistrement…" : "💾 Enregistrer"}
+              </button>
+              {enregistre && (
+                <p className="muted" style={{ fontSize: 12.5, textAlign: "center" }}>
+                  ✓ Enregistré
+                </p>
+              )}
+            </>
+          )}
+        </div>
       </div>
 
       <div className="hidden md:block">
@@ -280,7 +381,7 @@ export default function MessagerieAdmin() {
           <div>
             <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Messagerie</h2>
             <small className="text-[13px] text-muted">
-              Agrégateurs SMS et WhatsApp — les clés ne quittent jamais le serveur
+              SMS, WhatsApp et e-mail — les clés ne quittent jamais le serveur
             </small>
           </div>
           <span className="flex items-center gap-3">

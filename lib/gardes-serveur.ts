@@ -36,7 +36,12 @@ export function clientServiceRole(): SupabaseClient {
  * qu'en base depuis `est_admin()` (migration 0043).
  */
 export async function verifierAdmin(
-  permission: Permission
+  /**
+   * Omise, la garde exige seulement un compte administrateur actif : c'est le
+   * cas des écrans ouverts à toute l'équipe (tableau de bord, prise de
+   * rendez-vous au téléphone), qui ne relèvent d'aucune section cloisonnée.
+   */
+  permission?: Permission
 ): Promise<{ acces: AccesAdmin } | { refus: NextResponse }> {
   const session = await creerClientServeur();
   const { data: auth } = await session.auth.getUser();
@@ -57,10 +62,10 @@ export async function verifierAdmin(
     return { refus: NextResponse.json({ erreur: "Réservé aux administrateurs." }, { status: 403 }) };
   }
   const principal = Boolean(appelant.admin_principal);
-  if (!principal && !(appelant.sous_roles_admin ?? []).includes(permission)) {
+  if (permission && !principal && !(appelant.sous_roles_admin ?? []).includes(permission)) {
     return {
       refus: NextResponse.json(
-        { erreur: "Vous n’avez pas la permission « Équipe admin »." },
+        { erreur: `Vous n’avez pas la permission « ${permission} ».` },
         { status: 403 }
       ),
     };

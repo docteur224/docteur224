@@ -13,7 +13,7 @@
  * la comptabilité.
  */
 
-export type Canal = "sms" | "whatsapp";
+export type Canal = "sms" | "whatsapp" | "email";
 export type ModeMessagerie = "simule" | "reel";
 
 export interface ConfigCanal {
@@ -22,7 +22,7 @@ export interface ConfigCanal {
   identifiant: string | null;
   /** Secret : ne quitte jamais le serveur. */
   cle: string | null;
-  /** Expéditeur SMS, ou identifiant du numéro WhatsApp. */
+  /** Expéditeur SMS, identifiant du numéro WhatsApp, ou adresse d’envoi e-mail. */
   expediteur: string | null;
   coutGnf: number;
 }
@@ -32,6 +32,7 @@ export interface ConfigMessagerie {
   canalDefaut: Canal;
   sms: ConfigCanal;
   whatsapp: ConfigCanal;
+  email: ConfigCanal;
 }
 
 export interface ResultatFournisseur {
@@ -42,11 +43,28 @@ export interface ResultatFournisseur {
 
 export interface Fournisseur {
   nom: string;
-  envoyer(destinataire: string, texte: string, config: ConfigCanal): Promise<ResultatFournisseur>;
+  /**
+   * `sujet` n'a de sens que pour l'e-mail ; les fournisseurs SMS et WhatsApp
+   * l'ignorent. Le passer à tous plutôt que d'ouvrir une seconde interface
+   * garde un seul contrat à satisfaire pour brancher un agrégateur.
+   */
+  envoyer(
+    destinataire: string,
+    texte: string,
+    config: ConfigCanal,
+    sujet?: string
+  ): Promise<ResultatFournisseur>;
+}
+
+/** La configuration d'un canal, sans `if` recopié dans chaque appelant. */
+export function configDuCanal(canal: Canal, config: ConfigMessagerie): ConfigCanal {
+  return canal === "sms" ? config.sms : canal === "email" ? config.email : config.whatsapp;
 }
 
 /** Une configuration incomplète ne doit jamais partir en mode réel. */
 export function configComplete(canal: Canal, config: ConfigMessagerie): boolean {
-  const c = canal === "sms" ? config.sms : config.whatsapp;
-  return !!(c.url && c.cle && (canal === "sms" ? c.expediteur : c.identifiant));
+  const c = configDuCanal(canal, config);
+  // WhatsApp s'identifie par son numéro d'entreprise ; le SMS par le nom court
+  // déclaré chez l'opérateur ; l'e-mail par son adresse d'expédition.
+  return !!(c.url && c.cle && (canal === "whatsapp" ? c.identifiant : c.expediteur));
 }

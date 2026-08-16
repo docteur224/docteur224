@@ -17,4 +17,8 @@ export const FOURNISSEURS_PAR_CANAL: Record<Canal, { valeur: string; label: stri
     { valeur: "simule", label: "Simulé — rien n'est envoyé" },
     { valeur: "http", label: "WhatsApp Business (POST JSON)" },
   ],
+  email: [
+    { valeur: "simule", label: "Simulé — rien n'est envoyé" },
+    { valeur: "http-email", label: "E-mail transactionnel (Resend, Brevo, Postmark…)" },
+  ],
 };

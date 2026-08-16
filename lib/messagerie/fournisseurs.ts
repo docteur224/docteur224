@@ -71,9 +71,57 @@ export const httpGenerique: Fournisseur = {
   },
 };
 
+/**
+ * POST JSON vers une API d'e-mail transactionnel (Resend, Brevo, Postmark…).
+ *
+ * Même forme que `httpGenerique`, mais le corps porte un sujet : un e-mail
+ * sans objet part en indésirable, et le patient ne le lit jamais. Les noms de
+ * champs suivent la convention la plus répandue ; un fournisseur qui en attend
+ * d'autres se traite en ajoutant une entrée au catalogue, pas en tordant
+ * celle-ci.
+ */
+export const httpEmail: Fournisseur = {
+  nom: "http-email",
+  async envoyer(destinataire, texte, config: ConfigCanal, sujet): Promise<ResultatFournisseur> {
+    if (!config.url || !config.cle) return { erreur: "Fournisseur non configuré." };
+    if (!config.expediteur) return { erreur: "Adresse d’expédition manquante." };
+    const controleur = new AbortController();
+    const minuteur = setTimeout(() => controleur.abort(), 10_000);
+    try {
+      const reponse = await fetch(config.url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${config.cle}`,
+        },
+        body: JSON.stringify({
+          from: config.expediteur,
+          to: [destinataire],
+          subject: sujet ?? "Docteur 224",
+          text: texte,
+        }),
+        signal: controleur.signal,
+      });
+      if (!reponse.ok) {
+        const detail = await reponse.text().catch(() => "");
+        return { erreur: `HTTP ${reponse.status} ${detail.slice(0, 200)}`.trim() };
+      }
+      const donnees = (await reponse.json().catch(() => ({}))) as Record<string, unknown>;
+      const reference = donnees.id ?? donnees.messageId ?? donnees.reference;
+      return { reference: typeof reference === "string" ? reference : undefined };
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      return { erreur: message === "The operation was aborted." ? "Délai dépassé (10 s)." : message };
+    } finally {
+      clearTimeout(minuteur);
+    }
+  },
+};
+
 const CATALOGUE: Record<string, Fournisseur> = {
   simule: simule,
   http: httpGenerique,
+  "http-email": httpEmail,
 };
 
 /** Repli sur `simule` : un nom inconnu ne doit pas faire tomber un envoi. */

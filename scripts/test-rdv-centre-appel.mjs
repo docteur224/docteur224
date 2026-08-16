@@ -7,9 +7,14 @@
  * `est_admin()` est la seule barrière. Un test qui passerait par la
  * service_role ne prouverait rien.
  *
+ * La dernière partie appelle la route serveur qui envoie la confirmation :
+ * elle exige `npx next build && npx next start -p 3001` (variable APP pour
+ * un autre port). Sans serveur, cette partie est signalée et sautée.
+ *
  * Usage : node scripts/test-rdv-centre-appel.mjs
  */
 import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
 import { readFileSync } from "node:fs";
 
 const env = readFileSync(new URL("../.env.local", import.meta.url), "utf8");
@@ -481,6 +486,380 @@ if (rdvCrees[0]) {
 const { error: eRecentsPatient } = await patient.rpc("rdv_centre_appel_recents", { p_limite: 8 });
 test("…et refusée à un patient", !!eRecentsPatient, eRecentsPatient?.message?.slice(0, 60));
 
+/* ================= 8. Reprendre un rendez-vous posé ================= */
+
+const refusListe = async (client, qui) => {
+  const { error } = await client.rpc("appels_centre_appel", { p_limite: 5 });
+  test(`Liste des appels refusée à ${qui}`, !!error, error?.message?.slice(0, 60));
+};
+await refusListe(anonyme, "un visiteur anonyme");
+await refusListe(patient, "un patient");
+await refusListe(medecinSession, "un médecin");
+
+const { data: liste, error: eListe } = await admin.rpc("appels_centre_appel", {
+  p_recherche: "",
+  p_statut: "",
+  p_portee: "console",
+  p_limite: 20,
+  p_decalage: 0,
+});
+test("La liste des appels traités se lit", !eListe && (liste ?? []).length > 0, eListe?.message);
+
+const ligneRdv = (liste ?? []).find((l) => l.id === rdvCrees[0]);
+test(
+  "…et porte le contact de l'appelant",
+  !!ligneRdv && !!ligneRdv.telephone && !!ligneRdv.email,
+  ligneRdv ? `${ligneRdv.telephone} · ${ligneRdv.email}` : "ligne absente"
+);
+test(
+  "…ainsi que le praticien et l'auteur de la saisie",
+  !!ligneRdv && !!ligneRdv.medecin && !!ligneRdv.pris_par,
+  ligneRdv ? `${ligneRdv.medecin} · ${ligneRdv.pris_par}` : ""
+);
+
+// La recherche par numéro doit fonctionner comme au téléphone.
+const { data: parNumero } = await admin.rpc("appels_centre_appel", {
+  p_recherche: numeroEspace,
+  p_portee: "console",
+  p_limite: 20,
+});
+test(
+  "La liste se cherche par numéro de téléphone",
+  (parNumero ?? []).some((l) => l.id === rdvCrees[0]),
+  `${(parNumero ?? []).length} résultat(s)`
+);
+
+// Portée « tous » : les rendez-vous pris en ligne par les patients entrent
+// aussi dans la liste, sans qu'aucun droit nouveau soit accordé.
+const { data: tous } = await admin.rpc("appels_centre_appel", {
+  p_portee: "tous",
+  p_limite: 50,
+});
+test(
+  "La portée « tous » élargit au-delà des appels de la console",
+  (tous ?? []).length >= (liste ?? []).length,
+  `${(liste ?? []).length} → ${(tous ?? []).length}`
+);
+
+/* --- Déplacer --- */
+
+const refusDeplacer = async (client, qui) => {
+  const { error } = await client.rpc("reprogrammer_rdv_centre_appel", {
+    p_rdv: rdvCrees[0],
+    p_date: cible.jour,
+    p_heure: cible.heure,
+  });
+  test(`Déplacement refusé à ${qui}`, !!error, error?.message?.slice(0, 60));
+};
+await refusDeplacer(patient, "un patient");
+await refusDeplacer(medecinSession, "un médecin");
+
+// Un créneau libre chez le même praticien, différent de celui déjà pris.
+const { data: apresPrise } = await admin.rpc("prochaines_dispos_medecins", {
+  p_medecin_ids: [cible.medecin_id],
+  p_jours: 14,
+});
+const nouveauCreneau = (apresPrise ?? [])[0];
+
+if (nouveauCreneau) {
+  const { error: eDeplace } = await admin.rpc("reprogrammer_rdv_centre_appel", {
+    p_rdv: rdvCrees[0],
+    p_date: nouveauCreneau.jour,
+    p_heure: nouveauCreneau.heure,
+  });
+  test("Un rendez-vous se déplace vers un créneau ouvert", !eDeplace, eDeplace?.message);
+
+  const { data: deplace } = await service
+    .from("rendez_vous")
+    .select("date, heure")
+    .eq("id", rdvCrees[0])
+    .single();
+  test(
+    "…et la base porte le nouvel horaire",
+    deplace.date === nouveauCreneau.jour && deplace.heure === nouveauCreneau.heure,
+    `${deplace.date} ${deplace.heure}`
+  );
+
+  const { count: notifsDeplacement } = await service
+    .from("notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("source_id", rdvCrees[0])
+    .eq("type", "rdv_reprogramme");
+  test("…le patient est prévenu du déplacement", (notifsDeplacement ?? 0) >= 1);
+}
+
+const { error: eHorsAgenda } = await admin.rpc("reprogrammer_rdv_centre_appel", {
+  p_rdv: rdvCrees[0],
+  p_date: cible.jour,
+  p_heure: "03:15",
+});
+test(
+  "Un déplacement hors agenda est refusé",
+  !!eHorsAgenda && eHorsAgenda.message.includes("n'est pas ouvert"),
+  eHorsAgenda?.message?.slice(0, 60)
+);
+
+/* --- Supprimer avant d'annuler --- */
+
+const { error: eSuppAvant } = await admin.rpc("supprimer_rdv_centre_appel", { p_rdv: rdvCrees[0] });
+test(
+  "Un rendez-vous confirmé ne se supprime pas : il s'annule d'abord",
+  !!eSuppAvant && eSuppAvant.message.includes("Annulez d"),
+  eSuppAvant?.message?.slice(0, 70)
+);
+
+/* --- Annuler --- */
+
+const { error: eSansMotif } = await admin.rpc("annuler_rdv_centre_appel", {
+  p_rdv: rdvCrees[0],
+  p_motif: "   ",
+});
+test(
+  "Une annulation sans motif est refusée",
+  !!eSansMotif && eSansMotif.message.includes("motif"),
+  eSansMotif?.message?.slice(0, 60)
+);
+
+const refusAnnuler = await patient.rpc("annuler_rdv_centre_appel", {
+  p_rdv: rdvCrees[0],
+  p_motif: "Test",
+});
+test("Annulation refusée à un patient", !!refusAnnuler.error, refusAnnuler.error?.message?.slice(0, 60));
+
+const { error: eAnnule } = await admin.rpc("annuler_rdv_centre_appel", {
+  p_rdv: rdvCrees[0],
+  p_motif: "Le patient s'est décommandé (test)",
+});
+test("L'admin annule le rendez-vous avec un motif", !eAnnule, eAnnule?.message);
+
+const { data: annule } = await service
+  .from("rendez_vous")
+  .select("statut, motif_annulation")
+  .eq("id", rdvCrees[0])
+  .single();
+test(
+  "…le motif est conservé en base",
+  annule.statut === "annule" && annule.motif_annulation.includes("décommandé"),
+  `${annule.statut} · ${annule.motif_annulation}`
+);
+
+const { count: notifsAnnulation } = await service
+  .from("notifications")
+  .select("id", { count: "exact", head: true })
+  .eq("source_id", rdvCrees[0])
+  .eq("type", "rdv_annule");
+test("…patient et praticien sont prévenus", (notifsAnnulation ?? 0) >= 2, `${notifsAnnulation}`);
+
+// Le créneau libéré redevient réservable : c'est ce qui distingue une
+// annulation d'une simple étiquette posée sur la ligne.
+const { data: ouvertApres } = await admin.rpc("creneau_ouvert_medecin", {
+  p_medecin_id: annuleMedecinId(),
+  p_date: nouveauCreneau?.jour ?? cible.jour,
+  p_heure: nouveauCreneau?.heure ?? cible.heure,
+});
+test("…et le créneau est de nouveau libre", ouvertApres === true);
+
+function annuleMedecinId() {
+  return cible.medecin_id;
+}
+
+/* --- Supprimer --- */
+
+const refusSupprimer = await medecinSession.rpc("supprimer_rdv_centre_appel", { p_rdv: rdvCrees[0] });
+test(
+  "Suppression refusée à un médecin",
+  !!refusSupprimer.error,
+  refusSupprimer.error?.message?.slice(0, 60)
+);
+
+const { error: eSupp } = await admin.rpc("supprimer_rdv_centre_appel", { p_rdv: rdvCrees[0] });
+test("Un rendez-vous annulé se supprime", !eSupp, eSupp?.message);
+
+const { count: reste } = await service
+  .from("rendez_vous")
+  .select("id", { count: "exact", head: true })
+  .eq("id", rdvCrees[0]);
+test("…la ligne a bien disparu", reste === 0);
+
+const { count: notifsOrphelines } = await service
+  .from("notifications")
+  .select("id", { count: "exact", head: true })
+  .eq("source_id", rdvCrees[0]);
+test("…sans laisser de notification pointant dans le vide", notifsOrphelines === 0);
+
+const { data: traceSuppression } = await service
+  .from("journal_audit")
+  .select("action")
+  .eq("cible_id", rdvCrees[0])
+  .ilike("action", "%supprim%")
+  .maybeSingle();
+test("…mais la trace d'audit, elle, subsiste", !!traceSuppression, traceSuppression?.action);
+
+// Déjà supprimé côté base : on le retire de la liste de nettoyage.
+rdvCrees.shift();
+
+/* ================= 9. La confirmation part chez le patient ================= */
+
+/*
+ * Cette partie passe par la ROUTE et non par la RPC : l'envoi lit les secrets
+ * de l'agrégateur et appelle `enregistrer_message`, deux choses interdites au
+ * navigateur. Ce qu'on vérifie, c'est que le circuit complet est emprunté —
+ * pas qu'un SMS arrive vraiment, ce qui dépend d'un contrat d'agrégateur.
+ */
+const APP = process.env.APP ?? "http://localhost:3001";
+
+async function sessionCookies(email, motDePasse) {
+  const bocal = new Map();
+  const client = createServerClient(URL_SB, ANON, {
+    cookies: {
+      getAll: () => [...bocal].map(([name, value]) => ({ name, value })),
+      setAll: (liste) => liste.forEach(({ name, value }) => bocal.set(name, value)),
+    },
+  });
+  const { error } = await client.auth.signInWithPassword({ email, password: motDePasse });
+  if (error) throw new Error(`connexion ${email} : ${error.message}`);
+  const cookie = [...bocal].map(([n, v]) => `${n}=${encodeURIComponent(v)}`).join("; ");
+  return (chemin, init = {}) =>
+    fetch(`${APP}${chemin}`, {
+      ...init,
+      headers: { "Content-Type": "application/json", cookie, ...(init.headers ?? {}) },
+    });
+}
+
+let serveurDebout = true;
+try {
+  await fetch(`${APP}/espace-admin/connexion`, { method: "HEAD" });
+} catch {
+  serveurDebout = false;
+}
+
+if (!serveurDebout) {
+  console.log(`⏭️  Route de confirmation non testée : aucun serveur sur ${APP}.`);
+} else {
+  const appelAdmin = await sessionCookies("admin@docteur224.com", "alpha2308");
+  const appelPatient = await sessionCookies("patient1@test.docteur224.com", "test1234");
+
+  const { data: dispoRoute } = await admin.rpc("prochaines_dispos_medecins", {
+    p_medecin_ids: [cible.medecin_id],
+    p_jours: 14,
+  });
+  const creneauRoute = (dispoRoute ?? [])[0];
+
+  // Un patient connecté ne doit pas pouvoir poser un rendez-vous par la route.
+  const refusRoute = await appelPatient("/api/admin/rdv-centre-appel", {
+    method: "POST",
+    body: JSON.stringify({
+      medecinId: cible.medecin_id,
+      date: creneauRoute.jour,
+      heure: creneauRoute.heure,
+      patientCle: `c-${refPatient.id}`,
+    }),
+  });
+  test("La route de prise refuse un patient connecté", refusRoute.status === 403, `HTTP ${refusRoute.status}`);
+
+  const messagesAvant = (
+    await service.from("messages_envoyes").select("id", { count: "exact", head: true })
+  ).count;
+
+  const reponse = await appelAdmin("/api/admin/rdv-centre-appel", {
+    method: "POST",
+    body: JSON.stringify({
+      medecinId: cible.medecin_id,
+      date: creneauRoute.jour,
+      heure: creneauRoute.heure,
+      motif: "Consultation (test confirmation)",
+      patientCle: `c-${refPatient.id}`,
+    }),
+  });
+  const corps = await reponse.json();
+  test("La route pose le rendez-vous", reponse.ok && !!corps.id, corps.erreur ?? "");
+  if (corps.id) rdvCrees.push(corps.id);
+
+  test(
+    "…et rend le détail de ce qui est parti chez le patient",
+    !!corps.envoi && "canalTelephone" in corps.envoi && "emailEnvoye" in corps.envoi,
+    corps.envoi ? `tél. ${corps.envoi.canalTelephone} · e-mail ${corps.envoi.emailEnvoye}` : "absent"
+  );
+  test(
+    "…le canal téléphonique est emprunté",
+    corps.envoi?.canalTelephone === "sms" || corps.envoi?.canalTelephone === "whatsapp",
+    String(corps.envoi?.canalTelephone)
+  );
+  test(
+    "…l'e-mail part aussi quand une adresse est connue",
+    corps.envoi?.emailEnvoye === true,
+    corps.envoi?.email ?? "aucune adresse"
+  );
+  test(
+    "…et l'écran est prévenu que le mode est simulé",
+    typeof corps.envoi?.simule === "boolean",
+    corps.envoi?.simule ? "mode simulé — rien ne part réellement" : "mode réel"
+  );
+
+  const { data: messages } = await service
+    .from("messages_envoyes")
+    .select("canal, motif, titulaire_id, statut, destinataire")
+    .eq("motif", "rdv_confirmation")
+    .order("envoye_le", { ascending: false })
+    .limit(4);
+  const messagesApres = (
+    await service.from("messages_envoyes").select("id", { count: "exact", head: true })
+  ).count;
+  test(
+    "Les envois sont journalisés",
+    messagesApres > messagesAvant,
+    `${messagesAvant} → ${messagesApres}`
+  );
+  test(
+    "…sur les deux canaux, au débit du praticien",
+    (messages ?? []).some((m) => m.canal === "email") &&
+      (messages ?? []).some((m) => m.canal === "sms" || m.canal === "whatsapp") &&
+      (messages ?? [])[0]?.titulaire_id === cible.medecin_id,
+    (messages ?? []).map((m) => m.canal).join(", ")
+  );
+
+  /* --- Déplacement et annulation par la route --- */
+  if (corps.id) {
+    const { data: dispoSuite } = await admin.rpc("prochaines_dispos_medecins", {
+      p_medecin_ids: [cible.medecin_id],
+      p_jours: 14,
+    });
+    const suite = (dispoSuite ?? [])[0];
+    if (suite) {
+      const rDeplace = await appelAdmin(`/api/admin/rdv-centre-appel/${corps.id}`, {
+        method: "PUT",
+        body: JSON.stringify({ date: suite.jour, heure: suite.heure }),
+      });
+      const cDeplace = await rDeplace.json();
+      test("La route déplace et prévient", rDeplace.ok && !!cDeplace.envoi, cDeplace.erreur ?? "");
+    }
+
+    const rAnnule = await appelAdmin(`/api/admin/rdv-centre-appel/${corps.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ motif: "Test de la route d'annulation" }),
+    });
+    const cAnnule = await rAnnule.json();
+    test("La route annule et prévient", rAnnule.ok && !!cAnnule.envoi, cAnnule.erreur ?? "");
+
+    const rSansMotif = await appelAdmin(`/api/admin/rdv-centre-appel/${corps.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ motif: "" }),
+    });
+    test("…et refuse une annulation sans motif", rSansMotif.status === 400, `HTTP ${rSansMotif.status}`);
+
+    const { data: messagesAnnul } = await service
+      .from("messages_envoyes")
+      .select("canal, motif")
+      .eq("motif", "rdv_annulation")
+      .limit(3);
+    test(
+      "Les messages d'annulation sont journalisés à part",
+      (messagesAnnul ?? []).length > 0,
+      `${(messagesAnnul ?? []).length} message(s)`
+    );
+  }
+}
+
 /* ================= Nettoyage ================= */
 
 await service.from("notifications").delete().in("source_id", rdvCrees);
@@ -488,6 +867,12 @@ await service.from("journal_audit").delete().in("cible_id", rdvCrees);
 await service.from("rendez_vous").delete().in("id", rdvCrees);
 await service.from("patients_sans_compte").delete().in("id", fichesCrees);
 await service.from("patients_sans_compte").delete().eq("nom", "Orpheline");
+// Les messages du scénario ne doivent pas gonfler la consommation du
+// praticien de démo : ils sont comptés dans son quota mensuel.
+await service
+  .from("messages_envoyes")
+  .delete()
+  .in("motif", ["rdv_confirmation", "rdv_deplacement", "rdv_annulation"]);
 
 const { count: resteRdv } = await service
   .from("rendez_vous")

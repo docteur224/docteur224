@@ -29,12 +29,15 @@ import {
   LIBELLE_TYPE_FICHE,
   LONGUEUR_RECHERCHE_MINI,
   creerRdvCentreAppel,
+  resumeEnvoi,
   useAnnuaireMedecins,
+  useCommunesDeLaVille,
   useMedecinsFiltres,
   useProchainesDispos,
   useRdvRecents,
   useRecherchePatients,
   type DispoMedecin,
+  type EnvoiConfirmation,
   type FichePatient,
 } from "@/lib/rdv-centre-appel";
 
@@ -149,15 +152,30 @@ export default function PriseRdvCentreAppel() {
   const [rechercheMedecin, setRechercheMedecin] = useState("");
   const [specialite, setSpecialite] = useState("");
   const [ville, setVille] = useState("");
+  const [commune, setCommune] = useState("");
   const [domicileSeulement, setDomicileSeulement] = useState(false);
   const [tri, setTri] = useState<"plus_tot" | "note">("plus_tot");
   const [medecin, setMedecin] = useState<MedecinAvecPlages | null>(null);
 
   const idsMedecins = useMemo(() => medecins.map((m) => m.id), [medecins]);
   const { dispos, recharger: rechargerDispos } = useProchainesDispos(idsMedecins);
+  const communes = useCommunesDeLaVille(medecins, ville);
+  /*
+   * Changer de ville périme la commune retenue. On la neutralise AU RENDU
+   * plutôt que de la remettre à zéro dans un effet : le linter React interdit
+   * setState dans un effet, et une commune conservée en mémoire redevient
+   * valable si l'opérateur revient à la ville précédente.
+   */
+  const communeActive = communes.some((c) => c.cle === commune) ? commune : "";
   const resultatsMedecins = useMedecinsFiltres(
     medecins,
-    { recherche: rechercheMedecin, specialite, ville, domicile: domicileSeulement },
+    {
+      recherche: rechercheMedecin,
+      specialite,
+      ville,
+      commune: communeActive,
+      domicile: domicileSeulement,
+    },
     dispos,
     tri
   );
@@ -190,6 +208,7 @@ export default function PriseRdvCentreAppel() {
     adresse: string;
     motif: string;
     montant: number | null;
+    envoi: EnvoiConfirmation | null;
   } | null>(null);
   const { rdvs: recents, recharger: rechargerRecents } = useRdvRecents();
 
@@ -276,6 +295,7 @@ export default function PriseRdvCentreAppel() {
       adresse: adresse.trim(),
       motif: motif || "Consultation",
       montant,
+      envoi: res.envoi ?? null,
     });
     rechargerDispos();
     rechargerRecents();
@@ -295,8 +315,36 @@ export default function PriseRdvCentreAppel() {
             Rendez-vous enregistré
           </h2>
           <p className="mt-1.5 text-[13.5px] text-muted">
-            Le patient reçoit sa confirmation ; le praticien voit le rendez-vous dans son agenda.
+            Le praticien voit le rendez-vous dans son agenda.
           </p>
+          {/* Ce qui est VRAIMENT parti, canal par canal. En mode simulé, le
+              patient ne reçoit rien : le taire ferait raccrocher l'opérateur
+              en croyant le contraire. */}
+          {confirme.envoi && (
+            <p
+              className={`mx-auto mt-3 inline-flex max-w-[520px] items-start gap-2 rounded-xl px-[14px] py-2.5 text-left text-[12.5px] font-semibold leading-relaxed ${
+                confirme.envoi.canalTelephone || confirme.envoi.emailEnvoye
+                  ? confirme.envoi.simule
+                    ? "bg-amber-soft text-amber"
+                    : "bg-green-soft text-green"
+                  : "bg-red-soft text-red"
+              }`}
+            >
+              <span aria-hidden>
+                {confirme.envoi.canalTelephone || confirme.envoi.emailEnvoye
+                  ? confirme.envoi.simule
+                    ? "⚠️"
+                    : "📨"
+                  : "⚠️"}
+              </span>
+              <span>
+                {resumeEnvoi(confirme.envoi)}
+                {confirme.envoi.telephone && ` (${confirme.envoi.telephone}`}
+                {confirme.envoi.telephone && confirme.envoi.email && ` · ${confirme.envoi.email}`}
+                {confirme.envoi.telephone && ")"}
+              </span>
+            </p>
+          )}
         </div>
 
         {/* Ce que l'opérateur relit à l'appelant avant de raccrocher : c'est la
@@ -527,6 +575,31 @@ export default function PriseRdvCentreAppel() {
                     {villes.map((v) => (
                       <option key={v} value={v}>
                         {v}
+                      </option>
+                    ))}
+                  </select>
+                  {/* La commune dépend de la ville : sans ville choisie, la
+                      liste n'aurait aucun sens (les mêmes noms de quartier se
+                      répètent d'une ville à l'autre). Le compte de praticiens
+                      est affiché pour que l'opérateur voie tout de suite où il
+                      a le choix. */}
+                  <select
+                    className={CHAMP}
+                    aria-label="Commune"
+                    value={communeActive}
+                    disabled={!ville || communes.length === 0}
+                    onChange={(e) => setCommune(e.target.value)}
+                  >
+                    <option value="">
+                      {!ville
+                        ? "Commune — choisissez d’abord une ville"
+                        : communes.length === 0
+                          ? "Aucune commune renseignée ici"
+                          : "Toutes les communes"}
+                    </option>
+                    {communes.map((c) => (
+                      <option key={c.cle} value={c.cle}>
+                        {c.libelle} ({c.nb})
                       </option>
                     ))}
                   </select>
@@ -765,7 +838,15 @@ export default function PriseRdvCentreAppel() {
           </div>
 
           <div className={CARTE}>
-            <h3 className="mb-2 text-[15px] font-extrabold">Derniers appels traités</h3>
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h3 className="text-[15px] font-extrabold">Derniers appels traités</h3>
+              <Link
+                href="/espace-admin/nouveau-rdv?vue=appels"
+                className="text-[11.5px] font-bold text-blue underline"
+              >
+                Tout voir
+              </Link>
+            </div>
             {recents.length === 0 ? (
               <p className="text-[12.5px] text-muted">
                 Aucun rendez-vous encore pris depuis la console.

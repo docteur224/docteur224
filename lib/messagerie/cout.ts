@@ -60,6 +60,26 @@ export function mesurerSms(texte: string, coutSegment = COUT_SEGMENT_GNF): Mesur
 }
 
 /**
+ * Ramène un texte dans l'alphabet GSM-7 : accents décomposés puis retirés,
+ * apostrophes et guillemets typographiques remplacés par leurs équivalents
+ * droits, tirets longs par des traits d'union.
+ *
+ * À n'appliquer QUE sur les SMS. Un e-mail ou un message WhatsApp est facturé
+ * au message : les priver de leurs accents les rendrait laids sans rien faire
+ * économiser.
+ */
+export function versGsm7(texte: string): string {
+  return texte
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[’‘]/g, "'")
+    .replace(/[«»“”]/g, '"')
+    .replace(/[—–]/g, "-")
+    .replace(/[·•]/g, "-")
+    .replace(/…/g, "...");
+}
+
+/**
  * Message plus cher qu'il n'en a l'air : il tiendrait en un segment de moins
  * s'il restait dans l'alphabet GSM-7. Sert à alerter à la rédaction d'un
  * gabarit, pas à bloquer.
@@ -67,8 +87,7 @@ export function mesurerSms(texte: string, coutSegment = COUT_SEGMENT_GNF): Mesur
 export function alerteCout(texte: string): string | null {
   const mesure = mesurerSms(texte);
   if (mesure.gsm7) return null;
-  const sansAccents = texte.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[’‘]/g, "'").replace(/[«»]/g, '"');
-  const alternatif = mesurerSms(sansAccents);
+  const alternatif = mesurerSms(versGsm7(texte));
   if (!alternatif.gsm7 || alternatif.segments >= mesure.segments) return null;
   return `Ce message part en UCS-2 (${mesure.segments} segments). Sans les caractères hors alphabet GSM il en ferait ${alternatif.segments}, soit ${(mesure.coutGnf - alternatif.coutGnf).toLocaleString("fr-FR")} GNF de moins par envoi.`;
 }
