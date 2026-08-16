@@ -266,6 +266,36 @@ export interface CreneauAgenda {
   /** « domicile » quand le patient a demandé une visite chez lui. */
   lieu?: "cabinet" | "domicile";
   adresseDomicile?: string;
+  /** Le rendez-vous au complet, pour l'écran de détail de l'agenda. */
+  rdv?: RdvAgenda;
+}
+
+/**
+ * Un rendez-vous tel que l'agenda du praticien a besoin de le montrer :
+ * bénéficiaire nommé, contact déjà résolu (pour un proche, c'est le titulaire
+ * du compte qu'on joint) et clé de dossier prête à ouvrir.
+ */
+export interface RdvAgenda {
+  id: string;
+  date: string;
+  heure: string;
+  motif: string;
+  statut: "en_attente" | "confirme" | "annule" | "honore";
+  lieu: "cabinet" | "domicile";
+  adresseDomicile: string;
+  beneficiaire: string;
+  /** Clé du dossier patient : « c-… » compte, « p-… » proche, « s-… » sans compte. */
+  cle: string;
+  typeFiche: PatientCabinet["type"];
+  telephone: string;
+  email: string;
+  dateNaissance: string | null;
+  /** Titulaire du compte quand le rendez-vous est pris pour un proche. */
+  titulaire: string;
+  lien: string;
+  source: string;
+  creeLe: string;
+  motifAnnulation: string;
 }
 
 interface LigneRdvPro {
@@ -279,16 +309,36 @@ interface LigneRdvPro {
   patient_sans_compte_id: string | null;
   lieu: string | null;
   adresse_domicile: string | null;
-  patients: { utilisateurs: { nom: string | null; prenom: string | null } | null } | null;
-  proches: { nom: string; prenom: string } | null;
-  patients_sans_compte: { nom: string; prenom: string } | null;
+  source: string | null;
+  cree_le: string;
+  motif_annulation: string | null;
+  patients: {
+    date_naissance: string | null;
+    utilisateurs: ContactUtilisateur | null;
+  } | null;
+  proches: {
+    nom: string;
+    prenom: string;
+    lien: string;
+    date_naissance: string | null;
+    patients: { utilisateurs: ContactUtilisateur | null } | null;
+  } | null;
+  patients_sans_compte: { nom: string; prenom: string; telephone: string | null } | null;
+}
+
+interface ContactUtilisateur {
+  nom: string | null;
+  prenom: string | null;
+  telephone: string | null;
+  email: string | null;
 }
 
 const SELECTION_RDV_PRO = `
   id, date, heure, motif, statut, patient_id, proche_id, patient_sans_compte_id, lieu, adresse_domicile,
-  patients ( utilisateurs ( nom, prenom ) ),
-  proches ( nom, prenom ),
-  patients_sans_compte ( nom, prenom )
+  source, cree_le, motif_annulation,
+  patients ( date_naissance, utilisateurs ( nom, prenom, telephone, email ) ),
+  proches ( nom, prenom, lien, date_naissance, patients ( utilisateurs ( nom, prenom, telephone, email ) ) ),
+  patients_sans_compte ( nom, prenom, telephone )
 `;
 
 function nomBeneficiaire(l: LigneRdvPro): string {
@@ -299,16 +349,73 @@ function nomBeneficiaire(l: LigneRdvPro): string {
   return "Patient";
 }
 
-export function useAgenda(medecinId: string | undefined, joursAvance = 30): {
+/** Ligne Supabase → rendez-vous d'agenda, contacts et clé de dossier résolus. */
+function versRdvAgenda(l: LigneRdvPro): RdvAgenda {
+  const typeFiche: PatientCabinet["type"] = l.proche_id
+    ? "proche"
+    : l.patient_sans_compte_id
+      ? "sans_compte"
+      : "compte";
+  // Un proche n'a ni téléphone ni e-mail à lui : c'est le titulaire du compte
+  // qu'on appelle, jamais l'enfant.
+  const contact =
+    typeFiche === "proche"
+      ? (l.proches?.patients?.utilisateurs ?? null)
+      : (l.patients?.utilisateurs ?? null);
+  const titulaire =
+    typeFiche === "proche"
+      ? `${l.proches?.patients?.utilisateurs?.prenom ?? ""} ${l.proches?.patients?.utilisateurs?.nom ?? ""}`.trim()
+      : "";
+
+  return {
+    id: l.id,
+    date: l.date,
+    heure: l.heure,
+    motif: l.motif ?? "",
+    statut: l.statut,
+    lieu: l.lieu === "domicile" ? "domicile" : "cabinet",
+    adresseDomicile: l.adresse_domicile ?? "",
+    beneficiaire: nomBeneficiaire(l),
+    cle:
+      typeFiche === "proche"
+        ? `p-${l.proche_id}`
+        : typeFiche === "sans_compte"
+          ? `s-${l.patient_sans_compte_id}`
+          : `c-${l.patient_id}`,
+    typeFiche,
+    telephone: contact?.telephone ?? l.patients_sans_compte?.telephone ?? "",
+    email: contact?.email ?? "",
+    dateNaissance: l.proches?.date_naissance ?? l.patients?.date_naissance ?? null,
+    titulaire,
+    lien: l.proches?.lien ?? "",
+    source: l.source ?? "en_ligne",
+    creeLe: l.cree_le,
+    motifAnnulation: l.motif_annulation ?? "",
+  };
+}
+
+/**
+ * Créneaux et rendez-vous du praticien sur une fenêtre glissante.
+ *
+ * `joursAvance` et `joursRecul` bornent la lecture : un agenda tenu depuis
+ * deux ans ne se charge pas d'un bloc. L'écran qui laisse naviguer loin (Mon
+ * agenda) élargit sa fenêtre à mesure — sans quoi une journée hors fenêtre
+ * s'afficherait entièrement libre, ce qui est faux et non « vide ».
+ */
+export function useAgenda(
+  medecinId: string | undefined,
+  joursAvance = 30,
+  joursRecul = 90
+): {
   chargement: boolean;
   creneauxJour: (dateISO: string) => CreneauAgenda[];
-  rdvs: (LigneRdvPro & { beneficiaire: string })[];
+  rdvs: RdvAgenda[];
   recharger: () => void;
 } {
   const [chargement, setChargement] = useState(true);
   const [plages, setPlages] = useState<{ jour_semaine: number; heure_debut: string; heure_fin: string }[]>([]);
   const [exceptions, setExceptions] = useState<Map<string, EtatCreneau>>(new Map());
-  const [rdvs, setRdvs] = useState<(LigneRdvPro & { beneficiaire: string })[]>([]);
+  const [rdvs, setRdvs] = useState<RdvAgenda[]>([]);
   const [version, setVersion] = useState(0);
 
   useEffect(() => {
@@ -316,7 +423,7 @@ export function useAgenda(medecinId: string | undefined, joursAvance = 30): {
     let actif = true;
     setChargement(true);
     const supabase = creerClientNavigateur();
-    const debut = versISO(new Date(Date.now() - 90 * 86400000));
+    const debut = versISO(new Date(Date.now() - joursRecul * 86400000));
     const fin = versISO(new Date(Date.now() + joursAvance * 86400000));
     Promise.all([
       supabase.from("horaires_types").select("jour_semaine, heure_debut, heure_fin").eq("medecin_id", medecinId),
@@ -328,13 +435,17 @@ export function useAgenda(medecinId: string | undefined, joursAvance = 30): {
       const map = new Map<string, EtatCreneau>();
       for (const x of e.data ?? []) map.set(`${x.date}|${x.heure.slice(0, 5)}`, x.etat as EtatCreneau);
       setExceptions(map);
-      setRdvs(((r.data ?? []) as unknown as LigneRdvPro[]).map((l) => ({ ...l, heure: l.heure.slice(0, 5), beneficiaire: nomBeneficiaire(l) })));
+      setRdvs(
+        ((r.data ?? []) as unknown as LigneRdvPro[]).map((l) =>
+          versRdvAgenda({ ...l, heure: l.heure.slice(0, 5) })
+        )
+      );
       setChargement(false);
     });
     return () => {
       actif = false;
     };
-  }, [medecinId, joursAvance, version]);
+  }, [medecinId, joursAvance, joursRecul, version]);
 
   const creneauxJour = (dateISO: string): CreneauAgenda[] =>
     HEURES_JOURNEE.map((heure) => {
@@ -345,10 +456,11 @@ export function useAgenda(medecinId: string | undefined, joursAvance = 30): {
           statut: "reserve" as EtatCreneau,
           rdvId: rdv.id,
           patient: rdv.beneficiaire,
-          motif: rdv.motif ?? "Consultation",
+          motif: rdv.motif || "Consultation",
           statutRdv: rdv.statut,
-          lieu: rdv.lieu === "domicile" ? ("domicile" as const) : ("cabinet" as const),
-          adresseDomicile: rdv.adresse_domicile ?? "",
+          lieu: rdv.lieu,
+          adresseDomicile: rdv.adresseDomicile,
+          rdv,
         };
       }
       return { heure, statut: statutCreneau(plages, exceptions, dateISO, heure) };
@@ -380,6 +492,24 @@ export async function majStatutRdv(
   statut: "confirme" | "annule" | "honore" | "en_attente"
 ): Promise<{ erreur?: string }> {
   const { error } = await creerClientNavigateur().from("rendez_vous").update({ statut }).eq("id", rdvId);
+  return error ? { erreur: error.message } : {};
+}
+
+/**
+ * Annulation par le praticien (ou son assistant), avec le motif.
+ *
+ * Le motif n'est pas décoratif : c'est la première chose que demandera celui
+ * qui reprendra le dossier — patient décommandé, praticien absent ou erreur de
+ * saisie ne se traitent pas pareil. Le trigger `rdv_notifie` (migration 0013)
+ * prévient le patient ; rien n'est effacé, la ligne reste au dossier.
+ */
+export async function annulerRdvMedecin(rdvId: string, motif: string): Promise<{ erreur?: string }> {
+  const propre = motif.trim();
+  if (!propre) return { erreur: "Indiquez le motif de l’annulation." };
+  const { error } = await creerClientNavigateur()
+    .from("rendez_vous")
+    .update({ statut: "annule", motif_annulation: propre })
+    .eq("id", rdvId);
   return error ? { erreur: error.message } : {};
 }
 

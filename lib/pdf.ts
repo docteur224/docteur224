@@ -94,11 +94,25 @@ export interface OptionsTexte {
   interligne?: number;
 }
 
+export interface ColonnePdf {
+  titre: string;
+  /** Largeur en points. La somme doit tenir dans LARGEUR_UTILE. */
+  largeur: number;
+  align?: "gauche" | "droite";
+}
+
+export interface OptionsTableau {
+  taille?: number;
+}
+
+/** Largeur disponible entre les marges — sert à répartir les colonnes. */
+export const LARGEUR_UTILE = A4.largeur - 2 * MARGE;
+
 export class DocumentPdf {
   private pages: string[] = [];
   private courante: string[] = [];
   private y = A4.hauteur - MARGE;
-  private readonly largeurUtile = A4.largeur - 2 * MARGE;
+  private readonly largeurUtile = LARGEUR_UTILE;
 
   private nouvellePage() {
     this.pages.push(this.courante.join("\n"));
@@ -111,7 +125,27 @@ export class DocumentPdf {
     if (this.y - hauteur < MARGE + 40) this.nouvellePage();
   }
 
-  /** Découpe un texte pour qu'aucune ligne ne dépasse la largeur utile. */
+  /**
+   * Découpe un mot plus large que la colonne. Sans ça, une adresse sans espace
+   * ou un identifiant sortirait de la cellule et se superposerait à la
+   * suivante — invisible à l'écriture, illisible à l'impression.
+   */
+  private couperMot(mot: string, taille: number, gras: boolean, largeur: number): string[] {
+    const morceaux: string[] = [];
+    let courant = "";
+    for (const caractere of mot) {
+      if (courant && largeurTexte(courant + caractere, taille, gras) > largeur) {
+        morceaux.push(courant);
+        courant = caractere;
+      } else {
+        courant += caractere;
+      }
+    }
+    if (courant) morceaux.push(courant);
+    return morceaux;
+  }
+
+  /** Découpe un texte pour qu'aucune ligne ne dépasse la largeur demandée. */
   private decouper(texte: string, taille: number, gras: boolean, largeur: number): string[] {
     const lignes: string[] = [];
     for (const paragraphe of texte.split("\n")) {
@@ -120,18 +154,47 @@ export class DocumentPdf {
         continue;
       }
       let ligne = "";
-      for (const mot of paragraphe.split(/\s+/)) {
-        const essai = ligne ? `${ligne} ${mot}` : mot;
-        if (largeurTexte(essai, taille, gras) <= largeur) {
-          ligne = essai;
-        } else {
-          if (ligne) lignes.push(ligne);
-          ligne = mot;
+      for (const brut of paragraphe.split(/\s+/)) {
+        for (const mot of largeurTexte(brut, taille, gras) > largeur
+          ? this.couperMot(brut, taille, gras, largeur)
+          : [brut]) {
+          const essai = ligne ? `${ligne} ${mot}` : mot;
+          if (largeurTexte(essai, taille, gras) <= largeur) {
+            ligne = essai;
+          } else {
+            if (ligne) lignes.push(ligne);
+            ligne = mot;
+          }
         }
       }
       lignes.push(ligne);
     }
     return lignes;
+  }
+
+  /** Écrit une ligne à une position absolue, sans toucher au curseur. */
+  private poser(
+    texte: string,
+    x: number,
+    ligneDeBase: number,
+    taille: number,
+    gras: boolean,
+    gris: number
+  ) {
+    if (texte === "") return;
+    this.courante.push(
+      `q ${gris} ${gris} ${gris} rg BT /${gras ? "F2" : "F1"} ${taille} Tf ` +
+        `1 0 0 1 ${x.toFixed(2)} ${ligneDeBase.toFixed(2)} Tm ` +
+        `${String.fromCharCode(...litteral(texte))} Tj ET Q`
+    );
+  }
+
+  /** Aplat rectangulaire (bandeau d'en-tête de tableau, ligne alternée…). */
+  private rectangle(x: number, y: number, largeur: number, hauteur: number, gris: number) {
+    this.courante.push(
+      `q ${gris} ${gris} ${gris} rg ${x.toFixed(2)} ${y.toFixed(2)} ` +
+        `${largeur.toFixed(2)} ${hauteur.toFixed(2)} re f Q`
+    );
   }
 
   /** Écrit un bloc de texte et avance le curseur. */
@@ -151,14 +214,88 @@ export class DocumentPdf {
             : options.align === "droite"
               ? A4.largeur - MARGE - largeur
               : MARGE;
-        this.courante.push(
-          `q ${gris} ${gris} ${gris} rg BT /${gras ? "F2" : "F1"} ${taille} Tf ` +
-            `1 0 0 1 ${x.toFixed(2)} ${(this.y - taille).toFixed(2)} Tm ` +
-            `${String.fromCharCode(...litteral(ligne))} Tj ET Q`
-        );
+        this.poser(ligne, x, this.y - taille, taille, gras, gris);
       }
       this.y -= interligne;
     }
+    return this;
+  }
+
+  /**
+   * Tableau à colonnes fixes.
+   *
+   * Deux choix qui se voient à l'usage : le texte d'une cellule se REPLIE au
+   * lieu d'être coupé (un motif de consultation ou une adresse de visite ne
+   * s'abrègent pas sans perdre le sens), et l'en-tête est REDESSINÉ en haut de
+   * chaque page — sur un agenda de trois semaines, une colonne sans titre à la
+   * page 2 ne se devine pas.
+   */
+  tableau(colonnes: ColonnePdf[], lignes: string[][], options: OptionsTableau = {}): this {
+    const taille = options.taille ?? 8.5;
+    const interligne = taille * 1.3;
+    const padH = 4.5;
+    const padV = 4.5;
+    const largeurTotale = colonnes.reduce((somme, c) => somme + c.largeur, 0);
+
+    /** Pose une rangée déjà découpée, aplat compris. */
+    const rangee = (cellules: string[][], gras: boolean, fond: number | null) => {
+      const nbLignes = Math.max(1, ...cellules.map((c) => c.length));
+      const hauteur = nbLignes * interligne + 2 * padV;
+      if (fond !== null) this.rectangle(MARGE, this.y - hauteur, largeurTotale, hauteur, fond);
+      let x = MARGE;
+      colonnes.forEach((colonne, i) => {
+        cellules[i].forEach((ligne, j) => {
+          const largeur = largeurTexte(ligne, taille, gras);
+          const gauche =
+            colonne.align === "droite"
+              ? x + colonne.largeur - padH - largeur
+              : x + padH;
+          this.poser(
+            ligne,
+            gauche,
+            this.y - padV - taille - j * interligne,
+            taille,
+            gras,
+            gras ? 0.15 : 0.1
+          );
+        });
+        x += colonne.largeur;
+      });
+      this.y -= hauteur;
+    };
+
+    const decouperRangee = (valeurs: string[], gras: boolean) =>
+      colonnes.map((colonne, i) =>
+        this.decouper(valeurs[i] ?? "", taille, gras, colonne.largeur - 2 * padH)
+      );
+
+    const titres = decouperRangee(
+      colonnes.map((c) => c.titre),
+      true
+    );
+    const hauteurEnTete = Math.max(1, ...titres.map((c) => c.length)) * interligne + 2 * padV;
+
+    const poserEnTete = () => rangee(titres, true, 0.91);
+
+    if (this.y - hauteurEnTete < MARGE + 60) this.nouvellePage();
+    poserEnTete();
+
+    lignes.forEach((valeurs, index) => {
+      const cellules = decouperRangee(valeurs, false);
+      const hauteur = Math.max(1, ...cellules.map((c) => c.length)) * interligne + 2 * padV;
+      if (this.y - hauteur < MARGE + 30) {
+        this.nouvellePage();
+        poserEnTete();
+      }
+      // Une ligne sur deux teintée : sur six colonnes serrées, c'est ce qui
+      // évite de sauter d'une rangée à l'autre en suivant du doigt.
+      rangee(cellules, false, index % 2 === 1 ? 0.97 : null);
+      this.courante.push(
+        `q 0.5 w 0.88 0.88 0.88 RG ${MARGE} ${this.y.toFixed(2)} m ` +
+          `${(MARGE + largeurTotale).toFixed(2)} ${this.y.toFixed(2)} l S Q`
+      );
+    });
+
     return this;
   }
 

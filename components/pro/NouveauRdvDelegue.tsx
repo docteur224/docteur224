@@ -26,9 +26,16 @@ const FICHE_VIDE = { nom: "", prenom: "", telephone: "" };
 export default function NouveauRdvDelegue({
   reservePar,
   lienRetour,
+  dateInitiale,
+  heureInitiale,
 }: {
   reservePar: "medecin" | "assistant";
   lienRetour: string;
+  /* Créneau désigné depuis l'agenda : on repart de celui sur lequel le
+     praticien vient de cliquer, plutôt que de lui faire retrouver à la main
+     la case qu'il avait sous les yeux. */
+  dateInitiale?: string;
+  heureInitiale?: string;
 }) {
   const { medecin } = useContextePro();
   const { patients, recharger: rechargerPatients } = usePatientsCabinet(medecin?.id);
@@ -38,11 +45,12 @@ export default function NouveauRdvDelegue({
   const [patientChoisi, setPatientChoisi] = useState<PatientCabinet | null>(null);
   const [fiche, setFiche] = useState(FICHE_VIDE);
   const [dateISO, setDateISO] = useState(() => {
+    if (dateInitiale) return dateInitiale;
     const demain = new Date();
     demain.setDate(demain.getDate() + 1);
     return versISO(demain);
   });
-  const [heure, setHeure] = useState<string | null>(null);
+  const [heure, setHeure] = useState<string | null>(heureInitiale ?? null);
   const [motif, setMotif] = useState("");
   const [erreur, setErreur] = useState("");
   const [enCours, setEnCours] = useState(false);
