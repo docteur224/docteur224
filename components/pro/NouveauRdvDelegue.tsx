@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { capitaliser, formatDateLongue, versISO } from "@/lib/dates";
+import { capitaliser, creneauPasse, formatDateLongue, jourPasse, versISO } from "@/lib/dates";
 import {
   creerRdvDelegue,
   useAgenda,
@@ -19,6 +19,11 @@ import {
  * source téléphone » dans la table rendez_vous.
  * Pour l'assistant(e), la RLS refuse l'écriture si la permission
  * « créer un RDV » n'est pas accordée.
+ *
+ * Le passé ne se réserve pas : ni un jour écoulé, ni une heure déjà passée du
+ * jour même. Contrairement au parcours patient, le délai de prévenance de deux
+ * heures ne s'applique pas — « je peux venir tout de suite ? » est une demande
+ * courante au téléphone, et le cabinet sait s'il peut y répondre.
  */
 
 const FICHE_VIDE = { nom: "", prenom: "", telephone: "" };
@@ -44,13 +49,23 @@ export default function NouveauRdvDelegue({
   const [recherche, setRecherche] = useState("");
   const [patientChoisi, setPatientChoisi] = useState<PatientCabinet | null>(null);
   const [fiche, setFiche] = useState(FICHE_VIDE);
+  /* Le créneau désigné depuis l'agenda peut pointer une case écoulée —
+     l'agenda, lui, se consulte librement dans le passé. On ne le pré-remplit
+     alors pas : mieux vaut un formulaire vierge qu'un créneau irrecevable. */
+  const creneauInitialValide =
+    dateInitiale !== undefined &&
+    !jourPasse(dateInitiale) &&
+    (heureInitiale === undefined || !creneauPasse(dateInitiale, heureInitiale));
+
   const [dateISO, setDateISO] = useState(() => {
-    if (dateInitiale) return dateInitiale;
+    if (creneauInitialValide && dateInitiale) return dateInitiale;
     const demain = new Date();
     demain.setDate(demain.getDate() + 1);
     return versISO(demain);
   });
-  const [heure, setHeure] = useState<string | null>(heureInitiale ?? null);
+  const [heure, setHeure] = useState<string | null>(
+    creneauInitialValide ? (heureInitiale ?? null) : null
+  );
   const [motif, setMotif] = useState("");
   const [erreur, setErreur] = useState("");
   const [enCours, setEnCours] = useState(false);
@@ -79,7 +94,11 @@ export default function NouveauRdvDelegue({
           )
           .slice(0, 3);
 
-  const creneauxOuverts = creneauxJour(dateISO).filter((c) => c.statut === "ouvert");
+  const ouvertsDuJour = creneauxJour(dateISO).filter((c) => c.statut === "ouvert");
+  const creneauxOuverts = ouvertsDuJour.filter((c) => !creneauPasse(dateISO, c.heure));
+  // Distinguer « ce médecin ne consulte pas ce jour-là » de « la journée est
+  // trop avancée » : la première invite à changer de date, la seconde de jour.
+  const journeeEntamee = creneauxOuverts.length === 0 && ouvertsDuJour.length > 0;
 
   const fichePrete =
     fiche.nom.trim() !== "" && fiche.prenom.trim() !== "" && fiche.telephone.trim() !== "";
@@ -88,6 +107,14 @@ export default function NouveauRdvDelegue({
 
   async function enregistrer() {
     if (!tout || heure === null || !medecin || enCours) return;
+    // Le formulaire peut être resté ouvert jusqu'à ce que l'heure choisie
+    // passe : on le dit avant de créer quoi que ce soit (une fiche patient
+    // aurait été insérée en pure perte).
+    if (creneauPasse(dateISO, heure)) {
+      setErreur("Ce créneau est déjà passé — choisissez-en un autre.");
+      setHeure(null);
+      return;
+    }
     setEnCours(true);
     const nomPatient = patientChoisi
       ? `${patientChoisi.prenom} ${patientChoisi.nom}`
@@ -337,7 +364,9 @@ export default function NouveauRdvDelegue({
           ))}
           {creneauxOuverts.length === 0 && (
             <p className="text-[13px] text-muted">
-              Aucun créneau ouvert à cette date — choisissez une autre date.
+              {journeeEntamee
+                ? "Plus aucun créneau à venir aujourd’hui — choisissez une autre date."
+                : "Aucun créneau ouvert à cette date — choisissez une autre date."}
             </p>
           )}
         </div>

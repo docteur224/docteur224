@@ -11,7 +11,7 @@ import {
   MOIS_LONGS,
   calculerAge,
   capitaliser,
-  depuisISO,
+  creneauPasse,
   formatDateCourte,
   formatDateLongue,
   formatDateRelative,
@@ -80,22 +80,6 @@ const initiales = (prenom: string, nom: string) =>
 /** « mardi 18 août à 09:30 » — la forme lue au téléphone. */
 const quandLisible = (dateISO: string, heure: string) =>
   `${formatDateLongue(dateISO)} à ${heure}`;
-
-/**
- * Le créneau est-il encore à venir ?
- *
- * `creneauReservable` (lib/dates) refuserait en plus tout ce qui commence dans
- * moins de deux heures : c'est la règle du parcours patient, pas celle du
- * centre d'appel, où « je peux venir tout de suite ? » est une demande
- * courante. Fonction de module et non expression de rendu : React 19 refuse
- * un appel impur (`Date.now()`) dans le corps d'un composant.
- */
-function creneauFutur(dateISO: string, heure: string): boolean {
-  const debut = depuisISO(dateISO);
-  const [h, m] = heure.split(":").map(Number);
-  debut.setHours(h, m, 0, 0);
-  return debut.getTime() >= Date.now();
-}
 
 interface JourAgenda {
   iso: string;
@@ -1124,10 +1108,15 @@ function ChoixCreneau({
   // interdit setState dans un effet, et `dispo` arrive de façon asynchrone).
   const jour = jourVoulu ?? choisi?.date ?? dispo?.date ?? jours[0].iso;
 
+  /* `creneauPasse` et non `creneauReservable` : cette dernière refuserait en
+     plus tout ce qui commence dans moins de deux heures — la règle du parcours
+     patient, pas celle du centre d'appel, où « je peux venir tout de suite ? »
+     est une demande courante. Fonction de module (lib/dates) et non expression
+     de rendu : React 19 refuse un appel impur dans le corps d'un composant. */
   const creneaux = HEURES_JOURNEE.map((heure) => ({
     heure,
     statut: statutCreneau(plages, etats, jour, heure),
-  })).filter((c) => c.statut !== "ferme" && creneauFutur(jour, c.heure));
+  })).filter((c) => c.statut !== "ferme" && !creneauPasse(jour, c.heure));
   const ouverts = creneaux.filter((c) => c.statut === "ouvert");
 
   return (

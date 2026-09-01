@@ -1,7 +1,15 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { capitaliser, depuisISO, formatDateLongue, JOURS_COURTS, versISO } from "@/lib/dates";
+import {
+  capitaliser,
+  creneauPasse,
+  depuisISO,
+  formatDateLongue,
+  JOURS_COURTS,
+  jourPasse,
+  versISO,
+} from "@/lib/dates";
 import { basculerCreneau, useAgenda } from "@/lib/pro";
 
 /**
@@ -12,6 +20,8 @@ import { basculerCreneau, useAgenda } from "@/lib/pro";
  * - `basculer` : l'action réelle — si elle est refusée (permissions),
  *   le message d'erreur est affiché.
  * Règle C.4.3 : les créneaux réservés sont verrouillés dans tous les cas.
+ * Le passé l'est également : on consulte librement une journée écoulée — c'est
+ * utile pour vérifier ce qui avait été ouvert — mais on ne la réécrit pas.
  */
 export default function GrilleDisponibilites({
   medecinId,
@@ -26,6 +36,7 @@ export default function GrilleDisponibilites({
   const champDate = useRef<HTMLInputElement>(null);
 
   const creneaux = creneauxJour(dateISO);
+  const journeePassee = jourPasse(dateISO);
   const dateCourante = depuisISO(dateISO);
   const lundi = new Date(dateCourante);
   lundi.setDate(lundi.getDate() - ((lundi.getDay() + 6) % 7));
@@ -52,6 +63,10 @@ export default function GrilleDisponibilites({
   }
 
   async function cliquerCreneau(heure: string) {
+    if (creneauPasse(dateISO, heure)) {
+      setMessage("Créneau passé — il n'est plus modifiable.");
+      return;
+    }
     const statut = creneaux.find((c) => c.heure === heure)?.statut ?? "ouvert";
     const resultat = await basculerCreneau(medecinId, dateISO, heure, statut);
     setMessage(resultat.erreur ?? "");
@@ -112,6 +127,7 @@ export default function GrilleDisponibilites({
         {semaine.map((d) => {
           const iso = versISO(d);
           const dimanche = d.getDay() === 0;
+          const passe = jourPasse(iso);
           const selectionne = iso === dateISO;
           return (
             <button
@@ -121,7 +137,13 @@ export default function GrilleDisponibilites({
               onClick={() => setDateISO(iso)}
               className={`flex w-[52px] flex-col items-center rounded-[13px] border-[1.5px] py-2 ${
                 selectionne ? "border-blue bg-blue" : "border-line bg-white"
-              } ${dimanche ? "cursor-not-allowed opacity-40" : "cursor-pointer"}`}
+              } ${
+                dimanche
+                  ? "cursor-not-allowed opacity-40"
+                  : passe && !selectionne
+                    ? "cursor-pointer opacity-55"
+                    : "cursor-pointer"
+              }`}
             >
               <span
                 className={`text-[10px] font-bold uppercase ${
@@ -154,7 +176,17 @@ export default function GrilleDisponibilites({
           <i className="inline-block h-[13px] w-[13px] rounded border-[1.5px] border-[#BBD9EE] bg-[repeating-linear-gradient(45deg,#EAF3FA,#EAF3FA_4px,#D5E8F5_4px,#D5E8F5_8px)]" />
           Réservé
         </span>
+        <span className="inline-flex items-center gap-1.5">
+          <i className="inline-block h-[13px] w-[13px] rounded border-[1.5px] border-dashed border-[#DCE4E9] bg-[#FAFBFC]" />
+          Passé
+        </span>
       </div>
+
+      {journeePassee && (
+        <div className="mb-3 rounded-xl border border-line bg-bg px-[14px] py-3 text-[12.5px] font-semibold text-muted">
+          Journée écoulée — consultation seule, les créneaux ne sont plus modifiables.
+        </div>
+      )}
 
       {message && (
         <div className="mb-3 rounded-xl border border-[#F3C9C2] bg-red-soft px-[14px] py-3 text-[12.5px] font-bold text-red">
@@ -165,6 +197,7 @@ export default function GrilleDisponibilites({
       {/* Grille des 25 créneaux */}
       <div className="grid grid-cols-[repeat(auto-fill,minmax(82px,1fr))] gap-[9px]">
         {creneaux.map((creneau) => {
+          const passe = creneauPasse(dateISO, creneau.heure);
           if (creneau.statut === "reserve") {
             return (
               <button
@@ -181,6 +214,24 @@ export default function GrilleDisponibilites({
             );
           }
           const ouvert = creneau.statut === "ouvert";
+          if (passe) {
+            // Ni ouvert ni fermé à l'écran : l'état d'un créneau écoulé n'a
+            // plus d'effet, l'afficher en vert inviterait à cliquer pour rien.
+            return (
+              <button
+                key={creneau.heure}
+                type="button"
+                disabled
+                title="Créneau passé — il n'est plus modifiable."
+                className="cursor-not-allowed rounded-[11px] border-[1.5px] border-dashed border-[#DCE4E9] bg-[#FAFBFC] px-1 py-[10px] text-center text-[13.5px] font-extrabold text-[#B7C2CA]"
+              >
+                {creneau.heure}
+                <span className="mt-[3px] block text-[9px] font-bold uppercase tracking-[.04em] text-[#C3CDD4]">
+                  Passé
+                </span>
+              </button>
+            );
+          }
           return (
             <button
               key={creneau.heure}

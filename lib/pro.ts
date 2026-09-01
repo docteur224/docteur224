@@ -9,7 +9,7 @@ import {
   lieuTarif,
   type MedecinAvecPlages,
 } from "@/lib/donnees";
-import { versISO } from "@/lib/dates";
+import { creneauPasse, versISO } from "@/lib/dates";
 import { colonnesPermissions } from "@/lib/permissions-assistant";
 import type { Paiement } from "@/lib/paiements";
 import { JOURS_NOMS, horairesParJour, resumeHeures, resumeJours } from "@/lib/horaires";
@@ -469,7 +469,14 @@ export function useAgenda(
   return { chargement, creneauxJour, rdvs, recharger: () => setVersion((v) => v + 1) };
 }
 
-/** Bascule ouvert ↔ fermé d'un créneau (règle C.4.3 : un réservé est verrouillé). */
+/**
+ * Bascule ouvert ↔ fermé d'un créneau (règle C.4.3 : un réservé est verrouillé).
+ *
+ * Un créneau passé l'est aussi : ouvrir ou fermer une case d'hier ne change
+ * rien pour personne — plus aucun patient ne peut y réserver — mais réécrit
+ * l'agenda tel qu'il a été tenu. La grille les grise déjà ; ce garde-fou
+ * couvre les autres appels (clic sur une page qui a vieilli, appel direct).
+ */
 export async function basculerCreneau(
   medecinId: string,
   dateISO: string,
@@ -477,6 +484,7 @@ export async function basculerCreneau(
   statutActuel: EtatCreneau
 ): Promise<{ erreur?: string }> {
   if (statutActuel === "reserve") return { erreur: "Créneau réservé — annulez d'abord le rendez-vous." };
+  if (creneauPasse(dateISO, heure)) return { erreur: "Créneau passé — il n'est plus modifiable." };
   const nouveau = statutActuel === "ouvert" ? "ferme" : "ouvert";
   const { error } = await creerClientNavigateur()
     .from("creneaux_exceptions")
@@ -859,6 +867,11 @@ export async function creerRdvDelegue(d: {
   /** Fiche minimale à créer (patient sans compte) */
   nouvelleFiche?: { nom: string; prenom: string; telephone: string };
 }): Promise<{ erreur?: string }> {
+  // Avant tout le reste : un créneau écoulé ne se réserve pas. Le contrôle
+  // vient ici et non plus bas parce que la branche « nouvelle fiche » insère
+  // un patient sans compte — un refus tardif laisserait la fiche orpheline.
+  // Même refus que `creer_rdv_centre_appel` (migration 0046) côté admin.
+  if (creneauPasse(d.date, d.heure)) return { erreur: "Ce créneau est déjà passé." };
   const supabase = creerClientNavigateur();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return { erreur: "Session expirée." };

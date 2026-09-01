@@ -142,6 +142,27 @@ export function creneauReservable(dateISO: string, heure: string, maintenant = n
 }
 
 /**
+ * Un créneau est-il déjà passé ? Vrai dès que son heure de début est derrière
+ * nous — sans le délai de prévenance de `creneauReservable`.
+ *
+ * La distinction compte : le patient ne doit pas voir un créneau qui commence
+ * dans une heure (prévenance), alors que le praticien garde la main sur sa
+ * journée en cours jusqu'à la dernière minute. Seul le vrai passé est
+ * verrouillé — on ne réécrit pas un agenda derrière soi.
+ */
+export function creneauPasse(dateISO: string, heure: string, maintenant = new Date()): boolean {
+  const [h, min] = heure.split(":").map(Number);
+  const debut = depuisISO(dateISO);
+  debut.setHours(h, min, 0, 0);
+  return debut < maintenant;
+}
+
+/** La journée est-elle antérieure à aujourd'hui ? (dates comparées, pas les heures) */
+export function jourPasse(dateISO: string, maintenant = new Date()): boolean {
+  return dateISO < versISO(maintenant);
+}
+
+/**
  * Bandeau de dates du panneau de réservation : `nb` jours consécutifs à
  * partir d'aujourd'hui + `decalage` jours affichables. Comme dans les
  * maquettes, le dimanche n'apparaît pas dans la barre et les autres jours de
