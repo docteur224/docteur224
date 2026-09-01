@@ -3,11 +3,18 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useFavori } from "@/lib/favoris";
+import { useProfilConnecte } from "@/lib/patient";
 
 /*
  * Cœur « mettre ce médecin de côté ». Rendu sur la fiche publique, donc
  * aussi devant un visiteur non connecté : dans ce cas le clic n'échoue pas
  * en silence, il emmène vers la connexion en gardant l'adresse de retour.
+ *
+ * Un professionnel connecté, lui, ne le voit pas du tout. Les favoris sont
+ * une table du patient (`favoris.patient_id` → `patients`) et se consultent
+ * dans /patient/favoris, où sa coquille ne le laisse pas entrer : le cœur ne
+ * mènerait nulle part, et le clic mourait sur une clé étrangère. Mieux vaut
+ * ne rien proposer qu'un bouton sans suite.
  */
 export default function BoutonFavori({
   medecinId,
@@ -19,6 +26,7 @@ export default function BoutonFavori({
   mobile?: boolean;
 }) {
   const router = useRouter();
+  const { profil, chargement } = useProfilConnecte();
   const { estFavori, pret, basculer } = useFavori(medecinId);
   const [enCours, setEnCours] = useState(false);
 
@@ -31,6 +39,11 @@ export default function BoutonFavori({
       router.push(`/connexion?retour=${encodeURIComponent(window.location.pathname)}`);
     }
   }
+
+  /* Le profil arrive après le premier rendu ; on ne retire donc le cœur
+   * qu'une fois le rôle connu, pour ne pas le faire clignoter chez le
+   * patient — chez qui il doit rester. */
+  if (!chargement && profil && profil.role !== "patient") return null;
 
   const libelle = estFavori ? `Retirer ${nom} de mes favoris` : `Ajouter ${nom} à mes favoris`;
 

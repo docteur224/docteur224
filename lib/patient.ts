@@ -73,6 +73,35 @@ async function chargerProfil(): Promise<ProfilConnecte | null> {
   };
 }
 
+/**
+ * Message unique du refus « vous n'êtes pas un patient ». Il sert au
+ * formulaire de réservation comme aux écritures ci-dessous : la règle est la
+ * même, elle doit s'énoncer d'une seule façon.
+ */
+export const RESERVATION_PATIENTS_UNIQUEMENT =
+  "La réservation en ligne est réservée aux comptes patients.";
+
+/**
+ * Compte connecté et son rôle réel.
+ *
+ * Les écritures du parcours patient s'y adossent plutôt qu'à la seule
+ * session : `patients`, `proches` et `favoris` n'ont de ligne que pour les comptes de
+ * rôle `patient`, alors qu'un médecin ou un assistant connecté a bien une
+ * session. Sans ce contrôle, l'insertion partait et c'est la contrainte de
+ * clé étrangère qui répondait — en anglais, et en nommant la table.
+ */
+export async function compteConnecte(): Promise<{ id: string; role: string } | null> {
+  const supabase = creerClientNavigateur();
+  const { data: auth } = await supabase.auth.getUser();
+  if (!auth.user) return null;
+  const { data } = await supabase
+    .from("utilisateurs")
+    .select("role")
+    .eq("id", auth.user.id)
+    .single();
+  return data ? { id: auth.user.id, role: data.role as string } : null;
+}
+
 /** Profil de l'utilisateur connecté (null si déconnecté). */
 export function useProfilConnecte(): { profil: ProfilConnecte | null; chargement: boolean } {
   const [profil, setProfil] = useState<ProfilConnecte | null>(cacheProfil ?? null);
@@ -380,12 +409,15 @@ export async function ajouterProche(d: {
   genre: string;
 }): Promise<{ proche?: Proche; erreur?: string }> {
   const supabase = creerClientNavigateur();
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) return { erreur: "Connectez-vous pour ajouter un proche." };
+  const compte = await compteConnecte();
+  if (!compte) return { erreur: "Connectez-vous pour ajouter un proche." };
+  if (compte.role !== "patient") {
+    return { erreur: "Seuls les comptes patients peuvent enregistrer des proches." };
+  }
   const { data, error } = await supabase
     .from("proches")
     .insert({
-      patient_id: auth.user.id,
+      patient_id: compte.id,
       nom: d.nom,
       prenom: d.prenom,
       lien: d.lien,
@@ -699,15 +731,23 @@ export async function reserverRendezVous(d: {
     return { erreur: "Indiquez l'adresse de la visite à domicile." };
   }
   const supabase = creerClientNavigateur();
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) return { erreur: "non_connecte" };
+  const compte = await compteConnecte();
+  if (!compte) return { erreur: "non_connecte" };
+  /*
+   * Un professionnel connecté ne réserve pas ici : il pose ses rendez-vous
+   * depuis son propre écran « Nouveau rendez-vous », et se soigne avec un
+   * compte patient distinct. Le formulaire l'écarte déjà, mais l'URL de
+   * réservation se forge — d'où le même contrôle à l'écriture, doublé d'un
+   * trigger côté base (migration 0049).
+   */
+  if (compte.role !== "patient") return { erreur: RESERVATION_PATIENTS_UNIQUEMENT };
   const { error } = await supabase.from("rendez_vous").insert({
     medecin_id: d.medecinId,
     date: d.date,
     heure: d.heure,
-    reserve_par: auth.user.id,
+    reserve_par: compte.id,
     reserve_par_role: "patient",
-    patient_id: d.procheId ? null : auth.user.id,
+    patient_id: d.procheId ? null : compte.id,
     proche_id: d.procheId ?? null,
     motif: d.motif || null,
     lieu,

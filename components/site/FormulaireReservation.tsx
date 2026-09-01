@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ESPACE_PAR_ROLE, seDeconnecter, type Role } from "@/lib/auth";
 import { calculerAge } from "@/lib/dates";
 import { formatGNF } from "@/lib/format";
 import type { LieuConsultation } from "@/types";
@@ -35,6 +36,43 @@ const NOUVEAU_PROCHE_VIDE = {
   dateNaissance: "",
   genre: "Femme",
 };
+
+/* Libellés du refus adressé à un compte non patient : ce qu'il est, puis
+ * la porte par laquelle il pose ses rendez-vous. L'établissement n'a pas
+ * d'agenda propre — il n'a donc rien à proposer d'autre. */
+const LIBELLE_ROLE: Record<string, string> = {
+  medecin: "praticien",
+  assistant: "assistant",
+  etablissement: "établissement",
+  admin: "administrateur",
+};
+
+const POSER_UN_RDV: Record<string, string> = {
+  medecin: "Pour inscrire un patient à votre agenda, passez par « Nouveau rendez-vous » dans votre espace.",
+  assistant: "Pour inscrire un patient à l'agenda du praticien, passez par « Nouveau rendez-vous » dans votre espace.",
+  admin: "Pour poser un rendez-vous au nom d'un appelant, passez par « Nouveau rendez-vous » dans la console.",
+};
+
+/* Carte de refus, commune au visiteur déconnecté et au compte non patient :
+ * les deux disent la même chose — vous ne pouvez pas réserver d'ici, voici
+ * par où passer. */
+function Encart({
+  icone,
+  titre,
+  children,
+}: {
+  icone: string;
+  titre: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="mx-4 my-6 rounded-2xl border border-line bg-white p-6 text-center md:mx-0">
+      <div className="text-3xl" aria-hidden>{icone}</div>
+      <b className="mt-3 block text-base font-extrabold">{titre}</b>
+      {children}
+    </div>
+  );
+}
 
 const initiales = (prenom: string, nom: string) =>
   `${prenom.charAt(0)}${nom.charAt(0)}`.toUpperCase() || "?";
@@ -185,9 +223,7 @@ export default function FormulaireReservation({
 
   if (!chargement && !profil) {
     return (
-      <div className="mx-4 my-6 rounded-2xl border border-line bg-white p-6 text-center md:mx-0">
-        <div className="text-3xl" aria-hidden>🔒</div>
-        <b className="mt-3 block text-base font-extrabold">Connectez-vous pour réserver</b>
+      <Encart icone="🔒" titre="Connectez-vous pour réserver">
         <p className="mt-2 text-[13px] text-muted">
           La réservation nécessite un compte patient (gratuit).
         </p>
@@ -199,7 +235,53 @@ export default function FormulaireReservation({
             Créer un compte
           </Link>
         </div>
-      </div>
+      </Encart>
+    );
+  }
+
+  /*
+   * Un compte n'est pas un compte patient. Le bénéficiaire d'un rendez-vous
+   * est un patient, un de ses proches, ou une fiche sans compte ; un
+   * professionnel connecté n'est aucun des trois, et l'insertion se
+   * heurtait à la clé étrangère `rendez_vous_patient_id_fkey` — message
+   * brut, en pleine confirmation. On l'arrête ici, avec ce qu'il faut
+   * faire à la place : son propre écran pour l'agenda de son cabinet, un
+   * compte patient séparé pour se soigner lui-même.
+   */
+  if (profil && profil.role !== "patient") {
+    const espace = ESPACE_PAR_ROLE[profil.role as Role];
+    return (
+      <Encart icone="🩺" titre="Ce parcours est réservé aux comptes patients">
+        <p className="mt-2 text-[13px] leading-relaxed text-muted">
+          Vous êtes connecté{profil.prenom ? ` en tant que ${profil.prenom} ${profil.nom}` : ""} avec un
+          compte {LIBELLE_ROLE[profil.role] ?? "professionnel"}.{" "}
+          {POSER_UN_RDV[profil.role] ??
+            "Pour prendre rendez-vous, utilisez un compte patient."}{" "}
+          Pour consulter <b>pour vous-même</b>, créez un compte patient avec une autre adresse
+          e-mail : vos rendez-vous personnels restent alors séparés de votre activité
+          professionnelle.
+        </p>
+        <div className="mt-4 flex flex-wrap justify-center gap-3">
+          {espace && (
+            <Link
+              href={espace}
+              className="rounded-[11px] bg-teal px-[18px] py-[11px] text-[13.5px] font-bold text-white"
+            >
+              Aller à mon espace
+            </Link>
+          )}
+          <button
+            type="button"
+            onClick={async () => {
+              await seDeconnecter();
+              router.push("/inscription/patient");
+            }}
+            className="rounded-[11px] border-[1.5px] border-line bg-white px-[18px] py-[11px] text-[13.5px] font-bold text-blue"
+          >
+            Créer un compte patient
+          </button>
+        </div>
+      </Encart>
     );
   }
 

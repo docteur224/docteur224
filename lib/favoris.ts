@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { compteConnecte } from "@/lib/patient";
 import { creerClientNavigateur } from "@/lib/supabase/client";
 
 /*
@@ -122,8 +123,16 @@ export function useFavori(medecinId: string): {
 
   const basculer = useCallback(async () => {
     const supabase = creerClientNavigateur();
-    const { data: auth } = await supabase.auth.getUser();
-    if (!auth.user) return { erreur: "non_connecte" };
+    const compte = await compteConnecte();
+    if (!compte) return { erreur: "non_connecte" };
+    /*
+     * `favoris.patient_id` référence `patients` : un professionnel connecté
+     * n'y a pas de ligne, et le cœur échouait sur la clé étrangère — sans
+     * rien afficher, puisque BoutonFavori ne traite que `non_connecte`. Le
+     * bouton ne lui est plus proposé ; ce contrôle couvre le temps que le
+     * rôle mette à arriver.
+     */
+    if (compte.role !== "patient") return { erreur: "pas_un_patient" };
     const actuels = cacheIds ?? new Set<string>();
     const etait = actuels.has(medecinId);
 
@@ -137,9 +146,9 @@ export function useFavori(medecinId: string): {
       ? await supabase
           .from("favoris")
           .delete()
-          .eq("patient_id", auth.user.id)
+          .eq("patient_id", compte.id)
           .eq("medecin_id", medecinId)
-      : await supabase.from("favoris").insert({ patient_id: auth.user.id, medecin_id: medecinId });
+      : await supabase.from("favoris").insert({ patient_id: compte.id, medecin_id: medecinId });
 
     if (error) {
       diffuser(actuels); // retour en arrière
