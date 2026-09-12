@@ -20,6 +20,13 @@ export interface ProfilConnecte {
   telephone: string;
   /** actif | suspendu — un compte suspendu garde sa session mais n'agit plus. */
   statut: string;
+  /**
+   * Vrai quand la suspension est une SANCTION, et non la pause volontaire de
+   * « Mon compte » : le titulaire ne peut alors pas se réactiver lui-même
+   * (migration 0051), et l'écran ne doit pas lui tendre un bouton que la
+   * base refusera.
+   */
+  suspenduParAdmin: boolean;
   /** Ancienneté du compte, affichée dans « Mon compte ». */
   creeLe: string;
   dateNaissance?: string;
@@ -38,7 +45,7 @@ async function chargerProfil(): Promise<ProfilConnecte | null> {
   if (!auth.user) return null;
   const { data: u } = await supabase
     .from("utilisateurs")
-    .select("id, role, nom, prenom, email, telephone, statut, cree_le")
+    .select("id, role, nom, prenom, email, telephone, statut, suspendu_par_admin, cree_le")
     .eq("id", auth.user.id)
     .single();
   if (!u) return null;
@@ -65,6 +72,7 @@ async function chargerProfil(): Promise<ProfilConnecte | null> {
     email: u.email,
     telephone: u.telephone ?? "",
     statut: u.statut ?? "actif",
+    suspenduParAdmin: Boolean(u.suspendu_par_admin),
     creeLe: u.cree_le,
     dateNaissance,
     genre,

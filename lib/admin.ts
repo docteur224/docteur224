@@ -15,7 +15,16 @@ import {
  * Remplace lib/mock-admin.ts. Chaque décision sensible est tracée en base.
  */
 
-function utiliserRequete<T>(defaut: T, requete: () => Promise<T>, deps: unknown[] = []) {
+/*
+ * Petit crochet de lecture, commun à tous les écrans de la console.
+ *
+ * Le préfixe `use` n'est pas décoratif : c'est à lui que React et son
+ * linter reconnaissent un crochet. Sous son ancien nom (`utiliserRequete`),
+ * la règle des crochets ne s'appliquait pas à ce fichier — alors que tous
+ * les autres crochets du projet (`useProfilConnecte`, `useDroitsAdmin`…)
+ * portaient déjà ce préfixe.
+ */
+function useRequete<T>(defaut: T, requete: () => Promise<T>, deps: unknown[] = []) {
   const [donnees, setDonnees] = useState<T>(defaut);
   const [version, setVersion] = useState(0);
   useEffect(() => {
@@ -52,7 +61,7 @@ export interface EntreeAudit {
 }
 
 export function useJournalAudit(): EntreeAudit[] {
-  const { donnees } = utiliserRequete<EntreeAudit[]>([], async () => {
+  const { donnees } = useRequete<EntreeAudit[]>([], async () => {
     const { data } = await creerClientNavigateur()
       .from("journal_audit")
       .select("id, action, details, cree_le, utilisateurs ( prenom, nom )")
@@ -115,7 +124,7 @@ export function ancienneteDossier(depotLe: string | null): string {
 }
 
 export function useMedecinsEnAttente(): { dossiers: DossierValidation[]; recharger: () => void } {
-  const { donnees, recharger } = utiliserRequete<DossierValidation[]>([], async () => {
+  const { donnees, recharger } = useRequete<DossierValidation[]>([], async () => {
     const supabase = creerClientNavigateur();
     const { data } = await supabase
       .from("medecins")
@@ -188,7 +197,7 @@ export function useEtablissementsInscrits(): {
   etablissements: EtablissementInscrit[];
   recharger: () => void;
 } {
-  const { donnees, recharger } = utiliserRequete<EtablissementInscrit[]>([], async () => {
+  const { donnees, recharger } = useRequete<EtablissementInscrit[]>([], async () => {
     const supabase = creerClientNavigateur();
     const [{ data: etabs }, { data: tarifs }] = await Promise.all([
       supabase
@@ -269,7 +278,7 @@ export function useEtablissementsInscrits(): {
 }
 
 export function useEtablissementsEnAttente(): { dossiers: DossierValidation[]; recharger: () => void } {
-  const { donnees, recharger } = utiliserRequete<DossierValidation[]>([], async () => {
+  const { donnees, recharger } = useRequete<DossierValidation[]>([], async () => {
     const supabase = creerClientNavigateur();
     const { data } = await supabase
       .from("etablissements")
@@ -338,7 +347,7 @@ export function useDetailDossier(dossier: DossierValidation | null): {
   detail: DetailDossier | null;
   chargement: boolean;
 } {
-  const { donnees } = utiliserRequete<{ cle: string; detail: DetailDossier | null }>(
+  const { donnees } = useRequete<{ cle: string; detail: DetailDossier | null }>(
     { cle: "", detail: null },
     async () => {
       const cle = dossier ? `${dossier.etablissement ? "e" : "m"}:${dossier.id}` : "";
@@ -567,7 +576,7 @@ export interface Signalement {
 }
 
 export function useSignalements(): { signalements: Signalement[]; recharger: () => void } {
-  const { donnees, recharger } = utiliserRequete<Signalement[]>([], async () => {
+  const { donnees, recharger } = useRequete<Signalement[]>([], async () => {
     const { data } = await creerClientNavigateur()
       .from("signalements")
       .select("id, motif, cible_type, cree_le, statut")
@@ -615,7 +624,7 @@ export interface AvisAModerer {
  * pour que l'admin sache pourquoi la ligne est là.
  */
 export function useAvisAModerer(): { avis: AvisAModerer[]; recharger: () => void } {
-  const { donnees, recharger } = utiliserRequete<AvisAModerer[]>([], async () => {
+  const { donnees, recharger } = useRequete<AvisAModerer[]>([], async () => {
     const supabase = creerClientNavigateur();
 
     // Avis visés par un signalement encore ouvert.
@@ -724,7 +733,7 @@ const STATS_VIDES: StatsAvis = {
 };
 
 export function useStatsAvis(): { stats: StatsAvis; recharger: () => void } {
-  const { donnees, recharger } = utiliserRequete<StatsAvis>(STATS_VIDES, async () => {
+  const { donnees, recharger } = useRequete<StatsAvis>(STATS_VIDES, async () => {
     const { data } = await creerClientNavigateur().rpc("avis_stats_globales");
     const l = (data ?? [])[0];
     if (!l) return STATS_VIDES;
@@ -749,7 +758,7 @@ export function useStatsAvis(): { stats: StatsAvis; recharger: () => void } {
 
 /** Répartition 5★ → 1★ des avis publiés. */
 export function useRepartitionAvis(): { etoiles: number; nb: number }[] {
-  const { donnees } = utiliserRequete<{ etoiles: number; nb: number }[]>([], async () => {
+  const { donnees } = useRequete<{ etoiles: number; nb: number }[]>([], async () => {
     const { data } = await creerClientNavigateur().rpc("avis_repartition");
     return ((data ?? []) as { etoiles: number; nb: number }[]).map((l) => ({
       etoiles: Number(l.etoiles),
@@ -824,7 +833,7 @@ export function useClassementMedecins(
 
 /** Seuil d'avis à partir duquel une moyenne est jugée représentative. */
 export function useSeuilFiabilite(): number {
-  const { donnees } = utiliserRequete<number>(3, async () => {
+  const { donnees } = useRequete<number>(3, async () => {
     const { data } = await creerClientNavigateur().rpc("avis_seuil_fiabilite");
     return Number(data) || 3;
   });
@@ -855,7 +864,7 @@ export function useReglagesPlateforme(): {
   reglages: ReglagesPlateforme;
   basculer: (cle: keyof ReglagesPlateforme, valeur: boolean) => Promise<void>;
 } {
-  const { donnees, recharger } = utiliserRequete<ReglagesPlateforme>(
+  const { donnees, recharger } = useRequete<ReglagesPlateforme>(
     { inscriptionsOuvertes: true, paiementEnLigne: true, modeMaintenance: false },
     async () => {
       const { data } = await creerClientNavigateur().from("parametres_plateforme").select("cle, valeur");
@@ -891,7 +900,7 @@ const COLONNE_LIBELLE: Record<CleListeContenu, string> = {
 };
 
 export function useListeContenu(cle: CleListeContenu): { liste: string[]; recharger: () => void } {
-  const { donnees, recharger } = utiliserRequete<string[]>([], async () => {
+  const { donnees, recharger } = useRequete<string[]>([], async () => {
     const colonne = COLONNE_LIBELLE[cle];
     const { data } = await creerClientNavigateur().from(cle).select(colonne).order(colonne);
     return ((data ?? []) as unknown as Record<string, string>[]).map((r) => r[colonne]);
@@ -975,7 +984,7 @@ export function useSpecialitesAdmin(): {
   specialites: SpecialiteAdmin[];
   recharger: () => void;
 } {
-  const { donnees, recharger } = utiliserRequete<SpecialiteAdmin[]>([], async () => {
+  const { donnees, recharger } = useRequete<SpecialiteAdmin[]>([], async () => {
     const { data } = await creerClientNavigateur()
       .from("specialites")
       .select("id, nom, emoji")
@@ -1045,7 +1054,7 @@ export function useCommunesAdmin(villeId: string | undefined): {
   communes: CommuneAdmin[];
   recharger: () => void;
 } {
-  const { donnees, recharger } = utiliserRequete<CommuneAdmin[]>(
+  const { donnees, recharger } = useRequete<CommuneAdmin[]>(
     [],
     async () => {
       if (!villeId) return [];
@@ -1106,7 +1115,7 @@ export interface Vedette {
 }
 
 export function useVedettes(): { vedettes: Vedette[]; recharger: () => void } {
-  const { donnees, recharger } = utiliserRequete<Vedette[]>([], async () => {
+  const { donnees, recharger } = useRequete<Vedette[]>([], async () => {
     const { data } = await creerClientNavigateur()
       .from("medecins")
       .select("id, civilite, en_vedette, utilisateurs ( nom, prenom ), specialites ( nom ), villes ( nom )")
@@ -1143,7 +1152,7 @@ export interface Annonce {
 }
 
 export function useAnnonces(): { annonces: Annonce[]; recharger: () => void } {
-  const { donnees, recharger } = utiliserRequete<Annonce[]>([], async () => {
+  const { donnees, recharger } = useRequete<Annonce[]>([], async () => {
     const { data } = await creerClientNavigateur()
       .from("annonces")
       .select("id, message, segment, canaux, date_envoi, statut")
@@ -1218,7 +1227,7 @@ export function useEquipeAdmin(): {
   chargement: boolean;
   recharger: () => void;
 } {
-  const { donnees, recharger } = utiliserRequete<AdminEquipe[] | null>(null, async () => {
+  const { donnees, recharger } = useRequete<AdminEquipe[] | null>(null, async () => {
     const { data } = await creerClientNavigateur().rpc("admins_equipe");
     type L = {
       id: string;
@@ -1255,7 +1264,7 @@ export interface DroitsAdmin {
 }
 
 export function useDroitsAdmin(actif = true): { droits: DroitsAdmin | null; chargement: boolean } {
-  const { donnees } = utiliserRequete<{ pret: boolean; droits: DroitsAdmin | null }>(
+  const { donnees } = useRequete<{ pret: boolean; droits: DroitsAdmin | null }>(
     { pret: false, droits: null },
     async () => {
       // `actif` évite la requête là où la réponse est connue d'avance : le
@@ -1319,7 +1328,8 @@ export async function majPermissionsAdmin(
   return {};
 }
 
-async function appelEquipe(
+/** Appel d'une route /api/admin : le refus rédigé par le serveur l'emporte. */
+async function appelAdmin(
   url: string,
   init: RequestInit,
   echec: string
@@ -1345,7 +1355,7 @@ export interface NouveauCompteAdmin {
  * d'authentification exige la clé service_role, qu'aucune page ne détient.
  */
 export async function creerCompteAdmin(compte: NouveauCompteAdmin): Promise<{ erreur?: string }> {
-  return appelEquipe(
+  return appelAdmin(
     "/api/admin/equipe",
     {
       method: "POST",
@@ -1358,7 +1368,7 @@ export async function creerCompteAdmin(compte: NouveauCompteAdmin): Promise<{ er
 
 /** Désactive (ou réactive) un compte : le bannissement ferme sa session. */
 export async function majStatutAdmin(id: string, actif: boolean): Promise<{ erreur?: string }> {
-  return appelEquipe(
+  return appelAdmin(
     `/api/admin/equipe/${id}`,
     {
       method: "PATCH",
@@ -1370,7 +1380,7 @@ export async function majStatutAdmin(id: string, actif: boolean): Promise<{ erre
 }
 
 export async function supprimerCompteAdmin(id: string): Promise<{ erreur?: string }> {
-  return appelEquipe(`/api/admin/equipe/${id}`, { method: "DELETE" }, "La suppression a échoué.");
+  return appelAdmin(`/api/admin/equipe/${id}`, { method: "DELETE" }, "La suppression a échoué.");
 }
 
 /* ===== Configuration des abonnements (tarifs_plateforme) ===== */
@@ -1416,7 +1426,7 @@ export interface ConsommationSmsFormule {
  * le sous-rôle Finance ne verra rien, ce qui est voulu (spec C.7.10).
  */
 export function useConsommationSms(): { formules: ConsommationSmsFormule[]; total: ConsommationSmsFormule } {
-  const { donnees } = utiliserRequete<ConsommationSmsFormule[]>([], async () => {
+  const { donnees } = useRequete<ConsommationSmsFormule[]>([], async () => {
     const { data } = await creerClientNavigateur()
       .from("consommation_sms_mois")
       .select("formule, quota_sms, consommes, cout_gnf");
@@ -1470,7 +1480,7 @@ export function useConfigAbonnements(): {
   enregistrer: (formule: string, d: Partial<LigneTarif>) => Promise<{ erreur?: string }>;
   recharger: () => void;
 } {
-  const { donnees, recharger } = utiliserRequete<LigneTarif[]>([], async () => {
+  const { donnees, recharger } = useRequete<LigneTarif[]>([], async () => {
     const { data } = await creerClientNavigateur().from("tarifs_plateforme").select("*").order("prix_mensuel");
     return (data ?? []).map((t) => ({
       formule: t.formule,
@@ -1553,7 +1563,7 @@ export function usePaiementsARapprocher(): {
   paiements: PaiementARapprocher[];
   recharger: () => void;
 } {
-  const { donnees, recharger } = utiliserRequete<PaiementARapprocher[]>([], async () => {
+  const { donnees, recharger } = useRequete<PaiementARapprocher[]>([], async () => {
     const supabase = creerClientNavigateur();
     const nomDe = (u: { nom?: string; prenom?: string } | null) =>
       `${u?.prenom ?? ""} ${u?.nom ?? ""}`.trim() || "Compte supprimé";
@@ -1663,7 +1673,7 @@ export function useComptesEncaissement(): {
   enregistrer: (code: string, numeroMarchand: string) => Promise<{ erreur?: string }>;
   recharger: () => void;
 } {
-  const { donnees, recharger } = utiliserRequete<CompteEncaissement[]>([], async () => {
+  const { donnees, recharger } = useRequete<CompteEncaissement[]>([], async () => {
     const { data } = await creerClientNavigateur()
       .from("comptes_encaissement")
       .select("code, libelle, numero_marchand, code_ussd")
@@ -1731,7 +1741,7 @@ const nomUtilisateur = (u: { nom?: string; prenom?: string } | null) =>
  * et elle seule — qui deviendra une vue paginée en SQL.
  */
 export function useHistoriqueFinances(): { lignes: LigneFinance[]; recharger: () => void } {
-  const { donnees, recharger } = utiliserRequete<LigneFinance[]>([], async () => {
+  const { donnees, recharger } = useRequete<LigneFinance[]>([], async () => {
     const supabase = creerClientNavigateur();
     const [{ data: abos }, { data: sms }, { data: rembours }] = await Promise.all([
       supabase
@@ -1827,7 +1837,7 @@ export interface AbonnementAdmin {
 }
 
 export function useAbonnementsAdmin(): { abonnements: AbonnementAdmin[]; recharger: () => void } {
-  const { donnees, recharger } = utiliserRequete<AbonnementAdmin[]>([], async () => {
+  const { donnees, recharger } = useRequete<AbonnementAdmin[]>([], async () => {
     const { data } = await creerClientNavigateur()
       .from("abonnements")
       .select(
@@ -1884,7 +1894,7 @@ const KPI_VIDE: KpiFinances = {
 };
 
 export function useKpiFinances(): { kpi: KpiFinances; recharger: () => void } {
-  const { donnees, recharger } = utiliserRequete<KpiFinances>(KPI_VIDE, async () => {
+  const { donnees, recharger } = useRequete<KpiFinances>(KPI_VIDE, async () => {
     const { data } = await creerClientNavigateur().rpc("kpi_finances");
     if (!data) return KPI_VIDE;
     const k = data as Record<string, unknown>;
@@ -1987,7 +1997,7 @@ export interface CompteursAdmin {
 }
 
 export function useCompteursAdmin(): CompteursAdmin {
-  const { donnees } = utiliserRequete<CompteursAdmin>(
+  const { donnees } = useRequete<CompteursAdmin>(
     { medecinsEnAttente: 0, etablissementsEnAttente: 0, signalements: 0, avisAModerer: 0, utilisateurs: 0, medecinsValides: 0, rdvCeMois: 0 },
     async () => {
       const supabase = creerClientNavigateur();
@@ -2033,7 +2043,7 @@ export interface MoisCroissance {
 }
 
 export function useCroissanceInscriptions(): MoisCroissance[] {
-  const { donnees } = utiliserRequete<MoisCroissance[]>([], async () => {
+  const { donnees } = useRequete<MoisCroissance[]>([], async () => {
     const debut = new Date();
     debut.setMonth(debut.getMonth() - 5, 1);
     debut.setHours(0, 0, 0, 0);
@@ -2074,7 +2084,7 @@ export interface UtilisateurAdmin {
 }
 
 export function useUtilisateurs(): { utilisateurs: UtilisateurAdmin[]; recharger: () => void } {
-  const { donnees, recharger } = utiliserRequete<UtilisateurAdmin[]>([], async () => {
+  const { donnees, recharger } = useRequete<UtilisateurAdmin[]>([], async () => {
     const { data } = await creerClientNavigateur()
       .from("utilisateurs")
       .select("id, nom, prenom, email, role, statut, cree_le")
@@ -2092,10 +2102,28 @@ export function useUtilisateurs(): { utilisateurs: UtilisateurAdmin[]; recharger
   return { utilisateurs: donnees, recharger };
 }
 
-export async function majStatutUtilisateur(id: string, statut: "actif" | "suspendu"): Promise<{ erreur?: string }> {
-  const { error } = await creerClientNavigateur().from("utilisateurs").update({ statut }).eq("id", id);
-  if (!error) await tracerAudit(statut === "suspendu" ? "A suspendu un compte" : "A réactivé un compte", id);
-  return error ? { erreur: error.message } : {};
+/**
+ * Suspend ou réactive un compte membre.
+ *
+ * Passe par le serveur, comme la fermeture : l'opération ferme la session en
+ * cours (API auth admin, clé service_role) et inscrit la PROVENANCE de la
+ * mesure. Écrite depuis le navigateur, elle ne valait rien — la personne
+ * suspendue gardait son espace ouvert et se réactivait elle-même d'un clic,
+ * la policy `upd_utilisateurs_soi` laissant tout compte réécrire sa ligne.
+ */
+export async function majStatutUtilisateur(
+  id: string,
+  statut: "actif" | "suspendu"
+): Promise<{ erreur?: string }> {
+  return appelAdmin(
+    "/api/admin/utilisateurs/statut",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, actif: statut === "actif" }),
+    },
+    statut === "suspendu" ? "La suspension a échoué." : "La réactivation a échoué."
+  );
 }
 
 /**

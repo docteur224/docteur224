@@ -148,7 +148,7 @@ export default function MedecinShell({
           // Compte mis en pause par son titulaire : l'espace se referme sur
           // l'écran de réactivation. Laisser l'interface ouverte donnerait
           // des boutons que la base refuse (migration 0045).
-          <CompteSuspendu role={profil.role} />
+          <CompteSuspendu role={profil.role} parAdmin={profil.suspenduParAdmin} />
         ) : refuse ? (
           <EcranReserve />
         ) : (

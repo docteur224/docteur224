@@ -58,17 +58,25 @@ export default function CreneauxMobile({
     return valeur;
   }, [mois, decalage]);
 
-  const creneaux = chargement ? [] : creneauxJour(jourISO);
+  /*
+   * Le jour réellement affiché.
+   *
+   * En fin de journée, aucun créneau ne reste aujourd'hui : plutôt que
+   * d'ouvrir sur une grille vide, on montre le premier jour de la page qui
+   * a encore quelque chose à proposer. C'est DÉDUIT du jour retenu, et non
+   * réécrit dans l'état par un effet — corriger un état depuis un effet
+   * fait rendre deux fois, une première avec la grille vide.
+   *
+   * Dès que le patient a choisi une heure, on ne bouge plus sous ses yeux.
+   */
+  const jourAffiche = useMemo(() => {
+    if (chargement || heure || creneauxJour(jourISO).length > 0) return jourISO;
+    return jours.find((j) => !j.ferme && creneauxJour(j.iso).length > 0)?.iso ?? jourISO;
+  }, [chargement, heure, jourISO, jours, creneauxJour]);
+
+  const creneaux = chargement ? [] : creneauxJour(jourAffiche);
   const matin = creneaux.filter((c) => Number(c.heure.slice(0, 2)) < 13);
   const apresMidi = creneaux.filter((c) => Number(c.heure.slice(0, 2)) >= 13);
-
-  // En fin de journée, aucun créneau ne reste aujourd'hui : on ouvre sur le
-  // premier jour de la page qui a encore quelque chose à proposer.
-  useEffect(() => {
-    if (chargement || heure || creneaux.length > 0) return;
-    const jourUtile = jours.find((j) => !j.ferme && creneauxJour(j.iso).length > 0);
-    if (jourUtile && jourUtile.iso !== jourISO) setJourISO(jourUtile.iso);
-  }, [chargement, heure, creneaux.length, jours, creneauxJour, jourISO]);
 
   const grille = (liste: typeof creneaux) => (
     <div className="slots">
@@ -133,7 +141,7 @@ export default function CreneauxMobile({
               key={j.iso}
               type="button"
               disabled={j.ferme}
-              className={`day${j.iso === jourISO ? " on" : ""}${j.ferme ? " off" : ""}`}
+              className={`day${j.iso === jourAffiche ? " on" : ""}${j.ferme ? " off" : ""}`}
               onClick={() => {
                 setJourISO(j.iso);
                 setHeure(null);
@@ -167,7 +175,7 @@ export default function CreneauxMobile({
       <div className="ctafoot">
         {heure ? (
           <Link
-            href={`/reservation?medecin=${medecinId}&date=${jourISO}&heure=${encodeURIComponent(heure)}`}
+            href={`/reservation?medecin=${medecinId}&date=${jourAffiche}&heure=${encodeURIComponent(heure)}`}
             className="btn"
           >
             Continuer · {heure}

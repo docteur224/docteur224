@@ -20,12 +20,22 @@ import { NextResponse, type NextRequest } from "next/server";
 /** La porte de l'espace admin doit rester ouverte, sinon plus personne n'entre. */
 const CONNEXION_ADMIN = "/espace-admin/connexion";
 
-/** Espaces privés et porte à laquelle renvoyer un visiteur sans session. */
+/*
+ * Espaces privés et porte à laquelle renvoyer un visiteur sans session.
+ *
+ * L'espace patient y figure au même titre que les quatre autres : sa
+ * coquille posait bien la garde côté navigateur, mais la page partait
+ * quand même au visiteur anonyme, qui voyait le menu et les libellés le
+ * temps d'une redirection. « Mes rendez-vous » suit la même règle — c'est
+ * l'agenda personnel du patient, pas une page publique.
+ */
 const ESPACES_PRIVES: { prefixe: string; connexion: string }[] = [
   { prefixe: "/espace-admin", connexion: CONNEXION_ADMIN },
   { prefixe: "/espace-medecin", connexion: "/connexion" },
   { prefixe: "/espace-assistant", connexion: "/connexion" },
   { prefixe: "/espace-etablissement", connexion: "/connexion" },
+  { prefixe: "/patient", connexion: "/connexion" },
+  { prefixe: "/mes-rendez-vous", connexion: "/connexion" },
 ];
 
 export async function proxy(request: NextRequest) {
@@ -60,6 +70,11 @@ export async function proxy(request: NextRequest) {
   if (!user && espace && chemin !== espace.connexion) {
     const cible = request.nextUrl.clone();
     cible.pathname = espace.connexion;
+    // On revient où l'on allait : sans cela, un lien partagé vers un
+    // rendez-vous précis retombait sur l'accueil de l'espace après
+    // identification. `/connexion` n'accepte qu'un chemin interne.
+    cible.search = "";
+    if (espace.connexion === "/connexion") cible.searchParams.set("retour", chemin);
     const redirection = NextResponse.redirect(cible);
     // Les cookies posés plus haut (session expirée effacée) doivent suivre :
     // la redirection remplace la réponse, elle n'en hérite pas.

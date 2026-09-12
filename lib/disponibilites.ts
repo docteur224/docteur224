@@ -45,12 +45,22 @@ export interface Disponibilites {
  * fenêtre s'élargit à la demande via etendreFenetre() quand le patient
  * navigue plus loin dans l'horizon de réservation.
  */
+/* Références stables : elles servent de dépendances aux crochets ci-dessous. */
+const AUCUNE_PLAGE: Disponibilites["plages"] = [];
+const AUCUN_ETAT = new Map<string, EtatCreneau>();
+
 export function useDisponibilites(medecinId: string, joursAvance = 60): Disponibilites {
-  const [chargement, setChargement] = useState(true);
-  const [plages, setPlages] = useState<Disponibilites["plages"]>([]);
-  const [etats, setEtats] = useState<Map<string, EtatCreneau>>(new Map());
   const [version, setVersion] = useState(0);
   const [fenetreJours, setFenetreJours] = useState(joursAvance);
+  const [charge, setCharge] = useState<{
+    cle: string;
+    plages: Disponibilites["plages"];
+    etats: Map<string, EtatCreneau>;
+  } | null>(null);
+
+  // Ce que la vue demande en ce moment : praticien, largeur de fenêtre, et
+  // le compteur de rechargement.
+  const cle = `${medecinId}|${fenetreJours}|${version}`;
 
   const etendreFenetre = useCallback((jours: number) => {
     setFenetreJours((actuelle) => (jours > actuelle ? jours : actuelle));
@@ -58,21 +68,29 @@ export function useDisponibilites(medecinId: string, joursAvance = 60): Disponib
 
   useEffect(() => {
     let actif = true;
-    setChargement(true);
     const fin = versISO(new Date(Date.now() + fenetreJours * 86400000));
     Promise.all([
       chargerHorairesTypes(medecinId),
       chargerIndisponibilites(medecinId, versISO(new Date()), fin),
     ]).then(([p, e]) => {
-      if (!actif) return;
-      setPlages(p);
-      setEtats(e);
-      setChargement(false);
+      if (actif) setCharge({ cle, plages: p, etats: e });
     });
     return () => {
       actif = false;
     };
-  }, [medecinId, fenetreJours, version]);
+  }, [cle, medecinId, fenetreJours]);
+
+  /*
+   * « En cours de chargement » n'est pas un état à tenir à jour, c'est une
+   * CONSTATATION : ce qu'on a en mémoire ne répond pas encore à ce qui est
+   * demandé. Le poser depuis l'effet (`setChargement(true)` en tête) faisait
+   * rendre deux fois à chaque élargissement de la fenêtre, et laissait la
+   * porte ouverte à un drapeau resté bloqué si l'effet changeait de forme.
+   */
+  const aJour = charge?.cle === cle;
+  const plages = aJour ? charge.plages : AUCUNE_PLAGE;
+  const etats = aJour ? charge.etats : AUCUN_ETAT;
+  const chargement = !aJour;
 
   // Les créneaux déjà passés — ou trop proches pour respecter le délai de
   // prévenance — sont retirés : les proposer n'aurait aucun sens côté patient.

@@ -108,7 +108,7 @@ export default function EtablissementShell({ children }: { children: React.React
         {enParcours ? (
           <p className="py-16 text-center text-[13px] text-muted">Redirection…</p>
         ) : profil?.statut === "suspendu" ? (
-          <CompteSuspendu role={profil.role} />
+          <CompteSuspendu role={profil.role} parAdmin={profil.suspenduParAdmin} />
         ) : (
           children
         )}

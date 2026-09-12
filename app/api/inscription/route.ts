@@ -17,15 +17,36 @@ import { normaliserTypeEtablissement } from "@/lib/types-etablissement";
 
 const ROLES_AUTORISES = new Set(["patient", "medecin", "etablissement"]);
 
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export async function POST(request: Request) {
-  const corps = await request.json();
-  const { role, email, motDePasse, nom, prenom, telephone } = corps;
+  const corps = await request.json().catch(() => null);
+  if (!corps) return NextResponse.json({ erreur: "Requête illisible." }, { status: 400 });
+  const { role, motDePasse, nom, prenom, telephone } = corps;
+
+  /*
+   * L'adresse est ramenée en minuscules AVANT tout le reste.
+   *
+   * Supabase Auth le fait de son côté : sans cette normalisation,
+   * `utilisateurs.email` gardait la casse saisie et divergeait de
+   * `auth.users`. Toutes les recherches par adresse — ouverture d'un compte
+   * administrateur, d'un compte assistant(e) — passaient alors à côté du
+   * compte existant et n'échouaient qu'au bout de la chaîne, sur un message
+   * technique d'`auth.users`.
+   */
+  const email = String(corps.email ?? "").trim().toLowerCase();
 
   if (!ROLES_AUTORISES.has(role)) {
     return NextResponse.json({ erreur: "Rôle non autorisé." }, { status: 400 });
   }
-  if (!email || !motDePasse || motDePasse.length < 8) {
-    return NextResponse.json({ erreur: "E-mail ou mot de passe invalide." }, { status: 400 });
+  if (!EMAIL.test(email)) {
+    return NextResponse.json({ erreur: "Adresse e-mail invalide." }, { status: 400 });
+  }
+  if (typeof motDePasse !== "string" || motDePasse.length < 8) {
+    return NextResponse.json(
+      { erreur: "Le mot de passe doit contenir au moins 8 caractères." },
+      { status: 400 }
+    );
   }
   // Le contrôle du formulaire ne protège de rien : un POST direct passerait
   // à côté. Réservé aux comptes professionnels — la fiche publique affiche

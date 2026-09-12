@@ -97,7 +97,7 @@ export default function AdminShell({
   // la base refuse (migration 0045).
   const contenu =
     profil?.statut === "suspendu" ? (
-      <CompteSuspendu role="admin" />
+      <CompteSuspendu role="admin" parAdmin={profil.suspenduParAdmin} />
     ) : refuse ? (
       <SectionFermee />
     ) : (

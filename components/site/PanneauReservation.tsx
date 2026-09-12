@@ -63,16 +63,23 @@ export default function PanneauReservation({
     return valeur;
   }, [mois, decalage]);
 
-  const creneaux = chargement ? [] : creneauxJour(jourISO);
+  /*
+   * Le jour réellement affiché.
+   *
+   * En fin de journée, tous les créneaux d'aujourd'hui sont écoulés : plutôt
+   * que d'ouvrir sur une grille vide, on montre le premier jour de la page
+   * qui a encore quelque chose à proposer. C'est DÉDUIT du jour retenu, et
+   * non réécrit dans l'état par un effet — corriger un état depuis un effet
+   * fait rendre deux fois, une première avec la grille vide.
+   *
+   * Dès que le patient a choisi une heure, on ne bouge plus sous ses yeux.
+   */
+  const jourAffiche = useMemo(() => {
+    if (chargement || heure || creneauxJour(jourISO).length > 0) return jourISO;
+    return jours.find((j) => !j.ferme && creneauxJour(j.iso).length > 0)?.iso ?? jourISO;
+  }, [chargement, heure, jourISO, jours, creneauxJour]);
 
-  // En fin de journée, tous les créneaux d'aujourd'hui sont écoulés : plutôt
-  // que d'ouvrir sur une grille vide, on sélectionne le premier jour de la
-  // page qui a encore quelque chose à proposer.
-  useEffect(() => {
-    if (chargement || heure || creneaux.length > 0) return;
-    const jourUtile = jours.find((j) => !j.ferme && creneauxJour(j.iso).length > 0);
-    if (jourUtile && jourUtile.iso !== jourISO) setJourISO(jourUtile.iso);
-  }, [chargement, heure, creneaux.length, jours, creneauxJour, jourISO]);
+  const creneaux = chargement ? [] : creneauxJour(jourAffiche);
 
   return (
     <div className="rounded-[18px] border border-line bg-white p-[22px] shadow-[0_8px_22px_rgba(16,59,80,.06)] lg:sticky lg:top-[86px]">
@@ -119,7 +126,7 @@ export default function PanneauReservation({
         </button>
         <div className="flex flex-1 gap-2 overflow-auto">
         {jours.map((j) => {
-          const selectionne = j.iso === jourISO;
+          const selectionne = j.iso === jourAffiche;
           return (
             <button
               key={j.iso}
@@ -204,7 +211,7 @@ export default function PanneauReservation({
       {/* Bouton d'action : inactif tant qu'aucun horaire n'est choisi */}
       {heure ? (
         <Link
-          href={`/reservation?medecin=${medecinId}&date=${jourISO}&heure=${encodeURIComponent(heure)}`}
+          href={`/reservation?medecin=${medecinId}&date=${jourAffiche}&heure=${encodeURIComponent(heure)}`}
           className="mt-[18px] block w-full rounded-[11px] bg-teal py-[14px] text-center text-[15px] font-bold text-white transition-colors hover:bg-[#2790bc]"
         >
           Continuer · {heure}

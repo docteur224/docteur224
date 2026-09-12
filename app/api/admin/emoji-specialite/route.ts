@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse } from "next/server";
-import { creerClientServeur } from "@/lib/supabase/server";
+import { verifierAdmin } from "@/lib/gardes-serveur";
 import {
   devinerEmojiSpecialite,
   emojiDeSecours,
@@ -83,21 +83,15 @@ async function demanderEmojiIA(nom: string): Promise<string | null> {
 }
 
 export async function POST(request: Request) {
-  const session = await creerClientServeur();
-  const { data: auth } = await session.auth.getUser();
-  if (!auth.user) {
-    return NextResponse.json({ erreur: "Session expirée — reconnectez-vous." }, { status: 401 });
-  }
-
-  // Le rôle est relu en base, jamais déduit de ce que poste l'appelant.
-  const { data: appelant } = await session
-    .from("utilisateurs")
-    .select("role")
-    .eq("id", auth.user.id)
-    .maybeSingle();
-  if (appelant?.role !== "admin") {
-    return NextResponse.json({ erreur: "Réservé aux administrateurs." }, { status: 403 });
-  }
+  /*
+   * Garde commune aux routes d'administration : compte administrateur ACTIF,
+   * et permission « Paramètres » — celle qui ouvre l'écran des référentiels,
+   * seul endroit d'où part cet appel. Le contrôle se contentait du rôle : un
+   * administrateur suspendu, ou un administrateur n'ayant que le journal
+   * d'audit, déclenchait autant d'appels facturés à l'IA qu'il le voulait.
+   */
+  const garde = await verifierAdmin("parametres");
+  if ("refus" in garde) return garde.refus;
 
   const { nom } = await request.json().catch(() => ({ nom: null }));
   if (typeof nom !== "string" || !nom.trim()) {

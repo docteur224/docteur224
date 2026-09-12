@@ -1,6 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-import { creerClientServeur } from "@/lib/supabase/server";
+import { tracerAuditServeur, verifierAdmin } from "@/lib/gardes-serveur";
 import { supprimerCompte, type RoleSupprimable } from "@/lib/suppression-compte";
 
 /*
@@ -10,10 +9,18 @@ import { supprimerCompte, type RoleSupprimable } from "@/lib/suppression-compte"
  * d'e-mail et bannissement), qui exige la clé service_role : la RLS seule
  * ne suffit pas, un administrateur ne peut pas bannir depuis le navigateur.
  *
- * Deux garde-fous, sans lesquels l'écran se retourne contre son
+ * La garde est celle de toutes les routes d'administration
+ * (`verifierAdmin`) : elle exige un compte administrateur ACTIF — un compte
+ * désactivé n'est plus administrateur, c'est ce qui donne son sens au
+ * bouton « Désactiver » — et la permission « Utilisateurs ». La version
+ * précédente ne lisait que le rôle : un administrateur suspendu, ou un
+ * administrateur n'ayant que le journal d'audit, fermait le compte de
+ * n'importe quel membre.
+ *
+ * Deux garde-fous s'y ajoutent, sans lesquels l'écran se retourne contre son
  * utilisateur : on ne ferme ni son propre compte — l'administrateur se
  * bannirait lui-même, sans recours dans l'interface — ni celui d'un autre
- * administrateur, qui relève d'une décision hors application.
+ * administrateur, qui relève de /espace-admin/equipe.
  */
 
 const ROLES_SUPPRIMABLES = new Set<RoleSupprimable>([
@@ -24,34 +31,16 @@ const ROLES_SUPPRIMABLES = new Set<RoleSupprimable>([
 ]);
 
 export async function POST(request: Request) {
-  const session = await creerClientServeur();
-  const { data: auth } = await session.auth.getUser();
-  if (!auth.user) {
-    return NextResponse.json({ erreur: "Session expirée — reconnectez-vous." }, { status: 401 });
-  }
+  const garde = await verifierAdmin("utilisateurs");
+  if ("refus" in garde) return garde.refus;
+  const { admin, appelantId } = garde.acces;
 
   const { id } = await request.json().catch(() => ({ id: null }));
   if (typeof id !== "string" || !id) {
     return NextResponse.json({ erreur: "Compte à supprimer non précisé." }, { status: 400 });
   }
 
-  const admin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-
-  // Le rôle est relu en base, jamais déduit de ce que poste l'appelant.
-  const { data: appelant } = await admin
-    .from("utilisateurs")
-    .select("role")
-    .eq("id", auth.user.id)
-    .maybeSingle();
-  if (appelant?.role !== "admin") {
-    return NextResponse.json({ erreur: "Réservé aux administrateurs." }, { status: 403 });
-  }
-
-  if (id === auth.user.id) {
+  if (id === appelantId) {
     return NextResponse.json(
       { erreur: "Vous ne pouvez pas supprimer votre propre compte administrateur." },
       { status: 400 }
@@ -82,16 +71,13 @@ export async function POST(request: Request) {
   const { erreur } = await supprimerCompte(admin, id, cible.role as RoleSupprimable);
   if (erreur) return NextResponse.json({ erreur }, { status: 400 });
 
-  // Écriture directe plutôt que la RPC `ecrire_audit` : celle-ci renseigne
-  // l'acteur avec auth.uid(), nul sous service_role, ce qui effacerait
-  // justement l'information la plus importante — qui a fermé le compte.
-  await admin.from("journal_audit").insert({
-    action: "A supprimé un compte",
-    acteur_id: auth.user.id,
-    cible_type: "utilisateur",
-    cible_id: id,
-    details: { cible: `${cible.role} · ${id}` },
-  });
+  await tracerAuditServeur(
+    admin,
+    appelantId,
+    "A supprimé un compte",
+    `${cible.role} · ${id}`,
+    id
+  );
 
   return NextResponse.json({ ok: true });
 }

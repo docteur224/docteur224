@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
-import { creerClientServeur } from "@/lib/supabase/server";
+import { verifierAdmin } from "@/lib/gardes-serveur";
 import { envoyerMessage, lireConfigMessagerie } from "@/lib/messagerie";
 
 /*
@@ -13,9 +13,9 @@ import { envoyerMessage, lireConfigMessagerie } from "@/lib/messagerie";
  * il reste dans le cache, dans les journaux du proxy, dans l'onglet réseau
  * laissé ouvert. L'écran affiche « posée » ou « absente », pas la valeur.
  *
- * Réservé au sous-rôle Finance, comme le reste de ce qui engage de l'argent
- * (spec C.7.10) : la configuration décide de ce que la plateforme dépense
- * chez son agrégateur.
+ * Réservé à la permission « Messagerie », celle-là même qui ouvre l'écran
+ * dans la barre latérale : la configuration engage ce que la plateforme
+ * dépense chez son agrégateur, et il n'y a qu'un seul endroit où la régler.
  */
 
 function admin() {
@@ -24,23 +24,27 @@ function admin() {
   });
 }
 
-async function verifierAdminFinance() {
-  const session = await creerClientServeur();
-  const { data: auth } = await session.auth.getUser();
-  if (!auth.user) return { erreur: NextResponse.json({ erreur: "Session expirée." }, { status: 401 }) };
-  const { data: profil } = await admin()
-    .from("utilisateurs")
-    .select("role, sous_roles_admin")
-    .eq("id", auth.user.id)
-    .maybeSingle();
-  if (profil?.role !== "admin" || !(profil.sous_roles_admin ?? []).includes("finance")) {
-    return { erreur: NextResponse.json({ erreur: "Réservé aux administrateurs Finance." }, { status: 403 }) };
-  }
-  return { utilisateurId: auth.user.id };
+/*
+ * Garde commune aux trois verbes.
+ *
+ * Elle s'appuie sur `verifierAdmin`, comme le reste des routes
+ * d'administration. La version précédente relisait le rôle à la main et
+ * s'écartait de la règle sur trois points : elle acceptait un administrateur
+ * SUSPENDU (qui n'est plus administrateur depuis la migration 0043), elle
+ * ignorait le COMPTE PRINCIPAL — dont les permissions ne sont pas écrites
+ * dans sa liste mais détenues par construction, si bien qu'il se voyait
+ * refuser son propre écran — et elle exigeait « Finance » là où la barre
+ * latérale ouvre la page sur « Messagerie ». L'écran et la route demandent
+ * désormais la même chose.
+ */
+async function verifierAdminMessagerie() {
+  const garde = await verifierAdmin("messagerie");
+  if ("refus" in garde) return { erreur: garde.refus };
+  return { utilisateurId: garde.acces.appelantId };
 }
 
 export async function GET() {
-  const ctx = await verifierAdminFinance();
+  const ctx = await verifierAdminMessagerie();
   if (ctx.erreur) return ctx.erreur;
   // La vue ne porte pas les colonnes de secrets, seulement leur présence :
   // même une faute de frappe ici ne peut pas les faire fuiter.
@@ -74,7 +78,7 @@ const CHAMPS: Record<string, string> = {
 const SECRETS = new Set(["smsCle", "whatsappJeton", "emailCle"]);
 
 export async function POST(requete: Request) {
-  const ctx = await verifierAdminFinance();
+  const ctx = await verifierAdminMessagerie();
   if (ctx.erreur) return ctx.erreur;
 
   let corps: Record<string, unknown>;
@@ -146,7 +150,7 @@ export async function POST(requete: Request) {
 
 /** Envoi d'essai : la seule façon de savoir qu'une configuration fonctionne. */
 export async function PUT(requete: Request) {
-  const ctx = await verifierAdminFinance();
+  const ctx = await verifierAdminMessagerie();
   if (ctx.erreur) return ctx.erreur;
 
   let corps: { destinataire?: string; canal?: "sms" | "whatsapp" | "email" };

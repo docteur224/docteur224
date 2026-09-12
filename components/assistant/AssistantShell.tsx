@@ -106,7 +106,7 @@ export default function AssistantShell({ children }: { children: React.ReactNode
         {/* Compte mis en pause par son titulaire : l'espace se referme sur
             l'écran de réactivation. Laisser l'interface ouverte donnerait des
             boutons que la base refuse (migration 0045). */}
-        {profil?.statut === "suspendu" ? <CompteSuspendu role={profil.role} /> : children}
+        {profil?.statut === "suspendu" ? <CompteSuspendu role={profil.role} parAdmin={profil.suspenduParAdmin} /> : children}
       </main>
       <TabBarMobile role="assistant" />
     </div>

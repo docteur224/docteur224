@@ -402,6 +402,11 @@ function versRdvAgenda(l: LigneRdvPro): RdvAgenda {
  * agenda) élargit sa fenêtre à mesure — sans quoi une journée hors fenêtre
  * s'afficherait entièrement libre, ce qui est faux et non « vide ».
  */
+/* Références stables, rendues tant que l'agenda demandé n'est pas arrivé. */
+const AUCUNE_PLAGE_PRO: { jour_semaine: number; heure_debut: string; heure_fin: string }[] = [];
+const AUCUNE_EXCEPTION_PRO = new Map<string, EtatCreneau>();
+const AUCUN_RDV: RdvAgenda[] = [];
+
 export function useAgenda(
   medecinId: string | undefined,
   joursAvance = 30,
@@ -412,16 +417,20 @@ export function useAgenda(
   rdvs: RdvAgenda[];
   recharger: () => void;
 } {
-  const [chargement, setChargement] = useState(true);
-  const [plages, setPlages] = useState<{ jour_semaine: number; heure_debut: string; heure_fin: string }[]>([]);
-  const [exceptions, setExceptions] = useState<Map<string, EtatCreneau>>(new Map());
-  const [rdvs, setRdvs] = useState<RdvAgenda[]>([]);
   const [version, setVersion] = useState(0);
+  const [charge, setCharge] = useState<{
+    cle: string;
+    plages: { jour_semaine: number; heure_debut: string; heure_fin: string }[];
+    exceptions: Map<string, EtatCreneau>;
+    rdvs: RdvAgenda[];
+  } | null>(null);
+
+  // Ce que l'écran demande en ce moment : praticien et amplitude affichée.
+  const cle = `${medecinId ?? ""}|${joursRecul}|${joursAvance}|${version}`;
 
   useEffect(() => {
     if (!medecinId) return;
     let actif = true;
-    setChargement(true);
     const supabase = creerClientNavigateur();
     const debut = versISO(new Date(Date.now() - joursRecul * 86400000));
     const fin = versISO(new Date(Date.now() + joursAvance * 86400000));
@@ -431,21 +440,32 @@ export function useAgenda(
       supabase.from("rendez_vous").select(SELECTION_RDV_PRO).eq("medecin_id", medecinId).gte("date", debut).lte("date", fin).order("date").order("heure"),
     ]).then(([p, e, r]) => {
       if (!actif) return;
-      setPlages(p.data ?? []);
       const map = new Map<string, EtatCreneau>();
       for (const x of e.data ?? []) map.set(`${x.date}|${x.heure.slice(0, 5)}`, x.etat as EtatCreneau);
-      setExceptions(map);
-      setRdvs(
-        ((r.data ?? []) as unknown as LigneRdvPro[]).map((l) =>
+      setCharge({
+        cle,
+        plages: p.data ?? [],
+        exceptions: map,
+        rdvs: ((r.data ?? []) as unknown as LigneRdvPro[]).map((l) =>
           versRdvAgenda({ ...l, heure: l.heure.slice(0, 5) })
-        )
-      );
-      setChargement(false);
+        ),
+      });
     });
     return () => {
       actif = false;
     };
-  }, [medecinId, joursAvance, joursRecul, version]);
+  }, [cle, medecinId, joursAvance, joursRecul]);
+
+  /*
+   * « En cours de chargement » est DÉDUIT, non tenu à jour : ce qu'on a en
+   * mémoire ne répond pas encore à ce qui est demandé. Le poser en tête
+   * d'effet faisait rendre deux fois à chaque changement d'amplitude.
+   */
+  const aJour = charge?.cle === cle;
+  const chargement = !aJour;
+  const plages = aJour ? charge.plages : AUCUNE_PLAGE_PRO;
+  const exceptions = aJour ? charge.exceptions : AUCUNE_EXCEPTION_PRO;
+  const rdvs = aJour ? charge.rdvs : AUCUN_RDV;
 
   const creneauxJour = (dateISO: string): CreneauAgenda[] =>
     HEURES_JOURNEE.map((heure) => {

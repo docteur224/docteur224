@@ -26,18 +26,47 @@ export async function seConnecter(
   motDePasse: string
 ): Promise<{ role?: Role; cible?: string; erreur?: string }> {
   const supabase = creerClientNavigateur();
-  const { data, error } = await supabase.auth.signInWithPassword({ email, password: motDePasse });
+  const { data, error } = await supabase.auth.signInWithPassword({
+    // Même normalisation qu'à l'inscription : une majuscule saisie au
+    // clavier ne doit pas faire échouer une connexion valide.
+    email: email.trim().toLowerCase(),
+    password: motDePasse,
+  });
   if (error) {
-    return { erreur: error.message.includes("Invalid login credentials") ? "E-mail ou mot de passe incorrect." : error.message };
+    /*
+     * Un compte fermé ou suspendu par l'administration est BANNI côté
+     * authentification : Supabase répond alors « User is banned », en
+     * anglais et sans dire quoi faire. On traduit le refus, sans révéler
+     * lequel des deux cas s'applique — ce serait dire à un inconnu qu'une
+     * adresse est bien inscrite chez nous.
+     */
+    if (/banned/i.test(error.message)) {
+      return {
+        erreur:
+          "Ce compte n’est plus accessible. Si vous pensez qu’il s’agit d’une erreur, écrivez à support@docteur224.com.",
+      };
+    }
+    return {
+      erreur: error.message.includes("Invalid login credentials")
+        ? "E-mail ou mot de passe incorrect."
+        : error.message,
+    };
   }
   const { data: profil } = await supabase
     .from("utilisateurs")
-    .select("role")
+    .select("role, statut")
     .eq("id", data.user.id)
     .single();
   if (!profil) {
     await supabase.auth.signOut();
     return { erreur: "Profil introuvable. Contactez le support." };
+  }
+  // Un compte fermé conserve sa ligne (l'historique des rendez-vous la
+  // référence) : si le bannissement a sauté d'une façon ou d'une autre, la
+  // session s'arrête ici plutôt que d'ouvrir un espace vidé de son contenu.
+  if (profil.statut === "supprime") {
+    await supabase.auth.signOut();
+    return { erreur: "Ce compte a été fermé." };
   }
   const role = profil.role as Role;
   return { role, cible: ESPACE_PAR_ROLE[role] };

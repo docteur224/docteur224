@@ -76,9 +76,14 @@ await inserer("tarifs_plateforme", [
 ], "formule");
 
 // ---------- Admin ----------
-const adminId = await creerCompte("admin@docteur224.com", "alpha2308", {
+// Le compte est créé, son identifiant ne sert à rien ensuite : rien dans ce
+// jeu d'essai n'est rattaché à l'administrateur.
+await creerCompte("admin@docteur224.com", "alpha2308", {
   role: "admin", nom: "Administrateur", prenom: "Docteur224", telephone: "+224620000001",
-  sous_roles_admin: ["finance", "support", "moderation"],
+  // Le catalogue fermé de la migration 0043 : « support » n'en fait plus
+  // partie, et la base refuse désormais une clé qu'elle ne connaît pas.
+  sous_roles_admin: ["validations", "moderation", "utilisateurs", "etablissements",
+                     "pilotage", "finance", "messagerie", "parametres", "equipe", "audit"],
 });
 
 // ---------- Gestionnaires d'établissements ----------

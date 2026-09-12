@@ -66,23 +66,43 @@ const admin = await clientPour("admin@docteur224.com", "alpha2308");
   const { data } = await medecin.from("abonnements").select("*");
   test("Médecin → son abonnement : autorisé", (data ?? []).length === 1, `${data?.length} ligne(s)`);
 }
-// 8. Patient1 ne voit que SES rendez-vous (2 pour lui + 1 proche + 0 autres)
+/*
+ * 8-10, 13-14, 16 : ces tests comptaient des lignes — « patient1 voit
+ * exactement 2 rendez-vous », « l'anonyme voit exactement 7 médecins ». Le
+ * jeu d'essai grossit à chaque scénario joué, si bien qu'ils tombaient en
+ * échec alors que le cloisonnement, lui, tenait : six fausses alertes qui
+ * masquaient les vraies. On vérifie désormais À QUI APPARTIENT ce qui
+ * ressort, ce qui est la question posée — et qui, elle, ne dépend pas de la
+ * taille de la base.
+ */
+// 8. Patient1 ne voit que SES rendez-vous et ceux de ses proches
 {
+  const uid = (await patient.auth.getUser()).data.user.id;
+  const { data: proches } = await patient.from("proches").select("id");
+  const siens = new Set((proches ?? []).map((p) => p.id));
   const { data } = await patient.from("rendez_vous").select("*");
-  const etrangers = (data ?? []).filter((r) => r.reserve_par !== undefined && false);
-  test("Patient → uniquement ses RDV (1 pour lui + 1 pour sa proche)", (data ?? []).length === 2, `${data?.length} RDV (attendu 2)`);
+  const etrangers = (data ?? []).filter(
+    (r) => r.patient_id !== uid && !siens.has(r.proche_id) && r.reserve_par !== uid
+  );
+  test("Patient → uniquement ses RDV et ceux de ses proches", etrangers.length === 0, `${data?.length} RDV visibles, ${etrangers.length} d'autrui`);
 }
 // 9. Patient2 ne voit pas les RDV de patient1
 {
+  const uid = (await patient2.auth.getUser()).data.user.id;
+  const { data: proches } = await patient2.from("proches").select("id");
+  const siens = new Set((proches ?? []).map((p) => p.id));
   const { data } = await patient2.from("rendez_vous").select("*");
-  test("Patient2 → isolé des RDV des autres", (data ?? []).length === 1, `${data?.length} RDV (attendu 1)`);
+  const etrangers = (data ?? []).filter(
+    (r) => r.patient_id !== uid && !siens.has(r.proche_id) && r.reserve_par !== uid
+  );
+  test("Patient2 → isolé des RDV des autres", etrangers.length === 0, `${data?.length} RDV visibles, ${etrangers.length} d'autrui`);
 }
 // 10. Le médecin1 ne voit que ses propres RDV
 {
   const { data } = await medecin.from("rendez_vous").select("*");
   const medecinUid = (await medecin.auth.getUser()).data.user.id;
   const autres = (data ?? []).filter((r) => r.medecin_id !== medecinUid);
-  test("Médecin → uniquement ses RDV", (data ?? []).length === 3 && autres.length === 0, `${data?.length} RDV (attendu 3)`);
+  test("Médecin → uniquement ses RDV", (data ?? []).length > 0 && autres.length === 0, `${data?.length} RDV visibles, ${autres.length} d'un confrère`);
 }
 // 11. Assistant1 (peut_voir_agenda) voit les RDV de SON médecin
 {
@@ -95,16 +115,21 @@ const admin = await clientPour("admin@docteur224.com", "alpha2308");
   const { data: maj } = await assistant1.from("rendez_vous").update({ statut: "confirme" }).eq("id", rdvs[0].id).select();
   test("Assistant sans permission → confirmer un RDV : refusé", (maj ?? []).length === 0);
 }
-// 13. Visiteur anonyme : voit les médecins validés, pas celui en attente
+// 13. Visiteur anonyme : voit les médecins validés, et eux seuls
 {
   const { data } = await anon.from("medecins").select("id,statut");
-  const enAttente = (data ?? []).filter((m) => m.statut !== "valide");
-  test("Anonyme → seulement médecins validés", (data ?? []).length === 7 && enAttente.length === 0, `${data?.length} visibles (attendu 7)`);
+  const nonValides = (data ?? []).filter((m) => m.statut !== "valide");
+  test("Anonyme → seulement médecins validés", nonValides.length === 0, `${data?.length} visibles, ${nonValides.length} non validés`);
 }
-// 14. L'admin voit aussi le médecin en attente
+// 14. L'admin voit aussi les dossiers qui ne sont pas encore validés
 {
-  const { data } = await admin.from("medecins").select("id");
-  test("Admin → tous les médecins (8)", (data ?? []).length === 8, `${data?.length}`);
+  const { data } = await admin.from("medecins").select("id, statut");
+  const { data: publics } = await anon.from("medecins").select("id");
+  test(
+    "Admin → tous les médecins, validés ou non",
+    (data ?? []).length > (publics ?? []).length,
+    `${data?.length} pour l'admin, ${publics?.length} pour un visiteur`
+  );
 }
 // 15. Un patient ne peut pas s'auto-promouvoir admin (trigger)
 {
@@ -113,8 +138,10 @@ const admin = await clientPour("admin@docteur224.com", "alpha2308");
 }
 // 16. Un patient ne voit pas les proches d'un autre patient
 {
+  const uid = (await patient2.auth.getUser()).data.user.id;
   const { data } = await patient2.from("proches").select("*");
-  test("Patient2 → proches d'autrui : refusé", (data ?? []).length === 0);
+  const etrangers = (data ?? []).filter((p) => p.patient_id !== uid);
+  test("Patient2 → proches d'autrui : refusé", etrangers.length === 0, `${data?.length} visibles, ${etrangers.length} d'autrui`);
 }
 // 17. Écriture réelle : patient1 réserve un RDV puis l'annule (nettoyé ensuite)
 {
@@ -162,6 +189,67 @@ const admin = await clientPour("admin@docteur224.com", "alpha2308");
     `essai/2030-01-01 → ${apres.statut}/${apres.date_fin}`
   );
   await admin.from("abonnements").delete().eq("id", pose.id);
+}
+
+/*
+ * 20-23. La suspension prononcée par l'administration (migration 0051).
+ *
+ * Elle ne tenait pas : l'écran écrivait `statut` depuis le navigateur, et la
+ * policy `upd_utilisateurs_soi` laissait la personne suspendue repasser
+ * « actif » d'une requête. Le compte de sonde est créé puis effacé ici même,
+ * pour ne pas dépendre d'un compte du jeu d'essai.
+ */
+{
+  const sr = createClient(URL_SB, lire("SUPABASE_SERVICE_ROLE_KEY"), { auth: { persistSession: false } });
+  const mail = `rls-suspension-${Date.now()}@test.docteur224.com`;
+  const { data: cree } = await sr.auth.admin.createUser({ email: mail, password: "test1234", email_confirm: true });
+  const uid = cree.user.id;
+  await sr.from("utilisateurs").insert({ id: uid, role: "patient", email: mail, prenom: "RLS", nom: "Suspension" });
+  await sr.from("patients").insert({ id: uid });
+
+  const sonde = await clientPour(mail);
+  const statut = async () =>
+    (await sr.from("utilisateurs").select("statut, suspendu_par_admin").eq("id", uid).single()).data;
+
+  // 20. La pause volontaire, elle, doit continuer de s'ouvrir et de se lever.
+  await sonde.rpc("basculer_suspension_compte", { p_suspendre: true });
+  const enPause = await statut();
+  await sonde.rpc("basculer_suspension_compte", { p_suspendre: false });
+  const reprise = await statut();
+  test(
+    "Compte → pause volontaire puis reprise : autorisé",
+    enPause.statut === "suspendu" && !enPause.suspendu_par_admin && reprise.statut === "actif",
+    `${enPause.statut} → ${reprise.statut}`
+  );
+
+  // L'administration prononce la sanction (ce que fait /api/admin/utilisateurs/statut).
+  await sr.from("utilisateurs").update({ statut: "suspendu", suspendu_par_admin: true }).eq("id", uid);
+
+  // 21. Elle ne se lève pas d'un UPDATE direct…
+  await sonde.from("utilisateurs").update({ statut: "actif" }).eq("id", uid);
+  test("Compte suspendu → se réactiver par UPDATE : refusé", (await statut()).statut === "suspendu");
+
+  // 22. …ni par la porte de la pause volontaire.
+  const { error: eRpc } = await sonde.rpc("basculer_suspension_compte", { p_suspendre: false });
+  test(
+    "Compte suspendu par l'admin → se réactiver par la RPC : refusé",
+    !!eRpc && (await statut()).statut === "suspendu",
+    eRpc?.message?.slice(0, 50)
+  );
+
+  // 23. Et il ne laisse plus de trace publique en attendant.
+  const { data: cible } = await anon.from("medecins").select("id").limit(1);
+  const { error: eAvis } = await sonde
+    .from("avis")
+    .insert({ patient_id: uid, medecin_id: cible[0].id, note: 5, commentaire: "test RLS" });
+  const { error: eMsg } = await sonde
+    .from("messages")
+    .insert({ patient_id: uid, medecin_id: cible[0].id, expediteur_id: uid, contenu: "test RLS" });
+  test("Compte suspendu → déposer un avis ou écrire au cabinet : refusé", !!eAvis && !!eMsg);
+
+  await sr.from("patients").delete().eq("id", uid);
+  await sr.from("utilisateurs").delete().eq("id", uid);
+  await sr.auth.admin.deleteUser(uid);
 }
 
 const echecs = resultats.filter((r) => !r.ok).length;
