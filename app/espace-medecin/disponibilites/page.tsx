@@ -1,6 +1,7 @@
 "use client";
 
 import MedecinShell from "@/components/medecin/MedecinShell";
+import CongesAbsences from "@/components/pro/CongesAbsences";
 import GrilleDisponibilites from "@/components/pro/GrilleDisponibilites";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { useContextePro } from "@/lib/pro";
@@ -11,6 +12,9 @@ import { useContextePro } from "@/lib/pro";
  * (08:00 → 20:00) à 3 états Ouvert / Fermé / Réservé (règle C.4.3 :
  * réservé = verrouillé). Chaque bascule écrit une exception dans la table
  * `creneaux_exceptions`, immédiatement visible côté patient.
+ *
+ * Les congés, eux, vivent dans `absences` (migration 0052) : ils ferment un
+ * bloc de journées d'un geste, là où une exception ferme une demi-heure.
  */
 
 const NOMS_COURTS = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
@@ -71,32 +75,7 @@ export default function Disponibilites() {
             </div>
           </div>
           <GrilleDisponibilites medecinId={medecin.id} peutModifier />
-          <div className="card2" style={{ marginTop: 12 }}>
-            <h4>Congés et absences</h4>
-            <div className="setrow">
-              <div>
-                <b>Vacances annuelles</b>
-                <small>1 – 15 août 2026</small>
-              </div>
-              <span className="pill soon">Programmé</span>
-            </div>
-            <div className="setrow">
-              <div>
-                <b>Jour de congé</b>
-                <small>Chaque dimanche</small>
-              </div>
-              <span className="pill ok">Récurrent</span>
-            </div>
-          </div>
-          <button
-            type="button"
-            className="btn ghost block"
-            disabled
-            title="Disponible dans une phase ultérieure"
-            style={{ opacity: 0.5, cursor: "not-allowed" }}
-          >
-            + Ajouter une absence
-          </button>
+          <CongesAbsences medecinId={medecin.id} peutModifier variante="mobile" />
         </div>
       </div>
 
@@ -148,36 +127,8 @@ export default function Disponibilites() {
         <GrilleDisponibilites medecinId={medecin.id} peutModifier />
       </div>
 
-      {/* Congés et absences (démonstration) */}
-      <div className="rounded-2xl border border-line bg-white p-5">
-        <h3 className="mb-1 text-[15px] font-extrabold">Congés et absences</h3>
-        <div className="flex items-center justify-between gap-[14px] border-b border-line py-[15px]">
-          <div>
-            <b className="block text-[13.5px] font-bold">Vacances annuelles</b>
-            <small className="text-xs text-muted">Du 1 au 15 août 2026</small>
-          </div>
-          <span className="rounded-lg bg-amber-soft px-[9px] py-1 text-[11px] font-bold text-amber">
-            Programmé
-          </span>
-        </div>
-        <div className="flex items-center justify-between gap-[14px] py-[15px]">
-          <div>
-            <b className="block text-[13.5px] font-bold">Jour de congé</b>
-            <small className="text-xs text-muted">Chaque dimanche</small>
-          </div>
-          <span className="rounded-lg bg-green-soft px-[9px] py-1 text-[11px] font-bold text-green">
-            Récurrent
-          </span>
-        </div>
-        <button
-          type="button"
-          disabled
-          title="Disponible dans une phase ultérieure"
-          className="mt-[14px] cursor-not-allowed rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue opacity-50"
-        >
-          + Ajouter une absence
-        </button>
-      </div>
+      {/* Congés et absences : la liste réelle du praticien. */}
+      <CongesAbsences medecinId={medecin.id} peutModifier />
       </div>
     </MedecinShell>
   );

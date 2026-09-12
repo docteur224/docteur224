@@ -527,17 +527,65 @@ export const HEURES_JOURNEE: string[] = (() => {
 })();
 
 /**
- * Statut réel d'un créneau : l'exception (ou la réservation) prime,
- * sinon l'horaire-type du jour décide (spec : exceptions > horaire-type).
+ * Une absence, telle que la porte la table `absences` (migration 0052) :
+ * soit une période, soit un jour de la semaine, jamais les deux.
+ */
+export interface PeriodeAbsence {
+  date_debut: string | null;
+  date_fin: string | null;
+  jour_semaine: number | null;
+  /** Nuls = journée entière. */
+  heure_debut: string | null;
+  heure_fin: string | null;
+}
+
+/**
+ * Ce créneau tombe-t-il dans un congé ?
+ *
+ * Jumeau exact de la fonction SQL `absence_couvre()`, qui fait autorité —
+ * c'est elle que consultent la fiche publique, le centre d'appel et la
+ * prise de rendez-vous. Cette version-ci ne sert qu'à l'agenda du
+ * praticien, qui lit ses propres tables plutôt que `heures_indisponibles`
+ * (il lui faut le nom du patient, que la fonction publique ne rend pas).
+ */
+export function absenceCouvre(
+  absences: PeriodeAbsence[],
+  dateISO: string,
+  heure: string
+): boolean {
+  const jour = new Date(`${dateISO}T00:00:00`).getDay();
+  return absences.some((a) => {
+    const dansLaPeriode =
+      a.date_debut !== null && a.date_fin !== null
+        ? dateISO >= a.date_debut && dateISO <= a.date_fin
+        : a.jour_semaine === jour;
+    if (!dansLaPeriode) return false;
+    if (a.heure_debut === null || a.heure_fin === null) return true;
+    return heure >= a.heure_debut.slice(0, 5) && heure < a.heure_fin.slice(0, 5);
+  });
+}
+
+/**
+ * Statut réel d'un créneau.
+ *
+ * Ordre de précédence, le même qu'en base (migration 0052) :
+ *
+ *     exception du jour  >  absence  >  horaire-type
+ *
+ * L'exception garde le dernier mot, et c'est voulu : c'est par elle que le
+ * praticien ouvre une vacation exceptionnelle, y compris un jour de congé.
  */
 export function statutCreneau(
   horairesTypes: { jour_semaine: number; heure_debut: string; heure_fin: string }[],
   etats: Map<string, EtatCreneau>,
   dateISO: string,
-  heure: string
+  heure: string,
+  /** Omises, l'appelant lit déjà `heures_indisponibles`, qui les a appliquées. */
+  absences: PeriodeAbsence[] = []
 ): EtatCreneau {
   const exception = etats.get(`${dateISO}|${heure}`);
   if (exception) return exception;
+  if (absenceCouvre(absences, dateISO, heure)) return "ferme";
   const jour = new Date(`${dateISO}T00:00:00`).getDay();
   const dansPlage = horairesTypes.some(
     (h) =>

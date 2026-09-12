@@ -1,6 +1,7 @@
 "use client";
 
 import AssistantShell from "@/components/assistant/AssistantShell";
+import CongesAbsences from "@/components/pro/CongesAbsences";
 import GrilleDisponibilites from "@/components/pro/GrilleDisponibilites";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { useContextePro } from "@/lib/pro";
@@ -48,6 +49,11 @@ export default function CreneauxAssistant() {
             </div>
           )}
           <GrilleDisponibilites medecinId={medecin.id} peutModifier={permissions.gererCreneaux} />
+          <CongesAbsences
+            medecinId={medecin.id}
+            peutModifier={permissions.gererCreneaux}
+            variante="mobile"
+          />
         </div>
       </div>
 
@@ -89,6 +95,12 @@ export default function CreneauxAssistant() {
       )}
 
       <GrilleDisponibilites medecinId={medecin.id} peutModifier={permissions.gererCreneaux} />
+
+      {/* Les congés du praticien : même permission que la grille — poser un
+          congé et fermer une journée à la main sont le même geste. */}
+      <div className="mt-4">
+        <CongesAbsences medecinId={medecin.id} peutModifier={permissions.gererCreneaux} />
+      </div>
       </div>
     </AssistantShell>
   );

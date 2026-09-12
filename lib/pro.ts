@@ -8,6 +8,7 @@ import {
   type EtatCreneau,
   lieuTarif,
   type MedecinAvecPlages,
+  type PeriodeAbsence,
 } from "@/lib/donnees";
 import { creneauPasse, versISO } from "@/lib/dates";
 import { colonnesPermissions } from "@/lib/permissions-assistant";
@@ -406,6 +407,7 @@ function versRdvAgenda(l: LigneRdvPro): RdvAgenda {
 const AUCUNE_PLAGE_PRO: { jour_semaine: number; heure_debut: string; heure_fin: string }[] = [];
 const AUCUNE_EXCEPTION_PRO = new Map<string, EtatCreneau>();
 const AUCUN_RDV: RdvAgenda[] = [];
+const AUCUNE_ABSENCE: PeriodeAbsence[] = [];
 
 export function useAgenda(
   medecinId: string | undefined,
@@ -423,6 +425,7 @@ export function useAgenda(
     plages: { jour_semaine: number; heure_debut: string; heure_fin: string }[];
     exceptions: Map<string, EtatCreneau>;
     rdvs: RdvAgenda[];
+    absences: PeriodeAbsence[];
   } | null>(null);
 
   // Ce que l'écran demande en ce moment : praticien et amplitude affichée.
@@ -438,7 +441,14 @@ export function useAgenda(
       supabase.from("horaires_types").select("jour_semaine, heure_debut, heure_fin").eq("medecin_id", medecinId),
       supabase.from("creneaux_exceptions").select("date, heure, etat").eq("medecin_id", medecinId).gte("date", debut).lte("date", fin),
       supabase.from("rendez_vous").select(SELECTION_RDV_PRO).eq("medecin_id", medecinId).gte("date", debut).lte("date", fin).order("date").order("heure"),
-    ]).then(([p, e, r]) => {
+      // Les congés ferment des journées entières : sans eux, la grille du
+      // praticien montrerait ouvert ce que la fiche publique annonce fermé
+      // (elle, passe par `heures_indisponibles`, qui les applique en base).
+      supabase
+        .from("absences")
+        .select("date_debut, date_fin, jour_semaine, heure_debut, heure_fin")
+        .eq("medecin_id", medecinId),
+    ]).then(([p, e, r, a]) => {
       if (!actif) return;
       const map = new Map<string, EtatCreneau>();
       for (const x of e.data ?? []) map.set(`${x.date}|${x.heure.slice(0, 5)}`, x.etat as EtatCreneau);
@@ -449,6 +459,7 @@ export function useAgenda(
         rdvs: ((r.data ?? []) as unknown as LigneRdvPro[]).map((l) =>
           versRdvAgenda({ ...l, heure: l.heure.slice(0, 5) })
         ),
+        absences: (a.data ?? []) as PeriodeAbsence[],
       });
     });
     return () => {
@@ -466,6 +477,7 @@ export function useAgenda(
   const plages = aJour ? charge.plages : AUCUNE_PLAGE_PRO;
   const exceptions = aJour ? charge.exceptions : AUCUNE_EXCEPTION_PRO;
   const rdvs = aJour ? charge.rdvs : AUCUN_RDV;
+  const absences = aJour ? charge.absences : AUCUNE_ABSENCE;
 
   const creneauxJour = (dateISO: string): CreneauAgenda[] =>
     HEURES_JOURNEE.map((heure) => {
@@ -483,7 +495,7 @@ export function useAgenda(
           rdv,
         };
       }
-      return { heure, statut: statutCreneau(plages, exceptions, dateISO, heure) };
+      return { heure, statut: statutCreneau(plages, exceptions, dateISO, heure, absences) };
     });
 
   return { chargement, creneauxJour, rdvs, recharger: () => setVersion((v) => v + 1) };

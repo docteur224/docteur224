@@ -247,9 +247,97 @@ const admin = await clientPour("admin@docteur224.com", "alpha2308");
     .insert({ patient_id: uid, medecin_id: cible[0].id, expediteur_id: uid, contenu: "test RLS" });
   test("Compte suspendu → déposer un avis ou écrire au cabinet : refusé", !!eAvis && !!eMsg);
 
+  /*
+   * `journal_audit.acteur_id` référence `utilisateurs` SANS cascade — c'est
+   * voulu, la trace d'une décision ne doit pas disparaître avec son auteur.
+   * Mais `basculer_suspension_compte` en écrit une, si bien que le compte de
+   * test ne s'effaçait pas : chaque exécution en laissait un de plus en base.
+   */
+  await sr.from("journal_audit").delete().eq("acteur_id", uid);
+  await sr.from("journal_audit").delete().eq("cible_id", uid);
   await sr.from("patients").delete().eq("id", uid);
   await sr.from("utilisateurs").delete().eq("id", uid);
   await sr.auth.admin.deleteUser(uid);
+}
+
+/*
+ * 24-28. Congés et absences (migrations 0052-0053).
+ *
+ * Le bloc « Congés et absences » était une maquette : deux lignes écrites en
+ * dur, un bouton désactivé, rien en base. Un praticien parti trois semaines
+ * continuait de recevoir des rendez-vous. Ces tests tiennent les quatre
+ * promesses de la fonctionnalité : le congé ferme les créneaux, il ne se lit
+ * pas de l'extérieur, il ne se pose pas chez autrui, et il n'est pas
+ * contournable par une requête forgée.
+ */
+{
+  const sr = createClient(URL_SB, lire("SUPABASE_SERVICE_ROLE_KEY"), { auth: { persistSession: false } });
+  const uidMed = (await medecin.auth.getUser()).data.user.id;
+  const uidPat = (await patient.auth.getUser()).data.user.id;
+
+  const { data: plages } = await sr
+    .from("horaires_types")
+    .select("jour_semaine")
+    .eq("medecin_id", uidMed);
+  const ouverts = new Set((plages ?? []).map((p) => p.jour_semaine));
+  // Loin devant, pour ne croiser aucun rendez-vous du jeu d'essai.
+  let d = new Date(Date.now() + 120 * 86400000);
+  while (!ouverts.has(d.getDay())) d = new Date(d.getTime() + 86400000);
+  const jour = d.toISOString().slice(0, 10);
+
+  await sr.from("absences").delete().like("motif", "Test RLS%");
+  const fermes = async () => {
+    const { data } = await anon.rpc("heures_indisponibles", {
+      p_medecin_id: uidMed,
+      p_debut: jour,
+      p_fin: jour,
+    });
+    return (data ?? []).filter((l) => l.etat === "ferme").length;
+  };
+  const avant = await fermes();
+
+  // 24. Le praticien pose un congé, et les créneaux se ferment.
+  const { data: pose } = await medecin
+    .from("absences")
+    .insert({ medecin_id: uidMed, motif: "Test RLS congé", date_debut: jour, date_fin: jour })
+    .select("id")
+    .maybeSingle();
+  const apres = await fermes();
+  test("Médecin → poser un congé ferme ses créneaux", !!pose && apres > avant, `${avant} → ${apres}`);
+
+  // 25. Le motif ne sort pas : ce n'est pas une information publique.
+  const { data: vuePatient } = await patient.from("absences").select("id");
+  const { data: vueAnon } = await anon.from("absences").select("id");
+  test(
+    "Patient et visiteur → motifs des congés : refusé",
+    (vuePatient ?? []).length === 0 && (vueAnon ?? []).length === 0,
+    `${vuePatient?.length ?? 0} / ${vueAnon?.length ?? 0} ligne(s)`
+  );
+
+  // 26. On ne pose pas un congé dans l'agenda d'un confrère.
+  const { data: vol } = await patient
+    .from("absences")
+    .insert({ medecin_id: uidMed, motif: "Test RLS intrusion", jour_semaine: 3 })
+    .select("id");
+  test("Patient → poser un congé chez un médecin : refusé", !vol?.length);
+
+  // 27. Le congé n'est pas contournable par une requête forgée.
+  const { data: force, error: eForce } = await patient
+    .from("rendez_vous")
+    .insert({
+      medecin_id: uidMed, date: jour, heure: "14:00",
+      reserve_par: uidPat, reserve_par_role: "patient", patient_id: uidPat,
+      motif: "Test RLS créneau fermé", source: "en_ligne",
+    })
+    .select("id");
+  test("Patient → réserver pendant un congé : refusé", !!eForce || !force?.length, eForce?.message?.slice(0, 40));
+
+  // 28. Annuler le congé rouvre les créneaux.
+  await medecin.from("absences").delete().eq("id", pose.id);
+  test("Médecin → annuler le congé rouvre ses créneaux", (await fermes()) === avant);
+
+  await sr.from("absences").delete().like("motif", "Test RLS%");
+  await sr.from("rendez_vous").delete().like("motif", "Test RLS%");
 }
 
 const echecs = resultats.filter((r) => !r.ok).length;
