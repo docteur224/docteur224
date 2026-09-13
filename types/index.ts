@@ -39,6 +39,12 @@ export interface Medecin {
   photoUrl: string | null;
   specialite: string;
   etablissementId: string;
+  /**
+   * Nom de l'établissement de rattachement, vide s'il exerce seul. Porté
+   * par le médecin parce que la RECHERCHE en a besoin : « Clinique
+   * Ambroise Paré » doit ramener ses praticiens.
+   */
+  etablissementNom: string;
   ville: string;
   /** Commune du lieu d'exercice (échelon donné avant la ville en Guinée). */
   commune: string;

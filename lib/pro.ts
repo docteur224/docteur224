@@ -205,6 +205,11 @@ export function useContextePro(): ContextePro {
           photoUrl: ligne.photo_url ?? null,
           specialite: ligne.specialites?.nom ?? "Médecine générale",
           etablissementId: ligne.etablissement_id ?? "",
+          /* L'espace professionnel ne se sert pas du nom de l'établissement
+             — il ne fait jamais de recherche publique. Le champ existe pour
+             le modèle commun ; /espace-medecin/profil lit le sien
+             directement via `chargerEtablissementParId`. */
+          etablissementNom: "",
           ville: ligne.villes?.nom ?? "",
           commune: ligne.commune ?? "",
           quartier: ligne.quartier ?? "",

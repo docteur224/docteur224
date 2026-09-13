@@ -169,7 +169,15 @@ export default async function Resultats({
       })
     : medecins;
 
-  const titre = `${specialite || "Médecins"} à ${ville || "Conakry"} — ${liste.length} résultat${
+  /*
+   * Le titre annonçait « Médecins à Conakry » dès qu'aucune ville n'était
+   * choisie — y compris en cherchant un établissement de Kindia, dont les
+   * praticiens s'affichaient juste en dessous. On ne nomme que ce qui a
+   * réellement été demandé : la recherche libre en premier, puisque c'est
+   * elle qui a produit la liste.
+   */
+  const sujet = q || specialite || "Médecins";
+  const titre = `${sujet}${ville ? ` à ${ville}` : ""} — ${liste.length} résultat${
     liste.length > 1 ? "s" : ""
   }`;
 
@@ -279,7 +287,7 @@ export default async function Resultats({
       <div className="with-tabbar md:hidden">
         <EnTeteMobile
           retour={vueCarte ? lienListe : "/"}
-          titre={`${specialite || "Médecins"} · ${ville || "Conakry"}`}
+          titre={ville ? `${sujet} · ${ville}` : sujet}
           sousTitre={`${liste.length} médecin${liste.length > 1 ? "s" : ""} disponible${
             liste.length > 1 ? "s" : ""
           }`}

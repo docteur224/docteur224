@@ -64,6 +64,7 @@ interface LigneMedecin {
   photo_url: string | null;
   utilisateurs: { nom: string | null; prenom: string | null } | null;
   specialites: { nom: string } | null;
+  etablissements: { nom: string } | null;
   villes: { nom: string } | null;
   medecin_assurances: { assurances: { libelle: string } | null }[];
   horaires_types: { jour_semaine: number; heure_debut: string; heure_fin: string }[];
@@ -77,6 +78,7 @@ const SELECTION_MEDECIN = `
   note_moyenne, nb_avis, etablissement_id, commune, quartier, photo_url,
   utilisateurs ( nom, prenom ),
   specialites ( nom ),
+  etablissements ( nom ),
   villes ( nom ),
   medecin_assurances ( assurances ( libelle ) ),
   horaires_types ( jour_semaine, heure_debut, heure_fin ),
@@ -119,6 +121,7 @@ function versMedecinUI(ligne: LigneMedecin): MedecinAvecPlages {
     photoUrl: ligne.photo_url,
     specialite: ligne.specialites?.nom ?? "Médecine générale",
     etablissementId: ligne.etablissement_id ?? "",
+    etablissementNom: ligne.etablissements?.nom ?? "",
     ville: ligne.villes?.nom ?? "",
     commune: ligne.commune ?? "",
     quartier: ligne.quartier ?? "",
@@ -217,10 +220,24 @@ export async function chargerMedecins(filtres?: {
   if (filtres?.ville) {
     liste = liste.filter((m) => normaliser(m.ville).includes(normaliser(filtres.ville!)));
   }
+  /*
+   * Le champ s'appelle « Médecin OU ÉTABLISSEMENT », et son autocomplétion
+   * propose les deux (voir `chargerNomsRecherche`) — mais la comparaison
+   * ne portait que sur le praticien. Choisir « Clinique Ambroise Paré »
+   * dans la liste de suggestions rendait donc « 0 résultat », de même que
+   * les cartes « Établissements en vedette » de l'accueil, qui pointent
+   * toutes vers /resultats?q=<nom de l'établissement>.
+   *
+   * On cherche un lieu de soins autant qu'une personne : le nom de
+   * l'établissement de rattachement entre dans la comparaison, et ses
+   * praticiens remontent.
+   */
   if (filtres?.q) {
     const q = normaliser(filtres.q);
     liste = liste.filter((m) =>
-      normaliser(`${m.civilite} ${m.prenom} ${m.nom} ${m.specialite}`).includes(q)
+      normaliser(
+        `${m.civilite} ${m.prenom} ${m.nom} ${m.specialite} ${m.etablissementNom}`
+      ).includes(q)
     );
   }
 
