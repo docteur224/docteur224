@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { creerClientNavigateur } from "@/lib/supabase/client";
 import { formatDateCourte, MOIS_ABREGES } from "@/lib/dates";
+import { chiffresTelephone } from "@/lib/telephone";
 
 /*
  * Couche de données de l'espace établissement : profil du gestionnaire,
@@ -345,7 +346,25 @@ export interface MedecinInvitable {
    * l'aveugle : c'est le seul cas où se tromper de praticien est facile.
    */
   homonyme: boolean;
+  /**
+   * Par quoi la ligne a été trouvée, quand c'est un identifiant que seul
+   * quelqu'un connaissant le praticien peut taper. L'écran s'en sert pour
+   * confirmer « c'est bien lui » SANS réafficher l'adresse ou le numéro :
+   * une liste d'invitation n'a pas à devenir un annuaire de coordonnées
+   * personnelles.
+   */
+  correspondance: "email" | "telephone" | null;
 }
+
+/**
+ * Plafond de la liste chargée. Le filtrage se fait côté navigateur — c'est
+ * ce qui permet d'ignorer les accents et de chercher dans six champs à la
+ * fois, ce que `ilike` ne sait pas faire simplement à travers une jointure.
+ * Quelques centaines de praticiens tiennent sans peine ; au-delà, il
+ * faudra une recherche côté base, et l'écran prévient plutôt que de couper
+ * en silence.
+ */
+export const PLAFOND_MEDECINS_INVITABLES = 1000;
 
 /**
  * Médecins validés sans établissement, pour la recherche d'invitation.
@@ -363,10 +382,11 @@ export async function rechercherMedecinsInvitables(q: string): Promise<MedecinIn
   const { data } = await creerClientNavigateur()
     .from("medecins")
     .select(
-      "id, civilite, numero_ordre, quartier, commune, annees_experience, photo_url, utilisateurs ( nom, prenom ), specialites ( nom ), villes ( nom )"
+      "id, civilite, numero_ordre, quartier, commune, annees_experience, photo_url, telephone_secretariat, utilisateurs ( nom, prenom, email, telephone ), specialites ( nom ), villes ( nom )"
     )
     .eq("statut", "valide")
-    .is("etablissement_id", null);
+    .is("etablissement_id", null)
+    .limit(PLAFOND_MEDECINS_INVITABLES);
   type L = {
     id: string;
     civilite: string;
@@ -375,38 +395,80 @@ export async function rechercherMedecinsInvitables(q: string): Promise<MedecinIn
     commune: string | null;
     annees_experience: number | null;
     photo_url: string | null;
-    utilisateurs: { nom: string | null; prenom: string | null } | null;
+    telephone_secretariat: string | null;
+    utilisateurs: {
+      nom: string | null;
+      prenom: string | null;
+      email: string | null;
+      telephone: string | null;
+    } | null;
     specialites: { nom: string } | null;
     villes: { nom: string } | null;
   };
 
   const norm = sansAccent(q.trim());
+  // Un numéro se tape « 622 00 00 00 », « +224622000000 » ou « 622000000 » :
+  // on ne compare que les chiffres, des deux côtés.
+  const chiffres = chiffresTelephone(q);
+  const chercheNumero = chiffres.length >= 5;
+
   const liste = ((data ?? []) as unknown as L[])
     .map((m) => {
       const nom = `${m.civilite === "Pr" ? "Pr" : "Dr"} ${m.utilisateurs?.prenom ?? ""} ${m.utilisateurs?.nom ?? ""}`.trim();
+      const email = m.utilisateurs?.email ?? "";
+      const numeros = [m.utilisateurs?.telephone, m.telephone_secretariat]
+        .filter(Boolean)
+        .map((t) => chiffresTelephone(t as string));
       return {
-        id: m.id,
-        nom,
-        specialite: m.specialites?.nom ?? "",
-        numeroOrdre: m.numero_ordre ?? "",
-        lieu: [m.quartier, m.commune, m.villes?.nom].filter(Boolean).join(", "),
-        anneesExperience: m.annees_experience,
-        photoUrl: m.photo_url,
-        initiales: initialesDepuisNom(nom),
-        gradient: gradientPour(m.id),
-        homonyme: false,
+        fiche: {
+          id: m.id,
+          nom,
+          specialite: m.specialites?.nom ?? "",
+          numeroOrdre: m.numero_ordre ?? "",
+          lieu: [m.quartier, m.commune, m.villes?.nom].filter(Boolean).join(", "),
+          anneesExperience: m.annees_experience,
+          photoUrl: m.photo_url,
+          initiales: initialesDepuisNom(nom),
+          gradient: gradientPour(m.id),
+          homonyme: false,
+          correspondance: null as MedecinInvitable["correspondance"],
+        },
+        email,
+        numeros,
       };
     })
-    // Le numéro d'ordre entre dans la recherche : c'est la façon sûre de
-    // désigner quelqu'un quand on l'a sous les yeux.
-    .filter(
-      (m) =>
-        norm === "" ||
-        sansAccent(m.nom).includes(norm) ||
-        sansAccent(m.specialite).includes(norm) ||
-        sansAccent(m.numeroOrdre).includes(norm) ||
-        sansAccent(m.lieu).includes(norm)
-    )
+    .map(({ fiche, email, numeros }) => {
+      if (norm === "") return { fiche, garde: true };
+      /*
+       * L'e-mail et le téléphone servent à TROUVER, jamais à parcourir :
+       * ils ne comptent que si la saisie en reprend une part sérieuse.
+       * Sans ce seuil, taper « a » ferait « correspondre » la moitié des
+       * adresses et l'indication ne voudrait plus rien dire.
+       */
+      const parEmail = norm.length >= 4 && email !== "" && sansAccent(email).includes(norm);
+      const parNumero = chercheNumero && numeros.some((n) => n.includes(chiffres));
+      const parReste =
+        sansAccent(fiche.nom).includes(norm) ||
+        sansAccent(fiche.specialite).includes(norm) ||
+        sansAccent(fiche.numeroOrdre).includes(norm) ||
+        sansAccent(fiche.lieu).includes(norm);
+      if (!parEmail && !parNumero && !parReste) return { fiche, garde: false };
+      return {
+        fiche: {
+          ...fiche,
+          // Le nom l'emporte : si la saisie est un nom, dire « e-mail
+          // correspond » embrouillerait plus que ça n'aiderait.
+          correspondance: parReste
+            ? null
+            : parEmail
+              ? ("email" as const)
+              : ("telephone" as const),
+        },
+        garde: true,
+      };
+    })
+    .filter((r) => r.garde)
+    .map((r) => r.fiche)
     .sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
 
   const comptes = new Map<string, number>();

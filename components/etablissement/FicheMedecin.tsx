@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import Dialogue from "@/components/site/Dialogue";
 import { chargerDetailMedecin, type DetailMedecin } from "@/lib/etablissement";
@@ -8,29 +7,36 @@ import { formaterTelephoneGN, INDICATIF_GN } from "@/lib/telephone";
 import { formatNote } from "@/lib/format";
 
 /*
- * Fiche d'un médecin rattaché, ouverte depuis « Médecins rattachés ».
+ * Fiche d'un médecin, en fenêtre — avant de l'inviter comme après son
+ * rattachement. Les deux listes de l'écran « Médecins » n'affichent qu'un
+ * nom et une spécialité : c'est trop peu pour reconnaître quelqu'un, et
+ * c'est là qu'on se trompe de praticien.
  *
- * La liste ne portait que le nom et la spécialité : impossible de vérifier
- * qu'on a bien affaire au praticien qu'on croit — c'est le même problème
- * qu'à l'invitation, une fois le rattachement fait.
+ * Elle a d'abord renvoyé vers la fiche publique dans un nouvel onglet.
+ * Mauvaise idée : on quitte l'écran, on perd sa recherche, et on revient
+ * avec une page entière (horaires, tarifs, avis, réservation) là où trois
+ * lignes suffisent à lever un doute.
  *
- * Ce qui s'affiche est la fiche PUBLIQUE du praticien : identité
- * professionnelle, numéro d'ordre, lieu d'exercice, secrétariat. Pas
+ * Ce qui s'affiche est ce qui figure sur la fiche PUBLIQUE : identité
+ * professionnelle, numéro d'ordre, lieu d'exercice, secrétariat. Ni
  * l'e-mail ni le téléphone personnels, que la RLS laisserait pourtant
  * lire : l'établissement gère un rattachement, il n'hérite pas du carnet
- * d'adresses privé du médecin — même règle que pour ses rendez-vous.
+ * d'adresses privé du praticien — même règle que pour ses rendez-vous.
  */
 
 const LIGNE = "flex items-start justify-between gap-4 border-b border-line py-3 last:border-b-0";
 const CLE = "flex-none text-[12px] font-bold text-muted";
 const VALEUR = "min-w-0 text-right text-[13px] font-semibold";
 
-export default function DetailMedecinRattache({
+export default function FicheMedecin({
   medecinId,
   onFermer,
+  onInviter,
 }: {
   medecinId: string;
   onFermer: () => void;
+  /** Proposé quand la fiche s'ouvre depuis la recherche d'invitation. */
+  onInviter?: (nom: string) => void;
 }) {
   const [detail, setDetail] = useState<DetailMedecin | null>(null);
   const [chargement, setChargement] = useState(true);
@@ -63,7 +69,10 @@ export default function DetailMedecinRattache({
               ? "Non renseignée"
               : `${detail.anneesExperience} an${detail.anneesExperience > 1 ? "s" : ""}`,
         },
-        { cle: "Langues", valeur: detail.langues.length ? detail.langues.join(", ") : "Non renseignées" },
+        {
+          cle: "Langues",
+          valeur: detail.langues.length ? detail.langues.join(", ") : "Non renseignées",
+        },
         {
           cle: "Secrétariat",
           valeur: detail.telephoneSecretariat
@@ -82,31 +91,28 @@ export default function DetailMedecinRattache({
 
   return (
     <Dialogue
-      titre={detail?.nom ?? "Médecin rattaché"}
+      titre={detail?.nom ?? "Fiche du médecin"}
       icone="👨‍⚕️"
       sousTitre={detail?.specialite || undefined}
       onFermer={onFermer}
       pied={
         <div className="flex flex-wrap justify-end gap-2">
-          {detail && (
-            /* La fiche publique porte le reste : horaires, tarifs, photos,
-               avis. Nouvel onglet — on ne quitte pas l'écran en cours. */
-            <Link
-              href={`/medecin/${detail.id}`}
-              target="_blank"
-              rel="noopener"
-              className="rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue hover:border-teal"
-            >
-              Voir la fiche publique ↗
-            </Link>
-          )}
           <button
             type="button"
             onClick={onFermer}
-            className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white"
+            className="rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-muted"
           >
             Fermer
           </button>
+          {onInviter && detail && (
+            <button
+              type="button"
+              onClick={() => onInviter(detail.nom)}
+              className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white"
+            >
+              Inviter ce médecin
+            </button>
+          )}
         </div>
       }
     >
@@ -115,7 +121,7 @@ export default function DetailMedecinRattache({
 
         {!chargement && !detail && (
           <p className="text-[13px] text-muted">
-            Fiche introuvable. Le compte a peut-être été fermé depuis son rattachement.
+            Fiche introuvable. Le compte a peut-être été fermé entre-temps.
           </p>
         )}
 

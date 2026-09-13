@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import EtablissementShell from "@/components/etablissement/EtablissementShell";
 import {
@@ -8,6 +7,7 @@ import {
   detacherMedecin,
   inviterMedecin,
   rechercherMedecinsInvitables,
+  PLAFOND_MEDECINS_INVITABLES,
   useEtablissementConnecte,
   useInvitations,
   useMedecinsRattaches,
@@ -18,7 +18,7 @@ import {
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import Pagination, { usePagination } from "@/components/site/Pagination";
 import Dialogue from "@/components/site/Dialogue";
-import DetailMedecinRattache from "@/components/etablissement/DetailMedecinRattache";
+import FicheMedecin from "@/components/etablissement/FicheMedecin";
 
 /*
  * Médecins — reproduit l'écran « etab-medecins » de la maquette web :
@@ -74,18 +74,14 @@ export default function MedecinsEtablissement() {
   const [message, setMessage] = useState<{ texte: string; erreur: boolean } | null>(null);
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
   const [enCours, setEnCours] = useState(false);
-  /** Médecin rattaché dont on regarde la fiche. */
-  const [detailId, setDetailId] = useState<string | null>(null);
-  /**
-   * Compteur incrémenté par « Tous les médecins disponibles ». Il vit à côté
-   * de `recherche` pour que le clic relance la recherche même quand le champ
-   * n'a pas changé (deux clics de suite, par exemple).
-   */
-  const [toutLister, setToutLister] = useState(0);
+  /** Médecin dont on regarde la fiche, rattaché ou non. */
+  const [ficheId, setFicheId] = useState<string | null>(null);
+  /** « Tous les disponibles » : déroule la liste complète, un second clic la replie. */
+  const [toutListe, setToutListe] = useState(false);
 
   const saisie = recherche.trim();
   /** `null` = il n'y a rien à chercher, donc rien à montrer. */
-  const cleRecherche = saisie === "" && toutLister === 0 ? null : `${saisie}#${toutLister}`;
+  const cleRecherche = saisie === "" && !toutListe ? null : `${saisie}#${toutListe}`;
   const listeResultat = cleRecherche !== null && resultats?.cle === cleRecherche ? resultats.liste : null;
   const cherche = cleRecherche !== null && listeResultat === null;
 
@@ -123,10 +119,10 @@ export default function MedecinsEtablissement() {
     const res = await inviterMedecin(etablissement.id, medecinId);
     setMessage({ texte: res.erreur ?? `Invitation envoyée à ${nom}.`, erreur: Boolean(res.erreur) });
     if (!res.erreur) {
-      // Le champ se vide : la recherche courante n'a plus lieu d'être, et la
-      // liste suit d'elle-même (elle est dérivée de la saisie).
+      // Le champ se vide et la liste se replie : la recherche courante n'a
+      // plus lieu d'être (la liste est dérivée de ces deux états).
       setRecherche("");
-      setToutLister(0);
+      setToutListe(false);
       recharger();
     }
   }
@@ -208,6 +204,16 @@ export default function MedecinsEtablissement() {
             .filter(Boolean)
             .join(" · ")}
         </small>
+        {/*
+         * Trouvé par son e-mail ou son numéro : on le confirme sans les
+         * réafficher. Le gestionnaire sait ce qu'il a tapé — il lui manque
+         * seulement la certitude que c'est bien cette ligne-là.
+         */}
+        {m.correspondance && (
+          <small className="mt-0.5 block text-[11.5px] font-bold text-green">
+            ✓ Correspond {m.correspondance === "email" ? "à l’e-mail" : "au numéro"} recherché
+          </small>
+        )}
         {/* Quand rien ne distingue deux lignes, on le dit — plutôt que de
             laisser le gestionnaire choisir à pile ou face. */}
         {m.homonyme && (
@@ -219,14 +225,15 @@ export default function MedecinsEtablissement() {
       </span>
 
       <span className="flex flex-none gap-2">
-        <Link
-          href={`/medecin/${m.id}`}
-          target="_blank"
-          rel="noopener"
-          className="rounded-[9px] border-[1.5px] border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-blue hover:border-teal"
+        {/* La fiche s'ouvre ICI, en fenêtre : un nouvel onglet faisait
+            quitter l'écran et perdre la recherche en cours. */}
+        <button
+          type="button"
+          onClick={() => setFicheId(m.id)}
+          className="rounded-[9px] border-[1.5px] border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-blue transition-colors hover:border-teal"
         >
-          Fiche ↗
-        </Link>
+          Fiche
+        </button>
         <button
           type="button"
           onClick={() => inviter(m.id, m.nom)}
@@ -239,14 +246,31 @@ export default function MedecinsEtablissement() {
   );
 
   const listeResultats = listeResultat !== null && (
-    <div className="mt-2 flex flex-col gap-2">
+    <div className="mt-2">
       {listeResultat.length > 0 && (
-        <p className="text-[11.5px] text-muted">
+        <p className="mb-2 text-[11.5px] text-muted">
           {listeResultat.length} médecin{listeResultat.length > 1 ? "s" : ""} disponible
           {listeResultat.length > 1 ? "s" : ""}
+          {/* Le filtrage se fait dans le navigateur : au-delà du plafond,
+              quelqu'un pourrait manquer à l'appel sans qu'on le sache. */}
+          {listeResultat.length >= PLAFOND_MEDECINS_INVITABLES &&
+            " — liste plafonnée, affinez la recherche"}
         </p>
       )}
-      {listeResultat.map(ligneResultat)}
+      {/*
+       * La liste défile au lieu de pousser les sections suivantes hors de
+       * l'écran : « Tous les disponibles » peut en aligner des centaines,
+       * et les invitations comme les rattachés doivent rester accessibles.
+       * Le plafond n'existe qu'à partir de quelques lignes, sinon une
+       * liste de deux résultats se retrouverait dans une boîte vide.
+       */}
+      <div
+        className={`flex flex-col gap-2 ${
+          listeResultat.length > 4 ? "max-h-[420px] overflow-y-auto pr-1" : ""
+        }`}
+      >
+        {listeResultat.map(ligneResultat)}
+      </div>
       {/* Une recherche sans résultat ne disait rien : l'écran restait
           identique et on ne savait pas si elle avait eu lieu. */}
       {listeResultat.length === 0 && (
@@ -267,23 +291,24 @@ export default function MedecinsEtablissement() {
             setMessage(null);
             setRecherche(e.target.value);
           }}
-          placeholder="Nom, spécialité, numéro d'ordre ou ville"
+          placeholder="Nom, spécialité, ville, n° d’ordre, e-mail ou téléphone"
           aria-label="Rechercher un médecin à inviter"
           className={champ}
         />
         {/* La recherche part toute seule à la frappe ; ce bouton sert au cas
             où l'on ne sait pas quoi taper — il déroule les praticiens
-            disponibles. */}
+            disponibles, et un second clic les replie. */}
         <button
           type="button"
+          aria-expanded={toutListe}
           onClick={() => {
             setMessage(null);
             setRecherche("");
-            setToutLister((n) => n + 1);
+            setToutListe((ouvert) => !ouvert);
           }}
           className="rounded-[11px] border-[1.5px] border-line bg-white px-[18px] py-3 text-[12.5px] font-bold text-blue transition-colors hover:border-teal"
         >
-          Tous les disponibles
+          {toutListe ? "Masquer la liste" : "Tous les disponibles"}
         </button>
       </form>
       {cherche && <p className="mt-2 text-[11.5px] text-muted">Recherche…</p>}
@@ -364,7 +389,7 @@ export default function MedecinsEtablissement() {
           praticien qu'on croit avant de le retirer. */}
       <button
         type="button"
-        onClick={() => setDetailId(medecin.id)}
+        onClick={() => setFicheId(medecin.id)}
         className="rounded-[9px] border-[1.5px] border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-blue transition-colors hover:border-teal"
       >
         Détail
@@ -451,7 +476,9 @@ export default function MedecinsEtablissement() {
           <h3 className="mb-2 text-[15px] font-extrabold">Inviter un médecin</h3>
           <p className="mb-3 text-[12.5px] text-muted">
             Le médecin reçoit l’invitation et choisit de l’accepter ou de la refuser depuis son
-            espace. Un médecin ne peut être rattaché qu’à un seul établissement.
+            espace. Un médecin ne peut être rattaché qu’à un seul établissement. En cas de doute
+            entre deux praticiens, son e-mail ou son numéro de téléphone le désigne sans
+            ambiguïté.
           </p>
           {blocInvitation}
         </div>
@@ -495,8 +522,21 @@ export default function MedecinsEtablissement() {
         </div>
       </div>
 
-      {detailId && (
-        <DetailMedecinRattache medecinId={detailId} onFermer={() => setDetailId(null)} />
+      {ficheId && (
+        <FicheMedecin
+          medecinId={ficheId}
+          onFermer={() => setFicheId(null)}
+          /* Inviter depuis la fiche n'a de sens que si le praticien est
+             encore libre : un rattaché ne s'invite pas. */
+          onInviter={
+            rattaches.some((m) => m.id === ficheId)
+              ? undefined
+              : (nom) => {
+                  setFicheId(null);
+                  inviter(ficheId, nom);
+                }
+          }
+        />
       )}
 
       {confirmation && (
