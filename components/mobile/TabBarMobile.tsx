@@ -80,6 +80,9 @@ const ONGLETS: Record<string, Onglet[]> = {
         "/espace-etablissement/compte",
         "/espace-etablissement/statistiques",
         "/espace-etablissement/abonnement",
+        // Manquait : sur « Mon compte » aucun onglet ne s'allumait, et la
+        // barre laissait croire qu'on avait quitté l'espace.
+        "/espace-etablissement/mon-compte",
       ],
     },
   ],

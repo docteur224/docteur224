@@ -4,6 +4,7 @@ import Link from "next/link";
 import MedecinShell from "@/components/medecin/MedecinShell";
 import { useContextePro } from "@/lib/pro";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
+import InvitationsEtablissement from "@/components/medecin/InvitationsEtablissement";
 
 /*
  * Mon compte (hub mobile) — reproduit l'écran « m-med-compte » de la maquette
@@ -61,6 +62,9 @@ export default function CompteMedecin() {
               <small>Pédiatre · Profil vérifié ✔</small>
             </div>
           </div>
+          {/* Les invitations de rattachement arrivent ici : c'est l'écran
+              que vise la notification « Invitation reçue » (migration 0013). */}
+          <InvitationsEtablissement mobile />
           <div className="menu">
             {ENTREES.map((e) => (
               <Link key={e.titre} href={e.href} className="mrow">
@@ -83,6 +87,7 @@ export default function CompteMedecin() {
       {/* ===== Version web (carte équivalente, la sidebar reste la navigation) ===== */}
       <div className="hidden md:block">
         <h2 className="mb-5 text-[21px] font-extrabold tracking-[-0.3px]">Mon compte</h2>
+        <InvitationsEtablissement />
         <div className="max-w-[520px] overflow-hidden rounded-2xl border border-line bg-white">
           {ENTREES.map((e) => (
             <Link

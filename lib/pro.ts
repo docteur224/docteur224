@@ -1177,6 +1177,16 @@ export interface TarifFormule {
   prixAnnuel: number;
   quotaSms: number;
   essaiJours: number;
+  /**
+   * Taille couverte par le palier, en médecins rattachés — nulle pour les
+   * formules individuelles (standard, premium). C'est la grille tarifaire
+   * qui porte ces bornes : /espace-etablissement/abonnement en avait sa
+   * propre copie, écrite en dur, qui ignorait le palier « structure » et
+   * ne suivait pas les réglages de /espace-admin/abonnements.
+   */
+  medecinsMin: number | null;
+  medecinsMax: number | null;
+  assistantsInclus: number | null;
 }
 
 export function useAbonnement(): {
@@ -1210,6 +1220,9 @@ export function useAbonnement(): {
         prixAnnuel: x.prix_annuel,
         quotaSms: x.quota_sms,
         essaiJours: x.essai_jours,
+        medecinsMin: x.medecins_min ?? null,
+        medecinsMax: x.medecins_max ?? null,
+        assistantsInclus: x.assistants_inclus ?? null,
       })));
     })();
     return () => {

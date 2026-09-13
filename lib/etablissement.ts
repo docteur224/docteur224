@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { creerClientNavigateur } from "@/lib/supabase/client";
-import { formatDateCourte } from "@/lib/dates";
+import { formatDateCourte, MOIS_ABREGES } from "@/lib/dates";
 
 /*
  * Couche de données de l'espace établissement : profil du gestionnaire,
@@ -46,7 +46,13 @@ export interface EtablissementConnecte {
   nomCourt: string;
   type: string;
   description: string;
+  /** Adresse d'affichage, « adresse, quartier, ville » — non modifiable telle quelle. */
   adresse: string;
+  /** Numéro de rue / repère, seul morceau modifiable de l'adresse. */
+  adresseRue: string;
+  quartier: string;
+  /** Libellé de la ville (relation `ville_id`), en lecture seule. */
+  ville: string;
   telephone: string;
   email: string;
   siteWeb: string;
@@ -59,6 +65,33 @@ export interface EtablissementConnecte {
   parametres: Record<string, boolean>;
   gestionnaire: { nom: string; role: string; email: string; telephone: string };
 }
+
+/*
+ * Repli affiché pendant le chargement. Il était recopié à la main dans
+ * chacun des quatre écrans, et trois copies avaient pris du retard :
+ * `rccm` et `photoUrl` y manquaient, ce qui obligeait /informations à
+ * caster son propre objet pour compiler. Un seul repli, partagé.
+ */
+export const ETABLISSEMENT_VIDE: EtablissementConnecte = {
+  id: "",
+  nom: "…",
+  nomCourt: "…",
+  type: "",
+  description: "",
+  adresse: "",
+  adresseRue: "",
+  quartier: "",
+  ville: "",
+  telephone: "",
+  email: "",
+  siteWeb: "",
+  rccm: "",
+  photoUrl: null,
+  gradient: "linear-gradient(135deg,#16A085,#0E6655)",
+  statut: "",
+  parametres: {},
+  gestionnaire: { nom: "", role: "", email: "", telephone: "" },
+};
 
 export function useEtablissementConnecte(): {
   etablissement: EtablissementConnecte | null;
@@ -81,7 +114,7 @@ export function useEtablissementConnecte(): {
       const [{ data: e }, { data: u }] = await Promise.all([
         supabase
           .from("etablissements")
-          .select("id, nom, type, description, adresse, quartier, telephone, email, rccm, statut, parametres, photo_url, villes ( nom )")
+          .select("id, nom, type, description, adresse, quartier, telephone, email, site_web, rccm, statut, parametres, photo_url, villes ( nom )")
           .eq("gestionnaire_id", auth.user.id)
           .maybeSingle(),
         supabase.from("utilisateurs").select("nom, prenom, email, telephone").eq("id", auth.user.id).single(),
@@ -96,9 +129,12 @@ export function useEtablissementConnecte(): {
           type: e.type,
           description: e.description ?? "",
           adresse: [e.adresse, e.quartier, ville].filter(Boolean).join(", "),
+          adresseRue: e.adresse ?? "",
+          quartier: e.quartier ?? "",
+          ville,
           telephone: e.telephone ?? "",
           email: e.email ?? "",
-          siteWeb: "",
+          siteWeb: (e as unknown as { site_web: string | null }).site_web ?? "",
           rccm: (e as unknown as { rccm: string | null }).rccm ?? "",
           photoUrl: (e as unknown as { photo_url: string | null }).photo_url ?? null,
           gradient: gradientPour(e.id),
@@ -122,11 +158,30 @@ export function useEtablissementConnecte(): {
   return { etablissement, chargement, recharger: () => setVersion((v) => v + 1) };
 }
 
+/** Champs de la fiche que le gestionnaire peut corriger lui-même. */
+export interface InformationsEtablissement {
+  nom: string;
+  type: string;
+  description: string;
+  adresse: string;
+  quartier: string;
+  telephone: string;
+  email: string;
+  siteWeb: string;
+  rccm: string;
+}
+
 export async function enregistrerInformationsEtablissement(
   etabId: string,
-  d: Partial<{ nom: string; type: string; description: string; adresse: string; telephone: string; email: string; rccm: string }>
+  d: Partial<InformationsEtablissement>
 ): Promise<{ erreur?: string }> {
-  const { error } = await creerClientNavigateur().from("etablissements").update(d).eq("id", etabId);
+  // `siteWeb` est le seul champ dont le nom diffère de la colonne ; le
+  // reste passe tel quel.
+  const { siteWeb, ...reste } = d;
+  const { error } = await creerClientNavigateur()
+    .from("etablissements")
+    .update(siteWeb === undefined ? reste : { ...reste, site_web: siteWeb })
+    .eq("id", etabId);
   return error ? { erreur: error.message } : {};
 }
 
@@ -149,7 +204,6 @@ export interface MedecinRattache {
   specialite: string;
   initiales: string;
   gradient: string;
-  rdvSemaine: number;
 }
 
 export function useMedecinsRattaches(etabId: string | undefined): {
@@ -181,7 +235,6 @@ export function useMedecinsRattaches(etabId: string | undefined): {
             specialite: m.specialites?.nom ?? "",
             initiales: initialesDepuisNom(nom),
             gradient: gradientPour(m.id),
-            rdvSemaine: 0, // les RDV des médecins ne sont pas visibles du gestionnaire (RLS)
           };
         }));
       });
@@ -190,6 +243,18 @@ export function useMedecinsRattaches(etabId: string | undefined): {
     };
   }, [etabId, version]);
   return { rattaches, recharger: () => setVersion((v) => v + 1) };
+}
+
+/**
+ * Retire un médecin de l'établissement. Passe par une fonction
+ * SECURITY DEFINER : la RLS réserve l'écriture de
+ * `medecins.etablissement_id` au médecin lui-même (voir 0054).
+ */
+export async function detacherMedecin(medecinId: string): Promise<{ erreur?: string }> {
+  const { error } = await creerClientNavigateur().rpc("detacher_medecin", {
+    p_medecin_id: medecinId,
+  });
+  return error ? { erreur: error.message } : {};
 }
 
 /* ===== Invitations réelles ===== */
@@ -292,6 +357,20 @@ export async function inviterMedecin(etabId: string, medecinId: string): Promise
   return {};
 }
 
+/**
+ * Retire une invitation encore en attente. La policy `del_invitations`
+ * l'autorisait depuis le début (« le gestionnaire peut annuler »), mais
+ * aucun écran ne l'appelait : une invitation partie par erreur restait
+ * affichée « En attente » indéfiniment.
+ */
+export async function annulerInvitation(invitationId: string): Promise<{ erreur?: string }> {
+  const { error } = await creerClientNavigateur()
+    .from("invitations_etablissement")
+    .delete()
+    .eq("id", invitationId);
+  return error ? { erreur: error.message } : {};
+}
+
 /** Réponse du médecin (RPC SECURITY DEFINER) — utilisée depuis son espace. */
 export async function repondreInvitation(invitationId: string, accepte: boolean): Promise<{ erreur?: string }> {
   const { error } = await creerClientNavigateur().rpc("repondre_invitation", {
@@ -301,22 +380,209 @@ export async function repondreInvitation(invitationId: string, accepte: boolean)
   return error ? { erreur: error.message } : {};
 }
 
-/* ===== Paliers d'abonnement (spec C.6.1 / C.10.2) ===== */
+/* ===== Côté médecin : les invitations qu'il reçoit ===== */
 
-export interface Palier {
-  nom: string;
-  medecins: string;
-  tarif: string;
-  min: number;
-  max: number;
+export interface InvitationRecue {
+  id: string;
+  etablissementNom: string;
+  etablissementType: string;
+  gradient: string;
+  envoyeeLe: string;
+  statut: StatutInvitation;
 }
 
-export const PALIERS: Palier[] = [
-  { nom: "Cabinet", medecins: "1–3", tarif: "Tarif individuel", min: 1, max: 3 },
-  { nom: "Clinique", medecins: "4–15", tarif: "Tarif intermédiaire", min: 4, max: 15 },
-  { nom: "Hôpital / Grand centre", medecins: "16+", tarif: "Sur devis", min: 16, max: Infinity },
-];
+/**
+ * Invitations adressées au médecin connecté, et l'établissement auquel
+ * il est déjà rattaché.
+ *
+ * Ce hook manquait complètement : `repondre_invitation` existait en base
+ * depuis la migration 0007 mais n'était appelée par AUCUN écran. Le
+ * gestionnaire envoyait donc une invitation, le médecin recevait une
+ * notification pointant sur /espace-medecin/compte… où il n'y avait rien.
+ * Aucun rattachement n'a jamais pu aboutir.
+ */
+export function useInvitationsRecues(): {
+  invitations: InvitationRecue[];
+  rattachement: { nom: string; type: string } | null;
+  chargement: boolean;
+  recharger: () => void;
+} {
+  const [invitations, setInvitations] = useState<InvitationRecue[]>([]);
+  const [rattachement, setRattachement] = useState<{ nom: string; type: string } | null>(null);
+  const [chargement, setChargement] = useState(true);
+  const [version, setVersion] = useState(0);
 
-export function palierPour(nbMedecins: number): Palier {
-  return PALIERS.find((p) => nbMedecins >= p.min && nbMedecins <= p.max) ?? PALIERS[0];
+  useEffect(() => {
+    let actif = true;
+    (async () => {
+      const supabase = creerClientNavigateur();
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) {
+        if (actif) setChargement(false);
+        return;
+      }
+      const [{ data: inv }, { data: moi }] = await Promise.all([
+        supabase
+          .from("invitations_etablissement")
+          .select("id, statut, cree_le, etablissement_id, etablissements ( nom, type )")
+          .eq("medecin_id", auth.user.id)
+          .order("cree_le", { ascending: false }),
+        supabase
+          .from("medecins")
+          .select("etablissement_id, etablissements ( nom, type )")
+          .eq("id", auth.user.id)
+          .maybeSingle(),
+      ]);
+      if (!actif) return;
+      type L = {
+        id: string;
+        statut: StatutInvitation;
+        cree_le: string;
+        etablissement_id: string;
+        etablissements: { nom: string; type: string } | null;
+      };
+      setInvitations(
+        ((inv ?? []) as unknown as L[]).map((i) => ({
+          id: i.id,
+          etablissementNom: i.etablissements?.nom ?? "Établissement",
+          etablissementType: i.etablissements?.type ?? "",
+          gradient: gradientPour(i.etablissement_id),
+          envoyeeLe: formatDateCourte(i.cree_le.slice(0, 10)),
+          statut: i.statut,
+        }))
+      );
+      const e = (moi as unknown as { etablissements: { nom: string; type: string } | null } | null)
+        ?.etablissements;
+      setRattachement(e ? { nom: e.nom, type: e.type } : null);
+      setChargement(false);
+    })();
+    return () => {
+      actif = false;
+    };
+  }, [version]);
+
+  return { invitations, rattachement, chargement, recharger: () => setVersion((v) => v + 1) };
+}
+
+/* ===== Statistiques consolidées ===== */
+
+export interface ProchainRdvEtablissement {
+  id: string;
+  date: string;
+  heure: string;
+  statut: "en_attente" | "confirme";
+  medecinId: string;
+}
+
+export interface StatistiquesEtablissement {
+  medecins: number;
+  assistants: number;
+  rdvAujourdhui: number;
+  rdvSemaine: number;
+  rdvMois: number;
+  /** Pourcentages entiers, ou null quand il n'y a rien à mesurer. */
+  tauxAnnulation: number | null;
+  tauxHonores: number | null;
+  /** Six mois glissants, mois vides compris. `mois` est un « AAAA-MM ». */
+  parMois: { mois: string; total: number }[];
+  /** Nombre de RDV de la semaine, par identifiant de médecin. */
+  parMedecin: Record<string, number>;
+  prochains: ProchainRdvEtablissement[];
+}
+
+/**
+ * Les quatre compteurs du tableau de bord et tout l'écran Statistiques.
+ *
+ * Le gestionnaire n'a pas le droit de lire `rendez_vous` (la RLS ne lui
+ * accorde aucune policy de lecture, et c'est délibéré). Les chiffres
+ * viennent donc d'une fonction SECURITY DEFINER qui ne rend que des
+ * agrégats — jamais l'identité d'un patient. Voir la migration 0054.
+ */
+export function useStatistiquesEtablissement(etabId: string | undefined): {
+  stats: StatistiquesEtablissement | null;
+  chargement: boolean;
+  erreur: string | null;
+} {
+  const [stats, setStats] = useState<StatistiquesEtablissement | null>(null);
+  const [chargement, setChargement] = useState(true);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  useEffect(() => {
+    // `chargement` démarre déjà à true et l'identifiant ne change qu'une
+    // fois, quand la fiche arrive : le remettre à true ici déclencherait
+    // un rendu en cascade pour rien.
+    if (!etabId) return;
+    let actif = true;
+    creerClientNavigateur()
+      .rpc("statistiques_etablissement", { p_etablissement_id: etabId })
+      .then(({ data, error }) => {
+        if (!actif) return;
+        if (error) setErreur(error.message);
+        else setStats(data as unknown as StatistiquesEtablissement);
+        setChargement(false);
+      });
+    return () => {
+      actif = false;
+    };
+  }, [etabId]);
+
+  return { stats, chargement, erreur };
+}
+
+/** « 2026-09 » → « SEPT », avec les noms de mois français du projet. */
+export function libelleMois(aaaaMm: string): string {
+  const index = Number(aaaaMm.slice(5, 7)) - 1;
+  return MOIS_ABREGES[index] ?? aaaaMm;
+}
+
+/**
+ * Un pourcentage, ou « — » quand la mesure n'a aucun support (aucun
+ * rendez-vous encore passé, par exemple). Afficher « 0 % » laisserait
+ * croire à un résultat, alors qu'il n'y a rien à mesurer.
+ */
+export function formatTaux(taux: number | null | undefined): string {
+  return taux === null || taux === undefined ? "—" : `${taux} %`;
+}
+
+/* ===== Paliers d'abonnement (spec C.6.1 / C.10.2) ===== */
+
+/*
+ * AUDIT — l'écran Abonnement affichait sa PROPRE grille, écrite en dur :
+ * trois paliers « Cabinet 1–3 / Clinique 4–15 / Hôpital 16+ » avec des
+ * tarifs « individuel / intermédiaire / sur devis ». Rien de tout cela
+ * n'existait en base :
+ *
+ *   · le palier « structure » (0–3 médecins), le moins cher, manquait ;
+ *   · les prix réels sont dans `tarifs_plateforme` et se règlent depuis
+ *     /espace-admin/abonnements — la page en ignorait les changements ;
+ *   · surtout, le « palier actuel » était DÉDUIT du nombre de médecins,
+ *     alors que ce qui est facturé est la formule de `abonnements`. Un
+ *     établissement de deux médecins facturé « clinique » lisait donc
+ *     « Palier Cabinet · Actuel » : ni le bon nom, ni le bon prix.
+ *
+ * Les bornes et les prix viennent maintenant de la grille tarifaire. Il
+ * ne reste ici que les LIBELLÉS, les mêmes que ceux de l'écran admin.
+ */
+
+/** Nom lisible d'un palier de structure. */
+export const NOMS_PALIERS: Record<string, string> = {
+  structure: "Structure de proximité",
+  cabinet: "Cabinet / plateau technique",
+  clinique: "Clinique / centre médical",
+  hopital: "Hôpital / centre hospitalier",
+};
+
+export const DETAILS_PALIERS: Record<string, string[]> = {
+  structure: ["Fiche établissement publique", "Agenda de chaque médecin", "Statistiques de base"],
+  cabinet: ["Tout le palier Structure", "Plateau technique", "Statistiques consolidées"],
+  clinique: ["Tout le palier Cabinet", "Statistiques consolidées", "Plus d'assistant(e)s"],
+  hopital: ["Tout le palier Clinique", "Accompagnement dédié", "Volume de SMS le plus large"],
+};
+
+/** « 4 à 15 médecins », « 16 médecins et plus », « jusqu'à 3 médecins ». */
+export function libelleTaille(min: number | null, max: number | null): string {
+  if (min === null && max === null) return "—";
+  if (max === null) return `${min} médecins et plus`;
+  if (min === null || min <= 0) return `jusqu'à ${max} médecins`;
+  return `${min} à ${max} médecins`;
 }
