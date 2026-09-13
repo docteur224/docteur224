@@ -39,6 +39,15 @@ const ONGLETS: Record<string, Onglet[]> = {
         "/espace-medecin/statistiques",
         "/espace-medecin/equipe",
         "/espace-medecin/abonnement",
+        /*
+         * Manquaient à l'appel : ces écrans s'ouvrent depuis le hub
+         * « Profil », mais aucun onglet ne s'allumait une fois dedans. Le
+         * cas devient visible avec `mon-compte`, où la notification
+         * d'invitation dépose maintenant le praticien (migration 0055).
+         */
+        "/espace-medecin/mon-compte",
+        "/espace-medecin/avis",
+        "/espace-medecin/paiements",
       ],
     },
   ],

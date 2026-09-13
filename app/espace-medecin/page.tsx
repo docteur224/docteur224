@@ -6,6 +6,7 @@ import { capitaliser, formatDateLongue, versISO } from "@/lib/dates";
 import { formatNote } from "@/lib/format";
 import { majStatutRdv, useAgenda, useContextePro } from "@/lib/pro";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
+import InvitationsEtablissement from "@/components/medecin/InvitationsEtablissement";
 
 /*
  * Tableau de bord médecin — reproduit l'écran « medecin » de la maquette web :
@@ -69,6 +70,10 @@ export default function TableauDeBordMedecin() {
           </div>
         </div>
         <div className="pad" style={{ paddingTop: 18 }}>
+          {/* Une invitation de rattachement attend une réponse : elle passe
+              avant l'agenda du jour, sinon elle dort jusqu'à ce que le
+              praticien pense à ouvrir « Mon compte ». */}
+          <InvitationsEtablissement mobile uniquementEnAttente />
           <div className="section-t" style={{ marginTop: 0 }}>
             Demandes à confirmer
           </div>
@@ -153,6 +158,10 @@ export default function TableauDeBordMedecin() {
           </Link>
         </div>
       </div>
+
+      {/* Même raison que sur mobile : une réponse est attendue, elle passe
+          devant les indicateurs. */}
+      <InvitationsEtablissement uniquementEnAttente />
 
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <div className="rounded-2xl border border-line bg-white p-[18px]">

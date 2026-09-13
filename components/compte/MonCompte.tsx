@@ -88,7 +88,19 @@ const gnf = (n: number) => `${n.toLocaleString("fr-FR").replace(/ | /g, " ")}
 const jour = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "—";
 
-export default function MonCompte({ retourMobile }: { retourMobile: string }) {
+export default function MonCompte({
+  retourMobile,
+  avant,
+}: {
+  retourMobile: string;
+  /**
+   * Inséré en tête des cartes, sous le titre. Cet écran est commun aux cinq
+   * espaces : ce qui ne concerne qu'un rôle — les invitations de
+   * rattachement du médecin, par exemple — se passe par ici plutôt que
+   * d'entrer dans le corps partagé.
+   */
+  avant?: React.ReactNode;
+}) {
   const { profil, chargement } = useProfilConnecte();
   const { droits } = useDroitsAdmin(profil?.role === "admin");
   const role = profil?.role;
@@ -127,6 +139,7 @@ export default function MonCompte({ retourMobile }: { retourMobile: string }) {
 
         <div className="grid gap-4 px-4 pb-6 md:px-0 md:pb-0">
           {bandeau}
+          {avant}
 
           <Identite profil={profil} chargement={chargement} suspendu={suspendu} />
 

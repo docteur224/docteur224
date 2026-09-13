@@ -34,6 +34,8 @@ export default function InvitationsEtablissement({
   mobile = false,
   variante = "carte",
   onRattachement,
+  className = "mb-4 max-w-[520px]",
+  uniquementEnAttente = false,
 }: {
   mobile?: boolean;
   /**
@@ -50,6 +52,19 @@ export default function InvitationsEtablissement({
    * il resterait sur « Aucun » juste au-dessus du message d'acceptation.
    */
   onRattachement?: (nomEtablissement: string) => void;
+  /**
+   * Enveloppe de la carte web. Le défaut vaut pour une page qui empile ses
+   * blocs ; dans une grille qui gère déjà son `gap` (« Mon compte »), on
+   * passe une chaîne vide pour ne pas doubler l'espacement.
+   */
+  className?: string;
+  /**
+   * N'afficher que s'il y a une réponse à donner. Un tableau de bord montre
+   * ce qui attend quelque chose : rappeler en permanence « vous êtes
+   * rattaché à X », sans action possible, n'y serait que du bruit. Les
+   * écrans de compte, eux, gardent l'état complet.
+   */
+  uniquementEnAttente?: boolean;
 }) {
   const { invitations, rattachement, chargement, recharger } = useInvitationsRecues();
   const [enCours, setEnCours] = useState<string | null>(null);
@@ -63,6 +78,9 @@ export default function InvitationsEtablissement({
    * confirmation — disparaissait dans le même rendu.
    */
   if (enAttente.length === 0 && !rattachement && !message) return null;
+  // Tableau de bord : rien en attente, rien à montrer (le `message` reste,
+  // le temps que le praticien lise ce que son clic a donné).
+  if (uniquementEnAttente && enAttente.length === 0 && !message) return null;
 
   async function repondre(id: string, accepte: boolean, nom: string) {
     setEnCours(id);
@@ -194,7 +212,7 @@ export default function InvitationsEtablissement({
   }
 
   return (
-    <div className="mb-4 max-w-[520px] rounded-2xl border border-line bg-white p-5">
+    <div className={`${className} rounded-2xl border border-line bg-white p-5`}>
       <h3 className="mb-1 text-[15px] font-extrabold">
         Établissement
         {enAttente.length > 0 && ` · ${enAttente.length} invitation(s)`}
