@@ -30,7 +30,27 @@ const LIBELLES = {
   refusee: { texte: "Refusée", classes: "bg-[#FBE9E7] text-red" },
 } as const;
 
-export default function InvitationsEtablissement({ mobile = false }: { mobile?: boolean }) {
+export default function InvitationsEtablissement({
+  mobile = false,
+  variante = "carte",
+  onRattachement,
+}: {
+  mobile?: boolean;
+  /**
+   * « carte » — bloc autonome, avec son titre (hub /espace-medecin/compte).
+   * « champ » — sans cadre ni titre, glissé sous le champ « Établissement
+   *   de rattachement » de /espace-medecin/profil : le nom est déjà affiché
+   *   juste au-dessus, la carte ferait doublon.
+   */
+  variante?: "carte" | "champ";
+  /**
+   * Appelé avec le nom de l'établissement après une acceptation. Le champ
+   * « Établissement de rattachement » de /espace-medecin/profil est peint
+   * depuis `useContextePro`, qui n'a pas de rechargement : sans ce rappel,
+   * il resterait sur « Aucun » juste au-dessus du message d'acceptation.
+   */
+  onRattachement?: (nomEtablissement: string) => void;
+}) {
   const { invitations, rattachement, chargement, recharger } = useInvitationsRecues();
   const [enCours, setEnCours] = useState<string | null>(null);
   const [message, setMessage] = useState<{ texte: string; erreur: boolean } | null>(null);
@@ -55,16 +75,37 @@ export default function InvitationsEtablissement({ mobile = false }: { mobile?: 
         (accepte ? `Vous êtes désormais rattaché à ${nom}.` : `Invitation de ${nom} refusée.`),
       erreur: Boolean(res.erreur),
     });
-    if (!res.erreur) recharger();
+    if (!res.erreur) {
+      recharger();
+      if (accepte) onRattachement?.(nom);
+    }
   }
 
   const corps = (
     <>
       {rattachement && (
-        <p className={mobile ? "muted" : "mb-3 text-[12.5px] text-muted"} style={mobile ? { fontSize: 12.5 } : undefined}>
-          Vous êtes rattaché à <b>{rattachement.nom}</b>
-          {rattachement.type && ` · ${rattachement.type}`}. Pour en partir, demandez à
-          l’établissement de vous retirer depuis son onglet « Médecins ».
+        <p
+          className={
+            variante === "champ"
+              ? "mt-1.5 text-[11.5px] text-muted"
+              : mobile
+                ? "muted"
+                : "mb-3 text-[12.5px] text-muted"
+          }
+          style={mobile && variante !== "champ" ? { fontSize: 12.5 } : undefined}
+        >
+          {variante === "champ" ? (
+            <>
+              Pour quitter cet établissement, demandez-lui de vous retirer depuis son onglet
+              « Médecins » : un rattachement se défait des deux côtés.
+            </>
+          ) : (
+            <>
+              Vous êtes rattaché à <b>{rattachement.nom}</b>
+              {rattachement.type && ` · ${rattachement.type}`}. Pour en partir, demandez à
+              l’établissement de vous retirer depuis son onglet « Médecins ».
+            </>
+          )}
         </p>
       )}
 
@@ -135,6 +176,10 @@ export default function InvitationsEtablissement({ mobile = false }: { mobile?: 
       )}
     </>
   );
+
+  // Glissé sous un champ existant : ni cadre ni titre, le libellé du champ
+  // au-dessus dit déjà de quoi il s'agit.
+  if (variante === "champ") return <>{corps}</>;
 
   if (mobile) {
     return (

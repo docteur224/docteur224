@@ -17,6 +17,7 @@ import ChampCommune from "@/components/site/ChampCommune";
 import Interrupteur from "@/components/patient/Interrupteur";
 import { CIVILITES } from "@/lib/civilites";
 import ChampTelephoneGN from "@/components/site/ChampTelephoneGN";
+import InvitationsEtablissement from "@/components/medecin/InvitationsEtablissement";
 import { chargerEtablissementParId } from "@/lib/donnees";
 import { enregistrerHorairesHebdo } from "@/lib/inscription-pro";
 import { trierParDemande } from "@/lib/catalogue-specialites";
@@ -115,6 +116,8 @@ export default function ProfilMedecin() {
   const { medecin } = useContextePro();
   const medecinConnecte = medecin ?? MEDECIN_VIDE;
   const [etab, setEtab] = useState<Etablissement | undefined>();
+  /* Nom retenu après une invitation acceptée sur cet écran — voir plus bas. */
+  const [rattachementAccepte, setRattachementAccepte] = useState<string | null>(null);
   useEffect(() => {
     if (medecin?.etablissementId) {
       chargerEtablissementParId(medecin.etablissementId).then(setEtab);
@@ -568,8 +571,17 @@ export default function ProfilMedecin() {
       <div className="sm:col-span-2">
         <label className={labelChamp}>Établissement de rattachement</label>
         <div className={champStatique}>
-          {etab?.nom ?? "Aucun — vous exercez en cabinet indépendant"}
+          {rattachementAccepte ?? etab?.nom ?? "Aucun — vous exercez en cabinet indépendant"}
         </div>
+        {/*
+         * Les invitations reçues vivent SOUS le champ qu'elles remplissent.
+         * Elles n'étaient posées que sur /espace-medecin/compte — le hub
+         * mobile, vers lequel le menu latéral du web ne pointe jamais : sur
+         * ordinateur, un praticien invité recevait la notification sans
+         * pouvoir répondre nulle part. « Mon profil », lui, est dans la
+         * sidebar comme dans le menu mobile.
+         */}
+        <InvitationsEtablissement variante="champ" onRattachement={setRattachementAccepte} />
       </div>
     </div>
   );
