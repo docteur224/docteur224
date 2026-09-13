@@ -323,27 +323,176 @@ export function useInvitations(etabId: string | undefined): {
 }
 
 /** Médecins validés sans établissement, pour la recherche d'invitation. */
-export async function rechercherMedecinsInvitables(q: string): Promise<{ id: string; nom: string; specialite: string }[]> {
+/** Minuscules sans accents : « pediatrie » doit trouver « Pédiatrie ». */
+const sansAccent = (t: string) =>
+  t.normalize("NFD").replace(/\p{Diacritic}/gu, "").toLowerCase();
+
+export interface MedecinInvitable {
+  id: string;
+  nom: string;
+  specialite: string;
+  /** Numéro à l'Ordre national des médecins — vide tant qu'il n'est pas saisi. */
+  numeroOrdre: string;
+  /** « Tambassa, Mamou » — ce qui situe le cabinet. */
+  lieu: string;
+  anneesExperience: number | null;
+  photoUrl: string | null;
+  initiales: string;
+  gradient: string;
+  /**
+   * Vrai quand un AUTRE résultat porte le même nom et la même spécialité.
+   * L'écran le dit alors franchement plutôt que de laisser choisir à
+   * l'aveugle : c'est le seul cas où se tromper de praticien est facile.
+   */
+  homonyme: boolean;
+}
+
+/**
+ * Médecins validés sans établissement, pour la recherche d'invitation.
+ *
+ * Rend de quoi RECONNAÎTRE quelqu'un, et plus seulement son nom et sa
+ * spécialité : deux « Dr Wizard Testeur », tous deux cardiologues à
+ * Conakry, existent réellement en base. Le numéro d'ordre les départage
+ * quand il est renseigné ; sinon le lieu, l'expérience et la photo s'en
+ * chargent, et `homonyme` signale les cas où rien ne suffit.
+ *
+ * Plus de `.slice(0, 5)` muet : il coupait sans le dire, et le praticien
+ * cherché pouvait être le sixième.
+ */
+export async function rechercherMedecinsInvitables(q: string): Promise<MedecinInvitable[]> {
   const { data } = await creerClientNavigateur()
     .from("medecins")
-    .select("id, civilite, etablissement_id, utilisateurs ( nom, prenom ), specialites ( nom )")
+    .select(
+      "id, civilite, numero_ordre, quartier, commune, annees_experience, photo_url, utilisateurs ( nom, prenom ), specialites ( nom ), villes ( nom )"
+    )
     .eq("statut", "valide")
     .is("etablissement_id", null);
   type L = {
     id: string;
     civilite: string;
+    numero_ordre: string | null;
+    quartier: string | null;
+    commune: string | null;
+    annees_experience: number | null;
+    photo_url: string | null;
     utilisateurs: { nom: string | null; prenom: string | null } | null;
     specialites: { nom: string } | null;
+    villes: { nom: string } | null;
   };
-  const norm = q.trim().toLowerCase();
-  return ((data ?? []) as unknown as L[])
-    .map((m) => ({
-      id: m.id,
-      nom: `${m.civilite === "Pr" ? "Pr" : "Dr"} ${m.utilisateurs?.prenom ?? ""} ${m.utilisateurs?.nom ?? ""}`.trim(),
-      specialite: m.specialites?.nom ?? "",
-    }))
-    .filter((m) => norm === "" || m.nom.toLowerCase().includes(norm) || m.specialite.toLowerCase().includes(norm))
-    .slice(0, 5);
+
+  const norm = sansAccent(q.trim());
+  const liste = ((data ?? []) as unknown as L[])
+    .map((m) => {
+      const nom = `${m.civilite === "Pr" ? "Pr" : "Dr"} ${m.utilisateurs?.prenom ?? ""} ${m.utilisateurs?.nom ?? ""}`.trim();
+      return {
+        id: m.id,
+        nom,
+        specialite: m.specialites?.nom ?? "",
+        numeroOrdre: m.numero_ordre ?? "",
+        lieu: [m.quartier, m.commune, m.villes?.nom].filter(Boolean).join(", "),
+        anneesExperience: m.annees_experience,
+        photoUrl: m.photo_url,
+        initiales: initialesDepuisNom(nom),
+        gradient: gradientPour(m.id),
+        homonyme: false,
+      };
+    })
+    // Le numéro d'ordre entre dans la recherche : c'est la façon sûre de
+    // désigner quelqu'un quand on l'a sous les yeux.
+    .filter(
+      (m) =>
+        norm === "" ||
+        sansAccent(m.nom).includes(norm) ||
+        sansAccent(m.specialite).includes(norm) ||
+        sansAccent(m.numeroOrdre).includes(norm) ||
+        sansAccent(m.lieu).includes(norm)
+    )
+    .sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
+
+  const comptes = new Map<string, number>();
+  for (const m of liste) {
+    const cle = `${sansAccent(m.nom)}|${sansAccent(m.specialite)}`;
+    comptes.set(cle, (comptes.get(cle) ?? 0) + 1);
+  }
+  return liste.map((m) => ({
+    ...m,
+    homonyme: (comptes.get(`${sansAccent(m.nom)}|${sansAccent(m.specialite)}`) ?? 0) > 1,
+  }));
+}
+
+/* ===== Détail d'un médecin rattaché ===== */
+
+export interface DetailMedecin {
+  id: string;
+  nom: string;
+  specialite: string;
+  numeroOrdre: string;
+  lieu: string;
+  anneesExperience: number | null;
+  langues: string[];
+  presentation: string;
+  telephoneSecretariat: string;
+  photoUrl: string | null;
+  initiales: string;
+  gradient: string;
+  note: number;
+  nbAvis: number;
+}
+
+/**
+ * Fiche professionnelle d'un médecin, pour le gestionnaire.
+ *
+ * Ce qui est rendu est ce qui figure sur sa FICHE PUBLIQUE : identité
+ * professionnelle, lieu d'exercice, numéro d'ordre, téléphone du
+ * secrétariat. Ni l'e-mail ni le téléphone personnels de `utilisateurs`,
+ * bien que la RLS les laisse lire : l'établissement gère un rattachement,
+ * il n'hérite pas du carnet d'adresses privé du praticien — même principe
+ * que les rendez-vous, qu'il ne voit pas non plus.
+ */
+export async function chargerDetailMedecin(medecinId: string): Promise<DetailMedecin | null> {
+  const { data } = await creerClientNavigateur()
+    .from("medecins")
+    .select(
+      "id, civilite, numero_ordre, quartier, commune, annees_experience, langues, presentation, telephone_secretariat, photo_url, note_moyenne, nb_avis, utilisateurs ( nom, prenom ), specialites ( nom ), villes ( nom )"
+    )
+    .eq("id", medecinId)
+    .maybeSingle();
+  if (!data) return null;
+  type L = {
+    id: string;
+    civilite: string;
+    numero_ordre: string | null;
+    quartier: string | null;
+    commune: string | null;
+    annees_experience: number | null;
+    langues: string[] | null;
+    presentation: string | null;
+    telephone_secretariat: string | null;
+    photo_url: string | null;
+    note_moyenne: number | null;
+    nb_avis: number | null;
+    utilisateurs: { nom: string | null; prenom: string | null } | null;
+    specialites: { nom: string } | null;
+    villes: { nom: string } | null;
+  };
+  const m = data as unknown as L;
+  const nom = `${m.civilite === "Pr" ? "Pr" : "Dr"} ${m.utilisateurs?.prenom ?? ""} ${m.utilisateurs?.nom ?? ""}`.trim();
+  return {
+    id: m.id,
+    nom,
+    specialite: m.specialites?.nom ?? "",
+    numeroOrdre: m.numero_ordre ?? "",
+    lieu: [m.quartier, m.commune, m.villes?.nom].filter(Boolean).join(", "),
+    anneesExperience: m.annees_experience,
+    langues: m.langues ?? [],
+    presentation: m.presentation ?? "",
+    telephoneSecretariat: m.telephone_secretariat ?? "",
+    photoUrl: m.photo_url,
+    initiales: initialesDepuisNom(nom),
+    gradient: gradientPour(m.id),
+    note: m.note_moyenne ?? 0,
+    nbAvis: m.nb_avis ?? 0,
+  };
 }
 
 export async function inviterMedecin(etabId: string, medecinId: string): Promise<{ erreur?: string }> {

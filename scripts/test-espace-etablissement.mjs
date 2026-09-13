@@ -63,16 +63,33 @@ if (!etab || !autreEtab) throw new Error("Établissements de test introuvables :
 
 const fiche = { ...etab };
 
-// Un médecin validé et libre de tout rattachement, pour l'invitation.
+/*
+ * Un médecin validé, libre de tout rattachement, ET qui n'a AUCUNE
+ * invitation en cours.
+ *
+ * Cette dernière condition n'est pas un détail : le test repart d'une
+ * ardoise propre en supprimant les invitations de son cobaye. En prenant
+ * le premier venu, il pouvait tomber sur un praticien réellement invité
+ * par quelqu'un et effacer cette invitation — c'est arrivé.
+ */
 const { data: libres } = await service
   .from("medecins")
   .select("id, utilisateurs ( email )")
   .eq("statut", "valide")
-  .is("etablissement_id", null)
-  .limit(1);
-const medecinLibre = libres?.[0];
-if (!medecinLibre) throw new Error("Aucun médecin validé sans établissement : rejouez scripts/seed.mjs.");
+  .is("etablissement_id", null);
+const { data: dejaInvites } = await service
+  .from("invitations_etablissement")
+  .select("medecin_id");
+const occupes = new Set((dejaInvites ?? []).map((i) => i.medecin_id));
+const medecinLibre = (libres ?? []).find((m) => !occupes.has(m.id) && m.utilisateurs?.email);
+if (!medecinLibre) {
+  throw new Error(
+    "Aucun médecin validé, sans établissement et sans invitation en cours. " +
+      "Rejouez scripts/seed.mjs, ou traitez les invitations en attente."
+  );
+}
 const emailMedecin = medecinLibre.utilisateurs.email;
+console.log(`(cobaye : ${emailMedecin})`);
 
 const gestionnaire = await session(EMAIL_ETAB);
 const autreGestionnaire = await session(EMAIL_AUTRE_ETAB);
@@ -165,6 +182,12 @@ const { data: notifRetrait } = await service
   .select("type")
   .eq("destinataire_id", medecinLibre.id)
   .eq("type", "rattachement_retire")
+  // La plus récente, et elle seule : `maybeSingle()` sur plusieurs lignes
+  // lève une erreur. Une exécution interrompue avant son nettoyage — un
+  // `| head` sur la sortie suffit à la tuer — laissait sinon une
+  // notification derrière elle et faisait échouer la suivante.
+  .order("cree_le", { ascending: false })
+  .limit(1)
   .maybeSingle();
 test("le médecin est prévenu du retrait", notifRetrait?.type === "rattachement_retire");
 

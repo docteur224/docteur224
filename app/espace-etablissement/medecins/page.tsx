@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import EtablissementShell from "@/components/etablissement/EtablissementShell";
 import {
   annulerInvitation,
@@ -11,11 +12,13 @@ import {
   useInvitations,
   useMedecinsRattaches,
   type InvitationMedecin,
+  type MedecinInvitable,
   type MedecinRattache,
 } from "@/lib/etablissement";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import Pagination, { usePagination } from "@/components/site/Pagination";
 import Dialogue from "@/components/site/Dialogue";
+import DetailMedecinRattache from "@/components/etablissement/DetailMedecinRattache";
 
 /*
  * Médecins — reproduit l'écran « etab-medecins » de la maquette web :
@@ -59,23 +62,60 @@ export default function MedecinsEtablissement() {
   const pagi = usePagination(rattaches, 12);
   const pagiInvitations = usePagination(invitations, 10);
   const [recherche, setRecherche] = useState("");
-  const [cherche, setCherche] = useState(false);
-  const [resultats, setResultats] = useState<{ id: string; nom: string; specialite: string }[] | null>(
+  /*
+   * Les résultats sont gardés AVEC la recherche qui les a produits. C'est ce
+   * qui permet de savoir, sans le stocker, si ce qu'on a sous la main
+   * correspond encore à ce qui est demandé — et donc d'afficher « Recherche… »
+   * sans poser d'état depuis l'effet.
+   */
+  const [resultats, setResultats] = useState<{ cle: string; liste: MedecinInvitable[] } | null>(
     null
   );
   const [message, setMessage] = useState<{ texte: string; erreur: boolean } | null>(null);
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
   const [enCours, setEnCours] = useState(false);
+  /** Médecin rattaché dont on regarde la fiche. */
+  const [detailId, setDetailId] = useState<string | null>(null);
+  /**
+   * Compteur incrémenté par « Tous les médecins disponibles ». Il vit à côté
+   * de `recherche` pour que le clic relance la recherche même quand le champ
+   * n'a pas changé (deux clics de suite, par exemple).
+   */
+  const [toutLister, setToutLister] = useState(0);
 
-  async function chercher(e: React.FormEvent) {
+  const saisie = recherche.trim();
+  /** `null` = il n'y a rien à chercher, donc rien à montrer. */
+  const cleRecherche = saisie === "" && toutLister === 0 ? null : `${saisie}#${toutLister}`;
+  const listeResultat = cleRecherche !== null && resultats?.cle === cleRecherche ? resultats.liste : null;
+  const cherche = cleRecherche !== null && listeResultat === null;
+
+  /*
+   * Recherche au fil de la frappe, 300 ms après la dernière touche.
+   *
+   * Il fallait auparavant taper puis cliquer « Rechercher » pour voir quoi
+   * que ce soit, sans savoir si un résultat existait. `annule` ignore la
+   * réponse d'une frappe dépassée : deux requêtes lancées coup sur coup ne
+   * reviennent pas forcément dans l'ordre, et la plus ancienne écraserait
+   * sinon la plus récente.
+   */
+  useEffect(() => {
+    if (cleRecherche === null) return;
+    let annule = false;
+    const minuteur = setTimeout(async () => {
+      const trouves = await rechercherMedecinsInvitables(saisie);
+      if (!annule) setResultats({ cle: cleRecherche, liste: trouves });
+    }, 300);
+    return () => {
+      annule = true;
+      clearTimeout(minuteur);
+    };
+  }, [cleRecherche, saisie]);
+
+  /* Entrée dans le champ : on ne fait qu'empêcher le rechargement de page,
+     la recherche est déjà partie. */
+  function chercher(e: React.FormEvent) {
     e.preventDefault();
     setMessage(null);
-    setCherche(true);
-    try {
-      setResultats(await rechercherMedecinsInvitables(recherche));
-    } finally {
-      setCherche(false);
-    }
   }
 
   async function inviter(medecinId: string, nom: string) {
@@ -83,8 +123,10 @@ export default function MedecinsEtablissement() {
     const res = await inviterMedecin(etablissement.id, medecinId);
     setMessage({ texte: res.erreur ?? `Invitation envoyée à ${nom}.`, erreur: Boolean(res.erreur) });
     if (!res.erreur) {
-      setResultats(null);
+      // Le champ se vide : la recherche courante n'a plus lieu d'être, et la
+      // liste suit d'elle-même (elle est dérivée de la saisie).
       setRecherche("");
+      setToutLister(0);
       recharger();
     }
   }
@@ -121,29 +163,93 @@ export default function MedecinsEtablissement() {
   const boutonDiscret =
     "rounded-[9px] border-[1.5px] border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-muted transition-colors hover:border-[#E08E45] hover:text-[#C0392B]";
 
-  const listeResultats = resultats !== null && (
-    <div className="mt-2 flex flex-col gap-2">
-      {resultats.map((m) => (
-        <div
-          key={m.id}
-          className="flex items-center gap-3 rounded-[13px] border-[1.5px] border-line bg-white p-3"
+  /*
+   * Une ligne de résultat doit permettre de RECONNAÎTRE quelqu'un, pas
+   * seulement de lire son nom : deux praticiens peuvent porter le même nom
+   * ET la même spécialité. Dans l'ordre de ce qui tranche : la photo (un
+   * visage se reconnaît d'un coup d'œil), le numéro d'ordre (unique et
+   * officiel), le lieu d'exercice, l'ancienneté.
+   */
+  const ligneResultat = (m: MedecinInvitable) => (
+    <div
+      key={m.id}
+      className={`flex flex-wrap items-center gap-3 rounded-[13px] border-[1.5px] bg-white p-3 ${
+        m.homonyme ? "border-amber" : "border-line"
+      }`}
+    >
+      {m.photoUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={m.photoUrl}
+          alt=""
+          width={44}
+          height={44}
+          className="h-11 w-11 flex-none rounded-xl object-cover"
+        />
+      ) : (
+        <span
+          aria-hidden
+          className="grid h-11 w-11 flex-none place-items-center rounded-xl text-[13px] font-extrabold text-white"
+          style={{ background: m.gradient }}
         >
-          <span className="flex-1">
-            <b className="block text-[13.5px]">{m.nom}</b>
-            <small className="text-[11.5px] text-muted">{m.specialite}</small>
-          </span>
-          <button
-            type="button"
-            onClick={() => inviter(m.id, m.nom)}
-            className="rounded-[9px] bg-teal px-3 py-1.5 text-[11.5px] font-bold text-white"
-          >
-            Inviter
-          </button>
-        </div>
-      ))}
+          {m.initiales}
+        </span>
+      )}
+
+      <span className="min-w-0 flex-1">
+        <b className="block text-[13.5px]">{m.nom}</b>
+        <small className="block text-[11.5px] text-muted">
+          {[
+            m.specialite || "Spécialité non renseignée",
+            m.numeroOrdre ? `N° ${m.numeroOrdre}` : null,
+            m.lieu || null,
+            m.anneesExperience !== null ? `${m.anneesExperience} ans d'exercice` : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+        </small>
+        {/* Quand rien ne distingue deux lignes, on le dit — plutôt que de
+            laisser le gestionnaire choisir à pile ou face. */}
+        {m.homonyme && (
+          <small className="mt-0.5 block text-[11.5px] font-bold text-amber">
+            ⚠️ Un autre médecin porte le même nom et la même spécialité — ouvrez la fiche avant
+            d’inviter.
+          </small>
+        )}
+      </span>
+
+      <span className="flex flex-none gap-2">
+        <Link
+          href={`/medecin/${m.id}`}
+          target="_blank"
+          rel="noopener"
+          className="rounded-[9px] border-[1.5px] border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-blue hover:border-teal"
+        >
+          Fiche ↗
+        </Link>
+        <button
+          type="button"
+          onClick={() => inviter(m.id, m.nom)}
+          className="rounded-[9px] bg-teal px-3 py-1.5 text-[11.5px] font-bold text-white"
+        >
+          Inviter
+        </button>
+      </span>
+    </div>
+  );
+
+  const listeResultats = listeResultat !== null && (
+    <div className="mt-2 flex flex-col gap-2">
+      {listeResultat.length > 0 && (
+        <p className="text-[11.5px] text-muted">
+          {listeResultat.length} médecin{listeResultat.length > 1 ? "s" : ""} disponible
+          {listeResultat.length > 1 ? "s" : ""}
+        </p>
+      )}
+      {listeResultat.map(ligneResultat)}
       {/* Une recherche sans résultat ne disait rien : l'écran restait
           identique et on ne savait pas si elle avait eu lieu. */}
-      {resultats.length === 0 && (
+      {listeResultat.length === 0 && (
         <p className="text-[12.5px] text-muted">
           Aucun médecin ne correspond. Seuls les médecins déjà inscrits, validés et rattachés à
           aucun établissement peuvent être invités.
@@ -157,19 +263,30 @@ export default function MedecinsEtablissement() {
       <form onSubmit={chercher} className="grid gap-3 sm:grid-cols-[1fr_auto]">
         <input
           value={recherche}
-          onChange={(e) => setRecherche(e.target.value)}
-          placeholder="Nom ou spécialité d'un médecin inscrit (sans établissement)"
-          aria-label="Rechercher un médecin"
+          onChange={(e) => {
+            setMessage(null);
+            setRecherche(e.target.value);
+          }}
+          placeholder="Nom, spécialité, numéro d'ordre ou ville"
+          aria-label="Rechercher un médecin à inviter"
           className={champ}
         />
+        {/* La recherche part toute seule à la frappe ; ce bouton sert au cas
+            où l'on ne sait pas quoi taper — il déroule les praticiens
+            disponibles. */}
         <button
-          type="submit"
-          disabled={cherche}
-          className="rounded-[11px] bg-teal px-[18px] py-3 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:opacity-60"
+          type="button"
+          onClick={() => {
+            setMessage(null);
+            setRecherche("");
+            setToutLister((n) => n + 1);
+          }}
+          className="rounded-[11px] border-[1.5px] border-line bg-white px-[18px] py-3 text-[12.5px] font-bold text-blue transition-colors hover:border-teal"
         >
-          {cherche ? "Recherche…" : "🔍 Rechercher"}
+          Tous les disponibles
         </button>
       </form>
+      {cherche && <p className="mt-2 text-[11.5px] text-muted">Recherche…</p>}
       {listeResultats}
       {message && (
         <p
@@ -242,6 +359,16 @@ export default function MedecinsEtablissement() {
       <span className="rounded-lg bg-green-soft px-[9px] py-1 text-[11px] font-bold text-green">
         Actif
       </span>
+      {/* La liste ne porte que le nom et la spécialité : « Détail » ouvre la
+          fiche professionnelle, seule façon de vérifier qu'on a bien le
+          praticien qu'on croit avant de le retirer. */}
+      <button
+        type="button"
+        onClick={() => setDetailId(medecin.id)}
+        className="rounded-[9px] border-[1.5px] border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-blue transition-colors hover:border-teal"
+      >
+        Détail
+      </button>
       <button
         type="button"
         onClick={() => setConfirmation({ genre: "retirer", id: medecin.id, nom: medecin.nom })}
@@ -367,6 +494,10 @@ export default function MedecinsEtablissement() {
           />
         </div>
       </div>
+
+      {detailId && (
+        <DetailMedecinRattache medecinId={detailId} onFermer={() => setDetailId(null)} />
+      )}
 
       {confirmation && (
         <Dialogue
