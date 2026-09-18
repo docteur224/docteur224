@@ -32,12 +32,12 @@ export default function Dialogue({
       role="dialog"
       aria-modal="true"
       aria-label={titre}
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 md:items-center md:overflow-y-auto md:p-6"
+      className="ui-overlay-in fixed inset-0 z-50 flex items-end justify-center bg-black/45 md:items-center md:overflow-y-auto md:p-6"
       onClick={(e) => {
         if (e.target === e.currentTarget) onFermer();
       }}
     >
-      <div className="flex max-h-[94vh] w-full flex-col rounded-t-2xl border border-line bg-white md:max-h-[90vh] md:max-w-[480px] md:rounded-2xl md:shadow-xl">
+      <div className="ui-modal-in flex max-h-[94vh] w-full flex-col rounded-t-2xl border border-line bg-white md:max-h-[90vh] md:max-w-[480px] md:rounded-2xl md:shadow-xl">
         <div className="flex items-start gap-3 border-b border-line p-4">
           <span aria-hidden className="text-[17px]">
             {icone}
@@ -52,7 +52,7 @@ export default function Dialogue({
             type="button"
             onClick={onFermer}
             aria-label="Fermer"
-            className="flex-none rounded-lg px-2 py-1 text-lg text-muted hover:bg-bg"
+            className="flex-none rounded-lg px-2 py-1 text-lg text-muted transition-colors hover:bg-bg"
           >
             ✕
           </button>

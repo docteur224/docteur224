@@ -75,7 +75,7 @@ export default function MesRendezVous() {
         </div>
         <Link
           href="/resultats"
-          className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+          className="ui-btn rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white hover:bg-[#2790bc]"
         >
           + Nouveau rendez-vous
         </Link>
@@ -131,7 +131,7 @@ export default function MesRendezVous() {
             </p>
             <Link
               href="/resultats"
-              className="mt-4 inline-block rounded-[11px] bg-teal px-[18px] py-[11px] text-[13.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+              className="ui-btn mt-4 inline-block rounded-[11px] bg-teal px-[18px] py-[11px] text-[13.5px] font-bold text-white hover:bg-[#2790bc]"
             >
               🔍 Trouver un médecin
             </Link>

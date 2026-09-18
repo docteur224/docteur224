@@ -132,12 +132,12 @@ export default function AdresserConfrere({
           role="dialog"
           aria-modal="true"
           aria-label={`Adresser le dossier de ${nomPatient} à un confrère`}
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 md:items-start md:overflow-y-auto md:p-6"
+          className="ui-overlay-in fixed inset-0 z-50 flex items-end justify-center bg-black/40 md:items-start md:overflow-y-auto md:p-6"
           onClick={(e) => {
             if (e.target === e.currentTarget) setOuvert(false);
           }}
         >
-          <div className="flex max-h-[92vh] w-full flex-col rounded-t-2xl border border-line bg-white md:max-h-none md:max-w-[600px] md:rounded-2xl md:shadow-xl">
+          <div className="ui-modal-in flex max-h-[92vh] w-full flex-col rounded-t-2xl border border-line bg-white md:max-h-none md:max-w-[600px] md:rounded-2xl md:shadow-xl">
             <div className="flex items-start justify-between gap-3 border-b border-line p-4 md:border-b-0 md:pb-2">
               <h4 className="text-[15px] font-extrabold">
                 Adresser à un confrère

@@ -94,7 +94,8 @@ export default function CarteRdv({
     <div
       {...ouvrir}
       aria-label={`Voir le rendez-vous du ${d.getDate()} avec ${rdv.medecinNom}`}
-      className="mb-[14px] hidden cursor-pointer items-center gap-[18px] rounded-2xl border border-line bg-white p-[18px] transition-shadow hover:border-teal hover:shadow-[0_2px_10px_rgba(21,80,107,.08)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal sm:grid-cols-[64px_1fr] md:grid lg:grid-cols-[64px_1fr_auto]"
+      data-reveal
+      className="ui-card mb-[14px] hidden cursor-pointer items-center gap-[18px] rounded-2xl border border-line bg-white p-[18px] hover:border-teal hover:shadow-[0_2px_10px_rgba(21,80,107,.08)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal sm:grid-cols-[64px_1fr] md:grid lg:grid-cols-[64px_1fr_auto]"
     >
       <div className="rounded-[13px] bg-teal-soft py-3 text-center">
         <b className="block text-[22px] font-extrabold leading-none text-blue">{d.getDate()}</b>
@@ -132,14 +133,14 @@ export default function CarteRdv({
           <span className="flex flex-wrap items-center gap-[9px]" {...stopper}>
             <Link
               href={`/medecin/${rdv.medecinId}`}
-              className="rounded-[10px] border-[1.5px] border-line bg-white px-[15px] py-[9px] text-[12.5px] font-bold text-blue transition-colors hover:bg-bg"
+              className="ui-btn rounded-[10px] border-[1.5px] border-line bg-white px-[15px] py-[9px] text-[12.5px] font-bold text-blue hover:bg-bg"
             >
               Modifier
             </Link>
             <button
               type="button"
               onClick={() => onAnnuler(rdv.id)}
-              className="rounded-[10px] border-[1.5px] border-red-soft bg-white px-[15px] py-[9px] text-[12.5px] font-bold text-red transition-colors hover:bg-red-soft"
+              className="ui-btn rounded-[10px] border-[1.5px] border-red-soft bg-white px-[15px] py-[9px] text-[12.5px] font-bold text-red hover:bg-red-soft"
             >
               Annuler
             </button>

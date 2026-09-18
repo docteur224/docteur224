@@ -96,7 +96,7 @@ export default function PatientShell({ children }: { children: React.ReactNode }
               <Link
                 key={lien.href}
                 href={lien.href}
-                className={`flex items-center gap-[11px] rounded-[11px] px-3 py-[11px] text-[13.5px] ${
+                className={`flex items-center gap-[11px] rounded-[11px] px-3 py-[11px] text-[13.5px] transition-colors ${
                   actif
                     ? "bg-teal-soft font-bold text-blue"
                     : "font-semibold text-muted hover:bg-bg"
@@ -115,7 +115,7 @@ export default function PatientShell({ children }: { children: React.ReactNode }
               await seDeconnecter();
               router.push("/");
             }}
-            className="flex items-center gap-[11px] rounded-[11px] px-3 py-[11px] text-left text-[13.5px] font-semibold text-muted hover:bg-bg"
+            className="flex items-center gap-[11px] rounded-[11px] px-3 py-[11px] text-left text-[13.5px] font-semibold text-muted transition-colors hover:bg-bg"
           >
             <span className="text-base" aria-hidden>
               ↩️

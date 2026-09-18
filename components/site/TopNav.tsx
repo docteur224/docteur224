@@ -27,7 +27,7 @@ export default function TopNav({
         <div className="ml-2 hidden items-center gap-[18px] md:flex">
           <Link
             href="/resultats"
-            className={`text-[13.5px] font-semibold hover:text-blue ${
+            className={`ui-link text-[13.5px] font-semibold hover:text-blue ${
               lienActif === "trouver" ? "text-blue" : "text-muted"
             }`}
           >
@@ -35,30 +35,30 @@ export default function TopNav({
           </Link>
           <Link
             href="/a-propos"
-            className="hidden text-[13.5px] font-semibold text-muted hover:text-blue lg:inline"
+            className="ui-link hidden text-[13.5px] font-semibold text-muted hover:text-blue lg:inline"
           >
             À propos
           </Link>
           <Link
             href="/conseils-sante"
-            className="hidden text-[13.5px] font-semibold text-muted hover:text-blue lg:inline"
+            className="ui-link hidden text-[13.5px] font-semibold text-muted hover:text-blue lg:inline"
           >
             Conseils santé
           </Link>
           <Link
             href="/faq"
-            className="hidden text-[13.5px] font-semibold text-muted hover:text-blue lg:inline"
+            className="ui-link hidden text-[13.5px] font-semibold text-muted hover:text-blue lg:inline"
           >
             FAQ
           </Link>
-          <Link href="/#comment-ca-marche" className="text-[13.5px] font-semibold text-muted hover:text-blue">
+          <Link href="/#comment-ca-marche" className="ui-link text-[13.5px] font-semibold text-muted hover:text-blue">
             Comment ça marche
           </Link>
           {/* Destination : l'inscription professionnelle. L'espace médecin
               n'a de sens que pour un compte déjà créé et validé. */}
           <Link
             href="/inscription/professionnel"
-            className="text-[13.5px] font-semibold text-muted hover:text-blue"
+            className="ui-link text-[13.5px] font-semibold text-muted hover:text-blue"
           >
             Pour les médecins
           </Link>

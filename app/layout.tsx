@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+import RevelationAuScroll from "@/components/site/RevelationAuScroll";
+import TransitionPage from "@/components/site/TransitionPage";
 
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
@@ -21,7 +23,10 @@ export default function RootLayout({
   return (
     <html lang="fr" className={`${jakarta.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
-        {children}
+        {/* Enveloppes d'animation uniquement : transition de page et
+            apparition au défilement (voir les deux composants). */}
+        <TransitionPage>{children}</TransitionPage>
+        <RevelationAuScroll />
       </body>
     </html>
   );

@@ -150,7 +150,7 @@ export default function ChampAutocomplete({
       {/* La liste n'est plus plafonnée : sa hauteur l'est, et le reste
           défile. 60 vh au plus pour qu'elle ne déborde jamais de l'écran. */}
       {ouvert && filtrees.length > 0 && (
-        <ul className="absolute left-0 right-0 top-full z-30 mt-1 max-h-[min(60vh,420px)] overflow-auto rounded-xl border border-line bg-white py-1 shadow-[0_10px_26px_rgba(16,59,80,.14)]">
+        <ul className="ui-dropdown-in absolute left-0 right-0 top-full z-30 mt-1 max-h-[min(60vh,420px)] overflow-auto rounded-xl border border-line bg-white py-1 shadow-[0_10px_26px_rgba(16,59,80,.14)]">
           {filtrees.map((s, i) => (
             <li key={s}>
               <button

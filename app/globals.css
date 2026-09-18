@@ -177,3 +177,262 @@ body {
     opacity: 1;
   }
 }
+
+/* Couche `components` : les utilitaires Tailwind posés sur le même élément
+   (ombre conditionnelle d'une carte active, etc.) gardent la main. */
+@layer components {
+/* =====================================================================
+   ANIMATIONS ET MICRO-INTERACTIONS
+   ---------------------------------------------------------------------
+   Une seule source pour les durées et les courbes : tout ce qui bouge
+   sur le site lit ces tokens plutôt que des valeurs posées au hasard.
+   Règles : on n'anime que transform et opacity (composées par le GPU) ;
+   les couleurs et ombres ne transitent que sur des éléments petits.
+   Tout est ramené à un simple fondu, ou coupé, sous
+   prefers-reduced-motion (bloc unique en fin de section).
+   ===================================================================== */
+:root {
+  --dur-fast: 150ms;   /* survol, pression, couleurs */
+  --dur-base: 240ms;   /* entrées : pages, modales, cartes */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+  --elev-hover: 0 10px 24px rgba(16, 59, 80, 0.12);
+}
+
+@keyframes ui-page-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes ui-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes ui-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes ui-scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes ui-sheet-in {
+  from { opacity: 0; transform: translateY(28px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes ui-drop-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes ui-pulse {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
+@keyframes ui-check {
+  0%   { transform: scale(0.4); opacity: 0; }
+  60%  { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes ui-shimmer {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(100%); }
+}
+
+/* ---- Transition de page (components/site/TransitionPage) ------------- */
+.ui-page {
+  animation: ui-page-in var(--dur-base) var(--ease-out);
+}
+
+/* ---- Apparition au scroll (components/site/RevelationAuScroll) -------
+   Sans JavaScript, tout est visible : la classe `ui-reveal-pret` n'est
+   posée sur <html> qu'une fois l'observateur en place.
+   Le déplacement passe par la propriété `translate` (composée par le GPU
+   elle aussi) et non par `transform` : ce sélecteur est plus spécifique
+   que `.ui-card:hover`, et un `transform: none` ici annulerait l'élévation
+   au survol des cartes révélées. */
+.ui-reveal-pret [data-reveal] {
+  opacity: 0;
+  translate: 0 16px;
+  transition:
+    opacity var(--dur-base) var(--ease-out),
+    translate var(--dur-base) var(--ease-out);
+}
+.ui-reveal-pret [data-reveal].ui-in {
+  opacity: 1;
+  translate: none;
+}
+/* Décalage léger entre les cartes d'une même grille (jusqu'à 8). */
+[data-reveal-stagger] > [data-reveal]:nth-child(2) { transition-delay: 60ms; }
+[data-reveal-stagger] > [data-reveal]:nth-child(3) { transition-delay: 120ms; }
+[data-reveal-stagger] > [data-reveal]:nth-child(4) { transition-delay: 180ms; }
+[data-reveal-stagger] > [data-reveal]:nth-child(5) { transition-delay: 240ms; }
+[data-reveal-stagger] > [data-reveal]:nth-child(6) { transition-delay: 300ms; }
+[data-reveal-stagger] > [data-reveal]:nth-child(7) { transition-delay: 360ms; }
+[data-reveal-stagger] > [data-reveal]:nth-child(n + 8) { transition-delay: 420ms; }
+
+/* ---- Boutons ---------------------------------------------------------
+   Survol (pointeur fin seulement) : léger grossissement + ombre.
+   Pression (tous supports) : rétrécissement immédiat, sans dépendre du
+   :hover qui reste collé après un tap sur certains mobiles. */
+.ui-btn {
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    opacity var(--dur-fast) var(--ease-out);
+}
+@media (hover: hover) {
+  .ui-btn:hover:not(:disabled) {
+    transform: scale(1.02);
+    box-shadow: 0 6px 16px rgba(16, 59, 80, 0.16);
+  }
+}
+.ui-btn:active:not(:disabled) {
+  transform: scale(0.98);
+  transition-duration: 60ms;
+}
+
+/* ---- Cartes (médecins, établissements, rendez-vous) ------------------ */
+.ui-card {
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur-base) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+.ui-card-media {
+  transition: transform var(--dur-base) var(--ease-out);
+}
+@media (hover: hover) {
+  .ui-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--elev-hover);
+  }
+  .ui-card:hover .ui-card-media {
+    transform: scale(1.03);
+  }
+}
+.ui-card:active {
+  transform: scale(0.99);
+  transition-duration: 60ms;
+}
+
+/* ---- Créneaux et jours ----------------------------------------------- */
+.ui-slot {
+  transition:
+    transform 60ms var(--ease-out),
+    border-color 120ms var(--ease-out),
+    background-color 120ms var(--ease-out),
+    color 120ms var(--ease-out);
+}
+.ui-slot:active:not(:disabled) {
+  transform: scale(0.96);
+}
+/* Micro-confirmation à la sélection : pulse bref, une seule fois. */
+.ui-slot-sel {
+  animation: ui-pulse 220ms var(--ease-out);
+}
+
+/* ---- Liens ----------------------------------------------------------- */
+.ui-link {
+  transition: color var(--dur-fast) var(--ease-out), opacity var(--dur-fast) var(--ease-out);
+}
+
+/* ---- Modales, feuilles, menus déroulants ----------------------------- */
+.ui-overlay-in {
+  animation: ui-fade-in var(--dur-fast) var(--ease-out);
+}
+/* Feuille montante sur téléphone, carte centrée au-delà : même classe,
+   deux mouvements, calés sur les points de rupture des composants. */
+.ui-modal-in {
+  animation: ui-sheet-in var(--dur-base) var(--ease-out);
+}
+@media (min-width: 640px) {
+  .ui-modal-in.ui-modal-sm {
+    animation: ui-scale-in 200ms var(--ease-out);
+  }
+}
+@media (min-width: 768px) {
+  .ui-modal-in {
+    animation: ui-scale-in 200ms var(--ease-out);
+  }
+}
+.ui-dropdown-in {
+  transform-origin: top center;
+  animation: ui-drop-in var(--dur-fast) var(--ease-out);
+}
+
+/* ---- Feedback inline (erreur, succès), récapitulatifs ---------------- */
+.ui-fade-in {
+  animation: ui-fade-in var(--dur-base) var(--ease-out);
+}
+.ui-fade-up {
+  animation: ui-fade-up var(--dur-base) var(--ease-out) both;
+}
+.ui-delay-1 { animation-delay: 120ms; }
+.ui-delay-2 { animation-delay: 240ms; }
+.ui-delay-3 { animation-delay: 360ms; }
+
+/* ---- Confirmation de rendez-vous ------------------------------------- */
+.ui-check {
+  animation: ui-check 480ms var(--ease-out) both;
+  animation-delay: 120ms;
+}
+
+/* ---- Skeleton (listes, créneaux, historique) ------------------------- */
+.ui-skeleton {
+  position: relative;
+  overflow: hidden;
+  background: #e9eff3;
+  border-radius: 10px;
+  color: transparent;
+}
+.ui-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.7), transparent);
+  animation: ui-shimmer 1.4s ease-in-out infinite;
+}
+
+/* ---- Mouvement réduit --------------------------------------------------
+   Un seul fondu court pour les entrées, rien pour le reste. L'affichage
+   final est strictement le même. */
+@media (prefers-reduced-motion: reduce) {
+  .ui-page,
+  .ui-modal-in,
+  .ui-modal-in.ui-modal-sm,
+  .ui-dropdown-in,
+  .ui-fade-up,
+  .ui-check {
+    animation: ui-fade-in 120ms linear both;
+    animation-delay: 0ms;
+  }
+  .ui-slot-sel {
+    animation: none;
+  }
+  .ui-reveal-pret [data-reveal] {
+    opacity: 1;
+    translate: none;
+    transition: none;
+  }
+  .ui-btn,
+  .ui-card,
+  .ui-card-media,
+  .ui-slot {
+    transition: none;
+  }
+  .ui-btn:hover:not(:disabled),
+  .ui-btn:active:not(:disabled),
+  .ui-card:hover,
+  .ui-card:active,
+  .ui-card:hover .ui-card-media,
+  .ui-slot:active:not(:disabled) {
+    transform: none;
+  }
+  .ui-skeleton::after {
+    animation: none;
+  }
+}
+}

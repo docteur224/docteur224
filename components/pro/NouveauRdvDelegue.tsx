@@ -157,7 +157,7 @@ export default function NouveauRdvDelegue({
     return (
       <div className="mx-auto max-w-[560px] px-[18px] py-[40px] text-center md:px-0">
         <div className="mx-auto mb-[22px] grid h-[104px] w-[104px] animate-[pop_.4s_ease] place-items-center rounded-full bg-green-soft">
-          <div className="grid h-[72px] w-[72px] place-items-center rounded-full bg-green text-4xl text-white">
+          <div className="ui-check grid h-[72px] w-[72px] place-items-center rounded-full bg-green text-4xl text-white">
             ✓
           </div>
         </div>

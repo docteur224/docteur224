@@ -467,7 +467,7 @@ export default function FormulaireReservation({
       <div className="md:hidden">
         <div className="pad" style={{ paddingBottom: 0 }}>
           {erreur && (
-            <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-[12.5px] font-semibold text-red-600">
+            <p className="ui-fade-in mb-3 rounded-lg bg-red-50 px-3 py-2 text-[12.5px] font-semibold text-red-600">
               {erreur}
             </p>
           )}
@@ -627,7 +627,7 @@ export default function FormulaireReservation({
       {/* ================= VERSION WEB ================= */}
       <div className="hidden md:block">
       {erreur && (
-        <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-[12.5px] font-semibold text-red-600">
+        <p className="ui-fade-in mb-3 rounded-lg bg-red-50 px-3 py-2 text-[12.5px] font-semibold text-red-600">
           {erreur}
         </p>
       )}
@@ -811,7 +811,7 @@ export default function FormulaireReservation({
       <div className="flex gap-3">
         <Link
           href={`/medecin/${medecinId}`}
-          className="rounded-[11px] border-[1.5px] border-line bg-white px-[18px] py-[11px] text-[13.5px] font-bold text-blue transition-colors hover:bg-bg"
+          className="ui-btn rounded-[11px] border-[1.5px] border-line bg-white px-[18px] py-[11px] text-[13.5px] font-bold text-blue hover:bg-bg"
         >
           ← Retour
         </Link>
@@ -819,7 +819,7 @@ export default function FormulaireReservation({
           type="button"
           onClick={confirmer}
           disabled={enCours}
-          className="flex-1 rounded-[11px] bg-green px-[18px] py-[11px] text-[13.5px] font-bold text-white transition-colors hover:bg-[#196a3b] disabled:opacity-60"
+          className="ui-btn flex-1 rounded-[11px] bg-green px-[18px] py-[11px] text-[13.5px] font-bold text-white hover:bg-[#196a3b] disabled:opacity-60"
         >
           {enCours ? "Enregistrement…" : "✅ Confirmer le rendez-vous"}
         </button>

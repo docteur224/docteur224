@@ -77,7 +77,7 @@ export default function ClocheNotifications({ surFonce = false }: { surFonce?: b
         <div
           role="dialog"
           aria-label="Notifications"
-          className={`absolute top-[46px] z-50 w-[340px] max-w-[calc(100vw-32px)] overflow-hidden rounded-2xl border border-line bg-white shadow-card ${
+          className={`ui-dropdown-in absolute top-[46px] z-50 w-[340px] max-w-[calc(100vw-32px)] overflow-hidden rounded-2xl border border-line bg-white shadow-card ${
             ouvert.versLaDroite ? "left-0" : "right-0"
           }`}
         >
@@ -110,7 +110,7 @@ export default function ClocheNotifications({ surFonce = false }: { surFonce?: b
                     setOuvert(false);
                     if (n.lien) router.push(n.lien);
                   }}
-                  className={`mb-1.5 flex w-full items-start gap-[11px] rounded-xl border p-[11px] text-left last:mb-0 ${
+                  className={`mb-1.5 flex w-full items-start gap-[11px] rounded-xl border p-[11px] text-left transition-colors last:mb-0 ${
                     n.lu ? "border-line bg-white hover:bg-bg" : "border-[#cde6f2] bg-teal-soft"
                   }`}
                 >
@@ -143,7 +143,7 @@ export default function ClocheNotifications({ surFonce = false }: { surFonce?: b
               <Link
                 href="/patient/notifications"
                 onClick={() => setOuvert(false)}
-                className="block rounded-xl px-3 py-2 text-center text-[12px] font-bold text-teal hover:bg-bg"
+                className="block rounded-xl px-3 py-2 text-center text-[12px] font-bold text-teal transition-colors hover:bg-bg"
               >
                 Voir toutes mes notifications
               </Link>

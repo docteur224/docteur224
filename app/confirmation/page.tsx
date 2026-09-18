@@ -64,12 +64,12 @@ export default async function Confirmation({
       {/* ================= VERSION WEB (inchangée) ================= */}
       <div className="mx-auto hidden max-w-[560px] px-[30px] py-[60px] text-center md:block">
         <div className="mx-auto mb-[22px] grid h-[104px] w-[104px] animate-[pop_.4s_ease] place-items-center rounded-full bg-green-soft">
-          <div className="grid h-[72px] w-[72px] place-items-center rounded-full bg-green text-4xl text-white">
+          <div className="ui-check grid h-[72px] w-[72px] place-items-center rounded-full bg-green text-4xl text-white">
             ✓
           </div>
         </div>
-        <h2 className="text-[25px] font-extrabold tracking-[-0.4px]">Rendez-vous confirmé !</h2>
-        <p className="mt-[10px] text-[14.5px] leading-relaxed text-muted">
+        <h2 className="ui-fade-up ui-delay-2 text-[25px] font-extrabold tracking-[-0.4px]">Rendez-vous confirmé !</h2>
+        <p className="ui-fade-up ui-delay-3 mt-[10px] text-[14.5px] leading-relaxed text-muted">
           Votre rendez-vous avec <b>{nomComplet(medecin)}</b> est réservé pour le
           <br />
           <b>
@@ -77,23 +77,23 @@ export default async function Confirmation({
           </b>
           , à la {etab?.nom}.
         </p>
-        <div className="mt-[18px] inline-flex items-center gap-2 rounded-xl bg-green-soft px-[18px] py-[11px] text-[13px] font-bold text-green">
+        <div className="ui-fade-up ui-delay-3 mt-[18px] inline-flex items-center gap-2 rounded-xl bg-green-soft px-[18px] py-[11px] text-[13px] font-bold text-green">
           📩 Confirmation envoyée par SMS et e-mail · rappel 24 h avant
         </div>
         <p className="mt-2 text-[11.5px] text-muted">
           Mode démonstration : les envois simulés sont visibles dans le centre de notifications
           (🔔). L’envoi réel sera branché avec la base de données.
         </p>
-        <div className="mt-7 flex flex-wrap justify-center gap-3">
+        <div className="ui-fade-up ui-delay-3 mt-7 flex flex-wrap justify-center gap-3">
           <Link
             href="/mes-rendez-vous"
-            className="rounded-[11px] bg-teal px-[18px] py-[11px] text-[13.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+            className="ui-btn rounded-[11px] bg-teal px-[18px] py-[11px] text-[13.5px] font-bold text-white hover:bg-[#2790bc]"
           >
             Voir mes rendez-vous
           </Link>
           <Link
             href="/"
-            className="rounded-[11px] border-[1.5px] border-line bg-white px-[18px] py-[11px] text-[13.5px] font-bold text-blue transition-colors hover:bg-bg"
+            className="ui-btn rounded-[11px] border-[1.5px] border-line bg-white px-[18px] py-[11px] text-[13.5px] font-bold text-blue hover:bg-bg"
           >
             Retour à l’accueil
           </Link>

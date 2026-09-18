@@ -318,7 +318,7 @@ export default async function Resultats({
           <FiltresAvances boutons={boutonsMobile} />
         </div>
         <BandeauResultats total={liste.length} lienCarte={lienCarte} />
-        <div className="pad" style={{ paddingTop: 10 }}>
+        <div className="pad" style={{ paddingTop: 10 }} data-reveal-stagger>
           {liste.length === 0 && (
             <div className="card2" style={{ textAlign: "center", padding: 24 }}>
               <div style={{ fontSize: 30 }} aria-hidden>
@@ -451,7 +451,7 @@ export default async function Resultats({
           />
         ) : (
         /* Liste des résultats */
-        <div className="flex flex-col gap-[14px]">
+        <div className="flex flex-col gap-[14px]" data-reveal-stagger>
           <div className="flex flex-wrap items-center gap-3">
             <b className="text-[15px] font-extrabold">
               {liste.length} résultat{liste.length > 1 ? "s" : ""}
@@ -492,13 +492,15 @@ export default async function Resultats({
             return (
               <div
                 key={m.id}
-                className="grid items-center gap-[18px] rounded-2xl border border-line bg-white p-[18px] transition-shadow hover:shadow-[0_10px_24px_rgba(16,59,80,.09)] sm:grid-cols-[auto_1fr] lg:grid-cols-[auto_1fr_auto]"
+                data-reveal
+                className="ui-card grid items-center gap-[18px] rounded-2xl border border-line bg-white p-[18px] sm:grid-cols-[auto_1fr] lg:grid-cols-[auto_1fr_auto]"
               >
                 <AvatarMedecin
                   photoUrl={m.photoUrl}
                   initiales={m.initiales}
                   gradient={m.gradient}
                   taille={62}
+                  className="ui-card-media"
                 />
                 <div>
                   <Link href={`/medecin/${m.id}`} className="block text-base font-extrabold hover:text-blue">
@@ -542,7 +544,7 @@ export default async function Resultats({
                       <Link
                         key={heure}
                         href={`/medecin/${m.id}`}
-                        className="rounded-lg bg-teal-soft py-2 text-center text-[12.5px] font-bold text-blue transition-colors hover:bg-[#c9e6f3]"
+                        className="ui-slot rounded-lg bg-teal-soft py-2 text-center text-[12.5px] font-bold text-blue hover:bg-[#c9e6f3]"
                       >
                         {heure}
                       </Link>
@@ -550,7 +552,7 @@ export default async function Resultats({
                   </div>
                   <Link
                     href={`/medecin/${m.id}`}
-                    className="block w-full rounded-[9px] bg-teal px-[14px] py-2 text-center text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+                    className="ui-btn block w-full rounded-[9px] bg-teal px-[14px] py-2 text-center text-[12.5px] font-bold text-white hover:bg-[#2790bc]"
                   >
                     Voir le profil
                   </Link>

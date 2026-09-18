@@ -165,7 +165,7 @@ export default function CarteResultatsWeb({
           <Link
             href={lienListe}
             scroll={false}
-            className="ml-auto inline-flex items-center gap-2 rounded-[11px] border-[1.5px] border-line bg-white px-[13px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg"
+            className="ui-btn ml-auto inline-flex items-center gap-2 rounded-[11px] border-[1.5px] border-line bg-white px-[13px] py-2 text-[12.5px] font-bold text-blue hover:bg-bg"
           >
             ☰ Masquer la carte
           </Link>
@@ -295,7 +295,8 @@ function FicheCarte({
       onMouseEnter={() => onSurvol(point.id)}
       onMouseLeave={() => onSurvol(null)}
       onClick={() => onChoisir(point.id)}
-      className={`cursor-pointer rounded-2xl border bg-white p-[14px] transition-shadow ${
+      data-reveal
+      className={`ui-card cursor-pointer rounded-2xl border bg-white p-[14px] ${
         actif
           ? "border-teal shadow-[0_0_0_2px_var(--teal-soft),0_10px_24px_rgba(16,59,80,.12)]"
           : eclaire
@@ -309,6 +310,7 @@ function FicheCarte({
           initiales={point.initiales}
           gradient={point.gradient}
           taille={52}
+          className="ui-card-media"
         />
         <div className="min-w-0 flex-1">
           <Link
@@ -351,7 +353,7 @@ function FicheCarte({
         <Link
           href={`/medecin/${point.id}`}
           onClick={(e) => e.stopPropagation()}
-          className="ml-auto rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+          className="ui-btn ml-auto rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white hover:bg-[#2790bc]"
         >
           Voir le profil
         </Link>

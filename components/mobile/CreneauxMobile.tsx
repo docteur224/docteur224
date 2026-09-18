@@ -96,7 +96,13 @@ export default function CreneauxMobile({
           </button>
         )
       )}
-      {liste.length === 0 && (
+      {/* Squelette pendant la lecture des disponibilités, plutôt qu'un
+          « Aucun créneau » trompeur le temps du chargement. */}
+      {chargement &&
+        Array.from({ length: 3 }, (_, i) => (
+          <span key={i} className="ui-skeleton" style={{ height: 44 }} aria-hidden />
+        ))}
+      {!chargement && liste.length === 0 && (
         <p className="muted" style={{ gridColumn: "1 / -1", fontSize: 12, textAlign: "center", padding: "6px 0" }}>
           Aucun créneau — choisissez une autre date.
         </p>

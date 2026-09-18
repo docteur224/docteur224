@@ -183,13 +183,13 @@ export default function DeposerDocument({
           role="dialog"
           aria-modal="true"
           aria-label={`${enCorrection ? "Corriger" : "Remettre"} un document — ${nomPatient}`}
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 md:items-start md:overflow-y-auto md:p-6"
+          className="ui-overlay-in fixed inset-0 z-50 flex items-end justify-center bg-black/40 md:items-start md:overflow-y-auto md:p-6"
           onClick={(e) => {
             if (e.target === e.currentTarget) fermer();
           }}
         >
           {/* Feuille plein écran sur téléphone, carte centrée à partir de md. */}
-          <div className="flex max-h-[92vh] w-full flex-col rounded-t-2xl border border-line bg-white md:max-h-none md:max-w-[560px] md:rounded-2xl md:shadow-xl">
+          <div className="ui-modal-in flex max-h-[92vh] w-full flex-col rounded-t-2xl border border-line bg-white md:max-h-none md:max-w-[560px] md:rounded-2xl md:shadow-xl">
             <div className="flex items-start justify-between gap-3 border-b border-line p-4 md:border-b-0 md:pb-2">
               <h4 className="text-[15px] font-extrabold">
                 {enCorrection ? "Corriger le document" : "Remettre un document"}

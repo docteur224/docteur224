@@ -228,13 +228,13 @@ export default function DialoguePaiement({
       role="dialog"
       aria-modal="true"
       aria-label={`Paiement — ${achat.libelle}`}
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 md:items-start md:overflow-y-auto md:p-6"
+      className="ui-overlay-in fixed inset-0 z-50 flex items-end justify-center bg-black/45 md:items-start md:overflow-y-auto md:p-6"
       onClick={(e) => {
         if (e.target === e.currentTarget) onFermer();
       }}
     >
       {/* Feuille montante sur téléphone, carte centrée à partir de md. */}
-      <div className="flex max-h-[94vh] w-full flex-col rounded-t-2xl border border-line bg-white md:max-h-none md:max-w-[520px] md:rounded-2xl md:shadow-xl">
+      <div className="ui-modal-in flex max-h-[94vh] w-full flex-col rounded-t-2xl border border-line bg-white md:max-h-none md:max-w-[520px] md:rounded-2xl md:shadow-xl">
         {/* ---- En-tête et fil des étapes ---- */}
         <div className="border-b border-line p-4 pb-3">
           <div className="flex items-start justify-between gap-3">

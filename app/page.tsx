@@ -106,7 +106,7 @@ export default async function Accueil() {
           {medecinsEnVedette.map((m) => {
             const etab = getEtablissement(m.etablissementId);
             return (
-              <Link key={m.id} href={`/medecin/${m.id}`} className="doc">
+              <Link key={m.id} href={`/medecin/${m.id}`} className="doc" data-reveal>
                 {m.photoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={m.photoUrl} alt="" className="av" style={{ objectFit: "cover" }} />
@@ -134,7 +134,7 @@ export default async function Accueil() {
 
           <div className="section-t">Établissements en vedette</div>
           {etablissementsEnVedette.map((e) => (
-            <Link key={e.id} href={`/resultats?q=${encodeURIComponent(e.nom)}`} className="doc">
+            <Link key={e.id} href={`/resultats?q=${encodeURIComponent(e.nom)}`} className="doc" data-reveal>
               <span className="av" aria-hidden style={{ background: e.gradient }}>
                 🏥
               </span>
@@ -233,7 +233,7 @@ export default async function Accueil() {
           <p className="mt-[7px] text-center text-sm text-muted">
             Trois étapes simples, même avec une connexion lente.
           </p>
-          <div className="mt-[30px] grid gap-[18px] md:grid-cols-3">
+          <div className="mt-[30px] grid gap-[18px] md:grid-cols-3" data-reveal-stagger>
             {[
               {
                 n: "1",
@@ -255,6 +255,7 @@ export default async function Accueil() {
             ].map((etape) => (
               <div
                 key={etape.n}
+                data-reveal
                 className="rounded-2xl border border-line bg-white px-[22px] py-[26px] text-center"
               >
                 <div className="mx-auto mb-[14px] grid h-[46px] w-[46px] place-items-center rounded-[14px] bg-teal-soft text-lg font-extrabold text-blue">
@@ -277,14 +278,15 @@ export default async function Accueil() {
           <p className="mt-[7px] text-center text-sm text-muted">
             Des professionnels vérifiés, près de chez vous.
           </p>
-          <div className="mt-[30px] grid gap-[18px] md:grid-cols-3">
+          <div className="mt-[30px] grid gap-[18px] md:grid-cols-3" data-reveal-stagger>
             {medecinsEnVedette.map((m) => {
               const etab = getEtablissement(m.etablissementId);
               return (
                 <Link
                   key={m.id}
                   href={`/medecin/${m.id}`}
-                  className="rounded-2xl border border-line bg-white p-5 text-center transition hover:-translate-y-[3px] hover:shadow-[0_12px_26px_rgba(16,59,80,.1)]"
+                  data-reveal
+                  className="ui-card rounded-2xl border border-line bg-white p-5 text-center"
                 >
                   <div className="mx-auto mb-3 w-16">
                     <AvatarMedecin
@@ -292,6 +294,7 @@ export default async function Accueil() {
                       initiales={m.initiales}
                       gradient={m.gradient}
                       taille={64}
+                      className="ui-card-media"
                     />
                   </div>
                   <b className="block text-base font-extrabold">{nomComplet(m)}</b>
@@ -324,16 +327,17 @@ export default async function Accueil() {
           <p className="mt-[7px] text-center text-sm text-muted">
             Cliniques, hôpitaux et centres de santé partenaires.
           </p>
-          <div className="mt-[30px] grid gap-[18px] md:grid-cols-3">
+          <div className="mt-[30px] grid gap-[18px] md:grid-cols-3" data-reveal-stagger>
             {etablissementsEnVedette.map((e) => (
               <Link
                 key={e.id}
                 href={`/resultats?q=${encodeURIComponent(e.nom)}`}
-                className="rounded-2xl border border-line bg-white p-5 text-center transition hover:-translate-y-[3px] hover:shadow-[0_12px_26px_rgba(16,59,80,.1)]"
+                data-reveal
+                className="ui-card rounded-2xl border border-line bg-white p-5 text-center"
               >
                 <span
                   aria-hidden
-                  className="mx-auto mb-3 grid h-16 w-16 place-items-center rounded-2xl text-[22px] text-white"
+                  className="ui-card-media mx-auto mb-3 grid h-16 w-16 place-items-center rounded-2xl text-[22px] text-white"
                   style={{ background: e.gradient }}
                 >
                   🏥

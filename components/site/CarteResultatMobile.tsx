@@ -59,7 +59,7 @@ export default function CarteResultatMobile({
   };
 
   return (
-    <div {...ouvrir} className="doc cursor-pointer" aria-label={`Voir le profil de ${nomComplet}`}>
+    <div {...ouvrir} data-reveal className="doc cursor-pointer" aria-label={`Voir le profil de ${nomComplet}`}>
       {photoUrl ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={photoUrl} alt="" className="av" style={{ objectFit: "cover" }} />

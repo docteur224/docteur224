@@ -136,7 +136,7 @@ export default function PanneauReservation({
                 setJourISO(j.iso);
                 setHeure(null);
               }}
-              className={`w-[58px] flex-none rounded-xl border py-[10px] text-center transition ${
+              className={`ui-slot w-[58px] flex-none rounded-xl border py-[10px] text-center ${
                 selectionne
                   ? "border-blue bg-blue"
                   : "border-line bg-white hover:border-teal"
@@ -191,9 +191,9 @@ export default function PanneauReservation({
               key={c.heure}
               type="button"
               onClick={() => setHeure(c.heure)}
-              className={`rounded-[10px] border-[1.5px] py-[11px] text-center text-[13px] font-bold transition ${
+              className={`ui-slot rounded-[10px] border-[1.5px] py-[11px] text-center text-[13px] font-bold ${
                 heure === c.heure
-                  ? "border-blue bg-blue text-white"
+                  ? "ui-slot-sel border-blue bg-blue text-white"
                   : "border-line bg-white text-blue hover:border-teal"
               }`}
             >
@@ -201,7 +201,13 @@ export default function PanneauReservation({
             </button>
           )
         )}
-        {creneaux.length === 0 && (
+        {/* Squelette le temps de lire les disponibilités : la grille garde sa
+            hauteur au lieu d'annoncer « Aucun créneau » pendant le chargement. */}
+        {chargement &&
+          Array.from({ length: 9 }, (_, i) => (
+            <span key={i} className="ui-skeleton h-[42px]" aria-hidden />
+          ))}
+        {!chargement && creneaux.length === 0 && (
           <p className="col-span-3 py-2 text-center text-xs text-muted">
             Aucun créneau ce jour — choisissez une autre date.
           </p>
@@ -212,7 +218,7 @@ export default function PanneauReservation({
       {heure ? (
         <Link
           href={`/reservation?medecin=${medecinId}&date=${jourAffiche}&heure=${encodeURIComponent(heure)}`}
-          className="mt-[18px] block w-full rounded-[11px] bg-teal py-[14px] text-center text-[15px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+          className="ui-btn mt-[18px] block w-full rounded-[11px] bg-teal py-[14px] text-center text-[15px] font-bold text-white hover:bg-[#2790bc]"
         >
           Continuer · {heure}
         </Link>

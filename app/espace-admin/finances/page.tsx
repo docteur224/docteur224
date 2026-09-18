@@ -155,9 +155,9 @@ function DialogueDecision({
       role="dialog"
       aria-modal="true"
       aria-label={titre}
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 md:items-center md:p-4"
+      className="ui-overlay-in fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 md:items-center md:p-4"
     >
-      <div className="w-full max-w-[440px] rounded-t-2xl bg-white p-5 md:rounded-2xl">
+      <div className="ui-modal-in w-full max-w-[440px] rounded-t-2xl bg-white p-5 md:rounded-2xl">
         <h3 className="text-[15px] font-extrabold">{titre}</h3>
         <p className="mb-3 mt-1 text-[12.5px] text-muted">{detail}</p>
 

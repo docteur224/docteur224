@@ -181,7 +181,7 @@ function EcranConnexion({ retour }: { retour: string | null }) {
               type="button"
               onClick={connecter}
               disabled={enCours}
-              className="flex w-full items-center justify-center gap-2 rounded-[11px] bg-teal px-6 py-[14px] text-[15px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:opacity-60"
+              className="ui-btn flex w-full items-center justify-center gap-2 rounded-[11px] bg-teal px-6 py-[14px] text-[15px] font-bold text-white hover:bg-[#2790bc] disabled:opacity-60"
             >
               {enCours ? "Connexion…" : "S'identifier"}
             </button>
