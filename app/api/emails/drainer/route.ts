@@ -27,8 +27,16 @@ import { drainerEmails } from "@/lib/emails/drain";
 export const maxDuration = 60;
 
 async function appelantLegitime(requete: Request): Promise<boolean> {
-  const cle = process.env.EMAIL_CLE_DRAIN;
-  const presentee = requete.headers.get("x-cle-drain");
+  /*
+   * `trim` des DEUX CÔTÉS. Une clé partagée voyage par copier-coller — dans
+   * une console d'hébergeur, dans un fichier d'environnement — et repart
+   * régulièrement avec une espace ou un retour à la ligne accroché. Comme la
+   * comparaison exige une longueur identique, ce caractère invisible produit
+   * un refus que rien à l'écran n'explique. Le retirer ne coûte rien : un
+   * secret ne se distingue pas d'un autre par ses espaces de bord.
+   */
+  const cle = process.env.EMAIL_CLE_DRAIN?.trim();
+  const presentee = requete.headers.get("x-cle-drain")?.trim();
   /*
    * Comparaison en longueur constante. Le gain est théorique sur une route
    * appelée par un cron, mais une comparaison de secret qui s'interrompt au
@@ -48,7 +56,20 @@ async function appelantLegitime(requete: Request): Promise<boolean> {
 
 export async function POST(requete: Request) {
   if (!(await appelantLegitime(requete))) {
-    return NextResponse.json({ erreur: "Appel non autorisé." }, { status: 401 });
+    /*
+     * Le refus dit s'il existe une clé CÔTÉ SERVEUR — jamais sa valeur, ni
+     * celle qui a été présentée. Sans cette indication, deux causes très
+     * différentes rendent le même 401 muet : une variable d'environnement
+     * absente du déploiement, et une valeur qui ne correspond pas. La
+     * première se règle chez l'hébergeur, la seconde dans le planificateur,
+     * et rien ne permettait de les distinguer depuis l'extérieur.
+     *
+     * Savoir qu'un secret est configuré n'aide personne à le deviner.
+     */
+    return NextResponse.json(
+      { erreur: "Appel non autorisé.", cleConfiguree: !!process.env.EMAIL_CLE_DRAIN },
+      { status: 401 }
+    );
   }
   const resultat = await drainerEmails();
   return NextResponse.json(resultat);
