@@ -19,6 +19,7 @@ export const FOURNISSEURS_PAR_CANAL: Record<Canal, { valeur: string; label: stri
   ],
   email: [
     { valeur: "simule", label: "Simulé — rien n'est envoyé" },
+    { valeur: "smtp", label: "SMTP — boîte mail du domaine (Hostinger, OVH…)" },
     { valeur: "http-email", label: "E-mail transactionnel (Resend, Brevo, Postmark…)" },
   ],
 };

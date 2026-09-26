@@ -1,4 +1,5 @@
-import type { ConfigCanal, Fournisseur, ResultatFournisseur } from "./types";
+import nodemailer from "nodemailer";
+import type { ConfigCanal, ExtrasEmail, Fournisseur, ResultatFournisseur } from "./types";
 
 /*
  * Les fournisseurs disponibles.
@@ -118,10 +119,114 @@ export const httpEmail: Fournisseur = {
   },
 };
 
+/**
+ * Envoi par SMTP — une boîte mail ordinaire (Hostinger, OVH, Gmail…).
+ *
+ * C'est le fournisseur du démarrage : il ne demande aucun contrat, juste une
+ * adresse qui existe déjà. Il a en contrepartie un plafond d'envois quotidien
+ * bas et une réputation d'expéditeur qui n'est pas celle d'un service
+ * transactionnel — sans SPF, DKIM et DMARC posés sur le domaine, les messages
+ * partent en indésirables. Le jour où le volume l'exige, on bascule sur
+ * `http-email` depuis le menu de /espace-admin/messagerie : rien d'autre ne
+ * bouge.
+ *
+ * Le chiffrement se déduit du port plutôt que de s'ajouter en réglage : 465
+ * est le TLS implicite, tout le reste (587 en pratique) passe par STARTTLS.
+ * C'est la convention universelle, et un interrupteur de plus serait surtout
+ * un interrupteur de travers.
+ */
+export const smtp: Fournisseur = {
+  nom: "smtp",
+  async envoyer(
+    destinataire,
+    texte,
+    config: ConfigCanal,
+    sujet,
+    extras?: ExtrasEmail
+  ): Promise<ResultatFournisseur> {
+    if (!config.hote || !config.port) return { erreur: "Serveur SMTP non configuré." };
+    if (!config.identifiant || !config.cle) return { erreur: "Identifiants SMTP manquants." };
+    if (!config.expediteur) return { erreur: "Adresse d’expédition manquante." };
+
+    try {
+      const transporteur = nodemailer.createTransport({
+        host: config.hote,
+        port: config.port,
+        secure: config.port === 465,
+        auth: { user: config.identifiant, pass: config.cle },
+        /*
+         * Mêmes 10 s que les fournisseurs HTTP, et pour la même raison : une
+         * route de notification qui se bloque sur un serveur muet retiendrait
+         * la requête du patient qui vient de réserver. Les trois délais sont
+         * distincts chez nodemailer — la connexion, la bannière d'accueil,
+         * puis le dialogue — et n'en régler qu'un en laisse deux ouverts.
+         */
+        connectionTimeout: 10_000,
+        greetingTimeout: 10_000,
+        socketTimeout: 10_000,
+        /*
+         * Échappatoire de DÉVELOPPEMENT, lisible seulement par qui a la main
+         * sur les variables d'environnement du serveur — jamais depuis
+         * l'écran d'administration. Un antivirus qui inspecte le courrier
+         * (Avast, Kaspersky…) remplace le certificat du serveur par le sien et
+         * fait échouer la vérification sur le poste du développeur. La
+         * désactiver en production exposerait identifiant et mot de passe à
+         * qui s'intercale sur le réseau : c'est pourquoi ce n'est pas un
+         * réglage de la plateforme.
+         */
+        ...(process.env.EMAIL_TLS_NON_VERIFIE === "1"
+          ? { tls: { rejectUnauthorized: false } }
+          : {}),
+      });
+
+      const envoi = await transporteur.sendMail({
+        from: config.expediteur,
+        to: destinataire,
+        subject: sujet ?? "Docteur 224",
+        /*
+         * Les deux versions partent ensemble, en `multipart/alternative`. Ce
+         * n'est pas une politesse envers les vieux logiciels : un message qui
+         * ne porte QUE du HTML est un signal de courrier indésirable pour la
+         * plupart des filtres, et le texte est ce que lisent les montres, les
+         * lecteurs d'écran et les aperçus de notification.
+         */
+        text: texte,
+        ...(extras?.html ? { html: extras.html } : {}),
+        ...(extras?.pieces?.length
+          ? {
+              attachments: extras.pieces.map((p) => ({
+                filename: p.nom,
+                content: p.contenu,
+                contentType: p.type,
+              })),
+            }
+          : {}),
+      });
+      /*
+       * Un serveur SMTP peut accepter le message pour certains destinataires
+       * et le refuser pour d'autres. Sans ce contrôle, un refus total
+       * passerait pour un succès et la notification serait comptée envoyée.
+       */
+      if (!envoi.accepted?.length) {
+        return { erreur: `Refusé par le serveur : ${envoi.response ?? "sans motif"}` };
+      }
+      return { reference: envoi.messageId };
+    } catch (e) {
+      const erreur = e as { code?: string; responseCode?: number; message?: string };
+      // Le code SMTP porte le motif réel — 535 mot de passe refusé, 550
+      // adresse d'expédition non autorisée. Le perdre rendrait tout
+      // diagnostic impossible depuis l'écran d'administration.
+      const codes = [erreur.code, erreur.responseCode].filter(Boolean).join(" ");
+      return { erreur: `${codes} ${erreur.message ?? String(e)}`.trim() };
+    }
+  },
+};
+
 const CATALOGUE: Record<string, Fournisseur> = {
   simule: simule,
   http: httpGenerique,
   "http-email": httpEmail,
+  smtp: smtp,
 };
 
 /** Repli sur `simule` : un nom inconnu ne doit pas faire tomber un envoi. */

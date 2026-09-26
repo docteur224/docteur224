@@ -1,7 +1,13 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { fournisseur } from "./fournisseurs";
 import { mesurerSms } from "./cout";
-import { configComplete, configDuCanal, type Canal, type ConfigMessagerie } from "./types";
+import {
+  configComplete,
+  configDuCanal,
+  type Canal,
+  type ConfigMessagerie,
+  type ExtrasEmail,
+} from "./types";
 
 export * from "./types";
 export * from "./cout";
@@ -31,7 +37,7 @@ const CONFIG_DEFAUT: ConfigMessagerie = {
   canalDefaut: "whatsapp",
   sms: { fournisseur: null, url: null, identifiant: null, cle: null, expediteur: null, coutGnf: 150 },
   whatsapp: { fournisseur: null, url: null, identifiant: null, cle: null, expediteur: null, coutGnf: 20 },
-  email: { fournisseur: null, url: null, identifiant: null, cle: null, expediteur: null, coutGnf: 0 },
+  email: { fournisseur: null, url: null, identifiant: null, cle: null, expediteur: null, coutGnf: 0, hote: null, port: null },
 };
 
 export async function lireConfigMessagerie(admin = clientAdmin()): Promise<ConfigMessagerie> {
@@ -59,12 +65,16 @@ export async function lireConfigMessagerie(admin = clientAdmin()): Promise<Confi
     email: {
       fournisseur: data.email_fournisseur,
       url: data.email_url,
-      // L'adresse d'expédition tient les deux rôles : elle identifie
-      // l'émetteur et c'est elle qui part dans l'en-tête `From`.
-      identifiant: data.email_expediteur,
+      // Le SMTP s'authentifie avec un identifiant propre. À défaut, l'adresse
+      // d'expédition tient les deux rôles — c'est le cas chez la plupart des
+      // hébergeurs, et le seul possible pour une API HTTP, qui n'a pas de
+      // compte à ouvrir.
+      identifiant: data.email_identifiant || data.email_expediteur,
       cle: data.email_cle,
       expediteur: data.email_expediteur,
       coutGnf: data.cout_email_gnf ?? 0,
+      hote: data.email_hote,
+      port: data.email_port,
     },
   };
 }
@@ -79,6 +89,8 @@ export interface DemandeEnvoi {
   canal?: Canal;
   /** Objet de l'e-mail. Ignoré par les canaux SMS et WhatsApp. */
   sujet?: string;
+  /** Version HTML et pièces jointes. Ignorées par les canaux téléphoniques. */
+  extras?: ExtrasEmail;
 }
 
 export interface ResultatEnvoi {
@@ -117,7 +129,8 @@ export async function envoyerMessage(demande: DemandeEnvoi): Promise<ResultatEnv
         demande.destinataire,
         demande.texte,
         canalConfig,
-        demande.sujet
+        demande.sujet,
+        demande.extras
       )
     : { reference: `simule-${Date.now()}` };
 

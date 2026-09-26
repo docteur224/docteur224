@@ -72,6 +72,9 @@ const CHAMPS: Record<string, string> = {
   emailCle: "email_cle",
   emailExpediteur: "email_expediteur",
   coutEmailGnf: "cout_email_gnf",
+  emailHote: "email_hote",
+  emailPort: "email_port",
+  emailIdentifiant: "email_identifiant",
 };
 
 /** Un secret laissé vide n'efface pas celui déjà en base. */
@@ -114,10 +117,20 @@ export async function POST(requete: Request) {
       mailUrl: (maj.email_url ?? actuel.email.url) as string | null,
       mailCle: (maj.email_cle ?? actuel.email.cle) as string | null,
       mailDe: (maj.email_expediteur ?? actuel.email.expediteur) as string | null,
+      mailFournisseur: (maj.email_fournisseur ?? actuel.email.fournisseur) as string | null,
+      mailHote: (maj.email_hote ?? actuel.email.hote) as string | null,
+      mailPort: (maj.email_port ?? actuel.email.port) as number | string | null,
+      mailIdentifiant: (maj.email_identifiant ?? actuel.email.identifiant) as string | null,
     };
     const smsPret = !!(futur.url && futur.cle && futur.expediteur);
     const waPret = !!(futur.waUrl && futur.waJeton && futur.waNumero);
-    const mailPret = !!(futur.mailUrl && futur.mailCle && futur.mailDe);
+    // Le SMTP se joint par un hôte, pas par une URL : lui réclamer `email_url`
+    // refuserait une configuration pourtant complète. Même règle que
+    // `configComplete`, qui décidera ensuite si l'envoi part vraiment.
+    const mailPret =
+      futur.mailFournisseur === "smtp"
+        ? !!(futur.mailHote && futur.mailPort && futur.mailIdentifiant && futur.mailCle && futur.mailDe)
+        : !!(futur.mailUrl && futur.mailCle && futur.mailDe);
     if (!smsPret && !waPret && !mailPret) {
       return NextResponse.json(
         { erreur: "Aucun canal n'est complètement configuré : le mode réel n'enverrait rien." },

@@ -36,6 +36,9 @@ interface ConfigPublique {
   email_url: string | null;
   email_expediteur: string | null;
   cout_email_gnf: number;
+  email_hote: string | null;
+  email_port: number | null;
+  email_identifiant: string | null;
   sms_cle_posee: boolean;
   whatsapp_jeton_pose: boolean;
   email_cle_posee: boolean;
@@ -128,6 +131,9 @@ export default function MessagerieAdmin() {
   const mesure = mesurerSms(MESSAGE_TEST);
   const alerte = alerteCout(MESSAGE_TEST);
   const modeReel = valeur("mode", config?.mode) === "reel";
+  // Lu sur le brouillon, pas sur la base : les champs doivent changer dès que
+  // l'admin déroule le menu, sans attendre l'enregistrement.
+  const smtp = valeur("emailFournisseur", config?.email_fournisseur) === "smtp";
 
   const contenu = chargement ? (
     <p className="text-[13px] text-muted">Chargement…</p>
@@ -262,9 +268,9 @@ export default function MessagerieAdmin() {
           </span>
         </h3>
         <p className="mb-[14px] text-[12.5px] text-muted">
-          Confirmations et rappels envoyés par courriel, en complément du canal téléphonique. Un
-          fournisseur d’e-mail transactionnel est indispensable : envoyer depuis une boîte
-          ordinaire fait classer les messages en indésirables.
+          Confirmations et rappels envoyés par courriel, en complément du canal téléphonique. Le
+          SMTP d’une boîte du domaine convient pour démarrer ; au-delà de quelques centaines
+          d’envois par jour, un service transactionnel devient nécessaire.
         </p>
         <label className={etiquette}>Fournisseur</label>
         <select
@@ -279,30 +285,76 @@ export default function MessagerieAdmin() {
             </option>
           ))}
         </select>
-        <label className={etiquette}>URL de l’API</label>
-        <input
-          className={champ}
-          placeholder="https://api.resend.com/emails"
-          value={valeur("emailUrl", config.email_url)}
-          onChange={(e) => modifier("emailUrl", e.target.value)}
-        />
+
+        {/* Les deux fournisseurs ne se règlent pas du tout pareil : le SMTP par
+            un hôte et un compte, l'API par une URL et une clé. Tout afficher
+            ensemble ferait quatre champs inutiles à remplir, dont trois qui ne
+            servent à rien — et une configuration à moitié saisie qu'on croit
+            complète. */}
+        {smtp ? (
+          <>
+            <label className={etiquette}>Serveur SMTP</label>
+            <input
+              className={champ}
+              placeholder="smtp.hostinger.com"
+              value={valeur("emailHote", config.email_hote)}
+              onChange={(e) => modifier("emailHote", e.target.value)}
+            />
+            <label className={etiquette}>Port</label>
+            <input
+              className={champ}
+              inputMode="numeric"
+              placeholder="465"
+              value={valeur("emailPort", config.email_port)}
+              onChange={(e) => modifier("emailPort", e.target.value)}
+            />
+            <p className="-mt-1.5 mb-3 text-[11.5px] text-muted">
+              465 pour le TLS direct, 587 pour STARTTLS. Le chiffrement se déduit du port.
+            </p>
+            <label className={etiquette}>Identifiant</label>
+            <input
+              className={champ}
+              placeholder="contact@docteur224.com"
+              value={valeur("emailIdentifiant", config.email_identifiant)}
+              onChange={(e) => modifier("emailIdentifiant", e.target.value)}
+            />
+          </>
+        ) : (
+          <>
+            <label className={etiquette}>URL de l’API</label>
+            <input
+              className={champ}
+              placeholder="https://api.resend.com/emails"
+              value={valeur("emailUrl", config.email_url)}
+              onChange={(e) => modifier("emailUrl", e.target.value)}
+            />
+          </>
+        )}
+
         <label className={etiquette}>Adresse d’expédition</label>
         <input
           className={champ}
-          placeholder="Docteur 224 <rendezvous@docteur224.com>"
+          placeholder="Docteur 224 <contact@docteur224.com>"
           value={valeur("emailExpediteur", config.email_expediteur)}
           onChange={(e) => modifier("emailExpediteur", e.target.value)}
         />
         <p className="-mt-1.5 mb-3 text-[11.5px] text-muted">
-          Le domaine doit être vérifié chez le fournisseur (SPF et DKIM), sans quoi les messages
-          n’arrivent pas.
+          {smtp
+            ? "En SMTP, l’adresse doit être celle du compte authentifié : les hébergeurs refusent d’expédier au nom d’une autre. Posez SPF, DKIM et DMARC sur le domaine, sans quoi les messages partent en indésirables."
+            : "Le domaine doit être vérifié chez le fournisseur (SPF et DKIM), sans quoi les messages n’arrivent pas."}
         </p>
-        <label className={etiquette}>Clé d’API</label>
+        <label className={etiquette}>{smtp ? "Mot de passe" : "Clé d’API"}</label>
         <input
           className={champ}
           type="password"
           placeholder={
-            config.email_cle_posee ? "Inchangée — laissez vide pour la conserver" : "Collez la clé"
+            config.email_cle_posee
+              ? smtp
+                ? "Inchangé — laissez vide pour le conserver"
+                : "Inchangée — laissez vide pour la conserver"
+              : smtp
+                ? "Mot de passe de la boîte mail"
+                : "Collez la clé"
           }
           value={brouillon.emailCle ?? ""}
           onChange={(e) => modifier("emailCle", e.target.value)}

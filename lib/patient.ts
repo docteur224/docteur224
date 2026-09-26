@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { creerClientNavigateur } from "@/lib/supabase/client";
 import { creneauReservable, versISO } from "@/lib/dates";
+import { pousserEmails } from "@/lib/pousser-emails";
 
 /*
  * Couche de données du parcours patient (client) : session, proches,
@@ -285,25 +286,29 @@ export function useParametresPatient(): {
 } {
   const [parametres, setParametres] = useState<ParametresPatient>(PARAMETRES_DEFAUT);
 
+  /*
+   * Le rappel par e-mail ne vit plus dans `patients` mais dans
+   * `preferences_email` (migration 0059), commune à tous les rôles : un
+   * assistant ou un administrateur doit pouvoir se désabonner comme un
+   * patient. Deux tables à lire, donc, et une seule question par réglage.
+   */
   useEffect(() => {
     let actif = true;
     (async () => {
       const supabase = creerClientNavigateur();
       const { data: auth } = await supabase.auth.getUser();
       if (!auth.user) return;
-      const { data } = await supabase
-        .from("patients")
-        .select("pref_rappels_sms, pref_rappels_email, pref_offres")
-        .eq("id", auth.user.id)
-        .single();
-      if (actif && data) {
-        setParametres((p) => ({
-          ...p,
-          rappelsSms: data.pref_rappels_sms,
-          rappelsEmail: data.pref_rappels_email,
-          offres: data.pref_offres,
-        }));
-      }
+      const [{ data: p }, { data: e }] = await Promise.all([
+        supabase.from("patients").select("pref_rappels_sms, pref_offres").eq("id", auth.user.id).single(),
+        supabase.from("preferences_email").select("rappels").eq("utilisateur_id", auth.user.id).maybeSingle(),
+      ]);
+      if (!actif) return;
+      setParametres((prec) => ({
+        ...prec,
+        rappelsSms: p?.pref_rappels_sms ?? prec.rappelsSms,
+        rappelsEmail: e?.rappels ?? prec.rappelsEmail,
+        offres: p?.pref_offres ?? prec.offres,
+      }));
     })();
     return () => {
       actif = false;
@@ -312,12 +317,19 @@ export function useParametresPatient(): {
 
   function basculer(cle: keyof ParametresPatient, valeur: boolean) {
     setParametres((p) => ({ ...p, [cle]: valeur }));
-    const colonne =
-      cle === "rappelsSms" ? "pref_rappels_sms" : cle === "rappelsEmail" ? "pref_rappels_email" : "pref_offres";
     (async () => {
       const supabase = creerClientNavigateur();
       const { data: auth } = await supabase.auth.getUser();
       if (!auth.user) return;
+      if (cle === "rappelsEmail") {
+        // `upsert` et non `update` : la ligne de préférences naît au premier
+        // courriel envoyé, or un patient peut régler ceci avant d'en recevoir un.
+        await supabase
+          .from("preferences_email")
+          .upsert({ utilisateur_id: auth.user.id, rappels: valeur }, { onConflict: "utilisateur_id" });
+        return;
+      }
+      const colonne = cle === "rappelsSms" ? "pref_rappels_sms" : "pref_offres";
       await supabase.from("patients").update({ [colonne]: valeur }).eq("id", auth.user.id);
     })();
   }
@@ -768,6 +780,13 @@ export async function reserverRendezVous(d: {
     return { erreur: error.message };
   }
   oublierProchainRendezVous();
+  /*
+   * Le trigger vient de déposer la confirmation en file (migration 0057).
+   * Sans ce coup de pouce, elle attendrait le prochain passage du
+   * planificateur — jusqu'à une minute, pendant laquelle le patient se
+   * demande si sa réservation est passée.
+   */
+  pousserEmails();
   return {};
 }
 
@@ -777,6 +796,7 @@ export async function annulerRendezVous(id: string): Promise<{ erreur?: string }
     .update({ statut: "annule" })
     .eq("id", id);
   oublierProchainRendezVous();
+  if (!error) pousserEmails();
   return error ? { erreur: error.message } : {};
 }
 
@@ -793,5 +813,6 @@ export async function reprogrammerRendezVous(
     .update({ date, heure, statut: "en_attente" })
     .eq("id", id);
   oublierProchainRendezVous();
+  if (!error) pousserEmails();
   return error ? { erreur: error.message } : {};
 }

@@ -19,7 +19,7 @@ export async function GET() {
   }
   const id = auth.user.id;
 
-  const [profil, patient, proches, rendezVous, avis, documents, favoris, notifications] =
+  const [profil, patient, proches, rendezVous, avis, documents, favoris, notifications, prefEmail] =
     await Promise.all([
       supabase
         .from("utilisateurs")
@@ -28,7 +28,9 @@ export async function GET() {
         .maybeSingle(),
       supabase
         .from("patients")
-        .select("date_naissance, genre, quartier, pref_rappels_sms, pref_rappels_email, pref_offres, villes ( nom )")
+        // `pref_rappels_email` a migré vers `preferences_email` (0059), table
+        // commune à tous les rôles ; elle est jointe plus bas comme les autres.
+        .select("date_naissance, genre, quartier, pref_rappels_sms, pref_offres, villes ( nom )")
         .eq("id", id)
         .maybeSingle(),
       supabase.from("proches").select("nom, prenom, lien, date_naissance, genre, cree_le"),
@@ -53,6 +55,9 @@ export async function GET() {
         ),
       supabase.from("favoris").select("cree_le, medecins ( utilisateurs ( nom, prenom ), specialites ( nom ) )"),
       supabase.from("notifications").select("type, titre, corps, cree_le, lu_le").order("cree_le", { ascending: false }),
+      // Le jeton de désabonnement est volontairement écarté : c'est un secret
+      // porteur d'effet, pas une donnée personnelle à restituer.
+      supabase.from("preferences_email").select("rappels, resumes, maj_le").eq("utilisateur_id", id).maybeSingle(),
     ]);
 
   const contenu = {
@@ -67,6 +72,7 @@ export async function GET() {
     documents: documents.data ?? [],
     favoris: favoris.data ?? [],
     notifications: notifications.data ?? [],
+    preferencesEmail: prefEmail.data,
   };
 
   const nom = `docteur224-mes-donnees-${new Date().toISOString().slice(0, 10)}.json`;

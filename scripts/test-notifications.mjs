@@ -92,7 +92,7 @@ const notifsResa = await notifsDe(patient.id, "rdv_reserve");
 verifier("réservation → notification au patient", notifsResa.length > 0);
 verifier(
   "la notification porte le nom du médecin et la date",
-  /Dr .*15 mars à 09:30/.test(notifsResa[0]?.corps ?? ""),
+  /(Dr|Pr) .*15 mars à 09:30/.test(notifsResa[0]?.corps ?? ""),
   notifsResa[0]?.corps
 );
 verifier(
@@ -107,9 +107,15 @@ verifier(
   (notifsResa[0]?.canaux ?? []).includes("in_app"),
   JSON.stringify(notifsResa[0]?.canaux)
 );
+/*
+ * Depuis la migration 0059, le praticien reçoit aussi ses notifications par
+ * courriel : l'e-mail ne coûte rien et c'était la demande. Ce qu'il ne doit
+ * toujours PAS recevoir, ce sont les canaux payants — le prévenir dans sa
+ * propre application n'a pas à consommer son quota SMS.
+ */
 verifier(
-  "canaux du médecin : in_app seulement",
-  JSON.stringify(notifsMedecin[0]?.canaux) === JSON.stringify(["in_app"]),
+  "canaux du médecin : aucun canal payant",
+  !["sms", "whatsapp"].some((c) => (notifsMedecin[0]?.canaux ?? []).includes(c)),
   JSON.stringify(notifsMedecin[0]?.canaux)
 );
 verifier(
@@ -129,15 +135,61 @@ verifier(
 );
 
 // ---------- 3. Reprogrammation ----------
-await medecin.client
+/*
+ * La date d'arrivée est DEMANDÉE à la base, et non codée en dur.
+ *
+ * Depuis la migration 0053, `rendez_vous` refuse tout créneau qui n'est pas
+ * ouvert. Un horaire écrit en dur finissait par tomber un jour de fermeture :
+ * l'update était rejeté sans que rien ne le vérifie, aucune notification
+ * n'était créée, et le contrôle suivant lisait celle d'un ANCIEN rendez-vous
+ * en croyant l'avoir provoquée. Un test qui passe pour de mauvaises raisons
+ * est pire qu'un test qui échoue.
+ */
+const { data: creneaux } = await admin.rpc("creneau_ouvert_medecin", {
+  p_medecin_id: medecinId,
+  p_date: "2027-03-16",
+  p_heure: "11:00:00",
+});
+let nouvelleDate = "2027-03-16";
+let nouvelleHeure = "11:00";
+if (creneaux !== true) {
+  // Repli : on balaie les semaines suivantes jusqu'à trouver une ouverture.
+  for (let j = 1; j <= 60 && creneaux !== true; j++) {
+    const d = new Date(Date.UTC(2027, 2, 16 + j));
+    const iso = d.toISOString().slice(0, 10);
+    for (const h of ["09:00", "10:00", "11:00", "14:00", "15:00"]) {
+      const { data: ouvert } = await admin.rpc("creneau_ouvert_medecin", {
+        p_medecin_id: medecinId,
+        p_date: iso,
+        p_heure: `${h}:00`,
+      });
+      if (ouvert === true) {
+        nouvelleDate = iso;
+        nouvelleHeure = h;
+        j = 61;
+        break;
+      }
+    }
+  }
+}
+const { error: erreurReprog } = await medecin.client
   .from("rendez_vous")
-  .update({ date: "2027-03-16", heure: "11:00" })
+  .update({ date: nouvelleDate, heure: nouvelleHeure })
   .eq("id", rdv.id);
-const reprog = await notifsDe(patient.id, "rdv_reprogramme");
+verifier("le déplacement est accepté", !erreurReprog, erreurReprog?.message);
+// Filtré sur CE rendez-vous : sans cela on lit la notification d'un autre.
+const reprog = (await notifsDe(patient.id, "rdv_reprogramme")).filter(
+  (n) => n.source_id === rdv.id
+);
 verifier("reprogrammation → notification au patient", reprog.length > 0);
+const jourAttendu = Number(nouvelleDate.slice(8, 10));
+const moisAttendu = [
+  "janvier", "février", "mars", "avril", "mai", "juin",
+  "juillet", "août", "septembre", "octobre", "novembre", "décembre",
+][Number(nouvelleDate.slice(5, 7)) - 1];
 verifier(
   "elle annonce la nouvelle date",
-  /16 mars à 11:00/.test(reprog[0]?.corps ?? ""),
+  new RegExp(`${jourAttendu} ${moisAttendu} à ${nouvelleHeure}`).test(reprog[0]?.corps ?? ""),
   reprog[0]?.corps
 );
 

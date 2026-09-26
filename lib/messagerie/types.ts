@@ -25,6 +25,9 @@ export interface ConfigCanal {
   /** Expéditeur SMS, identifiant du numéro WhatsApp, ou adresse d’envoi e-mail. */
   expediteur: string | null;
   coutGnf: number;
+  /** SMTP uniquement : le serveur d’envoi et son port. Nuls ailleurs. */
+  hote?: string | null;
+  port?: number | null;
 }
 
 export interface ConfigMessagerie {
@@ -41,18 +44,40 @@ export interface ResultatFournisseur {
   erreur?: string;
 }
 
+export interface PieceJointe {
+  nom: string;
+  /** Contenu textuel du fichier (un `.ics` n'est rien d'autre que du texte). */
+  contenu: string;
+  /** Type MIME complet, méthode comprise pour un calendrier. */
+  type: string;
+}
+
+/**
+ * Ce qu'un e-mail porte en plus d'un SMS. Regroupé dans un objet plutôt
+ * qu'étalé en paramètres : `texte` reste la version de repli obligatoire, et
+ * tout ce qui est propre au courriel tient dans un seul argument qu'un
+ * fournisseur SMS se contente d'ignorer.
+ */
+export interface ExtrasEmail {
+  /** Version HTML. `texte` reste envoyé en parallèle, jamais à la place. */
+  html?: string;
+  pieces?: PieceJointe[];
+}
+
 export interface Fournisseur {
   nom: string;
   /**
-   * `sujet` n'a de sens que pour l'e-mail ; les fournisseurs SMS et WhatsApp
-   * l'ignorent. Le passer à tous plutôt que d'ouvrir une seconde interface
-   * garde un seul contrat à satisfaire pour brancher un agrégateur.
+   * `sujet` et `extras` n'ont de sens que pour l'e-mail ; les fournisseurs SMS
+   * et WhatsApp les ignorent. Les passer à tous plutôt que d'ouvrir une
+   * seconde interface garde un seul contrat à satisfaire pour brancher un
+   * agrégateur.
    */
   envoyer(
     destinataire: string,
     texte: string,
     config: ConfigCanal,
-    sujet?: string
+    sujet?: string,
+    extras?: ExtrasEmail
   ): Promise<ResultatFournisseur>;
 }
 
@@ -61,9 +86,20 @@ export function configDuCanal(canal: Canal, config: ConfigMessagerie): ConfigCan
   return canal === "sms" ? config.sms : canal === "email" ? config.email : config.whatsapp;
 }
 
-/** Une configuration incomplète ne doit jamais partir en mode réel. */
+/**
+ * Une configuration incomplète ne doit jamais partir en mode réel.
+ *
+ * Le SMTP est le seul fournisseur qui ne s'adresse pas par une URL : il se
+ * joint par un hôte et un port, et s'authentifie par un couple
+ * identifiant / mot de passe. Exiger `url` de lui refuserait toujours une
+ * configuration pourtant complète — d'où le branchement sur le FOURNISSEUR et
+ * pas seulement sur le canal.
+ */
 export function configComplete(canal: Canal, config: ConfigMessagerie): boolean {
   const c = configDuCanal(canal, config);
+  if (c.fournisseur === "smtp") {
+    return !!(c.hote && c.port && c.identifiant && c.cle && c.expediteur);
+  }
   // WhatsApp s'identifie par son numéro d'entreprise ; le SMS par le nom court
   // déclaré chez l'opérateur ; l'e-mail par son adresse d'expédition.
   return !!(c.url && c.cle && (canal === "whatsapp" ? c.identifiant : c.expediteur));
