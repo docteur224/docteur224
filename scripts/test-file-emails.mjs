@@ -37,6 +37,15 @@ const bdd = new Client({
 
 const q = async (sql, params = []) => (await bdd.query(sql, params)).rows;
 
+/*
+ * GARDE-FOU : ce script bascule le mode de la plateforme et envoie de vrais
+ * messages. Il refuse une base EN SERVICE, et rend toujours le mode tel qu il
+ * l a trouvé — le forcer à « simulé » couperait les envois en silence.
+ */
+let modeInitial = "simule";
+const rendreMode = () =>
+  q("update config_messagerie set mode = $1 where id = 1", [modeInitial]);
+
 const drainer = async () => {
   const r = await fetch(`${BASE}/api/emails/drainer`, {
     method: "POST",
@@ -52,6 +61,21 @@ const fileDu = (rdv) =>
 
 (async () => {
   await bdd.connect();
+
+  /*
+   * Le mode est relevé AVANT tout, et rendu tel quel à la fin. La version
+   * précédente le forçait à « simulé » en partant : lancée sur la plateforme
+   * en service, elle aurait coupé les envois sans que rien ne le signale.
+   */
+  [{ mode: modeInitial }] = await q("select mode from config_messagerie where id = 1");
+  if (modeInitial === "reel" && !process.argv.includes("--forcer")) {
+    console.error(
+      "✗ La plateforme est en mode RÉEL : ce test bascule la configuration et envoie\n" +
+      "  de vrais messages. Lancez-le sur une base de développement, ou ajoutez --forcer."
+    );
+    await bdd.end();
+    process.exit(1);
+  }
 
   const [{ id: patientId, email: emailPatient }] = await q(
     "select id, email from utilisateurs where email = 'patient1@test.docteur224.com'");
@@ -242,13 +266,13 @@ const fileDu = (rdv) =>
   verifier("l'envoi est journalisé comme les autres", journalise >= 1);
 
   console.log("\n13. Remise en état");
-  await q("update config_messagerie set mode = 'simule' where id = 1");
+  await rendreMode();
   await q("delete from emails_en_attente where source_id = $1", [rdv.id]);
   await q("delete from messages_envoyes where motif in ('test_drain','test_abandon')");
   await q("delete from notifications where source_id = $1", [rdv.id]);
   await q("delete from rendez_vous where id = $1", [rdv.id]);
   const [{ mode }] = await q("select mode from config_messagerie where id = 1");
-  verifier("mode revenu à « simulé »", mode === "simule", mode);
+  verifier("le mode est rendu tel qu il était", mode === modeInitial, mode);
   const [{ n: reste }] = await q(
     "select count(*)::int as n from emails_en_attente where source_id = $1", [rdv.id]);
   verifier("la file de test est vide", reste === 0);
@@ -258,7 +282,8 @@ const fileDu = (rdv) =>
   process.exit(ko === 0 ? 0 : 1);
 })().catch(async (e) => {
   console.error("\nERREUR:", e.message);
-  try { await bdd.query("update config_messagerie set mode = 'simule' where id = 1"); } catch {}
+  // Même en cas d'incident : on rend le mode trouvé, jamais « simulé » d'office.
+  try { await rendreMode(); } catch {}
   try { await bdd.end(); } catch {}
   process.exit(1);
 });

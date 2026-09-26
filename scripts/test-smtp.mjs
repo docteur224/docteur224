@@ -7,9 +7,9 @@
  *
  *   node scripts/test-smtp.mjs [destinataire]
  *
- * Le mode est basculé en « réel » le temps du test puis REMIS en « simulé » :
- * la mise en service se décide depuis /espace-admin/messagerie, pas par
- * l'exécution d'un script.
+ * Le mode est basculé le temps du test puis RENDU TEL QU'IL ÉTAIT. Le script
+ * refuse d'ailleurs de tourner sur une plateforme déjà en service : il écrit
+ * dans la configuration de messagerie et envoie de vrais messages.
  */
 import { execFileSync } from "node:child_process";
 import { readFileSync, rmSync } from "node:fs";
@@ -33,6 +33,46 @@ for (const [c, v] of Object.entries(env)) process.env[c] ??= v;
 process.env.EMAIL_TLS_NON_VERIFIE ??= "1";
 
 /*
+ * GARDE-FOU, placé avant tout le reste : ce script écrit dans la configuration
+ * de messagerie et envoie de vrais messages. Sur une plateforme EN SERVICE, il
+ * couperait les envois en partant — il remettait autrefois le mode sur
+ * « simulé » sans regarder celui qu'il avait trouvé. Il refuse donc une base
+ * dont le mode est « réel », sauf exigence explicite, et rend dans tous les
+ * cas le mode TEL QU'IL L'A TROUVÉ.
+ *
+ * Interrogé par `fetch` et non par le client Supabase, et avant la
+ * compilation : quitter alors que le client garde des connexions ouvertes fait
+ * échouer Node sur une assertion libuv sous Windows, et le refus sortait avec
+ * un code d'erreur trompeur.
+ */
+const reponse = await fetch(
+  `${env.NEXT_PUBLIC_SUPABASE_URL}/rest/v1/config_messagerie?id=eq.1&select=mode`,
+  {
+    headers: {
+      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
+    },
+  }
+);
+const modeInitial = (await reponse.json())[0]?.mode ?? "simule";
+if (modeInitial === "reel" && !process.argv.includes("--forcer")) {
+  console.error(
+    "✗ La plateforme est en mode RÉEL : ce test modifie la configuration et enverrait\n" +
+    "  de vrais messages. Lancez-le sur une base de développement, ou ajoutez --forcer\n" +
+    "  si vous savez ce que vous faites."
+  );
+  // Node 24 sous Windows fait suivre cette sortie d'une assertion libuv et
+  // rend 127 au lieu de 1. C'est un bruit de l'environnement, pas du script :
+  // le refus s'affiche et la configuration n'est pas touchée.
+  process.exit(1);
+}
+
+const { createClient } = await import("@supabase/supabase-js");
+const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+  auth: { persistSession: false },
+});
+
+/*
  * `lib/messagerie` est du TypeScript ; on le compile à chaque exécution plutôt
  * que de garder un dossier produit à côté. Sans cela le test finirait par
  * s'exécuter sur une version périmée de la bibliothèque et donnerait un feu
@@ -54,15 +94,10 @@ execFileSync(
   { cwd: path.join(ici, ".."), stdio: "inherit" }
 );
 
-const { createClient } = await import("@supabase/supabase-js");
 // La bibliothèque est compilée en CommonJS : `import()` la charge très bien,
 // mais range ses exports sous `default`.
 const messagerie = (await import(`file://${path.join(sortie, "index.js").replace(/\\/g, "/")}`)).default;
 const { envoyerMessage, lireConfigMessagerie, configComplete } = messagerie;
-
-const admin = createClient(env.NEXT_PUBLIC_SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
-  auth: { persistSession: false },
-});
 
 let ok = 0;
 let ko = 0;
@@ -200,7 +235,7 @@ const modeVers = (mode) => admin.from("config_messagerie").update({ mode }).eq("
     .select("mode, email_cle")
     .eq("id", 1)
     .maybeSingle();
-  verifier("mode revenu à « simulé »", fin?.mode === "simule", String(fin?.mode));
+  verifier("le mode est rendu tel qu il était", fin?.mode === modeInitial, String(fin?.mode));
   verifier("mot de passe restauré", fin?.email_cle === sauvegarde.email_cle);
 
   await admin.from("messages_envoyes").delete().in("motif", ["test_smtp", "test_smtp_refus"]);
