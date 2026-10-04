@@ -869,7 +869,8 @@ const LIBELLES_REGLAGES: Record<CleBool, string> = {
 export function useReglagesPlateforme(): {
   reglages: ReglagesPlateforme;
   basculer: (cle: CleBool, valeur: boolean) => Promise<void>;
-  enregistrerMaintenance: (message: string, jusqua: string) => Promise<void>;
+  /** Rend un message d'erreur, ou `null` si l'enregistrement a réussi. */
+  enregistrerMaintenance: (message: string, jusqua: string) => Promise<string | null>;
 } {
   const { donnees, recharger } = useRequete<ReglagesPlateforme>(
     {
@@ -908,13 +909,17 @@ export function useReglagesPlateforme(): {
   }
 
   /** Persiste le message et l'échéance du compte à rebours de la maintenance. */
-  async function enregistrerMaintenance(message: string, jusqua: string) {
-    await creerClientNavigateur()
+  async function enregistrerMaintenance(message: string, jusqua: string): Promise<string | null> {
+    const { error } = await creerClientNavigateur()
       .from("parametres_plateforme")
       .update({ message: message.trim() || null, jusqua: jusqua || null })
       .eq("cle", "mode_maintenance");
+    // Sans ce contrôle, un échec (colonne absente, droit refusé) passait pour
+    // un succès : l'écran affichait « Enregistré » mais rien n'était écrit.
+    if (error) return error.message;
     await tracerAudit("A modifié un réglage", "Message de maintenance");
     recharger();
+    return null;
   }
 
   return { reglages: donnees, basculer, enregistrerMaintenance };

@@ -98,20 +98,23 @@ function EditeurMaintenance({
 }: {
   messageInitial: string;
   jusquaInitial: string;
-  onEnregistrer: (message: string, jusqua: string) => Promise<void>;
+  onEnregistrer: (message: string, jusqua: string) => Promise<string | null>;
 }) {
   const [message, setMessage] = useState(messageInitial);
   const [jusqua, setJusqua] = useState(versInputLocal(jusquaInitial));
   const [enCours, setEnCours] = useState(false);
   const [enregistre, setEnregistre] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
 
   async function enregistrer() {
     setEnCours(true);
     setEnregistre(false);
+    setErreur(null);
     // L'input local est converti en ISO ; vide = pas de compte à rebours.
-    await onEnregistrer(message, jusqua ? new Date(jusqua).toISOString() : "");
+    const echec = await onEnregistrer(message, jusqua ? new Date(jusqua).toISOString() : "");
     setEnCours(false);
-    setEnregistre(true);
+    if (echec) setErreur(echec);
+    else setEnregistre(true);
   }
 
   return (
@@ -179,6 +182,7 @@ function EditeurMaintenance({
           Aperçu ↗
         </Link>
         {enregistre && <span className="text-[12.5px] font-bold text-green">✓ Enregistré</span>}
+        {erreur && <span className="text-[12.5px] font-bold text-red">✕ Échec : {erreur}</span>}
       </div>
     </div>
   );
