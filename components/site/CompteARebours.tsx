@@ -65,20 +65,20 @@ export default function CompteARebours({ jusqua }: { jusqua: string }) {
   const visibles = restant.j > 0 ? cases : cases.slice(1);
 
   return (
-    <div className="mt-7">
-      <p className="mb-3 text-[12.5px] font-bold uppercase tracking-[0.06em] text-muted">
+    <div className="mt-4 sm:mt-7">
+      <p className="mb-2 text-[11.5px] font-bold uppercase tracking-[0.06em] text-muted sm:mb-3 sm:text-[12.5px]">
         Retour estimé dans
       </p>
-      <div className="flex justify-center gap-2.5 sm:gap-3" role="timer" aria-live="off">
+      <div className="flex justify-center gap-2 sm:gap-3" role="timer" aria-live="off">
         {visibles.map((c) => (
           <div
             key={c.libelle}
-            className="min-w-[58px] rounded-2xl border border-line bg-bg px-3 py-2.5 sm:min-w-[68px]"
+            className="min-w-[52px] rounded-xl border border-line bg-bg px-2.5 py-2 sm:min-w-[68px] sm:rounded-2xl sm:py-2.5"
           >
-            <b className="block text-[26px] font-extrabold leading-none tabular-nums text-blue sm:text-[30px]">
+            <b className="block text-[22px] font-extrabold leading-none tabular-nums text-blue sm:text-[30px]">
               {String(c.valeur).padStart(2, "0")}
             </b>
-            <small className="mt-1 block text-[10.5px] font-bold uppercase tracking-[0.04em] text-muted">
+            <small className="mt-0.5 block text-[10px] font-bold uppercase tracking-[0.04em] text-muted sm:mt-1 sm:text-[10.5px]">
               {c.libelle}
             </small>
           </div>

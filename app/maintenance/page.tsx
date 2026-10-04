@@ -47,40 +47,40 @@ export default async function Maintenance() {
   const { message, jusqua } = await lireMaintenance();
 
   return (
-    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[linear-gradient(150deg,var(--blue)_0%,var(--blue-deep)_100%)] px-5 py-12 text-center">
+    <main className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[linear-gradient(150deg,var(--blue)_0%,var(--blue-deep)_100%)] px-4 py-6 text-center sm:px-5 sm:py-12">
       {/* Cercles décoratifs, repris du héros de l'accueil. */}
       <span aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
         <span className="absolute -right-24 -top-24 block h-[320px] w-[320px] rounded-full bg-[rgba(46,156,202,0.20)]" />
         <span className="absolute -bottom-32 -left-20 block h-72 w-72 rounded-full bg-[rgba(46,156,202,0.12)]" />
       </span>
 
-      <div className="relative w-full max-w-[520px] rounded-[26px] border border-white/10 bg-white p-7 shadow-[0_24px_70px_rgba(14,59,80,0.45)] sm:p-10">
-        <div className="mb-6 flex justify-center">
-          <Logo variante="compact" hauteur={76} lien={null} priority />
+      <div className="relative w-full max-w-[520px] rounded-[20px] border border-white/10 bg-white p-5 shadow-[0_24px_70px_rgba(14,59,80,0.45)] sm:rounded-[26px] sm:p-10">
+        <div className="mb-3 flex justify-center sm:mb-6">
+          <Logo variante="compact" hauteur={62} lien={null} priority />
         </div>
 
         <span
           aria-hidden
-          className="mx-auto mb-5 grid h-[66px] w-[66px] place-items-center rounded-2xl bg-teal-soft text-[30px]"
+          className="mx-auto mb-3 grid h-[52px] w-[52px] place-items-center rounded-2xl bg-teal-soft text-[26px] sm:mb-5 sm:h-[66px] sm:w-[66px] sm:text-[30px]"
         >
           🛠️
         </span>
 
-        <span className="inline-block rounded-full bg-amber-soft px-3.5 py-1.5 text-[12px] font-bold uppercase tracking-[0.05em] text-amber">
+        <span className="inline-block rounded-full bg-amber-soft px-3.5 py-1.5 text-[11.5px] font-bold uppercase tracking-[0.05em] text-amber sm:text-[12px]">
           Maintenance en cours
         </span>
 
-        <h1 className="mt-4 text-[24px] font-extrabold leading-tight tracking-[-0.4px] text-ink sm:text-[28px]">
+        <h1 className="mt-2.5 text-balance text-[22px] font-extrabold leading-tight tracking-[-0.4px] text-ink sm:mt-4 sm:text-[28px]">
           Nous revenons très vite
         </h1>
 
-        <p className="mx-auto mt-3 max-w-[420px] whitespace-pre-line text-[14.5px] leading-relaxed text-muted">
+        <p className="mx-auto mt-2 max-w-[420px] whitespace-pre-line text-[13.5px] leading-snug text-muted sm:mt-3 sm:text-[14.5px] sm:leading-relaxed">
           {message || MESSAGE_DEFAUT}
         </p>
 
         {jusqua && <CompteARebours jusqua={jusqua} />}
 
-        <div className="mt-8 border-t border-line pt-5 text-[12.5px] leading-relaxed text-muted">
+        <div className="mt-5 border-t border-line pt-4 text-[12px] leading-snug text-muted sm:mt-8 sm:pt-5 sm:text-[12.5px] sm:leading-relaxed">
           Besoin d’aide urgente ? Écrivez-nous à{" "}
           <a href="mailto:contact@docteur224.com" className="font-bold text-teal hover:underline">
             contact@docteur224.com
