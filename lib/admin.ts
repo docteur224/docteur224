@@ -846,15 +846,21 @@ export interface ReglagesPlateforme {
   inscriptionsOuvertes: boolean;
   paiementEnLigne: boolean;
   modeMaintenance: boolean;
+  /** Message affiché aux patients sur la page de maintenance, vide = texte par défaut. */
+  maintenanceMessage: string;
+  /** Échéance ISO du compte à rebours, vide = pas de compte à rebours. */
+  maintenanceJusqua: string;
 }
 
-const CLES_REGLAGES: Record<keyof ReglagesPlateforme, string> = {
+type CleBool = "inscriptionsOuvertes" | "paiementEnLigne" | "modeMaintenance";
+
+const CLES_REGLAGES: Record<CleBool, string> = {
   inscriptionsOuvertes: "inscriptions_ouvertes",
   paiementEnLigne: "paiement_en_ligne",
   modeMaintenance: "mode_maintenance",
 };
 
-const LIBELLES_REGLAGES: Record<keyof ReglagesPlateforme, string> = {
+const LIBELLES_REGLAGES: Record<CleBool, string> = {
   inscriptionsOuvertes: "Inscriptions médecins ouvertes",
   paiementEnLigne: "Paiement en ligne",
   modeMaintenance: "Mode maintenance",
@@ -862,22 +868,37 @@ const LIBELLES_REGLAGES: Record<keyof ReglagesPlateforme, string> = {
 
 export function useReglagesPlateforme(): {
   reglages: ReglagesPlateforme;
-  basculer: (cle: keyof ReglagesPlateforme, valeur: boolean) => Promise<void>;
+  basculer: (cle: CleBool, valeur: boolean) => Promise<void>;
+  enregistrerMaintenance: (message: string, jusqua: string) => Promise<void>;
 } {
   const { donnees, recharger } = useRequete<ReglagesPlateforme>(
-    { inscriptionsOuvertes: true, paiementEnLigne: true, modeMaintenance: false },
+    {
+      inscriptionsOuvertes: true,
+      paiementEnLigne: true,
+      modeMaintenance: false,
+      maintenanceMessage: "",
+      maintenanceJusqua: "",
+    },
     async () => {
-      const { data } = await creerClientNavigateur().from("parametres_plateforme").select("cle, valeur");
-      const map = new Map((data ?? []).map((r) => [r.cle, r.valeur]));
+      // `select("*")` plutôt que la liste des colonnes : si le déploiement
+      // Vercel précède l'application de la migration 0062, les colonnes
+      // message/jusqua peuvent manquer un court instant — on lit alors ce
+      // qui existe sans faire échouer tout l'écran de réglages.
+      const { data } = await creerClientNavigateur().from("parametres_plateforme").select("*");
+      const lignes = (data ?? []) as { cle: string; valeur: boolean; message?: string | null; jusqua?: string | null }[];
+      const map = new Map(lignes.map((r) => [r.cle, r]));
+      const maintenance = map.get("mode_maintenance");
       return {
-        inscriptionsOuvertes: map.get("inscriptions_ouvertes") ?? true,
-        paiementEnLigne: map.get("paiement_en_ligne") ?? true,
-        modeMaintenance: map.get("mode_maintenance") ?? false,
+        inscriptionsOuvertes: map.get("inscriptions_ouvertes")?.valeur ?? true,
+        paiementEnLigne: map.get("paiement_en_ligne")?.valeur ?? true,
+        modeMaintenance: maintenance?.valeur ?? false,
+        maintenanceMessage: maintenance?.message ?? "",
+        maintenanceJusqua: maintenance?.jusqua ?? "",
       };
     }
   );
 
-  async function basculer(cle: keyof ReglagesPlateforme, valeur: boolean) {
+  async function basculer(cle: CleBool, valeur: boolean) {
     await creerClientNavigateur()
       .from("parametres_plateforme")
       .update({ valeur })
@@ -886,7 +907,17 @@ export function useReglagesPlateforme(): {
     recharger();
   }
 
-  return { reglages: donnees, basculer };
+  /** Persiste le message et l'échéance du compte à rebours de la maintenance. */
+  async function enregistrerMaintenance(message: string, jusqua: string) {
+    await creerClientNavigateur()
+      .from("parametres_plateforme")
+      .update({ message: message.trim() || null, jusqua: jusqua || null })
+      .eq("cle", "mode_maintenance");
+    await tracerAudit("A modifié un réglage", "Message de maintenance");
+    recharger();
+  }
+
+  return { reglages: donnees, basculer, enregistrerMaintenance };
 }
 
 /* ===== Référentiels (spécialités, villes, assurances) ===== */

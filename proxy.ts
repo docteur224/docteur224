@@ -38,6 +38,52 @@ const ESPACES_PRIVES: { prefixe: string; connexion: string }[] = [
   { prefixe: "/mes-rendez-vous", connexion: "/connexion" },
 ];
 
+/*
+ * Mode maintenance — ce qui RESTE ouvert quand l'interrupteur est actif.
+ *
+ * La maintenance ferme le site aux PATIENTS ; l'équipe doit continuer à
+ * travailler et, surtout, pouvoir rouvrir la plateforme. Restent donc
+ * accessibles les espaces professionnels, les deux portes de connexion, les
+ * routes /api (les espaces en dépendent, et chacune relit ses propres droits),
+ * les liens de désinscription des e-mails déjà partis, et la page /maintenance
+ * elle-même (sinon : boucle de réécriture).
+ *
+ * Le gardiennage se fait par CHEMIN : lire le rôle à chaque requête est
+ * précisément ce que ce proxy s'interdit (voir l'en-tête). Patients et
+ * professionnels se distinguent déjà par l'URL qu'ils visitent.
+ */
+const MAINTENANCE_OUVERTS = [
+  "/espace-admin",
+  "/espace-medecin",
+  "/espace-assistant",
+  "/espace-etablissement",
+  "/connexion",
+  "/desinscription",
+  "/maintenance",
+  "/api",
+];
+
+function maintenanceOuvert(chemin: string): boolean {
+  return MAINTENANCE_OUVERTS.some((p) => chemin === p || chemin.startsWith(p + "/"));
+}
+
+async function maintenanceActive(
+  supabase: ReturnType<typeof createServerClient>
+): Promise<boolean> {
+  // Fail-open : une lecture qui échoue laisse passer. Une maintenance n'a pas
+  // à transformer un hoquet de base en panne totale du site.
+  try {
+    const { data } = await supabase
+      .from("parametres_plateforme")
+      .select("valeur")
+      .eq("cle", "mode_maintenance")
+      .maybeSingle();
+    return data?.valeur === true;
+  } catch {
+    return false;
+  }
+}
+
 export async function proxy(request: NextRequest) {
   let reponse = NextResponse.next({ request });
 
@@ -66,6 +112,24 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const chemin = request.nextUrl.pathname;
+
+  // Mode maintenance — on ne consulte le drapeau que pour les chemins
+  // concernés (page publique à fermer, ou /maintenance à rouvrir), jamais sur
+  // les espaces pros ni l'API, pour ne pas leur coller une lecture de plus.
+  const ouvert = maintenanceOuvert(chemin);
+  if (!ouvert || chemin === "/maintenance") {
+    const active = await maintenanceActive(supabase);
+    if (active && !ouvert) {
+      // Réécriture (pas redirection) : l'URL demandée est conservée, un simple
+      // rafraîchissement rouvre la vraie page une fois la maintenance levée.
+      return NextResponse.rewrite(new URL("/maintenance", request.url));
+    }
+    if (!active && chemin === "/maintenance") {
+      // Hors maintenance, la page ne doit pas rester une impasse accessible.
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+  }
+
   const espace = ESPACES_PRIVES.find((e) => chemin.startsWith(e.prefixe));
   if (!user && espace && chemin !== espace.connexion) {
     const cible = request.nextUrl.clone();
