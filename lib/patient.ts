@@ -484,7 +484,7 @@ export interface RendezVousPatient {
   motif: string;
   pourQui: string;
   procheId?: string;
-  statut: "en_attente" | "confirme" | "annule" | "honore";
+  statut: "en_attente" | "confirme" | "annule" | "honore" | "absent";
   /** Où se tient la consultation (migration 0024). */
   lieu: "cabinet" | "domicile";
   /** Adresse de la visite quand  vaut « domicile ». */

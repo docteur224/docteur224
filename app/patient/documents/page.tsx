@@ -96,7 +96,13 @@ export default function MesDocuments() {
           {iconeType(d.type)}
         </span>
         <div className="min-w-0 flex-1">
-          <b className="block text-sm font-extrabold">{d.titre}</b>
+          <b
+            className={`block text-sm font-extrabold ${
+              d.annuleLe ? "text-muted line-through" : ""
+            }`}
+          >
+            {d.titre}
+          </b>
           <div className="text-[11.5px] text-muted">
             {libelleType(d.type)} ·{" "}
             {d.origine === "medecin"
@@ -107,6 +113,11 @@ export default function MesDocuments() {
           {d.pourQui !== "Moi-même" && (
             <span className="mt-1 inline-block rounded bg-teal-soft px-1.5 py-0.5 text-[10.5px] font-bold text-blue">
               pour {d.pourQui}
+            </span>
+          )}
+          {d.version > 1 && !d.annuleLe && (
+            <span className="mt-1 ml-1 inline-block rounded bg-amber-soft px-1.5 py-0.5 text-[10.5px] font-bold text-amber">
+              corrigée · v{d.version}
             </span>
           )}
         </div>
@@ -120,6 +131,16 @@ export default function MesDocuments() {
           </button>
         )}
       </div>
+
+      {/* Une ordonnance annulée reste lisible — on doit pouvoir savoir ce
+          qui avait été prescrit — mais elle ne doit jamais passer pour
+          valable au comptoir d'une pharmacie. */}
+      {d.annuleLe && (
+        <p className="mt-2 rounded-[10px] border border-[#F3C9C2] bg-red-soft px-3 py-2 text-[12px] font-bold text-red">
+          Annulée le {formatDateCourte(d.annuleLe.slice(0, 10))} par {d.medecinNom} — motif :{" "}
+          {d.motifAnnulation}. Ce document n’est plus valable.
+        </p>
+      )}
 
       {d.contenu && (
         <>

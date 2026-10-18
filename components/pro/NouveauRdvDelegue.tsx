@@ -33,6 +33,7 @@ export default function NouveauRdvDelegue({
   lienRetour,
   dateInitiale,
   heureInitiale,
+  patientInitial,
 }: {
   reservePar: "medecin" | "assistant";
   lienRetour: string;
@@ -41,13 +42,26 @@ export default function NouveauRdvDelegue({
      la case qu'il avait sous les yeux. */
   dateInitiale?: string;
   heureInitiale?: string;
+  /* Patient désigné depuis sa fiche (« c-<uuid> », « p-<uuid> »,
+     « s-<uuid> ») : on ouvre le formulaire sur lui plutôt que de faire
+     retrouver dans la liste celui dont on vient de quitter le dossier. */
+  patientInitial?: string;
 }) {
   const { medecin } = useContextePro();
   const { patients, recharger: rechargerPatients } = usePatientsCabinet(medecin?.id);
   const { creneauxJour, recharger: rechargerAgenda } = useAgenda(medecin?.id);
 
   const [recherche, setRecherche] = useState("");
-  const [patientChoisi, setPatientChoisi] = useState<PatientCabinet | null>(null);
+  /* Le choix se DÉDUIT : tant que l'utilisateur n'a rien touché, c'est le
+     patient passé dans l'URL qui vaut — dès qu'il choisit ou désélectionne,
+     c'est son geste. Un effet qui poserait la sélection à l'arrivée de la
+     liste rendrait le bouton « Changer » inopérant, et le linter React
+     interdit de toute façon ce setState-là. */
+  const [choix, setChoix] = useState<{ patient: PatientCabinet | null } | null>(null);
+  const patientChoisi = choix
+    ? choix.patient
+    : (patientInitial ? patients.find((p) => p.id === patientInitial) ?? null : null);
+  const setPatientChoisi = (patient: PatientCabinet | null) => setChoix({ patient });
   const [fiche, setFiche] = useState(FICHE_VIDE);
   /* Le créneau désigné depuis l'agenda peut pointer une case écoulée —
      l'agenda, lui, se consulte librement dans le passé. On ne le pré-remplit

@@ -144,16 +144,40 @@ const admin = await clientPour("admin@docteur224.com", "alpha2308");
   test("Patient2 → proches d'autrui : refusé", etrangers.length === 0, `${data?.length} visibles, ${etrangers.length} d'autrui`);
 }
 // 17. Écriture réelle : patient1 réserve un RDV puis l'annule (nettoyé ensuite)
+//
+//     La date était écrite en dur (2026-08-01). Une fois ce jour passé, le
+//     verrou de créneau (migration 0053) refusait l'insertion et le test
+//     restait rouge sans rien signaler de réel. On cherche donc un créneau
+//     RÉELLEMENT ouvert dans les semaines qui viennent, comme le ferait un
+//     patient devant l'agenda.
 {
   const uid = (await patient.auth.getUser()).data.user.id;
   const medecinsPublics = await anon.from("medecins").select("id").limit(1);
-  const { data: rdv, error } = await patient.from("rendez_vous").insert({
-    medecin_id: medecinsPublics.data[0].id, date: "2026-08-01", heure: "10:30",
-    reserve_par: uid, reserve_par_role: "patient", patient_id: uid,
-    motif: "Test RLS écriture", source: "en_ligne",
-  }).select().single();
+  const medecinId = medecinsPublics.data[0].id;
+
+  let rdv = null;
+  let error = null;
+  for (let dans = 1; dans <= 30 && !rdv; dans++) {
+    const d = new Date();
+    d.setDate(d.getDate() + dans);
+    const date = d.toISOString().slice(0, 10);
+    for (const heure of ["10:30", "09:00", "15:00"]) {
+      const essai = await patient.from("rendez_vous").insert({
+        medecin_id: medecinId, date, heure,
+        reserve_par: uid, reserve_par_role: "patient", patient_id: uid,
+        motif: "Test RLS écriture", source: "en_ligne",
+      }).select().single();
+      error = essai.error;
+      if (essai.data) { rdv = essai.data; break; }
+    }
+  }
+
   const { data: annule } = await patient.from("rendez_vous").update({ statut: "annule" }).eq("id", rdv?.id).select();
-  test("Patient → réserver puis annuler son RDV : autorisé", !error && annule?.length === 1);
+  test(
+    "Patient → réserver puis annuler son RDV : autorisé",
+    !!rdv && annule?.length === 1,
+    rdv ? `${rdv.date} ${String(rdv.heure).slice(0, 5)}` : error?.message?.slice(0, 60)
+  );
   if (rdv) await admin.from("rendez_vous").delete().eq("id", rdv.id);
 }
 // 18. Un professionnel ne s'octroie pas son propre abonnement (migration 0019).

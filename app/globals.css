@@ -22,6 +22,11 @@
   --amber-soft: #fbefdf;
   --red: #c0392b;
   --red-soft: #fbe7e4;
+  /* Ajout : « à qualifier » (rendez-vous passé, pas encore tranché) devait se
+     distinguer d’« en attente », déjà en ambre. Deux états d’attente de même
+     teinte se confondent justement là où il faut agir. */
+  --orange: #9a3412;
+  --orange-soft: #ffedd5;
   --shadow: 0 14px 40px rgba(16, 59, 80, 0.12);
 }
 
@@ -41,6 +46,8 @@
   --color-amber-soft: var(--amber-soft);
   --color-red: var(--red);
   --color-red-soft: var(--red-soft);
+  --color-orange: var(--orange);
+  --color-orange-soft: var(--orange-soft);
   --font-sans: var(--font-jakarta);
   --shadow-card: var(--shadow);
 }

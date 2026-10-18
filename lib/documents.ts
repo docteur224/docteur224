@@ -54,6 +54,16 @@ export interface DocumentPatient {
   procheId: string | null;
   patientId: string | null;
   partages: PartageDocument[];
+  /* ---- Versions et annulation (migration 0063) ---- */
+  /** 1 pour la pièce d’origine, 2, 3… pour chaque correction. */
+  version: number;
+  /** Racine de la chaîne de corrections ; null quand c’est la v1 elle-même. */
+  documentParentId: string | null;
+  /** Version suivante. Null = version en cours, la seule que listent les écrans. */
+  remplaceParId: string | null;
+  /** Annulée : la pièce reste lisible, barrée, et ne vaut plus rien. */
+  annuleLe: string | null;
+  motifAnnulation: string | null;
 }
 
 interface LigneDocument {
@@ -69,6 +79,11 @@ interface LigneDocument {
   medecin_id: string | null;
   patient_id: string | null;
   proche_id: string | null;
+  version: number | null;
+  document_parent_id: string | null;
+  remplace_par_id: string | null;
+  annule_le: string | null;
+  motif_annulation: string | null;
   medecins: {
     civilite: string | null;
     utilisateurs: { nom: string | null; prenom: string | null } | null;
@@ -96,6 +111,7 @@ const NOM_MEDECIN = `civilite, utilisateurs ( nom, prenom )`;
 const SELECTION = `
   id, type, titre, contenu, fichier_path, fichier_nom, cree_le, origine, depose_par,
   medecin_id, patient_id, proche_id,
+  version, document_parent_id, remplace_par_id, annule_le, motif_annulation,
   medecins!documents_patient_medecin_id_fkey ( ${NOM_MEDECIN} ),
   proches ( nom, prenom ),
   partages_document ( medecin_id, cree_le, medecins ( ${NOM_MEDECIN} ) )
@@ -126,16 +142,31 @@ const versDocument = (l: LigneDocument): DocumentPatient => ({
     medecinNom: nomDe(p.medecins) || "Médecin",
     creeLe: p.cree_le,
   })),
+  version: l.version ?? 1,
+  documentParentId: l.document_parent_id,
+  remplaceParId: l.remplace_par_id,
+  annuleLe: l.annule_le,
+  motifAnnulation: l.motif_annulation,
 });
 
 /**
  * Documents visibles par l'utilisateur connecté (la RLS filtre le reste).
  * `pour` restreint au dossier d'un patient précis, pour l'espace médecin.
+ *
+ * Par défaut, seules les versions EN COURS remontent. C'est le défaut sûr :
+ * depuis la migration 0063 une correction laisse la version précédente en
+ * base, et un écran qui oublierait de l'écarter montrerait deux ordonnances
+ * là où il n'y en a qu'une — la périmée au-dessus, puisqu'elle est plus
+ * ancienne. Seul l'aperçu de la fiche médecin demande la chaîne entière,
+ * pour laisser relire ce que le patient a emporté.
  */
-export function useMesDocuments(pour?: {
-  patientId?: string;
-  procheId?: string;
-}): {
+export function useMesDocuments(
+  pour?: {
+    patientId?: string;
+    procheId?: string;
+  },
+  options?: { toutesVersions?: boolean }
+): {
   documents: DocumentPatient[];
   chargement: boolean;
   recharger: () => void;
@@ -144,6 +175,7 @@ export function useMesDocuments(pour?: {
   const [chargement, setChargement] = useState(true);
   const [version, setVersion] = useState(0);
   const filtre = `${pour?.patientId ?? ""}|${pour?.procheId ?? ""}`;
+  const toutesVersions = !!options?.toutesVersions;
 
   useEffect(() => {
     let actif = true;
@@ -154,6 +186,7 @@ export function useMesDocuments(pour?: {
     const [patientId, procheId] = filtre.split("|");
     if (patientId) requete = requete.eq("patient_id", patientId);
     if (procheId) requete = requete.eq("proche_id", procheId);
+    if (!toutesVersions) requete = requete.is("remplace_par_id", null);
 
     requete.then(({ data }) => {
       if (!actif) return;
@@ -163,7 +196,7 @@ export function useMesDocuments(pour?: {
     return () => {
       actif = false;
     };
-  }, [version, filtre]);
+  }, [version, filtre, toutesVersions]);
 
   return { documents, chargement, recharger: () => setVersion((v) => v + 1) };
 }
@@ -343,25 +376,30 @@ export async function deposerDocument(
   return {};
 }
 
+/* ===== Corriger, annuler : une pièce remise ne se supprime jamais ===== */
+
 /**
- * Correction d'un document déjà remis. Réservé au déposant par la policy
- * `upd_docs` : un médecin ne réécrit pas la pièce d'un patient, et
- * réciproquement. Un nouveau fichier remplace l'ancien, qui est supprimé —
- * sinon chaque correction laisserait une pièce jointe orpheline dans le
- * bucket, toujours facturée et toujours lisible par son chemin.
+ * Correction d'un document déjà remis : une NOUVELLE version, pas une
+ * réécriture.
+ *
+ * C'était un UPDATE en place jusqu'à la migration 0063, et c'était un
+ * problème de fond : le patient est peut-être déjà passé en pharmacie avec
+ * la v1. Réécrire la ligne effaçait ce qu'il avait présenté au comptoir, et
+ * avec, la seule trace de ce qui avait été prescrit ce jour-là. La base crée
+ * désormais une v2 liée à la v1, qui reste consultable.
+ *
+ * L'ancien fichier n'est donc PAS retiré du bucket : il appartient maintenant
+ * à la version précédente, qu'on doit pouvoir rouvrir.
  */
-export async function modifierDocument(
+export async function corrigerDocument(
   id: string,
   d: {
-    type: TypeDocument;
     titre: string;
     contenu: string;
-    /** Nouveau fichier ; `null` = on garde l'existant. */
+    /** Nouveau fichier ; sans lui, la version reprend celui de la précédente. */
     fichier?: File | null;
-    /** Chemin du fichier actuel, à retirer s'il est remplacé. */
     fichierActuel?: string | null;
-    /** Retirer la pièce jointe sans la remplacer. */
-    retirerFichier?: boolean;
+    fichierNomActuel?: string | null;
   }
 ): Promise<{ erreur?: string }> {
   if (!d.titre.trim()) return { erreur: "Donnez un titre au document." };
@@ -369,41 +407,56 @@ export async function modifierDocument(
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return { erreur: "Session expirée — reconnectez-vous." };
 
-  const champs: Record<string, unknown> = {
-    type: d.type,
-    titre: d.titre.trim(),
-    contenu: d.contenu.trim() || null,
-  };
-
-  let ancien: string | null = null;
+  let path = d.fichierActuel ?? null;
+  let nom = d.fichierNomActuel ?? null;
   if (d.fichier) {
     const envoi = await televerser(d.fichier, auth.user.id);
     if (envoi.erreur) return { erreur: envoi.erreur };
-    champs.fichier_path = envoi.path;
-    champs.fichier_nom = envoi.nom;
-    ancien = d.fichierActuel ?? null;
-  } else if (d.retirerFichier) {
-    if (!d.contenu.trim()) {
-      return { erreur: "Un document doit garder du texte ou un fichier." };
-    }
-    champs.fichier_path = null;
-    champs.fichier_nom = null;
-    ancien = d.fichierActuel ?? null;
+    path = envoi.path!;
+    nom = envoi.nom!;
+  }
+  if (!d.contenu.trim() && !path) {
+    return { erreur: "Une version doit garder du texte ou un fichier." };
   }
 
-  const { data, error } = await supabase
-    .from("documents_patient")
-    .update(champs)
-    .eq("id", id)
-    .select("id");
-  if (error) return { erreur: messageErreur(error.message) };
-  // Un update RLS-bloqué ne remonte pas d'erreur, il ne touche aucune ligne.
-  if (!data?.length) return { erreur: "Vous ne pouvez modifier que vos propres dépôts." };
-
-  if (ancien) await supabase.storage.from(BUCKET).remove([ancien]);
-  return {};
+  const { error } = await supabase.rpc("corriger_document", {
+    p_document_id: id,
+    p_titre: d.titre.trim(),
+    p_contenu: d.contenu.trim() || null,
+    p_fichier_path: path,
+    p_fichier_nom: nom,
+  });
+  return error ? { erreur: messageErreur(error.message) } : {};
 }
 
+/** Motifs d'annulation proposés. « Autre » ouvre un champ libre. */
+export const MOTIFS_ANNULATION_DOCUMENT = [
+  "Erreur de prescription",
+  "Changement de traitement",
+  "Doublon",
+  "Autre",
+] as const;
+
+/**
+ * Annulation d'une pièce remise. Elle reste au dossier, barrée, avec son
+ * motif : le patient et la pharmacie doivent pouvoir constater qu'elle ne
+ * vaut plus rien — ce qu'une suppression ne dit à personne.
+ */
+export async function annulerDocument(id: string, motif: string): Promise<{ erreur?: string }> {
+  const propre = motif.trim();
+  if (!propre) return { erreur: "Indiquez le motif de l’annulation." };
+  const { error } = await creerClientNavigateur().rpc("annuler_document", {
+    p_document_id: id,
+    p_motif: propre,
+  });
+  return error ? { erreur: messageErreur(error.message) } : {};
+}
+
+/**
+ * Suppression définitive — réservée au PATIENT, pour ce qu'il a lui-même
+ * envoyé. Depuis la migration 0063 la base refuse la suppression d'une pièce
+ * d'origine « medecin » : celle-là s'annule (voir `annulerDocument`).
+ */
 export async function supprimerDocument(
   id: string,
   fichierPath: string | null

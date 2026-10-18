@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Icone from "@/components/site/Icone";
 import {
+  corrigerDocument,
   deposerDocument,
   genererPdf,
-  modifierDocument,
+  libelleType,
   TYPES_DOCUMENT,
   type DocumentPatient,
   type TypeDocument,
@@ -22,17 +24,29 @@ import {
  * Un seul rendu pour web et mobile, contrairement au reste de l'application :
  * le formulaire déplié dans la ligne débordait de l'écran sur téléphone. Ici
  * c'est une feuille plein écran en dessous de md, une carte centrée au-dessus.
+ *
+ * Depuis la migration 0063, CORRIGER ne réécrit plus la ligne : la base crée
+ * une version suivante et conserve la précédente. Deux conséquences visibles
+ * ici — le type ne se change plus (une ordonnance corrigée reste une
+ * ordonnance, sinon la chaîne de versions n'a plus de sens), et le PDF est
+ * recomposé à partir du texte corrigé, sans quoi la v2 porterait encore le
+ * fichier de la v1.
  */
 
 type Mode = "generer" | "fichier";
 
 const VIDE = { type: "ordonnance" as TypeDocument, titre: "", contenu: "" };
 
+/** Une pièce rédigée en clair se recompose ; un scan se remplace. */
+const modeInitial = (doc?: DocumentPatient): Mode =>
+  !doc ? "generer" : doc.contenu ? "generer" : "fichier";
+
 export default function DeposerDocument({
   cle,
   nomPatient,
   document: aModifier,
   declencheur,
+  classeDeclencheur,
   apres,
 }: {
   /** « c-<uuid> » ou « p-<uuid> », tel que fourni par la liste des patients. */
@@ -42,11 +56,13 @@ export default function DeposerDocument({
   document?: DocumentPatient;
   /** Libellé du bouton d'ouverture. */
   declencheur?: string;
-  apres?: () => void;
+  /** Classes du bouton d'ouverture, pour l'aligner sur la rangée d'actions. */
+  classeDeclencheur?: string;
+  apres?: (message: string) => void;
 }) {
   const enCorrection = !!aModifier;
   const [ouvert, setOuvert] = useState(false);
-  const [mode, setMode] = useState<Mode>(enCorrection ? "fichier" : "generer");
+  const [mode, setMode] = useState<Mode>(modeInitial(aModifier));
   const [champs, setChamps] = useState(VIDE);
   const [remplacerFichier, setRemplacerFichier] = useState(false);
   const [enCours, setEnCours] = useState(false);
@@ -81,7 +97,7 @@ export default function DeposerDocument({
           }
         : VIDE
     );
-    setMode(enCorrection ? "fichier" : "generer");
+    setMode(modeInitial(aModifier));
     setRemplacerFichier(false);
     setMessage(null);
     if (fichierRef.current) fichierRef.current.value = "";
@@ -111,7 +127,7 @@ export default function DeposerDocument({
     setApercuEnCours(false);
     if (res.erreur || !res.fichier) {
       onglet?.close();
-      setMessage({ texte: `⚠️ ${res.erreur ?? "Aperçu impossible."}`, erreur: true });
+      setMessage({ texte: res.erreur ?? "Aperçu impossible.", erreur: true });
       return;
     }
     const url = URL.createObjectURL(res.fichier);
@@ -129,35 +145,44 @@ export default function DeposerDocument({
       const res = await genererPdf({ ...destinataire, ...champs });
       if (res.erreur || !res.fichier) {
         setEnCours(false);
-        setMessage({ texte: `⚠️ ${res.erreur ?? "Génération impossible."}`, erreur: true });
+          setMessage({ texte: res.erreur ?? "Génération impossible.", erreur: true });
         return;
       }
       fichier = res.fichier;
     }
 
     const res = aModifier
-      ? await modifierDocument(aModifier.id, {
-          ...champs,
+      ? await corrigerDocument(aModifier.id, {
+          titre: champs.titre,
+          contenu: champs.contenu,
           fichier,
+          // Sans nouveau fichier, la version reprend celui de la précédente :
+          // l'ancien n'est PAS retiré du bucket, il appartient maintenant à
+          // la v(n-1), qu'on doit pouvoir rouvrir.
           fichierActuel: aModifier.fichierPath,
+          fichierNomActuel: aModifier.fichierNom,
         })
       : await deposerDocument({ ...destinataire, ...champs, fichier, origine: "medecin" });
 
     setEnCours(false);
     if (res.erreur) {
-      setMessage({ texte: `⚠️ ${res.erreur}`, erreur: true });
+      setMessage({ texte: res.erreur, erreur: true });
       return;
     }
     if (fichierRef.current) fichierRef.current.value = "";
     if (enCorrection) {
-      setMessage({ texte: "✓ Document corrigé.", erreur: false });
-    } else {
-      setChamps(VIDE);
-      // Le panneau reste ouvert sur la confirmation : refermer aussitôt
-      // laisserait le médecin sans preuve que le document est bien parti.
-      setMessage({ texte: `✓ Document remis à ${nomPatient}.`, erreur: false });
+      const version = (aModifier?.version ?? 1) + 1;
+      const texte = `Version ${version} créée — la précédente reste au dossier`;
+      setMessage({ texte, erreur: false });
+      apres?.(texte);
+      return;
     }
-    apres?.();
+    setChamps(VIDE);
+    // Le panneau reste ouvert sur la confirmation : refermer aussitôt
+    // laisserait le médecin sans preuve que le document est bien parti.
+    const texte = `Document remis à ${nomPatient}`;
+    setMessage({ texte, erreur: false });
+    apres?.(texte);
   }
 
   const etiquette = "mb-1.5 text-[12.5px] font-bold";
@@ -170,9 +195,10 @@ export default function DeposerDocument({
         type="button"
         onClick={ouvrir}
         className={
-          enCorrection
+          classeDeclencheur ??
+          (enCorrection
             ? "rounded-[9px] border-[1.5px] border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-blue transition-colors hover:bg-bg"
-            : "rounded-[9px] bg-teal px-3 py-1.5 text-[11.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+            : "rounded-[9px] bg-teal px-3 py-1.5 text-[11.5px] font-bold text-white transition-colors hover:bg-[#2790bc]")
         }
       >
         {declencheur ?? (enCorrection ? "Corriger" : "+ Document")}
@@ -199,51 +225,61 @@ export default function DeposerDocument({
                 type="button"
                 onClick={fermer}
                 aria-label="Fermer"
-                className="flex-none rounded-lg px-2 py-1 text-lg text-muted hover:bg-bg"
+                className="grid h-11 w-11 flex-none place-items-center rounded-lg text-muted hover:bg-bg"
               >
-                ✕
+                <Icone nom="croix" taille={18} epaisseur={2.2} />
               </button>
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto p-4 md:overflow-visible">
-              {!enCorrection && (
-                <div role="radiogroup" aria-label="Comment produire le document" className="mb-3 flex gap-2">
-                  {(
-                    [
-                      ["generer", "🖨️ Générer"],
-                      ["fichier", "📎 Joindre un fichier"],
-                    ] as [Mode, string][]
-                  ).map(([valeur, libelle]) => (
-                    <button
-                      key={valeur}
-                      type="button"
-                      role="radio"
-                      aria-checked={mode === valeur}
-                      onClick={() => changerMode(valeur)}
-                      className={`flex-1 rounded-[11px] border-[1.5px] px-2 py-2 text-[12px] font-bold transition-colors ${
-                        mode === valeur
-                          ? "border-teal bg-teal-soft text-blue"
-                          : "border-line bg-white text-muted hover:bg-bg"
-                      }`}
-                    >
-                      {libelle}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              <div className={etiquette}>Type</div>
-              <select
-                className={champ}
-                value={champs.type}
-                onChange={(e) => setChamps({ ...champs, type: e.target.value as TypeDocument })}
-              >
-                {TYPES_DOCUMENT.map((t) => (
-                  <option key={t.valeur} value={t.valeur}>
-                    {t.icone} {t.libelle}
-                  </option>
+              <div role="radiogroup" aria-label="Comment produire le document" className="mb-3 flex gap-2">
+                {(
+                  [
+                    ["generer", "imprimante", "Générer"],
+                    ["fichier", "partager", "Joindre un fichier"],
+                  ] as [Mode, "imprimante" | "partager", string][]
+                ).map(([valeur, icone, libelle]) => (
+                  <button
+                    key={valeur}
+                    type="button"
+                    role="radio"
+                    aria-checked={mode === valeur}
+                    onClick={() => changerMode(valeur)}
+                    className={`flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[11px] border-[1.5px] px-2 text-[12px] font-bold transition-colors ${
+                      mode === valeur
+                        ? "border-teal bg-teal-soft text-blue"
+                        : "border-line bg-white text-muted hover:bg-bg"
+                    }`}
+                  >
+                    <Icone nom={icone} taille={14} />
+                    {libelle}
+                  </button>
                 ))}
-              </select>
+              </div>
+
+              {/* Le type ne se change pas en correction : la v2 d'une
+                  ordonnance reste une ordonnance, et la base reprend de
+                  toute façon celui de la version précédente. */}
+              {enCorrection ? (
+                <p className="mb-3 rounded-xl bg-bg px-3 py-2 text-[12px] font-semibold">
+                  {libelleType(champs.type)} · version {(aModifier?.version ?? 1) + 1} à créer
+                </p>
+              ) : (
+                <>
+                  <div className={etiquette}>Type</div>
+                  <select
+                    className={`${champ} min-h-11`}
+                    value={champs.type}
+                    onChange={(e) => setChamps({ ...champs, type: e.target.value as TypeDocument })}
+                  >
+                    {TYPES_DOCUMENT.map((t) => (
+                      <option key={t.valeur} value={t.valeur}>
+                        {t.libelle}
+                      </option>
+                    ))}
+                  </select>
+                </>
+              )}
 
               <div className={etiquette}>Titre *</div>
               <input
@@ -266,23 +302,26 @@ export default function DeposerDocument({
                 onChange={(e) => setChamps({ ...champs, contenu: e.target.value })}
               />
 
-              {mode === "generer" && !enCorrection && (
+              {mode === "generer" && (
                 <p className="mb-3 text-[11.5px] leading-relaxed text-muted">
-                  🖨️ Un PDF sera composé à votre en-tête (nom, spécialité, établissement) et joint
-                  au document. Il porte la mention « généré électroniquement » et n’est pas signé de
+                  Un PDF sera composé à votre en-tête (nom, spécialité, établissement) et joint au
+                  document. Il porte la mention « généré électroniquement » et n’est pas signé de
                   votre main.
                 </p>
               )}
 
-              {(mode === "fichier" || enCorrection) && (
+              {mode === "fichier" && (
                 <>
                   {enCorrection && aModifier?.fichierNom && !remplacerFichier ? (
                     <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl bg-bg px-3 py-2 text-[12px]">
-                      <span className="truncate font-semibold">📎 {aModifier.fichierNom}</span>
+                      <span className="flex min-w-0 items-center gap-1.5 truncate font-semibold">
+                        <Icone nom="document" taille={13} className="flex-none" />
+                        {aModifier.fichierNom}
+                      </span>
                       <button
                         type="button"
                         onClick={() => setRemplacerFichier(true)}
-                        className="ml-auto font-bold text-teal hover:underline"
+                        className="ml-auto min-h-11 font-bold text-teal hover:underline"
                       >
                         Remplacer
                       </button>
@@ -304,7 +343,7 @@ export default function DeposerDocument({
               )}
 
               <p className="text-[11.5px] leading-relaxed text-muted">
-                🔒 Le fichier est déposé dans un espace privé : seuls {nomPatient} et vous pourrez
+                Le fichier est déposé dans un espace privé : seuls {nomPatient} et vous pourrez
                 l’ouvrir, par un lien temporaire.
               </p>
             </div>
@@ -314,7 +353,7 @@ export default function DeposerDocument({
                 type="button"
                 onClick={envoyer}
                 disabled={!valide || enCours}
-                className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:cursor-not-allowed disabled:opacity-50"
+                className="min-h-11 rounded-[9px] bg-teal px-[14px] text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {enCours
                   ? "Envoi…"
@@ -322,13 +361,13 @@ export default function DeposerDocument({
                     ? "Enregistrer la correction"
                     : "Remettre le document"}
               </button>
-              {mode === "generer" && !enCorrection && (
+              {mode === "generer" && (
                 <button
                   type="button"
                   onClick={apercu}
                   disabled={!valide || apercuEnCours}
                   title={valide ? "Ouvrir le PDF sans l’enregistrer" : "Renseignez un titre et un contenu"}
-                  className="rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg disabled:cursor-not-allowed disabled:opacity-50"
+                  className="min-h-11 rounded-[9px] border-[1.5px] border-line bg-white px-[14px] text-[12.5px] font-bold text-blue transition-colors hover:bg-bg disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {apercuEnCours ? "Composition…" : "Aperçu du PDF"}
                 </button>
@@ -336,7 +375,7 @@ export default function DeposerDocument({
               <button
                 type="button"
                 onClick={fermer}
-                className="rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg"
+                className="min-h-11 rounded-[9px] border-[1.5px] border-line bg-white px-[14px] text-[12.5px] font-bold text-blue transition-colors hover:bg-bg"
               >
                 Fermer
               </button>

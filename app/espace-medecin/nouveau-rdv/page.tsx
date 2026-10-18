@@ -14,6 +14,10 @@ import NouveauRdvDelegue from "@/components/pro/NouveauRdvDelegue";
  * praticien vient de cliquer. Le créneau vit dans l'URL et non dans un état
  * partagé — c'est ce qui permet de revenir en arrière sans perdre la case
  * choisie.
+ *
+ * `?patient=` : la fiche d'un patient envoie sa clé, pour que « Nouveau
+ * RDV » ouvre le formulaire sur le patient dont on vient de quitter le
+ * dossier — et non sur une liste où il faut le rechercher.
  */
 export default function NouveauRendezVousMedecin() {
   return (
@@ -29,18 +33,28 @@ export default function NouveauRendezVousMedecin() {
 
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
 const HEURE = /^\d{2}:\d{2}$/;
+/** « c- », « p- » ou « s- » suivi d'un uuid, tel que la liste des patients les forge. */
+const CLE_PATIENT = /^[cps]-[0-9a-f-]{36}$/i;
 
 function FormulairePrerempli() {
   const parametres = useSearchParams();
   const date = parametres.get("date") ?? "";
   const heure = parametres.get("heure") ?? "";
+  const patient = parametres.get("patient") ?? "";
 
   return (
     <NouveauRdvDelegue
       reservePar="medecin"
-      lienRetour="/espace-medecin/agenda"
+      // On revient d'où l'on vient : de la fiche du patient si c'est elle qui
+      // a ouvert ce formulaire, de l'agenda sinon.
+      lienRetour={
+        CLE_PATIENT.test(patient)
+          ? `/espace-medecin/patients/${patient}`
+          : "/espace-medecin/agenda"
+      }
       dateInitiale={ISO.test(date) ? date : undefined}
       heureInitiale={HEURE.test(heure) ? heure : undefined}
+      patientInitial={CLE_PATIENT.test(patient) ? patient : undefined}
     />
   );
 }

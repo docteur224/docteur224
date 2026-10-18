@@ -19,6 +19,7 @@ const LIBELLES_STATUT: Record<RendezVousPatient["statut"], string> = {
   confirme: "Confirmé",
   annule: "Annulé",
   honore: "Honoré",
+  absent: "Absent",
 };
 
 export default function CarteRdv({

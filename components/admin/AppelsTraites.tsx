@@ -60,12 +60,14 @@ const TEINTE_STATUT: Record<string, string> = {
   en_attente: "bg-amber-soft text-amber",
   honore: "bg-teal-soft text-blue",
   annule: "bg-red-soft text-red",
+  absent: "bg-red-soft text-red",
 };
 const LIBELLE_STATUT: Record<string, string> = {
   confirme: "Confirmé",
   en_attente: "En attente",
   honore: "Honoré",
   annule: "Annulé",
+  absent: "Absent",
 };
 
 const initiales = (nom: string) =>

@@ -60,12 +60,16 @@ const TEINTE_STATUT: Record<string, string> = {
   confirme: "bg-green-soft text-green",
   en_attente: "bg-amber-soft text-amber",
   honore: "bg-teal-soft text-blue",
+  absent: "bg-red-soft text-red",
+  annule: "bg-bg text-muted",
 };
 
 const LIBELLE_STATUT: Record<string, string> = {
   confirme: "Confirmé",
   en_attente: "À confirmer",
   honore: "Honoré",
+  absent: "Absent",
+  annule: "Annulé",
 };
 
 const BTN_BARRE =

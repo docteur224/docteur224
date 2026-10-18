@@ -268,7 +268,7 @@ export interface CreneauAgenda {
   rdvId?: string;
   patient?: string;
   motif?: string;
-  statutRdv?: "en_attente" | "confirme" | "annule" | "honore";
+  statutRdv?: "en_attente" | "confirme" | "annule" | "honore" | "absent";
   /** « domicile » quand le patient a demandé une visite chez lui. */
   lieu?: "cabinet" | "domicile";
   adresseDomicile?: string;
@@ -286,7 +286,7 @@ export interface RdvAgenda {
   date: string;
   heure: string;
   motif: string;
-  statut: "en_attente" | "confirme" | "annule" | "honore";
+  statut: "en_attente" | "confirme" | "annule" | "honore" | "absent";
   lieu: "cabinet" | "domicile";
   adresseDomicile: string;
   beneficiaire: string;
@@ -309,7 +309,7 @@ interface LigneRdvPro {
   date: string;
   heure: string;
   motif: string | null;
-  statut: "en_attente" | "confirme" | "annule" | "honore";
+  statut: "en_attente" | "confirme" | "annule" | "honore" | "absent";
   patient_id: string | null;
   proche_id: string | null;
   patient_sans_compte_id: string | null;
@@ -534,7 +534,7 @@ export async function basculerCreneau(
 
 export async function majStatutRdv(
   rdvId: string,
-  statut: "confirme" | "annule" | "honore" | "en_attente"
+  statut: "confirme" | "annule" | "honore" | "en_attente" | "absent"
 ): Promise<{ erreur?: string }> {
   const { error } = await creerClientNavigateur().from("rendez_vous").update({ statut }).eq("id", rdvId);
   return error ? { erreur: error.message } : {};
@@ -755,6 +755,29 @@ export interface RdvDossier {
   statut: string;
 }
 
+/**
+ * Les quelques éléments qu'on relit AVANT de prescrire (migration 0063).
+ * Ce ne sont pas des notes de consultation : les allergies ont leur propre
+ * champ, en liste, parce que noyées dans un paragraphe elles se ratent.
+ */
+export interface InfosMedicales {
+  groupeSanguin: string | null;
+  allergies: string[];
+  antecedents: string;
+  traitements: string;
+  majLe: string | null;
+}
+
+export const INFOS_MEDICALES_VIDES: InfosMedicales = {
+  groupeSanguin: null,
+  allergies: [],
+  antecedents: "",
+  traitements: "",
+  majLe: null,
+};
+
+export const GROUPES_SANGUINS = ["A+", "A-", "B+", "B-", "AB+", "AB-", "O+", "O-"] as const;
+
 export interface DossierPatient {
   cle: string;
   type: PatientCabinet["type"];
@@ -770,6 +793,7 @@ export interface DossierPatient {
   lien: string;
   gradient: string;
   rdvs: RdvDossier[];
+  infos: InfosMedicales;
 }
 
 /** Découpe une clé « c-<uuid> » en son type et son identifiant. */
@@ -801,7 +825,7 @@ export function useDossierPatient(
       const supabase = creerClientNavigateur();
       const { type, id } = lirePatientCle(cle);
 
-      let base: Omit<DossierPatient, "rdvs"> | null = null;
+      let base: Omit<DossierPatient, "rdvs" | "infos"> | null = null;
       if (type === "compte") {
         const { data } = await supabase
           .from("patients")
@@ -853,13 +877,23 @@ export function useDossierPatient(
 
       const colonne =
         type === "compte" ? "patient_id" : type === "proche" ? "proche_id" : "patient_sans_compte_id";
-      const { data: rdvs } = await supabase
-        .from("rendez_vous")
-        .select("id, date, heure, motif, statut")
-        .eq("medecin_id", medecinId)
-        .eq(colonne, id)
-        .order("date", { ascending: false })
-        .order("heure", { ascending: false });
+      // La même colonne désigne le bénéficiaire dans les deux tables : les
+      // rendez-vous et les informations médicales se demandent ensemble, en
+      // parallèle, plutôt que l'une après l'autre.
+      const [{ data: rdvs }, { data: infos }] = await Promise.all([
+        supabase
+          .from("rendez_vous")
+          .select("id, date, heure, motif, statut")
+          .eq("medecin_id", medecinId)
+          .eq(colonne, id)
+          .order("date", { ascending: false })
+          .order("heure", { ascending: false }),
+        supabase
+          .from("infos_medicales")
+          .select("groupe_sanguin, allergies, antecedents, traitements, maj_le")
+          .eq(colonne, id)
+          .maybeSingle(),
+      ]);
 
       if (!actif) return;
       setResultat({
@@ -874,6 +908,15 @@ export function useDossierPatient(
                 motif: r.motif ?? "",
                 statut: r.statut,
               })),
+              infos: infos
+                ? {
+                    groupeSanguin: infos.groupe_sanguin,
+                    allergies: infos.allergies ?? [],
+                    antecedents: infos.antecedents ?? "",
+                    traitements: infos.traitements ?? "",
+                    majLe: infos.maj_le,
+                  }
+                : INFOS_MEDICALES_VIDES,
             }
           : null,
       });
@@ -889,6 +932,70 @@ export function useDossierPatient(
     chargement: !aJour,
     recharger: () => setVersion((v) => v + 1),
   };
+}
+
+/* ===== Qualification d'un rendez-vous passé ===== */
+
+/**
+ * « Honoré » ou « absent » — le geste que le praticien fait après coup.
+ *
+ * Passe par la fonction `qualifier_rdv` et non par un UPDATE direct : c'est
+ * elle qui refuse un rendez-vous à venir (on ne déclare pas honoré ce qui
+ * n'a pas eu lieu) ou déjà annulé, et c'est elle qui journalise. Un UPDATE
+ * depuis le navigateur n'aurait su faire ni l'un ni l'autre.
+ */
+export async function qualifierRdv(
+  rdvId: string,
+  statut: "honore" | "absent"
+): Promise<{ erreur?: string }> {
+  const { error } = await creerClientNavigateur().rpc("qualifier_rdv", {
+    p_rdv_id: rdvId,
+    p_statut: statut,
+  });
+  return error ? { erreur: error.message } : {};
+}
+
+/**
+ * Confirmation d'un rendez-vous par le praticien, SMS compris.
+ *
+ * `majStatutRdv` écrit bien le statut, et le trigger `rdv_notifie` pose la
+ * notification dans l'application — mais le patient ne la verra que s'il
+ * ouvre l'application. L'envoi SMS/e-mail, lui, ne peut pas partir du
+ * navigateur : `lib/messagerie` lit des secrets et débite un quota. D'où la
+ * route serveur, calquée sur celle du centre d'appel.
+ */
+export async function confirmerRdvMedecin(
+  rdvId: string
+): Promise<{ erreur?: string; previenu?: boolean }> {
+  const reponse = await fetch(`/api/medecin/rdv/${rdvId}/confirmer`, { method: "POST" });
+  const corps = await reponse.json().catch(() => null);
+  if (!reponse.ok) {
+    return { erreur: corps?.erreur ?? "La confirmation a échoué." };
+  }
+  return { previenu: !!corps?.previenu };
+}
+
+/* ===== Informations médicales ===== */
+
+/**
+ * Enregistre le bloc médical d'un bénéficiaire. La base vérifie le rôle, la
+ * patientèle et le groupe sanguin, et journalise — on ne redouble rien ici.
+ */
+export async function enregistrerInfosMedicales(
+  cle: string,
+  infos: InfosMedicales
+): Promise<{ erreur?: string }> {
+  const { type, id } = lirePatientCle(cle);
+  const { error } = await creerClientNavigateur().rpc("enregistrer_infos_medicales", {
+    p_patient_id: type === "compte" ? id : null,
+    p_proche_id: type === "proche" ? id : null,
+    p_sans_compte_id: type === "sans_compte" ? id : null,
+    p_groupe_sanguin: infos.groupeSanguin || null,
+    p_allergies: infos.allergies,
+    p_antecedents: infos.antecedents || null,
+    p_traitements: infos.traitements || null,
+  });
+  return error ? { erreur: error.message } : {};
 }
 
 /* ===== Réservation déléguée (spec C.2.3) ===== */

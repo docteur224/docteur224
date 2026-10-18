@@ -29,6 +29,7 @@ const LIBELLES_STATUT: Record<DetailRendezVous["statut"], string> = {
   confirme: "Confirmé",
   annule: "Annulé",
   honore: "Honoré",
+  absent: "Absent",
 };
 
 /** Classes de la pastille de statut, version web. */
@@ -37,6 +38,7 @@ const TONS_STATUT: Record<DetailRendezVous["statut"], string> = {
   confirme: "bg-green-soft text-green",
   annule: "bg-red-soft text-red",
   honore: "bg-teal-soft text-blue",
+  absent: "bg-red-soft text-red",
 };
 
 /** Classes de la pastille de statut, version mobile (.badge de la maquette). */
@@ -45,6 +47,7 @@ const BADGES_MOBILE: Record<DetailRendezVous["statut"], string> = {
   confirme: "ok",
   annule: "no",
   honore: "ok",
+  absent: "no",
 };
 
 export default function DetailRdv() {

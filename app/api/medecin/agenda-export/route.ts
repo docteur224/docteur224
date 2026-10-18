@@ -33,6 +33,7 @@ const LIBELLE_STATUT: Record<string, string> = {
   confirme: "Confirmé",
   annule: "Annulé",
   honore: "Honoré",
+  absent: "Absent",
 };
 
 const LIBELLE_SOURCE: Record<string, string> = {

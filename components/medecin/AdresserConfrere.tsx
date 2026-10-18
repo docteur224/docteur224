@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { formatDateCourte } from "@/lib/dates";
-import { iconeType, libelleType, type DocumentPatient } from "@/lib/documents";
+import Icone from "@/components/site/Icone";
+import { libelleType, type DocumentPatient } from "@/lib/documents";
 import {
   envoyerTransmission,
   useConfreres,
@@ -31,6 +32,7 @@ export default function AdresserConfrere({
   cle,
   nomPatient,
   documents,
+  classeDeclencheur,
   apres,
 }: {
   /** « c-<uuid> » ou « p-<uuid> », tel que fourni par la liste des patients. */
@@ -38,7 +40,9 @@ export default function AdresserConfrere({
   nomPatient: string;
   /** Documents du dossier, proposés en pièces jointes. */
   documents: DocumentPatient[];
-  apres?: () => void;
+  /** Classes du bouton d ouverture, pour l aligner sur la rangee d actions. */
+  classeDeclencheur?: string;
+  apres?: (message: string) => void;
 }) {
   const [ouvert, setOuvert] = useState(false);
   const [saisieConfrere, setSaisieConfrere] = useState("");
@@ -103,14 +107,12 @@ export default function AdresserConfrere({
     });
     setEnCours(false);
     if (res.erreur) {
-      setMessage({ texte: `⚠️ ${res.erreur}`, erreur: true });
+      setMessage({ texte: res.erreur, erreur: true });
       return;
     }
-    setMessage({
-      texte: `✓ Dossier de ${nomPatient} transmis à ${destinataire!.nom}. Le patient en est informé.`,
-      erreur: false,
-    });
-    apres?.();
+    const texte = `Dossier transmis à ${destinataire!.nom} — le patient en est informé`;
+    setMessage({ texte, erreur: false });
+    apres?.(texte);
   }
 
   const etiquette = "mb-1.5 text-[12.5px] font-bold";
@@ -122,9 +124,12 @@ export default function AdresserConfrere({
       <button
         type="button"
         onClick={ouvrir}
-        className="rounded-[9px] border-[1.5px] border-teal bg-white px-3 py-1.5 text-[11.5px] font-bold text-blue transition-colors hover:bg-teal-soft"
+        className={
+          classeDeclencheur ??
+          "rounded-[9px] border-[1.5px] border-teal bg-white px-3 py-1.5 text-[11.5px] font-bold text-blue transition-colors hover:bg-teal-soft"
+        }
       >
-        📨 Adresser à un confrère
+        Adresser à un confrère
       </button>
 
       {ouvert && (
@@ -149,9 +154,9 @@ export default function AdresserConfrere({
                 type="button"
                 onClick={() => setOuvert(false)}
                 aria-label="Fermer"
-                className="flex-none rounded-lg px-2 py-1 text-lg text-muted hover:bg-bg"
+                className="grid h-11 w-11 flex-none place-items-center rounded-lg text-muted hover:bg-bg"
               >
-                ✕
+                <Icone nom="croix" taille={18} epaisseur={2.2} />
               </button>
             </div>
 
@@ -280,9 +285,11 @@ export default function AdresserConfrere({
                         onChange={() => basculerPiece(d.id)}
                         className="h-4 w-4 flex-none accent-[#2E9CCA]"
                       />
-                      <span aria-hidden className="flex-none text-base">
-                        {iconeType(d.type)}
-                      </span>
+                      <Icone
+                        nom={d.type === "ordonnance" ? "gelule" : "document"}
+                        taille={16}
+                        className="flex-none text-muted"
+                      />
                       <span className="min-w-0 flex-1">
                         <b className="block truncate text-[12.5px] font-bold">{d.titre}</b>
                         <small className="block text-[10.5px] text-muted">
@@ -310,7 +317,7 @@ export default function AdresserConfrere({
               </label>
 
               <p className="text-[11.5px] leading-relaxed text-muted">
-                🔒 Le patient est prévenu immédiatement et peut retirer cet accès à tout moment.
+                Le patient est prévenu immédiatement et peut retirer cet accès à tout moment.
                 Vous le pouvez également. Le contenu de la transmission n’est plus modifiable une
                 fois envoyée.
               </p>
@@ -321,14 +328,14 @@ export default function AdresserConfrere({
                 type="button"
                 onClick={envoyer}
                 disabled={!valide || enCours}
-                className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:cursor-not-allowed disabled:opacity-50"
+                className="min-h-11 rounded-[9px] bg-teal px-[14px] text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {enCours ? "Transmission…" : "Transmettre le dossier"}
               </button>
               <button
                 type="button"
                 onClick={() => setOuvert(false)}
-                className="rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg"
+                className="min-h-11 rounded-[9px] border-[1.5px] border-line bg-white px-[14px] text-[12.5px] font-bold text-blue transition-colors hover:bg-bg"
               >
                 Fermer
               </button>
