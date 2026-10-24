@@ -59,6 +59,20 @@ body {
 }
 
 /* =====================================================================
+   DENSITÉ WEB — affichage réduit à 80 %
+   ---------------------------------------------------------------------
+   Reproduit à l'identique un zoom navigateur à 80 % : tout rétrécit de
+   façon uniforme (textes, marges, boutons, icônes, images), comme
+   demandé. Cantonné à la version web (≥ 768px) : le mobile, déjà pensé
+   en plein écran, reste inchangé — mobile.css n'agit que < 768px.
+   ===================================================================== */
+@media (min-width: 768px) {
+  body {
+    zoom: 0.8;
+  }
+}
+
+/* =====================================================================
    CARTE DES MÉDECINS — repères et habillage de Leaflet
    ---------------------------------------------------------------------
    Ces règles sont globales et non enfermées dans le bloc mobile : les
