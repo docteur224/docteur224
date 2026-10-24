@@ -178,7 +178,7 @@ const PLUS_PETITE_CIBLE = (racine) => `(() => { const els = [...(${racine}).quer
 const MARQUE = "VERIF-RELATION";
 let ids;
 let debutTest;
-const etat = { pref: undefined, rdv: null };
+const etat = { pref: undefined, rdv: null, existants: 0, nonLusPatient: 0, nonLusMedecin: 0 };
 const jourPlus = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
 
 async function preparer() {
@@ -187,6 +187,17 @@ async function preparer() {
   ids = { medecinId: u.find((x) => x.email.startsWith("medecin1")).id, patientId: u.find((x) => x.email.startsWith("patient1")).id };
   const { data: pref } = await service.from("preferences_rappels").select("*").eq("titulaire_id", ids.medecinId).maybeSingle();
   etat.pref = pref ?? null;
+  /* La base sert aussi la production : les comptes de démo peuvent déjà
+     s'être écrit. On relève l'état de départ, et on vérifie des écarts. */
+  const compter = async (expediteur, nonLus) => {
+    let q = service.from("messages").select("id", { count: "exact", head: true }).eq("patient_id", ids.patientId).eq("medecin_id", ids.medecinId);
+    if (expediteur) q = q.eq("expediteur_id", expediteur);
+    if (nonLus) q = q.eq("lu", false);
+    return (await q).count ?? 0;
+  };
+  etat.existants = await compter(null, false);
+  etat.nonLusPatient = await compter(ids.medecinId, true); // à lire par le patient
+  etat.nonLusMedecin = await compter(ids.patientId, true); // à lire par le médecin
   // Un rendez-vous à venir, pour que l'historique des rappels ait des lignes ;
   // l'une est avancée à maintenant et vidée : elle passe « simulé ».
   for (let j = 3; j <= 30 && !etat.rdv; j++) {
@@ -256,7 +267,8 @@ async function main() {
     check("[1280] trois sections : messagerie, rappels, téléconsultation", await page.eval(
       `['titre-messagerie','titre-rappels','titre-teleconsultation'].every(i => document.getElementById(i)) && ${PANNEAU}.textContent.includes('Bientôt disponible')`));
     await page.waitFor(`!${PANNEAU}.textContent.includes('Chargement de la conversation')`, 15000);
-    check("[1280] conversation vide : état vide explicite", await page.eval(`${PANNEAU}.textContent.includes('Aucun message pour l’instant')`));
+    if (etat.existants === 0) check("[1280] conversation vide : état vide explicite", await page.eval(`${PANNEAU}.textContent.includes('Aucun message pour l’instant')`));
+    else console.log(`ℹ️  conversation déjà commencée (${etat.existants} message(s) d’avant le test) : état vide non vérifiable`);
 
     await page.saisir("message-fiche", `Bonjour, vos résultats sont bons. (${MARQUE})`);
     await page.cliquer(BOUTON(PANNEAU, "Envoyer"));
@@ -286,7 +298,8 @@ async function main() {
     const LISTE = `document.querySelector('main ul[aria-label="Conversations"]')`;
     check("[1280] menu : un seul lien actif, « Messages »", await page.eval(
       `(() => { const a = [...document.querySelectorAll('aside [aria-current="page"]')].filter(x => x.offsetParent); return a.length === 1 && a[0].getAttribute('href') === '/patient/messages'; })()`));
-    check("[1280] conversation listée, 2 non lus", await page.waitFor(`${LISTE}?.textContent.includes('2 non lus')`, 20000));
+    const attendus = etat.nonLusPatient + 2;
+    check(`[1280] conversation listée, ${attendus} non lus`, await page.waitFor(`${LISTE}?.textContent.includes('${attendus} non lus')`, 20000));
     await page.cliquer(`${LISTE}.querySelector('button')`);
     const FIL = `document.querySelector('main [role="log"]')?.closest('.rounded-2xl')`;
     check("[1280] fil ouvert, message du médecin et pièce jointe", await page.waitFor(
@@ -326,7 +339,8 @@ async function main() {
     await page.taille(1280, 900, false);
     await page.goto(fiche("dossier"));
     const ONGLET = `document.getElementById('onglet-fiche-relation')`;
-    check("[1280] onglet Relation : pastille « 1 » (réponse non lue)", await page.waitFor(`${ONGLET}?.textContent.trim().endsWith('1')`, 20000),
+    const pastille = etat.nonLusMedecin + 1;
+    check(`[1280] onglet Relation : pastille « ${pastille} » (réponse non lue)`, await page.waitFor(`${ONGLET}?.textContent.trim().endsWith('${pastille}')`, 20000),
       await page.eval(`${ONGLET}?.textContent`).catch(() => ""));
     await page.cliquer(ONGLET);
     check("[1280] réponse du patient affichée", await page.waitFor(`${PANNEAU} && ${BULLES(PANNEAU)}.some(t => t.startsWith('Merci docteur'))`, 20000));

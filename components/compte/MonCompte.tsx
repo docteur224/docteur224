@@ -493,6 +493,7 @@ function ZoneSensible({
     }
     // Rechargement complet plutôt qu'une navigation : la session est close
     // et tous les caches de module doivent repartir à zéro.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- rechargement voulu, router.push garderait les caches
     window.location.assign("/");
   }
 

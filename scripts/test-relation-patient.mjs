@@ -87,6 +87,15 @@ async function main() {
     .from("rendez_vous").select("id", { count: "exact", head: true }).eq("medecin_id", etrangerId).eq("patient_id", patientId);
   if (rdvEtranger) throw new Error("medecin3 a un RDV avec patient1 : le test « sans relation » n’a plus de sens.");
 
+  /* La base sert aussi la production : les comptes de démo peuvent déjà
+     s'être écrit. On relève l'état de départ, et on raisonne en écarts. */
+  const { count: nonLusAvant } = await service
+    .from("messages").select("id", { count: "exact", head: true })
+    .eq("patient_id", patientId).eq("medecin_id", medecinId).eq("expediteur_id", medecinId).eq("lu", false);
+  const { data: notifEnCours } = await service
+    .from("notifications").select("id").eq("destinataire_id", patientId).eq("type", "message")
+    .eq("source_id", medecinId).is("lu_le", null).gte("cree_le", new Date(Date.now() - 30 * 60_000).toISOString()).limit(1);
+
   /* ============ Messagerie ============ */
   const ins = (client, champs) =>
     client.from("messages").insert({ patient_id: patientId, medecin_id: medecinId, ...champs }).select("id, lu, cree_le").single();
@@ -161,18 +170,23 @@ async function main() {
 
   const { data: notifPat } = await service
     .from("notifications").select("lien, titre, corps").eq("destinataire_id", patientId).eq("type", "message").gte("cree_le", debut);
-  check(
-    "patient notifié, lien vers sa messagerie",
-    notifPat?.length === 1 && notifPat[0].lien === `/patient/messages?medecin=${medecinId}`,
-    notifPat?.[0]?.lien
-  );
-  check("notification patient sans le contenu", !!notifPat?.[0] && !`${notifPat[0].titre} ${notifPat[0].corps}`.includes("enfant"));
+  if (notifEnCours?.length) {
+    // Une notification non lue de moins de 30 min existait : la règle veut qu'on n'en ajoute pas.
+    check("patient déjà notifié il y a moins de 30 min : pas de doublon", (notifPat ?? []).length === 0, `${notifPat?.length} nouvelle(s)`);
+  } else {
+    check(
+      "patient notifié, lien vers sa messagerie",
+      notifPat?.length === 1 && notifPat[0].lien === `/patient/messages?medecin=${medecinId}`,
+      notifPat?.[0]?.lien
+    );
+    check("notification patient sans le contenu", !!notifPat?.[0] && !`${notifPat[0].titre} ${notifPat[0].corps}`.includes("enfant"));
+  }
 
   const { data: convs, error: eConv } = await patient.rpc("conversations_patient");
   const conv = convs?.find((c) => c.medecin_id === medecinId);
   check(
-    "liste des conversations du patient : dernier message du médecin, 1 non lu",
-    !eConv && !!conv && conv.dernier_de_moi === false && Number(conv.non_lus) === 1,
+    "liste des conversations du patient : dernier message du médecin, +1 non lu",
+    !eConv && !!conv && conv.dernier_de_moi === false && Number(conv.non_lus) === (nonLusAvant ?? 0) + 1,
     eConv?.message ?? JSON.stringify(conv && { non_lus: conv.non_lus, de_moi: conv.dernier_de_moi })
   );
   const { data: convTiers } = await tiers.rpc("conversations_patient");

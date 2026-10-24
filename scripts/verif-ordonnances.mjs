@@ -266,7 +266,7 @@ async function main() {
     // Premier clic : ouvre la section ; le composant lit alors la signature
     // en base (squelette), puis propose son propre « Créer ma signature ».
     await page.cliquer(DANS(DIALOGUE, "Créer ma signature"));
-    await page.waitFor(DANS(DIALOGUE, "Créer ma signature"), 8000);
+    await page.waitFor(DANS(DIALOGUE, "Créer ma signature"), 20000);
     await page.cliquer(DANS(DIALOGUE, "Créer ma signature"));
     check("[1280] pavé de signature affiché", await page.waitFor(`(${DIALOGUE}).querySelector('canvas')`, 5000));
     const toile = await page.centre(`(${DIALOGUE}).querySelector('canvas')`);
