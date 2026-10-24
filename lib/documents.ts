@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { creerClientNavigateur } from "@/lib/supabase/client";
 import { resumePrescription, type LignePrescription } from "@/lib/prescription";
+import type { LigneActe, OptionsActes } from "@/lib/prescription-actes";
+import { libelleType, titreAutoDe, type TypeDocument } from "@/lib/types-document";
 
 /*
  * Documents remis au patient : ordonnances, comptes rendus, résultats
@@ -15,21 +17,27 @@ import { resumePrescription, type LignePrescription } from "@/lib/prescription";
 
 export const BUCKET = "documents";
 
-export const TYPES_DOCUMENT = [
-  { valeur: "ordonnance", libelle: "Ordonnance", icone: "💊" },
-  { valeur: "compte_rendu", libelle: "Compte rendu", icone: "📋" },
-  { valeur: "resultat", libelle: "Résultat d’examen", icone: "🧪" },
-  { valeur: "certificat", libelle: "Certificat", icone: "📄" },
-  { valeur: "arret_travail", libelle: "Arrêt de travail", icone: "🗓️" },
-  { valeur: "autre", libelle: "Autre", icone: "📎" },
-] as const;
-
-export type TypeDocument = (typeof TYPES_DOCUMENT)[number]["valeur"];
-
-export const libelleType = (t: string) =>
-  TYPES_DOCUMENT.find((x) => x.valeur === t)?.libelle ?? "Document";
-export const iconeType = (t: string) =>
-  TYPES_DOCUMENT.find((x) => x.valeur === t)?.icone ?? "📎";
+/*
+ * Les types de pièces sont décrits dans un module PUR
+ * (`lib/types-document.ts`) : la route du PDF et la page publique de
+ * vérification tournent sur le SERVEUR et ne peuvent pas importer ce
+ * fichier-ci, qui est « use client ». Réexportés ici pour que les écrans
+ * continuent de les trouver où ils les ont toujours trouvés.
+ */
+export {
+  TYPES_DOCUMENT,
+  domaineActeDe,
+  estFeminin,
+  glypheType,
+  iconeType,
+  libellePdf,
+  libellePublic,
+  libelleType,
+  structureDe,
+  titreAutoDe,
+  type StructureDocument,
+  type TypeDocument,
+} from "@/lib/types-document";
 
 /* ===== Titre et résumé affichés ===== */
 
@@ -66,18 +74,25 @@ export function heureDe(horodatage: string): string {
  * rendu d'échographie » disent quelque chose qu'une date ne dit pas.
  */
 export function titreDocument(d: { type: string; titre: string; creeLe: string }): string {
-  if (d.type === "ordonnance") return `Ordonnance du ${jourDe(d.creeLe)}`;
+  const auto = titreAutoDe(d.type);
+  if (auto) return `${auto} du ${jourDe(d.creeLe)}`;
   return d.titre?.trim() || libelleType(d.type);
 }
 
-/** Titre d'une NOUVELLE ordonnance, émise maintenant. */
-export const titreOrdonnanceDuJour = () => `Ordonnance du ${jourDe(new Date().toISOString())}`;
+/** Titre d'une NOUVELLE pièce à titre calculé, émise maintenant. */
+export function titreAutoDuJour(type: string): string {
+  const auto = titreAutoDe(type);
+  return auto ? `${auto} du ${jourDe(new Date().toISOString())}` : "";
+}
 
 /**
  * Premières lignes utiles d'un contenu, sur une ligne : de quoi distinguer
  * deux ordonnances émises le même jour sans les ouvrir.
  */
-export function resumeDocument(d: { contenu: string | null; prescription?: LignePrescription[] | null }): string {
+export function resumeDocument(d: {
+  contenu: string | null;
+  prescription?: (LignePrescription | LigneActe)[] | null;
+}): string {
   return d.prescription?.length ? resumePrescription(d.prescription) : resumeContenu(d.contenu);
 }
 
@@ -133,8 +148,17 @@ export interface DocumentPatient {
   annuleLe: string | null;
   motifAnnulation: string | null;
   /* ---- Ordonnance structurée et vérification (migration 0065) ---- */
-  /** Lignes de prescription ; null pour une pièce saisie en texte libre. */
-  prescription: LignePrescription[] | null;
+  /**
+   * Lignes de prescription ; null pour une pièce saisie en texte libre.
+   * Leur forme suit le type : médicaments pour une ordonnance médicale,
+   * actes pour une ordonnance de biologie (`structureDe`).
+   */
+  prescription: (LignePrescription | LigneActe)[] | null;
+  /**
+   * Ce qui porte sur l'ordonnance entière : « à jeun », « urgent »,
+   * renseignements cliniques (migration 0068). Null hors ordonnance d'actes.
+   */
+  prescriptionOptions: OptionsActes | null;
   /** « D224-XXXX-XXXX-XXXX » : présent sur les documents générés depuis 0065. */
   codeVerification: string | null;
 }
@@ -157,7 +181,8 @@ interface LigneDocument {
   remplace_par_id: string | null;
   annule_le: string | null;
   motif_annulation: string | null;
-  prescription: LignePrescription[] | null;
+  prescription: (LignePrescription | LigneActe)[] | null;
+  prescription_options: OptionsActes | null;
   code_verification: string | null;
   medecins: {
     civilite: string | null;
@@ -187,7 +212,7 @@ const SELECTION = `
   id, type, titre, contenu, fichier_path, fichier_nom, cree_le, origine, depose_par,
   medecin_id, patient_id, proche_id,
   version, document_parent_id, remplace_par_id, annule_le, motif_annulation,
-  prescription, code_verification,
+  prescription, prescription_options, code_verification,
   medecins!documents_patient_medecin_id_fkey ( ${NOM_MEDECIN} ),
   proches ( nom, prenom ),
   partages_document ( medecin_id, cree_le, medecins ( ${NOM_MEDECIN} ) )
@@ -224,6 +249,7 @@ const versDocument = (l: LigneDocument): DocumentPatient => ({
   annuleLe: l.annule_le,
   motifAnnulation: l.motif_annulation,
   prescription: l.prescription,
+  prescriptionOptions: l.prescription_options,
   codeVerification: l.code_verification,
 });
 
@@ -387,7 +413,9 @@ export interface NouveauDocument {
   contenu: string;
   fichier?: File | null;
   rendezVousId?: string;
-  prescription?: LignePrescription[] | null;
+  prescription?: (LignePrescription | LigneActe)[] | null;
+  /** « À jeun », « urgent », renseignements — ordonnance d'actes seulement. */
+  prescriptionOptions?: OptionsActes | null;
   /** Code tiré par le serveur à la génération du PDF définitif. */
   codeVerification?: string | null;
 }
@@ -512,6 +540,7 @@ export async function deposerDocument(
     fichier_path: fichierPath,
     fichier_nom: fichierNom,
     prescription: d.prescription ?? null,
+    prescription_options: d.prescriptionOptions ?? null,
     code_verification: d.codeVerification ?? null,
   });
 
@@ -547,7 +576,14 @@ export async function corrigerDocument(
     fichier?: File | null;
     fichierActuel?: string | null;
     fichierNomActuel?: string | null;
-    prescription?: LignePrescription[] | null;
+    prescription?: (LignePrescription | LigneActe)[] | null;
+    /**
+     * Options de la nouvelle version. `null` ou absent = la base reconduit
+     * celles de la version précédente (`coalesce` dans `corriger_document`,
+     * migration 0068) : une correction ne doit pas pouvoir perdre un
+     * « urgent » en silence.
+     */
+    prescriptionOptions?: OptionsActes | null;
     codeVerification?: string | null;
   }
 ): Promise<{ erreur?: string }> {
@@ -575,6 +611,7 @@ export async function corrigerDocument(
     p_fichier_path: path,
     p_fichier_nom: nom,
     p_prescription: d.prescription ?? null,
+    p_prescription_options: d.prescriptionOptions ?? null,
     p_code_verification: d.codeVerification ?? null,
   });
   return error ? { erreur: messageErreur(error.message) } : {};

@@ -3,6 +3,7 @@ import qrcode from "qrcode-generator";
 import { genererCode, urlVerification } from "@/lib/code-verification";
 import { A4, DocumentPdf, MARGE } from "@/lib/pdf";
 import { creerClientServeur } from "@/lib/supabase/server";
+import { libellePdf } from "@/lib/types-document";
 
 /*
  * Génération du PDF d'un document remis à un patient (ordonnance, certificat,
@@ -27,15 +28,6 @@ import { creerClientServeur } from "@/lib/supabase/server";
  * médecin). C'est la vérification en ligne qui la rend opposable : l'image
  * seule ne prouverait rien, d'où la mention imprimée à côté.
  */
-
-const LIBELLES: Record<string, string> = {
-  ordonnance: "ORDONNANCE",
-  compte_rendu: "COMPTE RENDU DE CONSULTATION",
-  resultat: "RÉSULTAT D’EXAMEN",
-  certificat: "CERTIFICAT MÉDICAL",
-  arret_travail: "AVIS D’ARRÊT DE TRAVAIL",
-  autre: "DOCUMENT MÉDICAL",
-};
 
 const dateLisible = (d: Date) =>
   d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", timeZone: "Africa/Conakry" });
@@ -207,8 +199,8 @@ export async function POST(requete: Request) {
   }
 
   pdf.saut(20);
-  pdf.texte(LIBELLES[type] ?? LIBELLES.autre, { gras: true, taille: 12 });
-  if (titre.toUpperCase() !== (LIBELLES[type] ?? "")) {
+  pdf.texte(libellePdf(type), { gras: true, taille: 12 });
+  if (titre.toUpperCase() !== libellePdf(type)) {
     pdf.texte(titre, { taille: 10, gris: 0.35 });
   }
   if (!final) {

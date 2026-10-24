@@ -4,9 +4,11 @@ import { useState } from "react";
 import Dialogue from "@/components/site/Dialogue";
 import Icone from "@/components/site/Icone";
 import { formatDateCourte } from "@/lib/dates";
+import { estLigneMedicament } from "@/lib/prescription";
 import {
   titreDocument,
   genererPdf,
+  glypheType,
   libelleType,
   urlSignee,
   type DocumentPatient,
@@ -72,16 +74,19 @@ export default function ApercuDocument({
   const [enCours, setEnCours] = useState<"imprimer" | "pdf" | null>(null);
   const [versionsVisibles, setVersionsVisibles] = useState(false);
 
-  const estOrdonnance = doc.type === "ordonnance";
   const annulee = !!doc.annuleLe;
   // Ordonnance structurée : les lignes telles que prescrites. Sinon, le texte
   // libre découpé au mieux.
   const lignes = doc.prescription?.length
     ? doc.prescription.map((l) => ({
         nom: l.libelle,
-        posologie: [l.posologie, l.duree && `pendant ${l.duree}`, l.quantite && `Quantité : ${l.quantite}`]
-          .filter(Boolean)
-          .join(" · "),
+        // Une ligne d'acte n'a pas de posologie : on ne prescrit pas une NFS
+        // « deux fois par jour ».
+        posologie: estLigneMedicament(l)
+          ? [l.posologie, l.duree && `pendant ${l.duree}`, l.quantite && `Quantité : ${l.quantite}`]
+              .filter(Boolean)
+              .join(" · ")
+          : "",
       }))
     : doc.contenu
       ? enLignes(doc.contenu)
@@ -152,7 +157,7 @@ export default function ApercuDocument({
   return (
     <Dialogue
       titre={titreAffiche}
-      icone={<Icone nom={estOrdonnance ? "gelule" : "document"} taille={18} />}
+      icone={<Icone nom={glypheType(doc.type)} taille={18} />}
       sousTitre={`${libelleType(doc.type)} · émis le ${formatDateCourte(doc.creeLe.slice(0, 10))}${
         doc.origine === "patient" ? " · envoyé par le patient" : ` · ${doc.medecinNom}`
       }`}
@@ -224,6 +229,27 @@ export default function ApercuDocument({
               : "Aucune allergie renseignée au dossier."}
           </span>
         </p>
+
+        {/* Ce qui porte sur l'ordonnance entière et s'imprime EN TÊTE du PDF.
+            Sans ce bloc, le médecin relirait la liste des analyses sans
+            revoir le « urgent » qu'il vient de cocher — or c'est justement
+            ce qu'on relit un aperçu pour vérifier. */}
+        {(doc.prescriptionOptions?.urgent || doc.prescriptionOptions?.jeun) && (
+          <div className="flex flex-wrap gap-2">
+            {doc.prescriptionOptions.urgent && (
+              <span className="rounded-full bg-red-soft px-3 py-1 text-[12px] font-extrabold text-red">URGENT</span>
+            )}
+            {doc.prescriptionOptions.jeun && (
+              <span className="rounded-full bg-amber-soft px-3 py-1 text-[12px] font-extrabold text-amber">À jeun</span>
+            )}
+          </div>
+        )}
+        {doc.prescriptionOptions?.renseignements && (
+          <p className="rounded-[10px] border border-line bg-bg px-3 py-2.5 text-[12.5px] leading-relaxed">
+            <span className="font-bold">Renseignements cliniques : </span>
+            {doc.prescriptionOptions.renseignements}
+          </p>
+        )}
 
         {lignes.length > 0 ? (
           <div>

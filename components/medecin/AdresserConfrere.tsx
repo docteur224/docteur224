@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { formatDateCourte } from "@/lib/dates";
 import Icone from "@/components/site/Icone";
-import { titreDocument, libelleType, type DocumentPatient } from "@/lib/documents";
+import { titreDocument, glypheType, libelleType, type DocumentPatient } from "@/lib/documents";
 import {
   envoyerTransmission,
   useConfreres,
@@ -286,7 +286,7 @@ export default function AdresserConfrere({
                         className="h-4 w-4 flex-none accent-[#2E9CCA]"
                       />
                       <Icone
-                        nom={d.type === "ordonnance" ? "gelule" : "document"}
+                        nom={glypheType(d.type)}
                         taille={16}
                         className="flex-none text-muted"
                       />

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Icone from "@/components/site/Icone";
 import { allergiesConcernees } from "@/lib/allergies";
-import { enregistrerModele, supprimerModele, useModelesOrdonnance } from "@/lib/medicaments";
+import { enregistrerModele, supprimerModele, useModelesOrdonnance } from "@/lib/modeles-ordonnance";
 import { LIGNE_VIDE, ligneRemplie, type LignePrescription } from "@/lib/prescription";
 import RechercheMedicament from "./RechercheMedicament";
 
@@ -53,7 +53,7 @@ export default function EditeurPrescription({
   onConfirmationAllergie: (ok: boolean) => void;
 }) {
   const [revisionModeles, setRevisionModeles] = useState(0);
-  const { modeles } = useModelesOrdonnance(revisionModeles);
+  const { modeles } = useModelesOrdonnance<LignePrescription>("medicament", revisionModeles);
   const [modeleCourant, setModeleCourant] = useState<string>("");
   const [nomModele, setNomModele] = useState<string | null>(null);
   const [infoModele, setInfoModele] = useState<{ texte: string; erreur?: boolean } | null>(null);
@@ -71,7 +71,7 @@ export default function EditeurPrescription({
   async function sauverModele() {
     if (nomModele === null) return;
     const existant = modeles.find((m) => m.nom.toLowerCase() === nomModele.trim().toLowerCase());
-    const res = await enregistrerModele(nomModele, lignes.filter(ligneRemplie), remarques, existant?.id);
+    const res = await enregistrerModele("medicament", nomModele, lignes.filter(ligneRemplie), remarques, existant?.id);
     if (res.erreur) {
       setInfoModele({ texte: res.erreur, erreur: true });
       return;

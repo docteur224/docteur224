@@ -8,9 +8,11 @@ import DeposerDocument from "@/components/medecin/DeposerDocument";
 import Icone, { type NomIcone } from "@/components/site/Icone";
 import { calculerAge } from "@/lib/dates";
 import {
+  glypheType,
   heureDe,
   jourDe,
   resumeDocument,
+  structureDe,
   titreDocument,
   useMesDocuments,
   type DocumentPatient,
@@ -90,7 +92,7 @@ export default function ModuleDocuments({ ctx }: { ctx: ContexteFiche }) {
           ? { texte: "Remise", classe: "bg-bg text-muted" }
           : null;
 
-    const icone: NomIcone = d.type === "ordonnance" ? "gelule" : "document";
+    const icone: NomIcone = glypheType(d.type);
     const teinte =
       variante === "remis"
         ? "bg-teal-soft text-teal"
@@ -100,7 +102,7 @@ export default function ModuleDocuments({ ctx }: { ctx: ContexteFiche }) {
 
     const jour = jourDe(d.creeLe);
     const heure = heureDe(d.creeLe);
-    const resume = d.type === "ordonnance" ? resumeDocument(d) : "";
+    const resume = structureDe(d.type) ? resumeDocument(d) : "";
     const dateLigne =
       variante === "recu"
         ? `Reçu le ${jour} · envoyé par le patient`

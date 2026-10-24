@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { LignePrescription, MedicamentRef } from "@/lib/prescription";
+import type { MedicamentRef } from "@/lib/prescription";
 import { creerClientNavigateur } from "@/lib/supabase/client";
 
 /*
@@ -52,64 +52,11 @@ export async function rechercherMedicaments(saisie: string): Promise<MedicamentR
   return ((data ?? []) as LigneMedicament[]).map(versRef);
 }
 
-/* ===================== Modèles d'ordonnance ===================== */
-
-export interface ModeleOrdonnance {
-  id: string;
-  nom: string;
-  lignes: LignePrescription[];
-  remarques: string;
-}
-
-export function useModelesOrdonnance(revision: number) {
-  const [resultat, setResultat] = useState<{ revision: number; modeles: ModeleOrdonnance[] } | null>(null);
-
-  useEffect(() => {
-    let actif = true;
-    creerClientNavigateur()
-      .from("modeles_ordonnance")
-      .select("id, nom, lignes, remarques")
-      .order("nom")
-      .then(({ data }) => {
-        if (!actif) return;
-        setResultat({
-          revision,
-          modeles: ((data ?? []) as { id: string; nom: string; lignes: LignePrescription[]; remarques: string | null }[]).map(
-            (m) => ({ id: m.id, nom: m.nom, lignes: m.lignes ?? [], remarques: m.remarques ?? "" })
-          ),
-        });
-      });
-    return () => {
-      actif = false;
-    };
-  }, [revision]);
-
-  return { modeles: resultat?.modeles ?? [], chargement: resultat === null };
-}
-
-/** Enregistre la prescription courante comme modèle ; même nom = mise à jour. */
-export async function enregistrerModele(
-  nom: string,
-  lignes: LignePrescription[],
-  remarques: string,
-  existant?: string
-): Promise<{ erreur?: string }> {
-  const propre = nom.trim();
-  if (!propre) return { erreur: "Donnez un nom au modèle." };
-  const supabase = creerClientNavigateur();
-  const { data: auth } = await supabase.auth.getUser();
-  if (!auth.user) return { erreur: "Session expirée — reconnectez-vous." };
-  const corps = { nom: propre, lignes, remarques: remarques.trim() || null, maj_le: new Date().toISOString() };
-  const { error } = existant
-    ? await supabase.from("modeles_ordonnance").update(corps).eq("id", existant)
-    : await supabase.from("modeles_ordonnance").insert({ ...corps, medecin_id: auth.user.id });
-  return error ? { erreur: error.message } : {};
-}
-
-export async function supprimerModele(id: string): Promise<{ erreur?: string }> {
-  const { error } = await creerClientNavigateur().from("modeles_ordonnance").delete().eq("id", id);
-  return error ? { erreur: error.message } : {};
-}
+/*
+ * Les MODÈLES d'ordonnance ont déménagé dans `lib/modeles-ordonnance.ts` :
+ * ils servent aux trois domaines (médicament, biologie, imagerie) et n'ont
+ * plus leur place dans un fichier consacré aux médicaments.
+ */
 
 /* ===================== Signature ===================== */
 

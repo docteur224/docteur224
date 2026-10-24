@@ -46,8 +46,26 @@ export function libelleMedicament(m: Pick<MedicamentRef, "dci" | "nomCommercial"
   return `${base}${marque}${m.forme ? ` — ${m.forme}` : ""}`;
 }
 
-/** Une ligne compte quand elle nomme un produit. */
-export const ligneRemplie = (l: LignePrescription) => l.libelle.trim() !== "";
+/**
+ * Ce que toute ligne d'ordonnance a en commun, qu'elle porte un médicament
+ * ou un acte : le nom de ce qui est prescrit. Les fonctions ci-dessous ne
+ * demandent que cela, et servent donc aussi aux ordonnances d'actes
+ * (`lib/prescription-actes.ts`) — plutôt que d'en avoir deux jeux qui
+ * divergeraient.
+ */
+export interface LigneNommee {
+  libelle: string;
+}
+
+/** Une ligne compte quand elle nomme un produit ou un acte. */
+export const ligneRemplie = (l: LigneNommee) => l.libelle.trim() !== "";
+
+/**
+ * Distingue une ligne de médicament d'une ligne d'acte : seule la première
+ * porte une posologie. Les deux cohabitent dans
+ * `documents_patient.prescription`, dont la forme suit le type de la pièce.
+ */
+export const estLigneMedicament = (l: LigneNommee): l is LignePrescription => "posologie" in l;
 
 /**
  * Le texte de l'ordonnance. Le produit en capitales sur sa ligne — c'est
@@ -70,8 +88,11 @@ export function texteOrdonnance(lignes: LignePrescription[], remarques = ""): st
   return [...blocs, ...fin].join("\n\n");
 }
 
-/** « Amoxicilline 500 mg, Paracétamol 1 g » : de quoi distinguer deux ordonnances du même jour. */
-export function resumePrescription(lignes: LignePrescription[] | null | undefined, max = 70): string {
+/**
+ * « Amoxicilline 500 mg, Paracétamol 1 g », ou « NFS, Glycémie à jeun » :
+ * de quoi distinguer deux ordonnances du même jour sans les ouvrir.
+ */
+export function resumePrescription(lignes: LigneNommee[] | null | undefined, max = 70): string {
   const texte = (lignes ?? [])
     .filter(ligneRemplie)
     .map((l) => l.libelle.split(" — ")[0].replace(/\s*\(.*\)$/, ""))

@@ -2,21 +2,35 @@
 
 import { useEffect, useRef, useState } from "react";
 import ChampsCertificat, { champsInitiaux, texteModele, type BaseModele } from "@/components/medecin/ordonnance/ChampsCertificat";
+import EditeurActes from "@/components/medecin/ordonnance/EditeurActes";
 import EditeurPrescription, { compterAlertes } from "@/components/medecin/ordonnance/EditeurPrescription";
 import SignatureElectronique from "@/components/medecin/SignatureElectronique";
 import Icone from "@/components/site/Icone";
 import {
   corrigerDocument,
   deposerDocument,
+  estFeminin,
   genererPdf,
   libelleType,
-  titreOrdonnanceDuJour,
+  domaineActeDe,
+  structureDe,
+  titreAutoDe,
+  titreAutoDuJour,
   TYPES_DOCUMENT,
   type DocumentPatient,
   type TypeDocument,
 } from "@/lib/documents";
 import { useSignature } from "@/lib/medicaments";
 import { LIGNE_VIDE, ligneRemplie, problemePrescription, texteOrdonnance, type LignePrescription } from "@/lib/prescription";
+import {
+  LIGNE_ACTE_VIDE,
+  ligneActeRemplie,
+  optionsEnBase,
+  problemeActes,
+  texteOrdonnanceActes,
+  type LigneActe,
+  type OptionsActes,
+} from "@/lib/prescription-actes";
 
 /*
  * Remise (ou correction) d'un document, depuis l'espace médecin.
@@ -54,8 +68,7 @@ const estCertificat = (t: TypeDocument): t is "certificat" | "arret_travail" =>
 
 /** « Ordonnance remise », « Certificat remis »… */
 function confirmation(type: TypeDocument, nomPatient: string): string {
-  const feminin = type === "ordonnance";
-  return `${libelleType(type)} remis${feminin ? "e" : ""} à ${nomPatient}`;
+  return `${libelleType(type)} remis${estFeminin(type) ? "e" : ""} à ${nomPatient}`;
 }
 
 export default function DeposerDocument({
@@ -86,6 +99,8 @@ export default function DeposerDocument({
   const [mode, setMode] = useState<Mode>(modeInitial(aModifier));
   const [champs, setChamps] = useState(VIDE);
   const [lignes, setLignes] = useState<LignePrescription[]>([{ ...LIGNE_VIDE }]);
+  const [lignesActes, setLignesActes] = useState<LigneActe[]>([{ ...LIGNE_ACTE_VIDE }]);
+  const [options, setOptions] = useState<OptionsActes>({});
   const [remarques, setRemarques] = useState("");
   const [confirmationAllergie, setConfirmationAllergie] = useState(false);
   const [remplacerFichier, setRemplacerFichier] = useState(false);
@@ -101,18 +116,26 @@ export default function DeposerDocument({
   const destinataire = prefixe === "c" ? { patientId: id } : { procheId: id };
   const allergies = patient?.allergies ?? [];
 
-  /* Ordonnance structurée — sauf pour corriger une ordonnance d'avant, tapée
-     en texte libre : elle se corrige comme elle a été écrite. */
+  /* L'éditeur structuré du type choisi — sauf pour corriger une ordonnance
+     d'avant, tapée en texte libre : elle se corrige comme elle a été écrite. */
   const ancienneLibre = enCorrection && !aModifier?.prescription?.length && !!aModifier?.contenu;
-  const structuree = mode === "generer" && champs.type === "ordonnance" && !ancienneLibre;
+  const structure = mode === "generer" && !ancienneLibre ? structureDe(champs.type) : null;
+  const structuree = structure !== null;
+  const actes = structure === "acte";
 
   /* Une ordonnance ne se titre plus à la main : « Ordonnance du JJ/MM/AAAA ». */
-  const titreAuto = champs.type === "ordonnance";
-  const titre = titreAuto ? titreOrdonnanceDuJour() : champs.titre;
-  const contenu = structuree ? texteOrdonnance(lignes, remarques) : champs.contenu;
+  const titreAuto = titreAutoDe(champs.type) !== null;
+  const titre = titreAuto ? titreAutoDuJour(champs.type) : champs.titre;
+  const contenu = actes
+    ? texteOrdonnanceActes(lignesActes, options)
+    : structuree
+      ? texteOrdonnance(lignes, remarques)
+      : champs.contenu;
 
-  const probleme = structuree ? problemePrescription(lignes) : null;
-  const nbAlertes = structuree ? compterAlertes(lignes, allergies) : 0;
+  const probleme = actes ? problemeActes(lignesActes) : structuree ? problemePrescription(lignes) : null;
+  // L'alerte allergie ne vaut que pour les médicaments : on ne compare pas
+  // une allergie déclarée à une analyse de sang.
+  const nbAlertes = structure === "medicament" ? compterAlertes(lignes, allergies) : 0;
   const valide =
     titre.trim() !== "" &&
     (mode === "generer" ? (structuree ? probleme === null : contenu.trim() !== "") : true) &&
@@ -142,10 +165,23 @@ export default function DeposerDocument({
         ? { type: aModifier.type as TypeDocument, titre: aModifier.titre, contenu: aModifier.contenu ?? "" }
         : VIDE
     );
+    // Les lignes relues suivent la structure du type corrigé : une
+    // ordonnance de biologie ne se recharge pas dans l'éditeur des
+    // médicaments, et réciproquement.
+    const structureDoc = aModifier ? structureDe(aModifier.type) : null;
+    const avecLignes = !!aModifier?.prescription?.length;
     setLignes(
-      aModifier?.prescription?.length ? aModifier.prescription.map((l) => ({ ...LIGNE_VIDE, ...l })) : [{ ...LIGNE_VIDE }]
+      avecLignes && structureDoc === "medicament"
+        ? (aModifier!.prescription as LignePrescription[]).map((l) => ({ ...LIGNE_VIDE, ...l }))
+        : [{ ...LIGNE_VIDE }]
     );
-    setRemarques(aModifier?.prescription?.length ? remarquesDe(aModifier.contenu) : "");
+    setLignesActes(
+      avecLignes && structureDoc === "acte"
+        ? (aModifier!.prescription as LigneActe[]).map((l) => ({ ...LIGNE_ACTE_VIDE, ...l }))
+        : [{ ...LIGNE_ACTE_VIDE }]
+    );
+    setOptions(aModifier?.prescriptionOptions ?? {});
+    setRemarques(avecLignes && structureDoc === "medicament" ? remarquesDe(aModifier!.contenu) : "");
     setConfirmationAllergie(false);
     setMode(modeInitial(aModifier));
     setRemplacerFichier(false);
@@ -215,7 +251,11 @@ export default function DeposerDocument({
       fichier = res.fichier;
       code = res.code ?? null;
     }
-    const prescription = structuree ? lignes.filter(ligneRemplie) : null;
+    const prescription = actes
+      ? lignesActes.filter(ligneActeRemplie)
+      : structuree
+        ? lignes.filter(ligneRemplie)
+        : null;
 
     const res = aModifier
       ? await corrigerDocument(aModifier.id, {
@@ -228,6 +268,13 @@ export default function DeposerDocument({
           fichierActuel: aModifier.fichierPath,
           fichierNomActuel: aModifier.fichierNom,
           prescription,
+          /*
+           * Objet VIDE et non `null` quand le médecin a tout décoché : côté
+           * base, `null` veut dire « reconduis celles d'avant » — ce qui
+           * protège les appelants distraits, mais empêcherait justement de
+           * retirer un « urgent » posé par erreur.
+           */
+          prescriptionOptions: actes ? (optionsEnBase(options) ?? {}) : null,
           codeVerification: code,
         })
       : await deposerDocument({
@@ -238,6 +285,7 @@ export default function DeposerDocument({
           fichier,
           origine: "medecin",
           prescription,
+          prescriptionOptions: actes ? optionsEnBase(options) : null,
           codeVerification: code,
         });
 
@@ -257,6 +305,8 @@ export default function DeposerDocument({
     const texte = confirmation(champs.type, nomPatient);
     setChamps(VIDE);
     setLignes([{ ...LIGNE_VIDE }]);
+    setLignesActes([{ ...LIGNE_ACTE_VIDE }]);
+    setOptions({});
     setRemarques("");
     setConfirmationAllergie(false);
     // Le panneau reste ouvert sur la confirmation : refermer aussitôt
@@ -402,7 +452,17 @@ export default function DeposerDocument({
                 />
               )}
 
-              {structuree ? (
+              {actes ? (
+                <div className="mb-3">
+                  <EditeurActes
+                    domaine={domaineActeDe(champs.type) ?? "biologie"}
+                    lignes={lignesActes}
+                    onLignes={setLignesActes}
+                    options={options}
+                    onOptions={setOptions}
+                  />
+                </div>
+              ) : structuree ? (
                 <div className="mb-3">
                   <EditeurPrescription
                     lignes={lignes}

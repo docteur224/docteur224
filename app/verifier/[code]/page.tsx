@@ -4,6 +4,7 @@ import Icone, { type NomIcone } from "@/components/site/Icone";
 import PageContenu from "@/components/site/PageContenu";
 import { normaliserCode } from "@/lib/code-verification";
 import { creerClientServeur } from "@/lib/supabase/server";
+import { libellePublic } from "@/lib/types-document";
 
 /*
  * Vérification publique d'un document médical — la page qu'ouvre le QR.
@@ -33,15 +34,6 @@ interface Resultat {
   etablissement: string | null;
   change_le: string | null;
 }
-
-const TYPES: Record<string, string> = {
-  ordonnance: "Ordonnance",
-  certificat: "Certificat médical",
-  arret_travail: "Arrêt de travail",
-  compte_rendu: "Compte rendu",
-  resultat: "Résultat d’examen",
-  autre: "Document médical",
-};
 
 const quand = (iso: string) =>
   new Date(iso).toLocaleString("fr-FR", {
@@ -106,7 +98,7 @@ export default async function PageVerification({ params }: { params: Promise<{ c
               <dd className="m-0 text-right font-mono font-bold tracking-[0.04em]">{code}</dd>
               <dt className="text-muted">Document</dt>
               <dd className="m-0 text-right font-semibold">
-                {TYPES[resultat.type] ?? "Document médical"}
+                {libellePublic(resultat.type)}
                 {resultat.version > 1 ? ` · version ${resultat.version}` : ""}
               </dd>
               <dt className="text-muted">Émis le</dt>
