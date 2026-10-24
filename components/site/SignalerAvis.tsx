@@ -40,7 +40,7 @@ export default function SignalerAvis({ avisId }: { avisId: string }) {
       <button
         type="button"
         onClick={() => setOuvert(true)}
-        className="mt-2 text-[11.5px] font-semibold text-muted underline-offset-2 transition-colors hover:text-red hover:underline"
+        className="cible-texte mt-2 text-[11.5px] font-semibold text-muted underline-offset-2 transition-colors hover:text-red hover:underline"
       >
         Signaler cet avis
       </button>

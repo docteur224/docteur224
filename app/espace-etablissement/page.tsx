@@ -201,7 +201,7 @@ export default function TableauDeBordEtablissement() {
           </div>
           <Link
             href="/espace-etablissement/medecins"
-            className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+            className="pointer-coarse:py-[13px] rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
           >
             + Inviter un médecin
           </Link>
@@ -278,7 +278,7 @@ export default function TableauDeBordEtablissement() {
           )}
           <Link
             href="/espace-etablissement/medecins"
-            className="mt-[14px] inline-block rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg"
+            className="pointer-coarse:py-[13px] mt-[14px] inline-block rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg"
           >
             {nbMedecins === 0 ? "Inviter un médecin →" : "Voir tous les médecins →"}
           </Link>

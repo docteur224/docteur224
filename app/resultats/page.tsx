@@ -460,7 +460,7 @@ export default async function Resultats({
               <Link
                 href={lienCarte}
                 scroll={false}
-                className="ml-auto inline-flex items-center gap-2 rounded-[11px] border-[1.5px] border-line bg-white px-[14px] py-[9px] text-[12.5px] font-bold text-blue transition-colors hover:bg-teal-soft"
+                className="pointer-coarse:py-3 ml-auto inline-flex items-center gap-2 rounded-[11px] border-[1.5px] border-line bg-white px-[14px] py-[9px] text-[12.5px] font-bold text-blue transition-colors hover:bg-teal-soft"
               >
                 <span aria-hidden>🗺️</span> Afficher la carte
               </Link>
@@ -478,7 +478,7 @@ export default async function Resultats({
               </p>
               <Link
                 href="/resultats"
-                className="mt-4 inline-block rounded-[11px] bg-teal px-[18px] py-[11px] text-[13.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+                className="pointer-coarse:py-3 mt-4 inline-block rounded-[11px] bg-teal px-[18px] py-[11px] text-[13.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
               >
                 Voir tous les médecins
               </Link>
@@ -544,7 +544,7 @@ export default async function Resultats({
                       <Link
                         key={heure}
                         href={`/medecin/${m.id}`}
-                        className="ui-slot rounded-lg bg-teal-soft py-2 text-center text-[12.5px] font-bold text-blue hover:bg-[#c9e6f3]"
+                        className="ui-slot rounded-lg bg-teal-soft py-2 text-center text-[12.5px] font-bold text-blue hover:bg-[#c9e6f3] pointer-coarse:py-[13px]"
                       >
                         {heure}
                       </Link>
@@ -552,7 +552,7 @@ export default async function Resultats({
                   </div>
                   <Link
                     href={`/medecin/${m.id}`}
-                    className="ui-btn block w-full rounded-[9px] bg-teal px-[14px] py-2 text-center text-[12.5px] font-bold text-white hover:bg-[#2790bc]"
+                    className="pointer-coarse:py-[13px] ui-btn block w-full rounded-[9px] bg-teal px-[14px] py-2 text-center text-[12.5px] font-bold text-white hover:bg-[#2790bc]"
                   >
                     Voir le profil
                   </Link>

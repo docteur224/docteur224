@@ -102,7 +102,7 @@ export default function AssistantShell({ children }: { children: React.ReactNode
           </button>
         </nav>
       </aside>
-      <main className="with-tabbar overflow-auto md:px-[30px] md:py-[26px]">
+      <main className="with-tabbar min-w-0 overflow-x-clip md:px-[30px] md:py-[26px]">
         {/* Compte mis en pause par son titulaire : l'espace se referme sur
             l'écran de réactivation. Laisser l'interface ouverte donnerait des
             boutons que la base refuse (migration 0045). */}

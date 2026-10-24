@@ -103,7 +103,7 @@ export default function CarteLocalisation({
           href={lienItineraire}
           target="_blank"
           rel="noopener"
-          className="inline-flex items-center justify-center gap-2 rounded-[11px] bg-teal px-[18px] py-[11px] text-[13.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+          className="pointer-coarse:py-3 inline-flex items-center justify-center gap-2 rounded-[11px] bg-teal px-[18px] py-[11px] text-[13.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
         >
           🧭 Voir l’itinéraire
         </a>

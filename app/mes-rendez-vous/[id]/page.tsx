@@ -389,7 +389,7 @@ export default function DetailRdv() {
                   href={carte}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="mt-3 inline-block rounded-[10px] border-[1.5px] border-line bg-white px-[15px] py-[9px] text-[12.5px] font-bold text-blue transition-colors hover:bg-bg"
+                  className="pointer-coarse:py-3 mt-3 inline-block rounded-[10px] border-[1.5px] border-line bg-white px-[15px] py-[9px] text-[12.5px] font-bold text-blue transition-colors hover:bg-bg"
                 >
                   📍 Ouvrir la carte
                 </a>

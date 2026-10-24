@@ -210,7 +210,7 @@ export default function NouveauRdvDelegue({
       <div className="mb-4 flex items-center gap-3">
         <Link
           href={lienRetour}
-          className="rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg"
+          className="pointer-coarse:py-[13px] rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg"
         >
           ← Retour
         </Link>

@@ -344,63 +344,67 @@ export default function AbonnementsAdmin() {
           </div>
           <div className="card2">
             <h4>Paliers établissement</h4>
-            <table className="atab">
-              <thead>
-                <tr>
-                  <th>Palier</th>
-                  <th>Mensuel</th>
-                  <th>Annuel</th>
-                  <th>SMS</th>
-                  <th>Assist.</th>
-                </tr>
-              </thead>
-              <tbody>
-                {PALIERS.map((palier) => (
-                  <tr key={palier.formule}>
-                    <td>
-                      {palier.nom}
-                      <span style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
-                        <input
-                          className="inp"
-                          style={{ marginBottom: 0, padding: "4px 6px", fontSize: 11, width: 44 }}
-                          value={valeurs[palier.min] as string}
-                          onChange={(e) => modifier(palier.min, e.target.value)}
-                          aria-label={`${palier.nom} médecins minimum`}
-                          inputMode="numeric"
-                        />
-                        <span className="muted" style={{ fontSize: 11 }}>
-                          à
-                        </span>
-                        <input
-                          className="inp"
-                          style={{ marginBottom: 0, padding: "4px 6px", fontSize: 11, width: 44 }}
-                          value={valeurs[palier.max] as string}
-                          onChange={(e) => modifier(palier.max, e.target.value)}
-                          aria-label={`${palier.nom} médecins maximum`}
-                          placeholder="∞"
-                          inputMode="numeric"
-                        />
-                        <span className="muted" style={{ fontSize: 11 }}>
-                          médecins
-                        </span>
-                      </span>
-                    </td>
-                    {([palier.mensuel, palier.annuel, palier.sms, palier.assistants] as const).map((cle, i) => (
-                      <td key={cle}>
-                        <input
-                          className="inp"
-                          style={{ marginBottom: 0, padding: "6px 8px", fontSize: 12 }}
-                          value={valeurs[cle] as string}
-                          onChange={(e) => modifier(cle, e.target.value)}
-                          aria-label={`${palier.nom} ${["mensuel", "annuel", "quota SMS", "assistants inclus"][i]}`}
-                          inputMode={i === 3 ? "numeric" : undefined}
-                        />
-                      </td>
-                    ))}
+            {/* Six colonnes ne tiennent pas sous 400px : le tableau défile
+                dans sa carte plutôt que d’être rogné par la coquille. */}
+            <div className="overflow-x-auto">
+              <table className="atab">
+                <thead>
+                  <tr>
+                    <th>Palier</th>
+                    <th>Mensuel</th>
+                    <th>Annuel</th>
+                    <th>SMS</th>
+                    <th>Assist.</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {PALIERS.map((palier) => (
+                    <tr key={palier.formule}>
+                      <td>
+                        {palier.nom}
+                        <span style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 4 }}>
+                          <input
+                            className="inp"
+                            style={{ marginBottom: 0, padding: "4px 6px", fontSize: 11, width: 44 }}
+                            value={valeurs[palier.min] as string}
+                            onChange={(e) => modifier(palier.min, e.target.value)}
+                            aria-label={`${palier.nom} médecins minimum`}
+                            inputMode="numeric"
+                          />
+                          <span className="muted" style={{ fontSize: 11 }}>
+                            à
+                          </span>
+                          <input
+                            className="inp"
+                            style={{ marginBottom: 0, padding: "4px 6px", fontSize: 11, width: 44 }}
+                            value={valeurs[palier.max] as string}
+                            onChange={(e) => modifier(palier.max, e.target.value)}
+                            aria-label={`${palier.nom} médecins maximum`}
+                            placeholder="∞"
+                            inputMode="numeric"
+                          />
+                          <span className="muted" style={{ fontSize: 11 }}>
+                            médecins
+                          </span>
+                        </span>
+                      </td>
+                      {([palier.mensuel, palier.annuel, palier.sms, palier.assistants] as const).map((cle, i) => (
+                        <td key={cle}>
+                          <input
+                            className="inp"
+                            style={{ marginBottom: 0, padding: "6px 8px", fontSize: 12 }}
+                            value={valeurs[cle] as string}
+                            onChange={(e) => modifier(cle, e.target.value)}
+                            aria-label={`${palier.nom} ${["mensuel", "annuel", "quota SMS", "assistants inclus"][i]}`}
+                            inputMode={i === 3 ? "numeric" : undefined}
+                          />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
             <div className="privnote info">
               <span aria-hidden>ℹ️</span>
               <div>Un médecin couvert par son établissement ne paie pas en plus.</div>

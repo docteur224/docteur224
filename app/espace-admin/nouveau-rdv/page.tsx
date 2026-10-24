@@ -44,7 +44,7 @@ function CentreAppel() {
     <Link
       href={cle === "prise" ? chemin : `${chemin}?vue=appels`}
       aria-current={vue === cle ? "page" : undefined}
-      className={`rounded-[10px] px-[14px] py-2 text-[12.5px] font-bold transition-colors ${
+      className={`rounded-[10px] px-[14px] py-2 text-[12.5px] font-bold transition-colors pointer-coarse:py-[13px] ${
         vue === cle ? "bg-teal text-white" : "border-[1.5px] border-line bg-white text-blue hover:bg-bg"
       }`}
     >

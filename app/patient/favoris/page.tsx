@@ -134,7 +134,7 @@ export default function MesFavoris() {
             </p>
             <Link
               href="/resultats"
-              className="mt-4 inline-block rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+              className="pointer-coarse:py-[13px] mt-4 inline-block rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
             >
               Trouver un médecin
             </Link>

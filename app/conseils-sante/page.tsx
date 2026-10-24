@@ -173,7 +173,7 @@ export default function ConseilsSante() {
       >
         <Link
           href="/resultats?specialite=M%C3%A9decine%20g%C3%A9n%C3%A9rale"
-          className="rounded-[11px] bg-teal px-[18px] py-[11px] text-[13.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+          className="pointer-coarse:py-3 rounded-[11px] bg-teal px-[18px] py-[11px] text-[13.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
         >
           Trouver un généraliste
         </Link>

@@ -208,8 +208,8 @@ export default function PatientsAssistant() {
               </div>
               {boutonRdv(
                 peutCreer
-                  ? "rounded-[9px] border-[1.5px] border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-blue transition-colors hover:bg-bg"
-                  : "cursor-not-allowed rounded-[9px] border-[1.5px] border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-blue opacity-50"
+                  ? "rounded-[9px] border-[1.5px] border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-blue transition-colors hover:bg-bg pointer-coarse:py-[13px]"
+                  : "cursor-not-allowed rounded-[9px] border-[1.5px] border-line bg-white px-3 py-1.5 pointer-coarse:py-[13px] text-[11.5px] font-bold text-blue opacity-50"
               )}
             </div>
           ))}

@@ -55,7 +55,7 @@ export default function ChampMotDePasse({
         aria-pressed={visible}
         aria-label={visible ? "Masquer le mot de passe" : "Afficher le mot de passe"}
         title={visible ? "Masquer le mot de passe" : "Afficher le mot de passe"}
-        className="absolute right-1 top-1 grid h-[calc(100%-8px)] w-10 place-items-center rounded-lg text-base text-muted hover:text-blue"
+        className="absolute right-0.5 top-1/2 grid h-11 w-11 -translate-y-1/2 place-items-center rounded-lg text-base text-muted hover:text-blue"
       >
         <span aria-hidden>{visible ? "🙈" : "👁️"}</span>
       </button>

@@ -133,7 +133,7 @@ export default function TableauDeBordPatient() {
         </div>
         <Link
           href="/resultats"
-          className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+          className="pointer-coarse:py-[13px] rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
         >
           + Nouveau rendez-vous
         </Link>
@@ -188,7 +188,7 @@ export default function TableauDeBordPatient() {
         <div className="flex flex-wrap gap-3">
           <Link
             href="/resultats"
-            className="rounded-[11px] border-[1.5px] border-line bg-white px-[18px] py-[11px] text-[13.5px] font-bold text-blue transition-colors hover:bg-bg"
+            className="pointer-coarse:py-3 rounded-[11px] border-[1.5px] border-line bg-white px-[18px] py-[11px] text-[13.5px] font-bold text-blue transition-colors hover:bg-bg"
           >
             🔍 Trouver un médecin
           </Link>

@@ -277,7 +277,7 @@ export default function CompteEtablissement() {
             </div>
             <Link
               href="/espace-etablissement/mon-compte"
-              className="rounded-[9px] border-[1.5px] border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-blue transition-colors hover:bg-bg"
+              className="pointer-coarse:py-[13px] rounded-[9px] border-[1.5px] border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-blue transition-colors hover:bg-bg"
             >
               Changer
             </Link>

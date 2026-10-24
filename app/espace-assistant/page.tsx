@@ -245,19 +245,19 @@ export default function TableauDeBordAssistant() {
         <div className="flex flex-wrap gap-2">
           <Link
             href="/espace-assistant/rendez-vous"
-            className="rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
+            className="pointer-coarse:py-[13px] rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
           >
             📅 Gérer les rendez-vous
           </Link>
           <Link
             href="/espace-assistant/creneaux"
-            className="rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
+            className="pointer-coarse:py-[13px] rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
           >
             🕐 Ouvrir/fermer des créneaux
           </Link>
           <Link
             href="/espace-assistant/messages"
-            className="rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
+            className="pointer-coarse:py-[13px] rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
           >
             💬 Répondre aux messages
           </Link>

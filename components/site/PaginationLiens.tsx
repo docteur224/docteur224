@@ -43,8 +43,8 @@ export default function PaginationLiens({
   };
 
   const classe =
-    "rounded-[9px] border-[1.5px] border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-blue transition-colors hover:bg-bg";
-  const inactif = "rounded-[9px] border-[1.5px] border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-muted opacity-40";
+    "inline-flex items-center rounded-[9px] border-[1.5px] border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-blue transition-colors hover:bg-bg pointer-coarse:min-h-11";
+  const inactif = "inline-flex items-center rounded-[9px] border-[1.5px] pointer-coarse:min-h-11 border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-muted opacity-40";
 
   return (
     <nav

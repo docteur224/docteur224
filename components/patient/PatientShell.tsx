@@ -124,7 +124,7 @@ export default function PatientShell({ children }: { children: React.ReactNode }
           </button>
         </nav>
       </aside>
-      <main className="with-tabbar overflow-auto md:px-[30px] md:py-[26px]">
+      <main className="with-tabbar min-w-0 overflow-x-clip md:px-[30px] md:py-[26px]">
         {profil?.statut === "suspendu" ? <CompteSuspendu role={profil.role} parAdmin={profil.suspenduParAdmin} /> : children}
       </main>
       <TabBarMobile role="public" />

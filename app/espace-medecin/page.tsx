@@ -146,13 +146,13 @@ export default function TableauDeBordMedecin() {
         <div className="flex gap-2">
           <Link
             href="/espace-medecin/nouveau-rdv"
-            className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+            className="pointer-coarse:py-[13px] rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
           >
             + Nouveau RDV
           </Link>
           <Link
             href="/espace-medecin/disponibilites"
-            className="rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg"
+            className="pointer-coarse:py-[13px] rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg"
           >
             + Ajouter un créneau
           </Link>

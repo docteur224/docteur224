@@ -72,7 +72,7 @@ const CARTE = "rounded-[16px] border border-line bg-white p-[18px]";
 const BTN_PRIMAIRE =
   "rounded-[10px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:cursor-not-allowed disabled:opacity-50";
 const BTN_LEGER =
-  "rounded-[10px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg";
+  "rounded-[10px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg pointer-coarse:py-[13px]";
 
 const initiales = (prenom: string, nom: string) =>
   `${prenom.charAt(0)}${nom.charAt(0)}`.toUpperCase() || "?";

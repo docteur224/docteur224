@@ -24,7 +24,7 @@ export default function BoutonsCompteWeb() {
     return (
       <Link
         href={espace}
-        className="ui-btn rounded-[11px] border-[1.5px] border-line bg-white px-[16px] py-[9px] text-[12.5px] font-bold text-blue hover:bg-bg"
+        className="ui-btn inline-flex items-center rounded-[11px] border-[1.5px] border-line bg-white px-[16px] py-[9px] pointer-coarse:min-h-11 text-[12.5px] font-bold text-blue hover:bg-bg"
       >
         Mon espace
       </Link>
@@ -33,12 +33,12 @@ export default function BoutonsCompteWeb() {
 
   return (
     <>
-      <Link href="/connexion" className="ui-link text-[13.5px] font-bold text-blue hover:text-blue-deep">
+      <Link href="/connexion" className="ui-link py-3 text-[13.5px] font-bold text-blue hover:text-blue-deep">
         Se connecter
       </Link>
       <Link
         href="/inscription"
-        className="ui-btn rounded-[11px] bg-teal px-[18px] py-[11px] text-[13.5px] font-bold text-white hover:bg-[#2790bc]"
+        className="ui-btn inline-flex items-center rounded-[11px] bg-teal px-[18px] py-[11px] pointer-coarse:min-h-11 text-[13.5px] font-bold text-white hover:bg-[#2790bc]"
       >
         S&apos;inscrire
       </Link>

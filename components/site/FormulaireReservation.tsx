@@ -811,7 +811,7 @@ export default function FormulaireReservation({
       <div className="flex gap-3">
         <Link
           href={`/medecin/${medecinId}`}
-          className="ui-btn rounded-[11px] border-[1.5px] border-line bg-white px-[18px] py-[11px] text-[13.5px] font-bold text-blue hover:bg-bg"
+          className="pointer-coarse:py-3 ui-btn rounded-[11px] border-[1.5px] border-line bg-white px-[18px] py-[11px] text-[13.5px] font-bold text-blue hover:bg-bg"
         >
           ← Retour
         </Link>

@@ -20,14 +20,14 @@ export default function TopNav({
 }) {
   return (
     <nav className="sticky top-0 z-20 hidden h-[66px] items-center gap-[26px] border-b border-line bg-white px-4 md:flex md:px-[30px]">
-      <Logo hauteur={38} priority className="flex items-center" />
+      <Logo hauteur={38} priority className="flex min-h-11 items-center" />
       {!minimale && (
         // Six entrées : les trois éditoriales n'apparaissent qu'à partir de
         // lg, sinon la barre déborderait sur une tablette.
         <div className="ml-2 hidden items-center gap-[18px] md:flex">
           <Link
             href="/resultats"
-            className={`ui-link text-[13.5px] font-semibold hover:text-blue ${
+            className={`ui-link py-3 text-[13.5px] font-semibold hover:text-blue ${
               lienActif === "trouver" ? "text-blue" : "text-muted"
             }`}
           >
@@ -35,30 +35,30 @@ export default function TopNav({
           </Link>
           <Link
             href="/a-propos"
-            className="ui-link hidden text-[13.5px] font-semibold text-muted hover:text-blue lg:inline"
+            className="ui-link hidden py-3 text-[13.5px] font-semibold text-muted hover:text-blue lg:inline"
           >
             À propos
           </Link>
           <Link
             href="/conseils-sante"
-            className="ui-link hidden text-[13.5px] font-semibold text-muted hover:text-blue lg:inline"
+            className="ui-link hidden py-3 text-[13.5px] font-semibold text-muted hover:text-blue lg:inline"
           >
             Conseils santé
           </Link>
           <Link
             href="/faq"
-            className="ui-link hidden text-[13.5px] font-semibold text-muted hover:text-blue lg:inline"
+            className="ui-link hidden py-3 text-[13.5px] font-semibold text-muted hover:text-blue lg:inline"
           >
             FAQ
           </Link>
-          <Link href="/#comment-ca-marche" className="ui-link text-[13.5px] font-semibold text-muted hover:text-blue">
+          <Link href="/#comment-ca-marche" className="ui-link py-3 text-[13.5px] font-semibold text-muted hover:text-blue">
             Comment ça marche
           </Link>
           {/* Destination : l'inscription professionnelle. L'espace médecin
               n'a de sens que pour un compte déjà créé et validé. */}
           <Link
             href="/inscription/professionnel"
-            className="ui-link text-[13.5px] font-semibold text-muted hover:text-blue"
+            className="ui-link py-3 text-[13.5px] font-semibold text-muted hover:text-blue"
           >
             Pour les médecins
           </Link>

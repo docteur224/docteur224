@@ -101,7 +101,7 @@ export default function PanneauReservation({
           aria-label="Aller à un mois"
           value={moisCourant}
           onChange={(e) => setDecalage(Number(e.target.value))}
-          className="flex-none rounded-lg border border-line bg-white px-2 py-1 text-xs font-bold text-blue"
+          className="flex-none rounded-lg border border-line bg-white px-2 py-1 text-xs font-bold text-blue pointer-coarse:min-h-11"
         >
           {mois.map((m) => (
             <option key={m.decalage} value={m.decalage}>

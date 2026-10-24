@@ -65,8 +65,60 @@ body {
    façon uniforme (textes, marges, boutons, icônes, images), comme
    demandé. Cantonné à la version web (≥ 768px) : le mobile, déjà pensé
    en plein écran, reste inchangé — mobile.css n'agit que < 768px.
+
+   Et seulement sous une SOURIS (`pointer: fine`). Une tablette tactile
+   passe elle aussi la barre des 768px : réduite à 80 %, une zone tactile
+   de 44px n'en faisait plus que 35 à l'écran, sous le minimum qu'exige un
+   doigt. Une règle unique pour tout le site plutôt que des tailles
+   rehaussées écran par écran.
    ===================================================================== */
-@media (min-width: 768px) {
+/* =====================================================================
+   CIBLES TACTILES — 44px partout où l'on touche l'écran du doigt
+   ---------------------------------------------------------------------
+   Pendant exact du zoom ci-dessous : sous une souris, l'interface reste
+   compacte ; sur un écran tactile (téléphone, tablette), tout bouton,
+   onglet ou liste déroulante mesure au moins 44px. Une règle unique pour
+   tout le site plutôt que des tailles rehaussées écran par écran — la
+   revue des pages (scripts/revue-pages.mjs) en relevait près de deux cents.
+
+   En couche `base` : une classe utilitaire d'un écran (`min-h-0`, …) peut
+   toujours en sortir explicitement. Les interrupteurs en sont exclus — un
+   étirement à 44px déformerait la pastille — et élargissent leur zone de
+   clic par un pseudo-élément (voir Interrupteur.tsx).
+   ===================================================================== */
+@layer base {
+  @media (pointer: coarse) {
+    button:not([role="switch"]),
+    [role="button"],
+    [role="tab"],
+    [role="menuitem"],
+    select {
+      min-height: 44px;
+    }
+    button:not([role="switch"]),
+    [role="button"] {
+      min-width: 44px;
+    }
+  }
+}
+
+/* Bouton-texte au fil d'une phrase (« Lire le contenu », « Signaler cet
+   avis ») : 44px de haut casseraient l'interligne. La zone de clic
+   s'étend par un pseudo-élément invisible, la ligne ne bouge pas. */
+@layer components {
+  .cible-texte {
+    position: relative;
+    min-height: 0;
+    min-width: 0;
+  }
+  .cible-texte::after {
+    content: "";
+    position: absolute;
+    inset: -14px -4px;
+  }
+}
+
+@media (min-width: 768px) and (hover: hover) and (pointer: fine) {
   body {
     zoom: 0.8;
   }

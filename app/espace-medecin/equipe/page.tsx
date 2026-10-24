@@ -263,7 +263,7 @@ export default function EquipeMedecin() {
             <span className="flex-1">{motifBlocage}</span>
             <Link
               href="/espace-medecin/abonnement"
-              className="rounded-[9px] border-[1.5px] border-[#E5C79C] bg-white px-3 py-1.5 text-[11.5px] font-bold text-[#8A5A1B]"
+              className="pointer-coarse:py-[13px] rounded-[9px] border-[1.5px] border-[#E5C79C] bg-white px-3 py-1.5 text-[11.5px] font-bold text-[#8A5A1B]"
             >
               Voir les formules
             </Link>

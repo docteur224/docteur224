@@ -353,7 +353,7 @@ function FicheCarte({
         <Link
           href={`/medecin/${point.id}`}
           onClick={(e) => e.stopPropagation()}
-          className="ui-btn ml-auto rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white hover:bg-[#2790bc]"
+          className="pointer-coarse:py-[13px] ui-btn ml-auto rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white hover:bg-[#2790bc]"
         >
           Voir le profil
         </Link>

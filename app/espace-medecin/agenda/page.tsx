@@ -359,7 +359,7 @@ export default function AgendaMedecin() {
           <div className="flex flex-wrap gap-2">
             <Link
               href="/espace-medecin/nouveau-rdv"
-              className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+              className="pointer-coarse:py-[13px] rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
             >
               + Nouveau RDV
             </Link>

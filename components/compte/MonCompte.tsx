@@ -82,7 +82,7 @@ const CARTE = "rounded-2xl border border-line bg-white p-5";
 const TITRE_CARTE = "mb-1 text-[15px] font-extrabold";
 const LIGNE = "flex flex-wrap items-center justify-between gap-[14px] border-b border-line py-[15px] last:border-b-0";
 const BOUTON_LEGER =
-  "rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg";
+  "rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg pointer-coarse:py-[13px]";
 
 const gnf = (n: number) => `${n.toLocaleString("fr-FR").replace(/ | /g, " ")} GNF`;
 const jour = (iso: string | null) =>

@@ -163,7 +163,7 @@ export default function AdminShell({
           </button>
         </nav>
       </aside>
-      <main className="with-tabbar overflow-auto md:px-[30px] md:py-[26px]">{contenu}</main>
+      <main className="with-tabbar min-w-0 overflow-x-clip md:px-[30px] md:py-[26px]">{contenu}</main>
       <TabBarMobile role="admin" />
     </div>
   );

@@ -67,7 +67,9 @@ export default function PopupAvis({
         }}
         onKeyDown={(e) => e.stopPropagation()}
         aria-haspopup="dialog"
-        className={className}
+        // Zone de clic élargie à 45px de haut : la note est un texte de 17px
+        // posé dans une carte, le doigt la manquait.
+        className={`relative after:absolute after:-inset-x-1 after:-inset-y-[14px] ${className ?? ""}`}
       >
         {children}
       </button>
@@ -92,7 +94,7 @@ export default function PopupAvis({
                   type="button"
                   onClick={() => setOuvert(false)}
                   aria-label="Fermer"
-                  className="grid h-8 w-8 flex-none place-items-center rounded-full text-lg text-muted transition-colors hover:bg-bg hover:text-ink"
+                  className="grid h-11 w-11 flex-none place-items-center rounded-full text-lg text-muted transition-colors hover:bg-bg hover:text-ink"
                 >
                   ✕
                 </button>

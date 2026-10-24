@@ -74,7 +74,7 @@ export default function BoutonFavori({
       aria-pressed={estFavori}
       aria-label={libelle}
       title={libelle}
-      className={`flex items-center gap-1.5 rounded-[9px] border-[1.5px] px-3 py-1.5 text-[11.5px] font-bold transition-colors ${
+      className={`flex items-center gap-1.5 rounded-[9px] border-[1.5px] px-3 py-1.5 text-[11.5px] pointer-coarse:min-h-11 font-bold transition-colors ${
         estFavori
           ? "border-[#F3C9C2] bg-red-soft text-red"
           : "border-line bg-white text-blue hover:bg-bg"

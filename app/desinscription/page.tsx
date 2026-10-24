@@ -114,7 +114,7 @@ function Contenu() {
         aria-checked={valeur}
         aria-label={titre}
         onClick={() => basculer(cle, !valeur)}
-        className={`mt-1 h-[26px] w-[46px] shrink-0 rounded-full transition-colors ${valeur ? "bg-teal" : "bg-line"}`}
+        className={`relative mt-1 h-[26px] w-[46px] shrink-0 rounded-full transition-colors after:absolute after:inset-x-0 after:-inset-y-[9px] ${valeur ? "bg-teal" : "bg-line"}`}
       >
         <span
           className={`block h-[20px] w-[20px] rounded-full bg-white transition-transform ${valeur ? "translate-x-[23px]" : "translate-x-[3px]"}`}

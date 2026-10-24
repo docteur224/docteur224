@@ -60,7 +60,9 @@
   /* actions : cible tactile 44px conservée malgré un carré visuel de 38px */
   .topbar .tb-actions { display: flex; align-items: center; gap: 8px; margin-left: auto; }
   .topbar .tb-btn { position: relative; width: 38px; height: 38px; border-radius: 12px; background: #fff; border: 1px solid var(--line); display: grid; place-items: center; font-size: 17px; color: var(--blue); flex: none; cursor: pointer; font-family: inherit; padding: 0; }
-  .topbar .tb-btn::after { content: ""; position: absolute; inset: -3px; }
+  /* -4px et non -3px : le pseudo-élément se cale sur l’intérieur de la
+     bordure (1px). À -3px la zone faisait 42px, pas les 44 annoncés. */
+  .topbar .tb-btn::after { content: ""; position: absolute; inset: -4px; }
   /* Trois tirets dessinés plutôt qu'un emoji : ils doivent suivre la couleur
      du texte de la barre, blanche sur le héros et bleue une fois figée. */
   .tb-tirets { width: 17px; height: 2px; border-radius: 2px; background: currentColor; position: relative; display: block; }
@@ -71,11 +73,13 @@
   .topbar.transparente .tb-btn .tb-tirets { color: #fff; }
   .topbar.transparente.figee .tb-btn .tb-tirets { color: var(--blue); }
   .topbar .tb-btn:active { transform: scale(0.96); }
-  .topbar .tb-connexion { font-size: 12.5px; font-weight: 800; color: var(--blue); background: #fff; border: 1px solid var(--line); border-radius: 11px; padding: 9px 13px; flex: none; }
+  .topbar .tb-connexion { font-size: 12.5px; font-weight: 800; color: var(--blue); background: #fff; border: 1px solid var(--line); border-radius: 11px; padding: 0 13px; min-height: 44px; display: inline-flex; align-items: center; flex: none; }
   .topbar.transparente .tb-connexion { background: rgba(255, 255, 255, 0.16); border-color: rgba(255, 255, 255, 0.3); color: #fff; }
   .topbar.transparente.figee .tb-connexion { background: #fff; border-color: var(--line); color: var(--blue); }
   /* avatar (initiales) — ouvre le tiroir à l'étape B, inerte pour l'instant */
-  .topbar .tb-avatar { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; font-size: 13px; font-weight: 800; color: #fff; flex: none; background: linear-gradient(135deg, #2e9cca, #15506b); }
+  .topbar .tb-avatar { position: relative; width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; font-size: 13px; font-weight: 800; color: #fff; flex: none; background: linear-gradient(135deg, #2e9cca, #15506b); }
+  /* Même zone de 44px que les boutons ; l’avatar n’a pas de bordure. */
+  .topbar .tb-avatar::after { content: ""; position: absolute; inset: -3px; }
   /* pastille de non-lus sur la cloche */
   .topbar .tb-pastille { position: absolute; top: -4px; right: -4px; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 999px; background: var(--red); color: #fff; font-size: 10px; font-weight: 800; display: grid; place-items: center; border: 2px solid #fff; }
 
@@ -97,8 +101,10 @@
   /* ===== pied de page mobile (accueil et pages éditoriales) ===== */
   .pied-mobile { background: var(--blue-deep); color: #fff; padding: 24px 18px 26px; margin-top: 8px; border-radius: 22px 22px 0 0; }
   .pied-mobile p { font-size: 12px; line-height: 1.6; opacity: 0.75; margin-top: 10px; }
-  .pied-mobile nav { display: grid; grid-template-columns: 1fr 1fr; gap: 9px 14px; margin: 16px 0 18px; }
-  .pied-mobile nav a { font-size: 12.5px; font-weight: 600; opacity: 0.9; }
+  /* Lignes de 44px (cible tactile) plutôt que des liens de 19px espacés de
+     9px : même rythme visuel, mais le doigt ne tombe plus à côté. */
+  .pied-mobile nav { display: grid; grid-template-columns: 1fr 1fr; gap: 0 14px; margin: 10px 0 12px; }
+  .pied-mobile nav a { display: flex; align-items: center; min-height: 44px; font-size: 12.5px; font-weight: 600; opacity: 0.9; }
   .pied-mobile small { display: block; border-top: 1px solid rgba(255, 255, 255, 0.15); padding-top: 14px; font-size: 11px; opacity: 0.7; }
 
   /* ===== rappel du prochain rendez-vous, sous la barre ===== */
@@ -219,7 +225,7 @@
   .btn.ghost:hover { background: var(--bg); }
   .btn.green { background: var(--green); }
   .btn.green:hover { background: #196a3b; }
-  .btn.small { width: auto; padding: 9px 16px; font-size: 13px; border-radius: 11px; }
+  .btn.small { width: auto; min-height: 44px; padding: 9px 16px; font-size: 13px; border-radius: 11px; }
 
   /* ===== puces spécialités / chips ===== */
   .chips { display: flex; gap: 7px; flex-wrap: wrap; }
@@ -394,7 +400,7 @@
   .aptm .meta b { font-size: 12.5px; display: block; }
   .aptm .meta small { font-size: 10.5px; color: var(--muted); }
   .aptm .acts { display: flex; flex-direction: column; gap: 5px; flex: none; }
-  .btnm { padding: 6px 11px; font-size: 10.5px; border-radius: 8px; font-weight: 700; border: 1.5px solid var(--blue); background: var(--blue); color: #fff; white-space: nowrap; cursor: pointer; font-family: inherit; }
+  .btnm { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 6px 11px; font-size: 10.5px; border-radius: 8px; font-weight: 700; border: 1.5px solid var(--blue); background: var(--blue); color: #fff; white-space: nowrap; cursor: pointer; font-family: inherit; }
   .btnm.gh { background: #fff; color: var(--blue); }
   .btnm.dg { background: #fff; color: #c0392b; border-color: #f3c9c2; }
   .msgm { display: flex; align-items: center; gap: 11px; padding: 11px 0; border-bottom: 1px solid var(--line); }
@@ -425,7 +431,7 @@
   .daynav { flex: none; width: 30px; padding: 14px 0; border-radius: 10px; background: #fff; border: 1px solid var(--line); color: var(--blue); font-weight: 800; font-size: 16px; line-height: 1; cursor: pointer; font-family: inherit; }
   .daynav:disabled { opacity: 0.3; cursor: not-allowed; }
   .daytitle { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-  .moissel { flex: none; border-radius: 9px; border: 1px solid var(--line); background: #fff; color: var(--blue); font-family: inherit; font-size: 12px; font-weight: 700; padding: 5px 6px; }
+  .moissel { flex: none; min-height: 44px; border-radius: 9px; border: 1px solid var(--line); background: #fff; color: var(--blue); font-family: inherit; font-size: 12px; font-weight: 700; padding: 5px 6px; }
   .slots { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-top: 4px; }
   .slot { padding: 12px 0; border-radius: 11px; background: #fff; border: 1.5px solid var(--line); font-weight: 700; font-size: 13.5px; color: var(--blue); transition: transform 0.05s, border-color 0.12s, background 0.12s, color 0.12s; cursor: pointer; font-family: inherit; }
   .slot:hover { border-color: var(--teal); }
@@ -634,7 +640,7 @@
      ===================================================================== */
   .res-bandeau { display: flex; align-items: center; gap: 10px; padding: 12px 18px 2px; }
   .res-bandeau b { font-size: 15px; font-weight: 800; letter-spacing: -0.2px; }
-  .res-bandeau .res-carte { margin-left: auto; display: inline-flex; align-items: center; gap: 7px; padding: 9px 14px; border-radius: 999px; background: #fff; border: 1.5px solid var(--line); font-size: 13px; font-weight: 800; color: var(--blue); }
+  .res-bandeau .res-carte { margin-left: auto; display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 9px 14px; border-radius: 999px; background: #fff; border: 1.5px solid var(--line); font-size: 13px; font-weight: 800; color: var(--blue); }
   .res-bandeau .res-carte:active { background: var(--teal-soft); }
 
   /* La carte prend tout ce qui reste sous la barre haute. `fixed` plutôt
