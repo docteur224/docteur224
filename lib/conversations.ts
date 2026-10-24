@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { rafraichirNotifications } from "@/lib/notifications";
 import { creerClientNavigateur } from "@/lib/supabase/client";
 
 /*
@@ -105,7 +106,11 @@ export function useConversation(patientId: string | null, medecinId: string | nu
   };
 }
 
-/** Marque lus les messages reçus de cette conversation (jamais les siens : la base le refuse). */
+/**
+ * Marque lus les messages reçus de cette conversation (jamais les siens : la
+ * base le refuse), et la notification qui les annonçait : la cloche ne doit
+ * pas signaler un message que l'on vient de lire.
+ */
 export async function marquerLus(patientId: string, medecinId: string): Promise<void> {
   const supabase = creerClientNavigateur();
   const { data: auth } = await supabase.auth.getUser();
@@ -117,6 +122,17 @@ export async function marquerLus(patientId: string, medecinId: string): Promise<
     .eq("medecin_id", medecinId)
     .neq("expediteur_id", auth.user.id)
     .eq("lu", false);
+  // La notification porte l'interlocuteur en source (migration 0066).
+  const interlocuteur = auth.user.id === patientId ? medecinId : patientId;
+  await supabase
+    .from("notifications")
+    .update({ lu_le: new Date().toISOString() })
+    .eq("destinataire_id", auth.user.id)
+    .eq("type", "message")
+    .eq("source_type", "conversation")
+    .eq("source_id", interlocuteur)
+    .is("lu_le", null);
+  rafraichirNotifications();
 }
 
 /** Envoie un message, avec une pièce jointe facultative. */

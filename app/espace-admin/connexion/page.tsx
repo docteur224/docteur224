@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import Logo from "@/components/site/Logo";
 import { seConnecter } from "@/lib/auth";
 
@@ -19,7 +18,6 @@ import { seConnecter } from "@/lib/auth";
  * que le titre de page, il n'ajoute aucune coquille.
  */
 export default function ConnexionAdmin() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [motDePasse, setMotDePasse] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);
@@ -51,7 +49,12 @@ export default function ConnexionAdmin() {
       setEspacePropose(res.cible ?? null);
       return;
     }
-    router.replace("/espace-admin");
+    // Navigation complète : la session vient d'être posée dans les cookies,
+    // une navigation client peut devancer sa lecture par le serveur (le proxy
+    // renverrait vers la connexion). Le rechargement garantit la lecture et
+    // repart de zéro pour les caches de module.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- rechargement voulu après connexion (voir ci-dessus)
+    window.location.assign("/espace-admin");
   }
 
   const champ =

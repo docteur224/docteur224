@@ -221,12 +221,13 @@ async function preparer() {
 
 async function nettoyer() {
   if (!ids) return;
-  const { data: msgs } = await service.from("messages").select("id, contenu, piece_path, piece_nom").eq("patient_id", ids.patientId).eq("medecin_id", ids.medecinId).gte("cree_le", debutTest);
+  const { data: msgs } = await service.from("messages").select("id, contenu, piece_path, piece_nom, cree_le").eq("patient_id", ids.patientId).eq("medecin_id", ids.medecinId).gte("cree_le", debutTest);
   const nos = (msgs ?? []).filter((m) => m.contenu?.includes(MARQUE) || m.piece_nom === `${MARQUE}.pdf`);
   const fichiers = nos.map((m) => m.piece_path).filter(Boolean);
   if (nos.length) await service.from("messages").delete().in("id", nos.map((m) => m.id));
   if (fichiers.length) await service.storage.from("messages").remove(fichiers);
-  await service.from("notifications").delete().in("destinataire_id", [ids.patientId, ids.medecinId]).eq("type", "message").gte("cree_le", debutTest);
+  // Seulement NOS notifications : même cree_le que le message qui les a créées.
+  if (nos.length) await service.from("notifications").delete().eq("type", "message").eq("source_type", "conversation").in("cree_le", nos.map((m) => m.cree_le));
   if (etat.rdv) {
     await service.from("notifications").delete().eq("source_id", etat.rdv);
     await service.from("messages_envoyes").delete().eq("titulaire_id", ids.medecinId).eq("motif", "rappel").gte("envoye_le", debutTest);

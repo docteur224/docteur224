@@ -1,8 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { useState } from "react";
 import CoteAuth from "@/components/site/CoteAuth";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import Footer from "@/components/site/Footer";
@@ -24,25 +23,21 @@ import { refuserSession, seConnecter } from "@/lib/auth";
  * aussitôt et se fait renvoyer vers /espace-admin/connexion.
  */
 
-/** `?retour=…` : l'écran d'où l'on venait, pour y revenir après connexion. */
-function CibleRetour({ children }: { children: (retour: string | null) => React.ReactNode }) {
-  const parametres = useSearchParams();
-  const retour = parametres.get("retour");
+/**
+ * `?retour=…` : l'écran d'où l'on venait, pour y revenir après connexion.
+ * Lu au moment du clic, pas par useSearchParams : celui-ci exigeait un
+ * <Suspense> dont le repli était un SECOND formulaire, remplacé une fraction
+ * de seconde plus tard — ce qu'on y avait tapé, et surtout ce que le
+ * gestionnaire de mots de passe y avait rempli, disparaissait.
+ */
+function cibleRetour(): string | null {
+  const retour = new URLSearchParams(window.location.search).get("retour");
   // Uniquement un chemin interne : un `retour` absolu servirait de rebond
   // vers un site tiers depuis notre page de connexion.
-  return <>{children(retour?.startsWith("/") && !retour.startsWith("//") ? retour : null)}</>;
+  return retour?.startsWith("/") && !retour.startsWith("//") ? retour : null;
 }
 
 export default function Connexion() {
-  return (
-    <Suspense fallback={<EcranConnexion retour={null} />}>
-      <CibleRetour>{(retour) => <EcranConnexion retour={retour} />}</CibleRetour>
-    </Suspense>
-  );
-}
-
-function EcranConnexion({ retour }: { retour: string | null }) {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [motDePasse, setMotDePasse] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);
@@ -73,8 +68,16 @@ function EcranConnexion({ retour }: { retour: string | null }) {
       setRenvoiAdmin(true);
       return;
     }
-    setEnCours(false);
-    router.push(retour ?? res.cible!);
+    /*
+     * Navigation COMPLÈTE, pas un router.push : la session vient d'être
+     * écrite dans les cookies, et une navigation côté client peut atteindre
+     * la route protégée avant que le serveur (le proxy) ne voie ce cookie —
+     * il renvoyait alors vers /connexion, session en poche. Le rechargement
+     * garantit que le serveur lit la session, et repart de zéro pour tous les
+     * caches de module (profil, notifications) — ce qui importe quand on se
+     * connecte à un autre compte sur le même appareil.
+     */
+    window.location.assign(cibleRetour() ?? res.cible!);
   }
 
   const champ =

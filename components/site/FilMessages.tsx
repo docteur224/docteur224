@@ -74,6 +74,12 @@ export default function FilMessages({
     signalerActivite.current = onActivite;
   });
 
+  // Ouvrir le fil, c'est aussi lire sa notification, même si les messages
+  // étaient déjà marqués lus (lus sur un autre appareil, par exemple).
+  useEffect(() => {
+    marquerLus(patientId, medecinId);
+  }, [patientId, medecinId]);
+
   // Ce qui arrive est lu dès qu'on l'affiche ; le fil est aussitôt relu,
   // sans quoi ces messages compteraient encore comme non lus ici.
   const nonLusRecus = messages.filter((m) => !m.lu && m.expediteurId !== moiId).length;

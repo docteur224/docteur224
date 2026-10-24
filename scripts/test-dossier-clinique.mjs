@@ -256,7 +256,12 @@ async function nettoyer() {
     await service.from("journal_audit").delete().in("cible_id", cree.notes);
     await service.from("notes_consultation").delete().in("id", cree.notes);
   }
-  if (cree.rdvs.length) await service.from("rendez_vous").delete().in("id", cree.rdvs);
+  if (cree.rdvs.length) {
+    // Le trigger de réservation a notifié le patient : sans ce ménage, sa
+    // cloche garderait des « Rendez-vous enregistré » vers des RDV disparus.
+    await service.from("notifications").delete().in("source_id", cree.rdvs);
+    await service.from("rendez_vous").delete().in("id", cree.rdvs);
+  }
   // Filets : ce qu'un test aurait créé malgré un refus attendu.
   await service.from("notes_consultation_versions").delete().like("motif", "%(TEST-CLINIQUE)%");
   console.log("ℹ️  données de test supprimées");

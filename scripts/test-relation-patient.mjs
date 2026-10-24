@@ -361,11 +361,14 @@ async function nettoyer() {
   const medecinId = u?.find((x) => x.email.startsWith("medecin1"))?.id;
   const patientId = u?.find((x) => x.email.startsWith("patient1"))?.id;
 
-  const { data: msgs } = await service.from("messages").select("id, contenu, piece_path").in("patient_id", ids).gte("cree_le", debut);
-  const nos = (msgs ?? []).filter((m) => m.contenu?.includes(MARQUE) || m.piece_path?.includes(MARQUE)).map((m) => m.id);
+  const { data: msgs } = await service.from("messages").select("id, contenu, piece_path, cree_le").in("patient_id", ids).gte("cree_le", debut);
+  const aNous = (msgs ?? []).filter((m) => m.contenu?.includes(MARQUE) || m.piece_path?.includes(MARQUE));
+  const nos = aNous.map((m) => m.id);
   if (nos.length) await service.from("messages").delete().in("id", nos);
   if (cree.fichiers.length) await service.storage.from("messages").remove(cree.fichiers);
-  await service.from("notifications").delete().in("destinataire_id", ids).eq("type", "message").eq("source_type", "conversation").gte("cree_le", debut);
+  // La notification a le cree_le EXACT de son message (même transaction) : on
+  // ne supprime que les nôtres, jamais une notification réelle de la démo.
+  if (aNous.length) await service.from("notifications").delete().eq("type", "message").eq("source_type", "conversation").in("cree_le", aNous.map((m) => m.cree_le));
   if (cree.rdv.length) {
     await service.from("notifications").delete().in("source_id", cree.rdv);
     await service.from("rendez_vous").delete().in("id", cree.rdv);

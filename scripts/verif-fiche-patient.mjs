@@ -290,6 +290,7 @@ async function retirerDonnees() {
   for (const id of [...fixture.documents].reverse()) {
     await service.from("documents_patient").delete().eq("id", id);
   }
+  if (fixture.rdvs.length) await service.from("notifications").delete().in("source_id", fixture.rdvs);
   for (const id of fixture.rdvs) await service.from("rendez_vous").delete().eq("id", id);
   await service.from("notifications").delete().ilike("corps", "%Ordonnance de vérification%");
   console.log("ℹ️  données de vérification retirées");
