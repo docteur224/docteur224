@@ -1655,7 +1655,8 @@ export interface PreferencesRappels {
   rappelsActifs: boolean;
   smsAutorise: boolean;
   whatsappAutorise: boolean;
-  delaiHeures: number;
+  /** Délais avant le rendez-vous, en heures (migration 0066) : J-1 et H-2 par défaut. */
+  delaisHeures: number[];
 }
 
 export interface PackSms {
@@ -1696,7 +1697,7 @@ export function useRappelsEtSms(): {
     rappelsActifs: true,
     smsAutorise: false,
     whatsappAutorise: true,
-    delaiHeures: 24,
+    delaisHeures: [24, 2],
   };
   const [preferences, setPreferences] = useState<PreferencesRappels>(DEFAUT);
   const [etat, setEtat] = useState<EtatSms | null>(null);
@@ -1734,7 +1735,7 @@ export function useRappelsEtSms(): {
           rappelsActifs: pref.rappels_actifs,
           smsAutorise: pref.sms_autorise,
           whatsappAutorise: pref.whatsapp_autorise,
-          delaiHeures: pref.delai_heures,
+          delaisHeures: pref.delais_heures ?? [pref.delai_heures],
         });
       }
       const conso = consos?.[0];
@@ -1788,7 +1789,9 @@ export function useRappelsEtSms(): {
       rappels_actifs: p.rappelsActifs,
       sms_autorise: p.smsAutorise,
       whatsapp_autorise: p.whatsappAutorise,
-      delai_heures: p.delaiHeures,
+      delais_heures: p.delaisHeures,
+      // Colonne d'avant 0066, gardée cohérente : le délai le plus long.
+      delai_heures: Math.max(...p.delaisHeures),
       maj_le: new Date().toISOString(),
     });
     if (error) return { erreur: error.message };

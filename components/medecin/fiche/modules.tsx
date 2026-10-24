@@ -1,9 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useNonLus } from "@/lib/conversations";
 import { useNombreDocuments } from "@/lib/documents";
+import { lirePatientCle } from "@/lib/pro";
 import type { ContexteFiche, ModuleFiche } from "./contexte";
-import ModuleEnPreparation from "./ModuleEnPreparation";
 import { SqueletteModule } from "./ui";
 
 /*
@@ -25,6 +26,7 @@ const charger = () => <SqueletteModule />;
 
 const ModuleDossierClinique = dynamic(() => import("./clinique/ModuleDossierClinique"), { loading: charger });
 const ModuleDocuments = dynamic(() => import("./ModuleDocuments"), { loading: charger });
+const ModuleRelation = dynamic(() => import("./relation/ModuleRelation"), { loading: charger });
 
 /** Pastille de l'onglet Documents : le nombre de pièces en cours au dossier. */
 function CompteurDocuments({ ctx }: { ctx: ContexteFiche }) {
@@ -32,15 +34,15 @@ function CompteurDocuments({ ctx }: { ctx: ContexteFiche }) {
   return n ? <>{n}</> : null;
 }
 
-/* Contenu d'attente, remplacé à l'étape 4 de la livraison. */
-function RelationEnPreparation() {
-  return (
-    <ModuleEnPreparation
-      icone="message"
-      titre="Relation patient"
-      texte="Messagerie avec le patient, rappels de rendez-vous par SMS ou WhatsApp et, plus tard, téléconsultation."
-    />
-  );
+/**
+ * Pastille de l'onglet Relation patient : les messages non lus du patient.
+ * Pour la fiche d'un proche, la conversation est celle du titulaire : pas de
+ * pastille (il faudrait d'abord lire qui il est).
+ */
+function CompteurRelation({ ctx }: { ctx: ContexteFiche }) {
+  const { type, id } = lirePatientCle(ctx.cle);
+  const n = useNonLus(type === "compte" ? id : null, ctx.medecinId, ctx.revision("relation"));
+  return n ? <>{n}</> : null;
 }
 
 const seulementMedecin = (ctx: ContexteFiche) => ctx.role === "medecin";
@@ -68,7 +70,8 @@ export const MODULES: ModuleFiche[] = [
     libelle: "Relation patient",
     libelleCourt: "Relation",
     icone: "message",
-    Composant: RelationEnPreparation,
+    Composant: ModuleRelation,
+    Compteur: CompteurRelation,
     permission: seulementMedecin,
   },
 ];

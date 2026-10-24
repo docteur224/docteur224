@@ -18,6 +18,7 @@ const LIENS = [
   { href: "/patient", icone: "📊", label: "Tableau de bord" },
   { href: "/mes-rendez-vous", icone: "📅", label: "Mes rendez-vous" },
   { href: "/patient/documents", icone: "📄", label: "Mes documents" },
+  { href: "/patient/messages", icone: "💬", label: "Messages" },
   { href: "/patient/favoris", icone: "♥", label: "Mes favoris" },
   { href: "/patient/proches", icone: "👨‍👩‍👧", label: "Mes proches" },
   { href: "/patient/avis", icone: "⭐", label: "Mes avis" },

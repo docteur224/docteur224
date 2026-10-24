@@ -239,7 +239,7 @@ function pagesParRole({ medecinId, patientId, rdvId }) {
     patient: {
       compte: { email: "patient1@test.docteur224.com", mdp: "test1234", porte: "/connexion" },
       pages: [
-        "/patient", "/patient/avis", "/patient/compte", "/patient/documents", "/patient/favoris", "/patient/mon-compte",
+        "/patient", "/patient/avis", "/patient/compte", "/patient/documents", "/patient/messages", "/patient/favoris", "/patient/mon-compte",
         "/patient/notifications", "/patient/parametres", "/patient/proches", "/patient/profil", "/mes-rendez-vous",
         ...(rdvId ? [`/mes-rendez-vous/${rdvId}`] : []),
       ],

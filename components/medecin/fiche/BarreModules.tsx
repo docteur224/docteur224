@@ -271,9 +271,24 @@ export function PucesMobile({
 
   // La puce active est toujours ramenée dans le champ : choisie depuis un
   // lien (`?tab=relation`), elle pourrait sinon être hors de l'écran, à droite.
+  // Les compteurs arrivent après coup et élargissent les puces qui précèdent :
+  // on recentre aussi à chaque changement de taille de la rangée.
   useEffect(() => {
-    const el = rangee.current?.querySelector<HTMLElement>('[aria-selected="true"]');
-    el?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    const ligne = rangee.current;
+    if (!ligne) return;
+    const ramener = () => {
+      const el = ligne.querySelector<HTMLElement>('[aria-selected="true"]');
+      if (!el) return;
+      const gauche = el.offsetLeft - ligne.offsetLeft;
+      if (gauche < ligne.scrollLeft) ligne.scrollLeft = gauche;
+      else if (gauche + el.offsetWidth > ligne.scrollLeft + ligne.clientWidth) {
+        ligne.scrollLeft = gauche + el.offsetWidth - ligne.clientWidth;
+      }
+    };
+    ramener();
+    const observateur = new ResizeObserver(ramener);
+    for (const puce of ligne.children) observateur.observe(puce);
+    return () => observateur.disconnect();
   }, [actif]);
 
   return (

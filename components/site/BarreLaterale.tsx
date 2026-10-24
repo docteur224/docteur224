@@ -64,8 +64,14 @@ export default function BarreLaterale({
     return () => window.removeEventListener("keydown", surTouche);
   }, [ouvert, pathname]);
 
-  const estActif = (href: string) =>
-    pathname === href || (sousRoutes && pathname.startsWith(`${href}/`));
+  /* Un seul lien actif : le plus précis. Sans quoi « /patient » (Tableau de
+     bord) restait surligné sur toutes les pages /patient/…, à côté de la
+     page réellement ouverte. */
+  const couvre = (href: string) => pathname === href || (sousRoutes && pathname.startsWith(`${href}/`));
+  const lienActif = liens
+    .filter((l) => couvre(l.href))
+    .reduce<string | null>((meilleur, l) => (!meilleur || l.href.length > meilleur.length ? l.href : meilleur), null);
+  const estActif = (href: string) => href === lienActif;
 
   const classeLigne =
     "flex items-center gap-[11px] rounded-[11px] px-3 py-[11px] text-[13.5px] transition-colors";

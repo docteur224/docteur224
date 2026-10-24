@@ -25,11 +25,14 @@ import { useRappelsEtSms, type PackSms, type PreferencesRappels } from "@/lib/pr
  * d'administration ne montrait.
  */
 
+/* Plusieurs rappels possibles (migration 0066) : la veille ET deux heures
+   avant est le réglage par défaut, celui qui réduit le plus les absences. */
 const DELAIS = [
-  { valeur: 2, label: "2 heures avant" },
-  { valeur: 6, label: "6 heures avant" },
-  { valeur: 24, label: "24 heures avant" },
-  { valeur: 48, label: "48 heures avant" },
+  { valeur: 48, label: "J-2" },
+  { valeur: 24, label: "J-1" },
+  { valeur: 6, label: "H-6" },
+  { valeur: 2, label: "H-2" },
+  { valeur: 1, label: "H-1" },
 ];
 
 export default function RappelsEtSms() {
@@ -47,7 +50,7 @@ export default function RappelsEtSms() {
   /** Recharge à régler : `null` = dialogue fermé. */
   const [aRegler, setARegler] = useState<{ pack: PackSms; reprise: boolean } | null>(null);
 
-  async function changer(champ: keyof PreferencesRappels, valeur: boolean | number) {
+  async function changer(champ: keyof PreferencesRappels, valeur: boolean | number[]) {
     setMessage(null);
     const res = await enregistrerPreferences({ ...preferences, [champ]: valeur });
     setMessage(res.erreur ?? "Préférences enregistrées.");
@@ -122,22 +125,40 @@ export default function RappelsEtSms() {
           />
         </div>
 
-        <div className={ligne}>
+        <div className={`${ligne} flex-wrap`}>
           <div>
             <b className="block text-[13.5px]">Quand prévenir</b>
+            <small className="text-[11.5px] text-muted">Un à quatre rappels avant chaque rendez-vous</small>
           </div>
-          <select
-            aria-label="Délai du rappel"
-            className="rounded-[9px] border border-line bg-white px-2 py-1.5 text-[12.5px]"
-            value={preferences.delaiHeures}
-            onChange={(e) => changer("delaiHeures", Number(e.target.value))}
-          >
-            {DELAIS.map((d) => (
-              <option key={d.valeur} value={d.valeur}>
-                {d.label}
-              </option>
-            ))}
-          </select>
+          <div role="group" aria-label="Délais des rappels" className="flex flex-wrap gap-1.5">
+            {DELAIS.map((d) => {
+              const choisi = preferences.delaisHeures.includes(d.valeur);
+              // Au moins un délai, au plus quatre : la base refuse le reste.
+              const bloque = choisi ? preferences.delaisHeures.length === 1 : preferences.delaisHeures.length >= 4;
+              return (
+                <button
+                  key={d.valeur}
+                  type="button"
+                  aria-pressed={choisi}
+                  disabled={bloque}
+                  title={d.valeur >= 24 ? `${d.valeur / 24} jour(s) avant` : `${d.valeur} heure(s) avant`}
+                  onClick={() =>
+                    changer(
+                      "delaisHeures",
+                      (choisi ? preferences.delaisHeures.filter((x) => x !== d.valeur) : [...preferences.delaisHeures, d.valeur]).sort(
+                        (a, b) => b - a
+                      )
+                    )
+                  }
+                  className={`min-h-9 rounded-full border px-3 text-[12px] font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-60 pointer-coarse:min-h-11 ${
+                    choisi ? "border-blue bg-blue text-white" : "border-line bg-white text-muted hover:border-muted"
+                  }`}
+                >
+                  {d.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {!preferences.whatsappAutorise && !preferences.smsAutorise && preferences.rappelsActifs && (
