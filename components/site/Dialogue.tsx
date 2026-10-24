@@ -97,7 +97,7 @@ export default function Dialogue({
       <div
         ref={panneau}
         style={largeur ? { maxWidth: largeur } : undefined}
-        className="ui-modal-in flex max-h-[94vh] w-full flex-col rounded-t-2xl border border-line bg-white md:max-h-[90vh] md:max-w-[480px] md:rounded-2xl md:shadow-xl"
+        className="ui-modal-in flex max-h-[94vh] w-full flex-col rounded-t-2xl border border-line bg-white md:max-h-[calc(90vh/var(--zoom-page,1))] md:max-w-[480px] md:rounded-2xl md:shadow-xl"
       >
         <div className="flex items-start gap-3 border-b border-line p-4">
           <span aria-hidden className="text-[17px]">

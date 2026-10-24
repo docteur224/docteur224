@@ -220,7 +220,7 @@ export default function CarteResultatsWeb({
       {/* ---------- Colonne de droite : la carte ---------- */}
       <div className="relative hidden lg:block">
         {/* 82px = la barre de navigation collante (66) plus la respiration. */}
-        <div className="sticky top-[82px] h-[calc(100vh-98px)]">
+        <div className="sticky top-[82px] h-[calc(100vh/var(--zoom-page,1)_-_98px)]">
           <div className="relative h-full overflow-hidden rounded-2xl border border-line">
             <div
               ref={poserToile}

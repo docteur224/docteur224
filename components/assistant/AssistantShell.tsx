@@ -1,14 +1,12 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
-import { seDeconnecter } from "@/lib/auth";
 import { useContextePro } from "@/lib/pro";
 import { useProfilConnecte } from "@/lib/patient";
 import CompteSuspendu from "@/components/compte/CompteSuspendu";
-import ClocheNotifications from "@/components/site/ClocheNotifications";
+import BarreLaterale from "@/components/site/BarreLaterale";
 
 /**
  * Coquille de l'espace assistant(e) — reproduit la structure .dash / .side /
@@ -29,7 +27,6 @@ const LIENS = [
 ];
 
 export default function AssistantShell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
   const router = useRouter();
   const { medecin, utilisateur, chargement, role } = useContextePro();
   const { profil } = useProfilConnecte();
@@ -44,64 +41,14 @@ export default function AssistantShell({ children }: { children: React.ReactNode
   const nomMedecin = medecin ? `${medecin.civilite} ${medecin.prenom.charAt(0)}. ${medecin.nom}` : "";
 
   return (
-    <div className="grid min-h-screen bg-bg lg:grid-cols-[236px_1fr]">
-      <aside className="hidden border-b border-line bg-white px-4 py-[22px] md:block lg:border-b-0 lg:border-r">
-        <div className="mb-[14px] flex items-center gap-[11px] border-b border-line px-1.5 pb-[18px]">
-          <span
-            aria-hidden
-            className="grid h-[42px] w-[42px] flex-none place-items-center rounded-xl text-[15px] font-extrabold text-white"
-            style={{ background: "linear-gradient(135deg,#2E9CCA,#15506B)" }}
-          >
-            HD
-          </span>
-          <div>
-            <b className="block text-[13.5px] font-extrabold">{nomAssistant}</b>
-            <small className="text-[11.5px] text-muted">Assistant(e){nomMedecin ? ` · ${nomMedecin}` : ""}</small>
-          </div>
-          {/* La cloche vit ici sur web : la sidebar est le seul en-tête
-              permanent des espaces. */}
-          <div className="ml-auto">
-            <ClocheNotifications />
-          </div>
-        </div>
-        <nav className="flex flex-col gap-[3px]">
-          {LIENS.map((lien) => {
-            const actif = pathname === lien.href;
-            return (
-              <Link
-                key={lien.href}
-                href={lien.href}
-                className={`flex items-center gap-[11px] rounded-[11px] px-3 py-[11px] text-[13.5px] transition-colors ${
-                  actif
-                    ? "bg-teal-soft font-bold text-blue"
-                    : "font-semibold text-muted hover:bg-bg"
-                }`}
-              >
-                <span className="text-base" aria-hidden>
-                  {lien.icone}
-                </span>
-                {lien.label}
-              </Link>
-            );
-          })}
-          {/* Vraie déconnexion : c'était un simple lien vers l'accueil, qui
-              laissait la session ouverte (comme PatientShell/MedecinShell le
-              faisaient déjà correctement). */}
-          <button
-            type="button"
-            onClick={async () => {
-              await seDeconnecter();
-              router.push("/");
-            }}
-            className="flex items-center gap-[11px] rounded-[11px] px-3 py-[11px] text-left text-[13.5px] font-semibold text-muted transition-colors hover:bg-bg"
-          >
-            <span className="text-base" aria-hidden>
-              ↩️
-            </span>
-            Déconnexion
-          </button>
-        </nav>
-      </aside>
+    <div className="grid min-h-screen content-start bg-bg lg:grid-cols-[236px_1fr] lg:content-stretch">
+      <BarreLaterale
+        avatar="HD"
+        fondAvatar="linear-gradient(135deg,#2E9CCA,#15506B)"
+        nom={nomAssistant}
+        sousTitre={`Assistant(e)${nomMedecin ? ` · ${nomMedecin}` : ""}`}
+        liens={LIENS}
+      />
       <main className="with-tabbar min-w-0 overflow-x-clip md:px-[30px] md:py-[26px]">
         {/* Compte mis en pause par son titulaire : l'espace se referme sur
             l'écran de réactivation. Laisser l'interface ouverte donnerait des

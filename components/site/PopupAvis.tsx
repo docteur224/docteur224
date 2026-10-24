@@ -86,7 +86,7 @@ export default function PopupAvis({
               aria-modal="true"
               aria-label={`Avis de ${medecinNom}`}
               onClick={(e) => e.stopPropagation()}
-              className="ui-modal-in ui-modal-sm flex max-h-[85vh] w-full max-w-[520px] flex-col rounded-t-2xl bg-white shadow-[0_20px_50px_rgba(0,0,0,.3)] sm:rounded-2xl"
+              className="ui-modal-in ui-modal-sm flex max-h-[calc(85vh/var(--zoom-page,1))] w-full max-w-[520px] flex-col rounded-t-2xl bg-white shadow-[0_20px_50px_rgba(0,0,0,.3)] sm:rounded-2xl"
             >
               <div className="flex items-center justify-between border-b border-line px-5 py-4">
                 <b className="text-[15px] font-extrabold">Avis · {medecinNom}</b>

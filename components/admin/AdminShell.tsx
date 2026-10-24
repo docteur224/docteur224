@@ -2,9 +2,9 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
-import { ESPACE_PAR_ROLE, seDeconnecter, type Role } from "@/lib/auth";
+import { ESPACE_PAR_ROLE, type Role } from "@/lib/auth";
 import { useProfilConnecte } from "@/lib/patient";
 import { useDroitsAdmin } from "@/lib/admin";
 import {
@@ -12,8 +12,8 @@ import {
   PERMISSION_PAR_ROUTE,
   type Permission,
 } from "@/lib/permissions-admin";
-import ClocheNotifications from "@/components/site/ClocheNotifications";
 import CompteSuspendu from "@/components/compte/CompteSuspendu";
+import BarreLaterale from "@/components/site/BarreLaterale";
 
 /**
  * Coquille de l'espace administrateur — reproduit la structure .dash / .side /
@@ -55,7 +55,6 @@ export default function AdminShell({
   /** Section dont la page relève ; absente, la page est ouverte à tout admin. */
   permission?: Permission;
 }) {
-  const pathname = usePathname();
   const router = useRouter();
   const { profil, chargement } = useProfilConnecte();
   const { droits, chargement: chargementDroits } = useDroitsAdmin();
@@ -105,64 +104,15 @@ export default function AdminShell({
     );
 
   return (
-    <div className="grid min-h-screen bg-bg lg:grid-cols-[236px_1fr]">
-      <aside className="hidden border-b border-line bg-white px-4 py-[22px] md:block lg:border-b-0 lg:border-r">
-        <div className="mb-[14px] flex items-center gap-[11px] border-b border-line px-1.5 pb-[18px]">
-          <span
-            aria-hidden
-            className="grid h-[42px] w-[42px] flex-none place-items-center rounded-xl text-lg text-white"
-            style={{ background: "linear-gradient(135deg,#15506B,#0B2E3D)" }}
-          >
-            🛡️
-          </span>
-          <div>
-            <b className="block text-[13.5px] font-extrabold">Administrateur</b>
-            <small className="text-[11.5px] text-muted">Docteur 224</small>
-          </div>
-          {/* La cloche vit ici sur web : la sidebar est le seul en-tête
-              permanent des espaces. */}
-          <div className="ml-auto">
-            <ClocheNotifications />
-          </div>
-        </div>
-        <nav className="flex flex-col gap-[3px]">
-          {liens.map((lien) => {
-            const actif = pathname === lien.href;
-            return (
-              <Link
-                key={lien.href}
-                href={lien.href}
-                className={`flex items-center gap-[11px] rounded-[11px] px-3 py-[11px] text-[13.5px] transition-colors ${
-                  actif
-                    ? "bg-teal-soft font-bold text-blue"
-                    : "font-semibold text-muted hover:bg-bg"
-                }`}
-              >
-                <span className="text-base" aria-hidden>
-                  {lien.icone}
-                </span>
-                {lien.label}
-              </Link>
-            );
-          })}
-          {/* Vraie déconnexion : c'était un simple lien vers l'accueil, qui
-              laissait la session ouverte (comme PatientShell/MedecinShell le
-              faisaient déjà correctement). */}
-          <button
-            type="button"
-            onClick={async () => {
-              await seDeconnecter();
-              router.push("/");
-            }}
-            className="flex items-center gap-[11px] rounded-[11px] px-3 py-[11px] text-left text-[13.5px] font-semibold text-muted transition-colors hover:bg-bg"
-          >
-            <span className="text-base" aria-hidden>
-              ↩️
-            </span>
-            Déconnexion
-          </button>
-        </nav>
-      </aside>
+    <div className="grid min-h-screen content-start bg-bg lg:grid-cols-[236px_1fr] lg:content-stretch">
+      <BarreLaterale
+        avatar="🛡️"
+        avatarEmoji
+        fondAvatar="linear-gradient(135deg,#15506B,#0B2E3D)"
+        nom="Administrateur"
+        sousTitre="Docteur 224"
+        liens={liens}
+      />
       <main className="with-tabbar min-w-0 overflow-x-clip md:px-[30px] md:py-[26px]">{contenu}</main>
       <TabBarMobile role="admin" />
     </div>

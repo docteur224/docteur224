@@ -1,15 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
-import { seDeconnecter } from "@/lib/auth";
 import { useContextePro } from "@/lib/pro";
 import { useProfilConnecte } from "@/lib/patient";
 import CompteSuspendu from "@/components/compte/CompteSuspendu";
 import { useParcoursInscription } from "@/lib/inscription-pro";
-import ClocheNotifications from "@/components/site/ClocheNotifications";
+import BarreLaterale from "@/components/site/BarreLaterale";
 
 /**
  * Coquille de l'espace médecin — reproduit la structure .dash / .side / .snav
@@ -48,7 +47,6 @@ export default function MedecinShell({
   /** Page interdite aux assistant(e)s (équipe, abonnement, paiements). */
   reserveAuMedecin?: boolean;
 }) {
-  const pathname = usePathname();
   const router = useRouter();
   const { medecin, chargement, role } = useContextePro();
   const { profil } = useProfilConnecte();
@@ -84,63 +82,14 @@ export default function MedecinShell({
   };
 
   return (
-    <div className="grid min-h-screen bg-bg lg:grid-cols-[236px_1fr]">
-      <aside className="hidden border-b border-line bg-white px-4 py-[22px] md:block lg:border-b-0 lg:border-r">
-        <div className="mb-[14px] flex items-center gap-[11px] border-b border-line px-1.5 pb-[18px]">
-          <span
-            aria-hidden
-            className="grid h-[42px] w-[42px] flex-none place-items-center rounded-xl text-[15px] font-extrabold text-white"
-            style={{ background: medecinConnecte.gradient }}
-          >
-            {medecinConnecte.initiales}
-          </span>
-          <div>
-            <b className="block text-[13.5px] font-extrabold">
-              {medecinConnecte.civilite} {medecinConnecte.prenom.charAt(0)}. {medecinConnecte.nom}
-            </b>
-            <small className="text-[11.5px] text-muted">{medecinConnecte.specialite}</small>
-          </div>
-          {/* La cloche vit ici sur web : la sidebar est le seul en-tête
-              permanent des espaces. */}
-          <div className="ml-auto">
-            <ClocheNotifications />
-          </div>
-        </div>
-        <nav className="flex flex-col gap-[3px]">
-          {liens.map((lien) => {
-            const actif = pathname === lien.href;
-            return (
-              <Link
-                key={lien.href}
-                href={lien.href}
-                className={`flex items-center gap-[11px] rounded-[11px] px-3 py-[11px] text-[13.5px] transition-colors ${
-                  actif
-                    ? "bg-teal-soft font-bold text-blue"
-                    : "font-semibold text-muted hover:bg-bg"
-                }`}
-              >
-                <span className="text-base" aria-hidden>
-                  {lien.icone}
-                </span>
-                {lien.label}
-              </Link>
-            );
-          })}
-          <button
-            type="button"
-            onClick={async () => {
-              await seDeconnecter();
-              router.push("/");
-            }}
-            className="flex items-center gap-[11px] rounded-[11px] px-3 py-[11px] text-left text-[13.5px] font-semibold text-muted transition-colors hover:bg-bg"
-          >
-            <span className="text-base" aria-hidden>
-              ↩️
-            </span>
-            Déconnexion
-          </button>
-        </nav>
-      </aside>
+    <div className="grid min-h-screen content-start bg-bg lg:grid-cols-[236px_1fr] lg:content-stretch">
+      <BarreLaterale
+        avatar={medecinConnecte.initiales}
+        fondAvatar={medecinConnecte.gradient}
+        nom={`${medecinConnecte.civilite} ${medecinConnecte.prenom.charAt(0)}. ${medecinConnecte.nom}`}
+        sousTitre={medecinConnecte.specialite}
+        liens={liens}
+      />
       <main className="with-tabbar min-w-0 overflow-x-clip md:px-[30px] md:py-[26px]">
         {enParcours ? (
           <p className="py-16 text-center text-[13px] text-muted">Redirection…</p>

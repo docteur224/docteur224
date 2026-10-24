@@ -118,9 +118,23 @@ body {
   }
 }
 
+/* Facteur de zoom courant, lu par toute hauteur exprimée en hauteur
+   d'écran : sous `zoom: 0.8`, 100vh ne couvre plus que 80 % de la fenêtre
+   (la barre latérale s'arrêtait aux quatre cinquièmes de l'écran). */
+:root {
+  --zoom-page: 1;
+}
+
 @media (min-width: 768px) and (hover: hover) and (pointer: fine) {
+  :root {
+    --zoom-page: 0.8;
+  }
   body {
     zoom: 0.8;
+  }
+  /* Hors couche : passe devant l'utilitaire de Tailwind, partout où il sert. */
+  .min-h-screen {
+    min-height: calc(100vh / var(--zoom-page));
   }
 }
 
