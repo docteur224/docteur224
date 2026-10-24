@@ -7,6 +7,7 @@ import {
   deposerDocument,
   genererPdf,
   libelleType,
+  titreOrdonnanceDuJour,
   TYPES_DOCUMENT,
   type DocumentPatient,
   type TypeDocument,
@@ -73,8 +74,14 @@ export default function DeposerDocument({
   const [prefixe, id] = [cle.slice(0, 1), cle.slice(2)];
   const destinataire = prefixe === "c" ? { patientId: id } : { procheId: id };
 
+  /* Une ordonnance ne se titre plus à la main : « Ordonnance du JJ/MM/AAAA »,
+     date d'émission (voir titreDocument). Le titre saisi produisait « Ordo »,
+     « Ordo du… » et des dates qui n'étaient pas celle de l'émission. */
+  const titreAuto = champs.type === "ordonnance";
+  const aEnvoyer = { ...champs, titre: titreAuto ? titreOrdonnanceDuJour() : champs.titre };
+
   const valide =
-    champs.titre.trim() !== "" &&
+    aEnvoyer.titre.trim() !== "" &&
     (mode === "generer" ? champs.contenu.trim() !== "" : true);
 
   // Échap referme, comme tout dialogue.
@@ -123,7 +130,7 @@ export default function DeposerDocument({
     // le prendrait pour une fenêtre surgissante et le bloquerait.
     const onglet = window.open("", "_blank", "noopener");
     setApercuEnCours(true);
-    const res = await genererPdf({ ...destinataire, ...champs });
+    const res = await genererPdf({ ...destinataire, ...aEnvoyer });
     setApercuEnCours(false);
     if (res.erreur || !res.fichier) {
       onglet?.close();
@@ -142,7 +149,7 @@ export default function DeposerDocument({
 
     let fichier: File | null = fichierRef.current?.files?.[0] ?? null;
     if (mode === "generer") {
-      const res = await genererPdf({ ...destinataire, ...champs });
+      const res = await genererPdf({ ...destinataire, ...aEnvoyer });
       if (res.erreur || !res.fichier) {
         setEnCours(false);
           setMessage({ texte: res.erreur ?? "Génération impossible.", erreur: true });
@@ -153,7 +160,7 @@ export default function DeposerDocument({
 
     const res = aModifier
       ? await corrigerDocument(aModifier.id, {
-          titre: champs.titre,
+          titre: aEnvoyer.titre,
           contenu: champs.contenu,
           fichier,
           // Sans nouveau fichier, la version reprend celui de la précédente :
@@ -162,7 +169,7 @@ export default function DeposerDocument({
           fichierActuel: aModifier.fichierPath,
           fichierNomActuel: aModifier.fichierNom,
         })
-      : await deposerDocument({ ...destinataire, ...champs, fichier, origine: "medecin" });
+      : await deposerDocument({ ...destinataire, ...aEnvoyer, fichier, origine: "medecin" });
 
     setEnCours(false);
     if (res.erreur) {
@@ -281,13 +288,23 @@ export default function DeposerDocument({
                 </>
               )}
 
-              <div className={etiquette}>Titre *</div>
-              <input
-                className={champ}
-                placeholder="Ordonnance du 31 juillet"
-                value={champs.titre}
-                onChange={(e) => setChamps({ ...champs, titre: e.target.value })}
-              />
+              {titreAuto ? (
+                <p className="mb-3 flex flex-wrap items-center gap-x-1.5 rounded-xl bg-bg px-3 py-2 text-[12px]">
+                  <span className="text-muted">Titre :</span>
+                  <b>{aEnvoyer.titre}</b>
+                  <span className="text-muted">· automatique</span>
+                </p>
+              ) : (
+                <>
+                  <div className={etiquette}>Titre *</div>
+                  <input
+                    className={champ}
+                    placeholder="Bilan lipidique"
+                    value={champs.titre}
+                    onChange={(e) => setChamps({ ...champs, titre: e.target.value })}
+                  />
+                </>
+              )}
 
               <div className={etiquette}>
                 Contenu {mode === "generer" ? "*" : "(visible par le patient)"}

@@ -9,6 +9,7 @@ import Pagination, { usePagination } from "@/components/site/Pagination";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { formatDateCourte } from "@/lib/dates";
 import {
+  titreDocument,
   iconeType,
   libelleType,
   supprimerDocument,
@@ -101,7 +102,7 @@ export default function MesDocuments() {
               d.annuleLe ? "text-muted line-through" : ""
             }`}
           >
-            {d.titre}
+            {titreDocument(d)}
           </b>
           <div className="text-[11.5px] text-muted">
             {libelleType(d.type)} ·{" "}
@@ -147,7 +148,7 @@ export default function MesDocuments() {
           <button
             type="button"
             onClick={() => setDeplie(deplie === d.id ? null : d.id)}
-            className="mt-2 text-[11.5px] font-bold text-teal hover:underline"
+            className="cible-texte mt-2 text-[11.5px] font-bold text-teal hover:underline"
           >
             {deplie === d.id ? "Replier" : "Lire le contenu"}
           </button>

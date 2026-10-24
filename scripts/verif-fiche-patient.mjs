@@ -4,8 +4,14 @@
  *
  * Ce qui est contrôlé n'est pas « la page s'affiche », mais ce que la
  * maquette et les règles de métier exigent vraiment :
- *   - deux colonnes à partir de 1024 px, une seule en dessous, avec les
- *     onglets Dossier / Rendez-vous / Documents qui n'en montrent qu'une ;
+ *   - deux colonnes à partir de 1024 px : barre d'onglets des modules
+ *     (Dossier clinique par défaut), reflétée dans l'URL, collée en haut au
+ *     défilement, navigable aux flèches ;
+ *   - une seule colonne en dessous, avec UNE rangée de puces (Patient,
+ *     Rendez-vous, puis les modules) qui ne montre qu'une section ;
+ *   - le zoom 80 % ne s'applique que sous une souris, jamais au tactile ;
+ *   - le titre d'une ordonnance est calculé (« Ordonnance du JJ/MM/AAAA »)
+ *     et la ligne du dessous cite les médicaments ;
  *   - aucun défilement horizontal à 360, 390, 768 et 1280 px ;
  *   - des zones tactiles d'au moins 44 px sur téléphone ;
  *   - l'aperçu d'un document s'ouvre, piège le focus et se ferme avec Échap ;
@@ -396,38 +402,114 @@ async function main() {
          && [...document.querySelectorAll('main a')].some(a => a.offsetParent !== null && /Nouveau RDV/.test(a.textContent))`
       )
     );
-    check(
-      "[1280] onglets masqués (deux colonnes)",
-      !(await page.eval(`!!document.querySelector('[role="tablist"][aria-label="Sections du dossier"]')?.offsetParent`))
-    );
+    const BARRE = `document.querySelector('[role="tablist"][aria-label="Modules du dossier"]')`;
+    const PUCES = `document.querySelector('[role="tablist"][aria-label="Sections du dossier"]')`;
+    const ONGLET_ACTIF = `(${BARRE})?.querySelector('[aria-selected="true"]')?.textContent.trim()`;
+
+    check("[1280] zoom 80 % appliqué sous la souris", (await page.eval("getComputedStyle(document.body).zoom")) === "0.8");
+    check("[1280] puces masquées (deux colonnes)", !(await page.eval(`!!(${PUCES})?.offsetParent`)));
+    check("[1280] barre d’onglets des modules visible", await page.eval(`!!(${BARRE})?.offsetParent`));
+    const libelles = await page.eval(`[...(${BARRE}).querySelectorAll('[role="tab"]')].map(t => t.textContent.trim())`);
+    check("[1280] trois modules", libelles.length === 3, libelles.join(" | "));
+    check("[1280] Dossier clinique ouvert par défaut", /^Dossier clinique/.test((await page.eval(ONGLET_ACTIF)) ?? ""));
     const colonnes = await page.eval(
       `(() => { const g = [...document.querySelectorAll('main div')].find(d => getComputedStyle(d).gridTemplateColumns.split(' ').length === 2 && d.querySelector('section'));
         return g ? getComputedStyle(g).gridTemplateColumns : null; })()`
     );
     check("[1280] grille à deux colonnes", !!colonnes, colonnes ?? "aucune");
-    check("[1280] toutes les sections visibles", (await page.eval(SECTIONS_VISIBLES)) >= 3);
-    check("[1280] pas de défilement horizontal", !(await page.eval(DEBORDE)));
-    await page.shot("1280-fiche");
-
-    /* ---------- 768 : une colonne, onglets ---------- */
-    await page.taille(768, 1000, false);
-    await sleep(600);
     check(
-      "[768] onglets visibles",
-      await page.eval(`!!document.querySelector('[role="tablist"][aria-label="Sections du dossier"]')?.offsetParent`)
+      "[1280] carte patient et rendez-vous visibles à côté des modules",
+      await page.eval(`!!document.getElementById('panneau-fiche-patient')?.offsetParent && !!document.getElementById('panneau-fiche-rdv')?.offsetParent`)
     );
+    check("[1280] pas de défilement horizontal", !(await page.eval(DEBORDE)));
+    await page.shot("1280-dossier-clinique");
+
+    // Le compteur de l'onglet Documents arrive sans ouvrir l'onglet.
+    await page
+      .waitFor(`/\d/.test((${BARRE}).querySelectorAll('[role="tab"]')[1].textContent)`, 15000)
+      .catch(() => {});
+    const compteur = await page.eval(`(${BARRE}).querySelectorAll('[role="tab"]')[1].textContent.trim()`);
+    check("[1280] l’onglet Documents porte son compteur", /\d+$/.test(compteur), compteur);
+
+    // Clic sur Documents : l'URL suit, les pièces s'affichent.
+    await page.click('[role="tablist"][aria-label="Modules du dossier"] [role="tab"]', 1);
+    await page.waitFor(`!!document.querySelector('#panneau-fiche-documents article')`, 20000);
+    check("[1280] l’URL porte ?tab=documents", (await page.eval("location.search")).includes("tab=documents"));
+    const titres = await page.eval(`[...document.querySelectorAll('#panneau-fiche-documents article b')].map(b => b.textContent.trim())`);
+    check(
+      "[1280] titre d’ordonnance calculé",
+      titres.some((t) => /^Ordonnance du \d{2}\/\d{2}\/\d{4}$/.test(t)),
+      titres.slice(0, 3).join(" | ")
+    );
+    check("[1280] plus aucun « Ordo » abrégé", !titres.some((t) => /^Ordo\b/.test(t)));
+    check(
+      "[1280] la ligne de l’ordonnance cite les médicaments",
+      await page.eval(`[...document.querySelectorAll('#panneau-fiche-documents article')].some(a => /Amlodipine 5 mg/.test(a.textContent))`)
+    );
+    check(
+      "[1280] boutons Corriger / Annuler / Ouvrir conservés",
+      await page.eval(
+        `(() => { const t = [...document.querySelectorAll('#panneau-fiche-documents button')].map(b => b.textContent.trim()); return ['Corriger','Annuler','Ouvrir'].every(x => t.includes(x)); })()`
+      )
+    );
+    await page.shot("1280-documents");
+
+    /* Barre collante : après un VRAI défilement (fenêtre basse, pour que la
+       page ait de quoi défiler bien au-delà de la position de la barre), son
+       bord haut reste au bord de la fenêtre. On mesure le conteneur collant
+       lui-même, pas la rangée d'onglets qu'il contient. Une première version
+       mesurait −11 px après 133 px de défilement et passait : la barre ne
+       collait pas, la page ne défilait juste pas assez pour le voir. */
+    await page.taille(1280, 560, false);
+    await page.eval("window.scrollTo(0, 900)");
+    await sleep(400);
+    const haut = await page.eval(`Math.round((${BARRE}).closest('.sticky').getBoundingClientRect().top)`);
+    const defile = await page.eval("Math.round(window.scrollY)");
+    check(
+      "[1280] la barre d’onglets reste collée au défilement",
+      defile >= 300 && Math.abs(haut) <= 2,
+      `scrollY = ${defile}, top = ${haut}px`
+    );
+    await page.shot("1280-documents-defile");
+    await page.eval("window.scrollTo(0, 0)");
+    await page.taille(1280, 900, false);
+
+    // Clavier : flèche droite → Relation patient, focus compris.
+    await page.eval(`(${BARRE}).querySelector('[aria-selected="true"]').focus()`);
+    await page.send("Input.dispatchKeyEvent", { type: "keyDown", key: "ArrowRight", code: "ArrowRight", windowsVirtualKeyCode: 39 });
+    await page.send("Input.dispatchKeyEvent", { type: "keyUp", key: "ArrowRight", code: "ArrowRight", windowsVirtualKeyCode: 39 });
+    await sleep(400);
+    check("[1280] flèche droite → Relation patient", /^Relation patient/.test((await page.eval(ONGLET_ACTIF)) ?? ""));
+    check("[1280] le focus suit l’onglet", await page.eval(`document.activeElement?.getAttribute('aria-selected') === 'true'`));
+    check(
+      "[1280] un seul onglet tabulable",
+      (await page.eval(`(${BARRE}).querySelectorAll('[role="tab"][tabindex="0"]').length`)) === 1
+    );
+
+    // Un lien direct ouvre le bon onglet.
+    await page.goto(`${APP}${lien}?tab=documents`);
+    await page.waitFor(DOSSIER_PRET, 30000);
+    check("[1280] ?tab=documents ouvre Documents", /^Ordonnances et documents/.test((await page.eval(ONGLET_ACTIF)) ?? ""));
+
+    /* ---------- 768 sous la souris : une colonne, puces ---------- */
+    await page.taille(768, 1000, false);
+    await page.goto(`${APP}${lien}`);
+    await page.waitFor(DOSSIER_PRET, 30000);
+    await sleep(600);
+    check("[768] puces visibles", await page.eval(`!!(${PUCES})?.offsetParent`));
+    check("[768] barre d’onglets ordinateur masquée", !(await page.eval(`!!(${BARRE})?.offsetParent`)));
+    const puces = await page.eval(`[...(${PUCES}).querySelectorAll('[role="tab"]')].map(t => t.textContent.trim())`);
+    check("[768] cinq puces, Patient en tête", puces.length === 5 && /^Patient/.test(puces[0]), puces.join(" | "));
     const sections768 = await page.eval(SECTIONS_VISIBLES);
     check("[768] une seule section à la fois", sections768 === 1, `${sections768} visible(s)`);
     check("[768] pas de défilement horizontal", !(await page.eval(DEBORDE)));
-    await page.shot("768-dossier");
+    await page.shot("768-patient");
 
-    // Onglet Documents
-    await page.click('[role="tablist"][aria-label="Sections du dossier"] button', 2);
-    const sectionsDocs = await page.eval(SECTIONS_VISIBLES);
-    check("[768] onglet Documents affiche les sections de documents", sectionsDocs >= 1, `${sectionsDocs} visible(s)`);
+    await page.click('[role="tablist"][aria-label="Sections du dossier"] [role="tab"]', 3);
+    await page.waitFor(`!!document.querySelector('#panneau-fiche-documents article')?.offsetParent`, 20000);
     check(
-      "[768] la carte patient est masquée",
-      !(await page.eval(`[...document.querySelectorAll('main section')].some(s => s.offsetParent !== null && /Informations médicales/.test(s.textContent))`))
+      "[768] la carte patient est masquée sur Ordonnances",
+      !(await page.eval(`!!document.getElementById('panneau-fiche-patient')?.offsetParent`))
     );
     await page.shot("768-documents");
 
@@ -442,6 +524,11 @@ async function main() {
       await sleep(600);
 
       check(`[${largeur}] pas de défilement horizontal`, !(await page.eval(DEBORDE)));
+      check(`[${largeur}] pas de zoom au tactile`, (await page.eval("getComputedStyle(document.body).zoom")) === "1");
+      check(
+        `[${largeur}] ouverture sur la puce Patient`,
+        /^Patient/.test((await page.eval(`document.querySelector('[aria-label="Sections du dossier"] [aria-selected="true"]')?.textContent.trim()`)) ?? "")
+      );
       check(
         `[${largeur}] barre haute mobile présente`,
         await page.eval(`!!document.querySelector('.topbar')`)
@@ -456,24 +543,32 @@ async function main() {
         cible.min >= 44,
         `plus petite : ${cible.min}px (${cible.coupable})`
       );
-      await page.shot(`${largeur}-dossier`);
+      await page.shot(`${largeur}-patient`);
 
-      // Onglet Documents puis aperçu d'un document
-      await page.click('[role="tablist"][aria-label="Sections du dossier"] button', 2);
+      await page.click('[role="tablist"][aria-label="Sections du dossier"] [role="tab"]', 2);
+      await sleep(500);
+      await page.shot(`${largeur}-dossier-clinique`);
+
+      // Puce Ordonnances puis aperçu d'un document
+      await page.click('[role="tablist"][aria-label="Sections du dossier"] [role="tab"]', 3);
+      await page.waitFor(`!!document.querySelector('#panneau-fiche-documents article')?.offsetParent`, 20000);
+      const cibleDocs = await page.eval(PLUS_PETITE_CIBLE);
+      check(`[${largeur}] zones tactiles ≥ 44 px (Ordonnances)`, cibleDocs.min >= 44, `plus petite : ${cibleDocs.min}px (${cibleDocs.coupable})`);
+      check(`[${largeur}] pas de défilement horizontal (Ordonnances)`, !(await page.eval(DEBORDE)));
       await page.shot(`${largeur}-documents`);
       const aOuvrir = await page.eval(
-        `[...document.querySelectorAll('main button')].filter(b => b.offsetParent !== null && b.textContent.trim() === 'Ouvrir').length > 0`
+        `[...document.querySelectorAll('#panneau-fiche-documents button')].filter(b => b.offsetParent !== null && b.textContent.trim() === 'Ouvrir').length > 0`
       );
       if (aOuvrir) {
         const indexOuvrir = await page.eval(
-          `[...document.querySelectorAll('main button')].filter(b => b.offsetParent !== null).findIndex(b => b.textContent.trim() === 'Ouvrir')`
+          `[...document.querySelectorAll('#panneau-fiche-documents button')].filter(b => b.offsetParent !== null).findIndex(b => b.textContent.trim() === 'Ouvrir')`
         );
-        await page.click("main button", indexOuvrir);
+        await page.click("#panneau-fiche-documents button", indexOuvrir);
         await sleep(700);
         /* La coquille mobile garde en permanence deux role="dialog" dans le
            DOM (tiroir et notifications), masqués en CSS : on vise donc
            l'aperçu par son libellé, pas le premier dialogue venu. */
-        const APERCU = `[...document.querySelectorAll('[role="dialog"]')].find(d => /Ordonnance de vérification/.test(d.getAttribute('aria-label') ?? ''))`;
+        const APERCU = `[...document.querySelectorAll('[role="dialog"]')].find(d => /Ordonnance du/.test(d.getAttribute('aria-label') ?? ''))`;
         const ouverte = await page.eval(`!!(${APERCU})`);
         check(`[${largeur}] l’aperçu s’ouvre`, ouverte);
         if (ouverte) {
@@ -512,7 +607,7 @@ async function main() {
     await sleep(600);
 
     const etats = await page.eval(`(() => {
-      const section = [...document.querySelectorAll('main section')].find(s => /^Rendez-vous/.test(s.textContent.trim()));
+      const section = document.getElementById('panneau-fiche-rdv');
       if (!section) return null;
       const lignes = [...section.querySelectorAll('div.border-b, div.last\\\\:border-b-0')];
       const badges = [...section.querySelectorAll('span.rounded-full')].map(s => s.textContent.trim());

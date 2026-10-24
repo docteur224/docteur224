@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { formatDateCourte } from "@/lib/dates";
 import Icone from "@/components/site/Icone";
-import { libelleType, type DocumentPatient } from "@/lib/documents";
+import { titreDocument, libelleType, type DocumentPatient } from "@/lib/documents";
 import {
   envoyerTransmission,
   useConfreres,
@@ -291,7 +291,7 @@ export default function AdresserConfrere({
                         className="flex-none text-muted"
                       />
                       <span className="min-w-0 flex-1">
-                        <b className="block truncate text-[12.5px] font-bold">{d.titre}</b>
+                        <b className="block truncate text-[12.5px] font-bold">{titreDocument(d)}</b>
                         <small className="block text-[10.5px] text-muted">
                           {libelleType(d.type)} · {formatDateCourte(d.creeLe.slice(0, 10))}
                           {d.origine === "patient" ? " · envoyé par le patient" : ""}

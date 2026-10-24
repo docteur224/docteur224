@@ -29,6 +29,68 @@ export const libelleType = (t: string) =>
 export const iconeType = (t: string) =>
   TYPES_DOCUMENT.find((x) => x.valeur === t)?.icone ?? "📎";
 
+/* ===== Titre et résumé affichés ===== */
+
+/** « JJ/MM/AAAA » d'un horodatage, à l'heure de Conakry (UTC+0 toute l'année). */
+export function jourDe(horodatage: string): string {
+  const d = new Date(horodatage);
+  if (Number.isNaN(d.getTime())) return horodatage.slice(0, 10).split("-").reverse().join("/");
+  return d.toLocaleDateString("fr-FR", { timeZone: "Africa/Conakry" });
+}
+
+/** « HH:MM » d'un horodatage, à l'heure de Conakry. */
+export function heureDe(horodatage: string): string {
+  const d = new Date(horodatage);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleTimeString("fr-FR", {
+    timeZone: "Africa/Conakry",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/**
+ * Titre d'une pièce tel qu'il s'affiche partout.
+ *
+ * Une ordonnance s'intitule TOUJOURS « Ordonnance du JJ/MM/AAAA », date
+ * d'émission de la version. Le titre se tapait à la main, et le dossier
+ * finissait par aligner « Ordo », « Ordo du 01/08 », « Ordonnance du 27/07
+ * 21:16 » — trois manières de dire la même chose, dont une datée d'un autre
+ * jour que l'émission.
+ *
+ * Le titre est RECALCULÉ ici plutôt que réécrit en base : une pièce remise
+ * est immuable (migration 0063), y compris son libellé. Les autres types
+ * gardent le titre choisi par le médecin — « Bilan lipidique », « Compte
+ * rendu d'échographie » disent quelque chose qu'une date ne dit pas.
+ */
+export function titreDocument(d: { type: string; titre: string; creeLe: string }): string {
+  if (d.type === "ordonnance") return `Ordonnance du ${jourDe(d.creeLe)}`;
+  return d.titre?.trim() || libelleType(d.type);
+}
+
+/** Titre d'une NOUVELLE ordonnance, émise maintenant. */
+export const titreOrdonnanceDuJour = () => `Ordonnance du ${jourDe(new Date().toISOString())}`;
+
+/**
+ * Premières lignes utiles d'un contenu, sur une ligne : de quoi distinguer
+ * deux ordonnances émises le même jour sans les ouvrir.
+ */
+export function resumeContenu(contenu: string | null, max = 70): string {
+  if (!contenu) return "";
+  const lignes = contenu
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean)
+    // Une posologie (« 1 cp matin et soir ») suit son médicament : seules
+    // les lignes qui commencent par une lettre portent un nom de produit.
+    .filter((l) => /^\p{L}/u.test(l))
+    // Le produit seul : « Amlodipine 5 mg — 1 comprimé le matin » donne
+    // « Amlodipine 5 mg ». La posologie se lit en ouvrant la pièce.
+    .map((l) => l.split(/\s[—–-]\s|\s?:\s|\s\(/)[0].trim());
+  const texte = lignes.slice(0, 3).join(", ");
+  return texte.length > max ? `${texte.slice(0, max - 1).trimEnd()}…` : texte;
+}
+
 export interface PartageDocument {
   medecinId: string;
   medecinNom: string;
@@ -199,6 +261,63 @@ export function useMesDocuments(
   }, [version, filtre, toutesVersions]);
 
   return { documents, chargement, recharger: () => setVersion((v) => v + 1) };
+}
+
+/*
+ * Une même pastille s'affiche à plusieurs endroits (barre d'onglets, puces
+ * mobiles, copie de mesure de la barre) : sans mise en commun, chacun
+ * lancerait sa requête. Les demandes identiques en cours partagent la même
+ * promesse, oubliée dès qu'elle a répondu — la suivante relira la base.
+ */
+const comptagesEnCours = new Map<string, Promise<number>>();
+
+function compterDocuments(cle: string): Promise<number> {
+  const enCours = comptagesEnCours.get(cle);
+  if (enCours) return enCours;
+  const [patientId, procheId] = cle.split("|");
+  let requete = creerClientNavigateur()
+    .from("documents_patient")
+    .select("id", { count: "exact", head: true })
+    .is("remplace_par_id", null);
+  if (patientId) requete = requete.eq("patient_id", patientId);
+  if (procheId) requete = requete.eq("proche_id", procheId);
+  const promesse = Promise.resolve(requete)
+    .then(({ count }) => count ?? 0)
+    .finally(() => comptagesEnCours.delete(cle));
+  comptagesEnCours.set(cle, promesse);
+  return promesse;
+}
+
+/**
+ * Nombre de pièces en cours au dossier d'un patient, sans les charger : le
+ * compteur de l'onglet « Ordonnances et documents » s'affiche avant que
+ * l'onglet soit ouvert. Même filtre que la liste (versions en cours, RLS),
+ * donc le chiffre et la liste ne peuvent pas se contredire.
+ *
+ * `revision` : changé par l'onglet après un dépôt ou une annulation, pour
+ * que le compteur suive sans recharger la page.
+ */
+export function useNombreDocuments(
+  pour: { patientId?: string; procheId?: string } | undefined,
+  revision = 0
+): number | null {
+  const cle = pour ? `${pour.patientId ?? ""}|${pour.procheId ?? ""}|${revision}` : "";
+  const [resultat, setResultat] = useState<{ cle: string; n: number } | null>(null);
+
+  useEffect(() => {
+    if (!cle) return;
+    let actif = true;
+    compterDocuments(cle).then((n) => {
+      if (actif) setResultat({ cle, n });
+    });
+    return () => {
+      actif = false;
+    };
+  }, [cle]);
+
+  // Tant que la réponse de la requête courante n'est pas là, pas de chiffre :
+  // annoncer l'ancien puis se corriger se lirait comme une erreur.
+  return resultat?.cle === cle ? resultat.n : null;
 }
 
 /** Médecins déjà consultés, pour le sélecteur d'envoi et de partage. */

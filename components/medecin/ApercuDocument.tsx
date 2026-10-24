@@ -5,6 +5,7 @@ import Dialogue from "@/components/site/Dialogue";
 import Icone from "@/components/site/Icone";
 import { formatDateCourte } from "@/lib/dates";
 import {
+  titreDocument,
   genererPdf,
   libelleType,
   urlSignee,
@@ -96,7 +97,7 @@ export default function ApercuDocument({
     const res = await genererPdf({
       ...destinataire,
       type: doc.type as TypeDocument,
-      titre: doc.titre,
+      titre: titreDocument(doc),
       contenu: doc.contenu,
     });
     if (res.erreur || !res.fichier) {
@@ -125,7 +126,7 @@ export default function ApercuDocument({
     if (!url) return;
     const lien = window.document.createElement("a");
     lien.href = url;
-    lien.download = `${doc.titre.replace(/[^\w\s.\-]+/g, "").trim() || "document"}.pdf`.replace(
+    lien.download = `${titreDocument(doc).replace(/[^\w\s.\-]+/g, "").trim() || "document"}.pdf`.replace(
       /\s+/g,
       "-"
     );
@@ -134,7 +135,8 @@ export default function ApercuDocument({
     lien.remove();
   }
 
-  const titreAffiche = doc.version > 1 ? `${doc.titre} (v${doc.version})` : doc.titre;
+  const titreAffiche =
+    doc.version > 1 ? `${titreDocument(doc)} (v${doc.version})` : titreDocument(doc);
 
   return (
     <Dialogue

@@ -7,6 +7,7 @@ import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import Pagination, { usePagination } from "@/components/site/Pagination";
 import { formatDateCourte } from "@/lib/dates";
 import {
+  titreDocument,
   iconeType,
   libelleType,
   urlSignee,
@@ -118,7 +119,7 @@ function EcranCorrespondance({ vue }: { vue: Vue }) {
         {iconeType(p.type)}
       </span>
       <span className="min-w-0 flex-1">
-        <b className="block truncate text-[12.5px] font-bold">{p.titre}</b>
+        <b className="block truncate text-[12.5px] font-bold">{titreDocument(p)}</b>
         <small className="block text-[10.5px] text-muted">
           {libelleType(p.type)} · {formatDateCourte(p.creeLe.slice(0, 10))}
           {p.redigePar ? ` · ${p.redigePar}` : ""}
@@ -171,7 +172,7 @@ function EcranCorrespondance({ vue }: { vue: Vue }) {
             <button
               type="button"
               onClick={() => setDeplie(deplie === t.id ? null : t.id)}
-              className="mt-2 text-[11.5px] font-bold text-teal hover:underline"
+              className="cible-texte mt-2 text-[11.5px] font-bold text-teal hover:underline"
             >
               {deplie === t.id ? "Replier le courrier" : "Lire le courrier"}
             </button>
@@ -249,7 +250,7 @@ function EcranCorrespondance({ vue }: { vue: Vue }) {
           {iconeType(d.type)}
         </span>
         <div className="min-w-0 flex-1">
-          <b className="block text-sm font-extrabold">{d.titre}</b>
+          <b className="block text-sm font-extrabold">{titreDocument(d)}</b>
           <div className="text-[11.5px] text-muted">
             {libelleType(d.type)} · {formatDateCourte(d.creeLe.slice(0, 10))} · partagé le{" "}
             {formatDateCourte(d.partageLe.slice(0, 10))}
@@ -281,7 +282,7 @@ function EcranCorrespondance({ vue }: { vue: Vue }) {
           <button
             type="button"
             onClick={() => setDeplie(deplie === d.documentId ? null : d.documentId)}
-            className="mt-2 text-[11.5px] font-bold text-teal hover:underline"
+            className="cible-texte mt-2 text-[11.5px] font-bold text-teal hover:underline"
           >
             {deplie === d.documentId ? "Replier" : "Lire le contenu"}
           </button>
