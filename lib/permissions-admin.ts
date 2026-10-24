@@ -177,6 +177,7 @@ export const PERMISSION_PAR_ROUTE: Record<string, Permission> = {
   "/espace-admin/abonnements": "finance",
   "/espace-admin/messagerie": "messagerie",
   "/espace-admin/parametres": "parametres",
+  "/espace-admin/medicaments": "parametres",
   "/espace-admin/equipe": "equipe",
   "/espace-admin/audit": "audit",
 };

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { creerClientNavigateur } from "@/lib/supabase/client";
+import { resumePrescription, type LignePrescription } from "@/lib/prescription";
 
 /*
  * Documents remis au patient : ordonnances, comptes rendus, résultats
@@ -19,6 +20,7 @@ export const TYPES_DOCUMENT = [
   { valeur: "compte_rendu", libelle: "Compte rendu", icone: "📋" },
   { valeur: "resultat", libelle: "Résultat d’examen", icone: "🧪" },
   { valeur: "certificat", libelle: "Certificat", icone: "📄" },
+  { valeur: "arret_travail", libelle: "Arrêt de travail", icone: "🗓️" },
   { valeur: "autre", libelle: "Autre", icone: "📎" },
 ] as const;
 
@@ -75,6 +77,10 @@ export const titreOrdonnanceDuJour = () => `Ordonnance du ${jourDe(new Date().to
  * Premières lignes utiles d'un contenu, sur une ligne : de quoi distinguer
  * deux ordonnances émises le même jour sans les ouvrir.
  */
+export function resumeDocument(d: { contenu: string | null; prescription?: LignePrescription[] | null }): string {
+  return d.prescription?.length ? resumePrescription(d.prescription) : resumeContenu(d.contenu);
+}
+
 export function resumeContenu(contenu: string | null, max = 70): string {
   if (!contenu) return "";
   const lignes = contenu
@@ -126,6 +132,11 @@ export interface DocumentPatient {
   /** Annulée : la pièce reste lisible, barrée, et ne vaut plus rien. */
   annuleLe: string | null;
   motifAnnulation: string | null;
+  /* ---- Ordonnance structurée et vérification (migration 0065) ---- */
+  /** Lignes de prescription ; null pour une pièce saisie en texte libre. */
+  prescription: LignePrescription[] | null;
+  /** « D224-XXXX-XXXX-XXXX » : présent sur les documents générés depuis 0065. */
+  codeVerification: string | null;
 }
 
 interface LigneDocument {
@@ -146,6 +157,8 @@ interface LigneDocument {
   remplace_par_id: string | null;
   annule_le: string | null;
   motif_annulation: string | null;
+  prescription: LignePrescription[] | null;
+  code_verification: string | null;
   medecins: {
     civilite: string | null;
     utilisateurs: { nom: string | null; prenom: string | null } | null;
@@ -174,6 +187,7 @@ const SELECTION = `
   id, type, titre, contenu, fichier_path, fichier_nom, cree_le, origine, depose_par,
   medecin_id, patient_id, proche_id,
   version, document_parent_id, remplace_par_id, annule_le, motif_annulation,
+  prescription, code_verification,
   medecins!documents_patient_medecin_id_fkey ( ${NOM_MEDECIN} ),
   proches ( nom, prenom ),
   partages_document ( medecin_id, cree_le, medecins ( ${NOM_MEDECIN} ) )
@@ -209,6 +223,8 @@ const versDocument = (l: LigneDocument): DocumentPatient => ({
   remplaceParId: l.remplace_par_id,
   annuleLe: l.annule_le,
   motifAnnulation: l.motif_annulation,
+  prescription: l.prescription,
+  codeVerification: l.code_verification,
 });
 
 /**
@@ -371,6 +387,9 @@ export interface NouveauDocument {
   contenu: string;
   fichier?: File | null;
   rendezVousId?: string;
+  prescription?: LignePrescription[] | null;
+  /** Code tiré par le serveur à la génération du PDF définitif. */
+  codeVerification?: string | null;
 }
 
 /**
@@ -380,17 +399,21 @@ export interface NouveauDocument {
  * praticien, elle doit être relue en base à partir de la session et non
  * fournie par le navigateur (voir app/api/document-pdf/route.ts).
  */
-export async function genererPdf(d: {
-  patientId?: string;
-  procheId?: string;
-  type: TypeDocument;
-  titre: string;
-  contenu: string;
-}): Promise<{ fichier?: File; erreur?: string }> {
+export async function genererPdf(
+  d: {
+    patientId?: string;
+    procheId?: string;
+    type: TypeDocument;
+    titre: string;
+    contenu: string;
+  },
+  /** « final » : le serveur attribue un code de vérification et l'imprime en QR. */
+  mode: "apercu" | "final" = "apercu"
+): Promise<{ fichier?: File; code?: string; erreur?: string }> {
   const reponse = await fetch("/api/document-pdf", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(d),
+    body: JSON.stringify({ ...d, mode }),
   });
   if (!reponse.ok) {
     const { erreur } = await reponse
@@ -400,7 +423,10 @@ export async function genererPdf(d: {
   }
   const octets = await reponse.blob();
   const nom = `${d.titre.replace(/[^\w\s.\-]+/g, "").trim() || d.type}.pdf`.replace(/\s+/g, "-");
-  return { fichier: new File([octets], nom, { type: "application/pdf" }) };
+  return {
+    fichier: new File([octets], nom, { type: "application/pdf" }),
+    code: reponse.headers.get("X-Code-Verification") ?? undefined,
+  };
 }
 
 const TAILLE_MAX = 8 * 1024 * 1024; // 8 Mo
@@ -485,6 +511,8 @@ export async function deposerDocument(
     contenu: d.contenu.trim() || null,
     fichier_path: fichierPath,
     fichier_nom: fichierNom,
+    prescription: d.prescription ?? null,
+    code_verification: d.codeVerification ?? null,
   });
 
   if (error) {
@@ -519,6 +547,8 @@ export async function corrigerDocument(
     fichier?: File | null;
     fichierActuel?: string | null;
     fichierNomActuel?: string | null;
+    prescription?: LignePrescription[] | null;
+    codeVerification?: string | null;
   }
 ): Promise<{ erreur?: string }> {
   if (!d.titre.trim()) return { erreur: "Donnez un titre au document." };
@@ -544,6 +574,8 @@ export async function corrigerDocument(
     p_contenu: d.contenu.trim() || null,
     p_fichier_path: path,
     p_fichier_nom: nom,
+    p_prescription: d.prescription ?? null,
+    p_code_verification: d.codeVerification ?? null,
   });
   return error ? { erreur: messageErreur(error.message) } : {};
 }

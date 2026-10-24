@@ -589,8 +589,8 @@ async function main() {
             await page.eval(`/Allergies connues|Aucune allergie renseignée/.test((${APERCU})?.textContent ?? '')`)
           );
           check(
-            `[${largeur}] l’emplacement du QR est réservé`,
-            await page.eval(`/QR de vérification/.test((${APERCU})?.textContent ?? '')`)
+            `[${largeur}] code de vérification, ou mention de son absence`,
+            await page.eval(`/Code de vérification|Sans code de vérification/.test((${APERCU})?.textContent ?? '')`)
           );
           await page.touche("Escape");
           check(`[${largeur}] Échap referme l’aperçu`, !(await page.eval(`!!(${APERCU})`)));

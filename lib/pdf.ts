@@ -7,13 +7,14 @@
  * PDF 1.4 avec les polices standard Helvetica, qu'aucun lecteur n'a besoin
  * d'embarquer.
  *
- * Limites assumées : texte seulement (pas d'image ni de vectoriel), polices
- * Helvetica et Helvetica-Bold, encodage WinAnsi (CP1252) — largement
- * suffisant pour le français.
+ * Limites assumées : pas d'image matricielle, polices Helvetica et
+ * Helvetica-Bold, encodage WinAnsi (CP1252) — largement suffisant pour le
+ * français. Le vectoriel se limite à ce que les documents médicaux demandent :
+ * des aplats (le QR de vérification) et des tracés (la signature).
  */
 
-const A4 = { largeur: 595.28, hauteur: 841.89 };
-const MARGE = 56; // ~2 cm
+export const A4 = { largeur: 595.28, hauteur: 841.89 };
+export const MARGE = 56; // ~2 cm
 
 /* ---------- Encodage WinAnsi (CP1252) ---------- */
 
@@ -72,7 +73,7 @@ const LARGEURS_GRAS = [
   611, 611, 389, 556, 333, 611, 556, 778, 556, 556, 500, 389, 280, 389, 584,
 ];
 
-function largeurTexte(texte: string, taille: number, gras: boolean): number {
+export function largeurTexte(texte: string, taille: number, gras: boolean): number {
   const table = gras ? LARGEURS_GRAS : LARGEURS_NORMAL;
   let total = 0;
   for (const caractere of texte) {
@@ -296,6 +297,100 @@ export class DocumentPdf {
       );
     });
 
+    return this;
+  }
+
+  /* ---------- Positionnement libre ---------- */
+
+  /** Position verticale du curseur (points, origine en bas de page). */
+  get curseur(): number {
+    return this.y;
+  }
+
+  /** Garantit la place d'un bloc sur la page courante, quitte à en ouvrir une. */
+  garantir(hauteur: number): this {
+    this.reserver(hauteur);
+    return this;
+  }
+
+  /** Texte à une position absolue (ligne de base), sans toucher au curseur. */
+  texteA(
+    contenu: string,
+    x: number,
+    ligneDeBase: number,
+    options: { taille?: number; gras?: boolean; gris?: number; align?: "gauche" | "droite" | "centre" } = {}
+  ): this {
+    const taille = options.taille ?? 9;
+    const gras = options.gras ?? false;
+    const largeur = largeurTexte(contenu, taille, gras);
+    const gauche = options.align === "droite" ? x - largeur : options.align === "centre" ? x - largeur / 2 : x;
+    this.poser(contenu, gauche, ligneDeBase, taille, gras, options.gris ?? 0);
+    return this;
+  }
+
+  /**
+   * Matrice de modules noirs (QR code). `haut` est le bord SUPÉRIEUR du carré.
+   * Les modules contigus d'une rangée sont fusionnés en un seul rectangle :
+   * moins d'opérations, et pas de liseré blanc entre deux modules voisins à
+   * l'impression.
+   */
+  matrice(cases: (rangee: number, colonne: number) => boolean, n: number, x: number, haut: number, cote: number): this {
+    const m = cote / n;
+    const rects: string[] = [];
+    for (let r = 0; r < n; r++) {
+      let debut = -1;
+      for (let c = 0; c <= n; c++) {
+        const noir = c < n && cases(r, c);
+        if (noir && debut < 0) debut = c;
+        if (!noir && debut >= 0) {
+          rects.push(
+            `${(x + debut * m).toFixed(2)} ${(haut - (r + 1) * m).toFixed(2)} ${((c - debut) * m).toFixed(2)} ${m.toFixed(2)} re`
+          );
+          debut = -1;
+        }
+      }
+    }
+    this.courante.push(`q 0 0 0 rg ${rects.join(" ")} f Q`);
+    return this;
+  }
+
+  /**
+   * Tracés à main levée (signature) dans un cadre. Les points sont en
+   * coordonnées relatives (0 à 1, y vers le bas comme à l'écran) ; `haut` est
+   * le bord supérieur du cadre.
+   */
+  traits(
+    traits: [number, number][][],
+    x: number,
+    haut: number,
+    largeur: number,
+    hauteur: number,
+    epaisseur = 1.1
+  ): this {
+    const chemins = traits
+      .filter((t) => t.length > 0)
+      .map((t) => {
+        // Un point isolé (un clic) devient un trait minuscule, sinon il
+        // ne s'imprimerait pas.
+        const pts: [number, number][] = t.length === 1 ? [t[0], [t[0][0] + 0.002, t[0][1]]] : t;
+        return pts
+          .map(([px, py], i) => `${(x + px * largeur).toFixed(2)} ${(haut - py * hauteur).toFixed(2)} ${i ? "l" : "m"}`)
+          .join(" ");
+      });
+    if (chemins.length) {
+      // Encre bleu nuit : une signature se reconnaît à sa couleur sur un
+      // document noir et blanc.
+      this.courante.push(`q ${epaisseur} w 1 J 1 j 0.08 0.14 0.3 RG ${chemins.join(" ")} S Q`);
+    }
+    return this;
+  }
+
+  /** Cadre fin (emplacement réservé, aperçu). `haut` est le bord supérieur. */
+  cadre(x: number, haut: number, largeur: number, hauteur: number, gris = 0.75): this {
+    this.courante.push(
+      `q 0.6 w ${gris} ${gris} ${gris} RG ${x.toFixed(2)} ${(haut - hauteur).toFixed(2)} ` +
+        `${largeur.toFixed(2)} ${hauteur.toFixed(2)} re S Q`
+    );
     return this;
   }
 

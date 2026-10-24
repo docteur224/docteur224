@@ -159,8 +159,18 @@ let ids;
 
 async function nettoyer() {
   if (!ids) return;
-  const { data: notes } = await service.from("notes_consultation").select("id").eq("medecin_id", ids.medecinId).gte("cree_le", debutTest);
-  const { data: cst } = await service.from("constantes").select("id").eq("medecin_id", ids.medecinId).gte("cree_le", debutTest);
+  // Uniquement ce que le TEST a créé : la base est partagée avec la
+  // production, où le compte de démonstration sert aussi à des essais à la
+  // main. Notes : celles qui portent la marque du test. Constantes : celles
+  // du patient de test, créées pendant le test, aux valeurs que le test saisit.
+  const { data: versions } = await service.from("notes_consultation_versions").select("note_id").ilike("motif", `%${MARQUE}%`);
+  const notes = [...new Set((versions ?? []).map((v) => v.note_id))].map((id) => ({ id }));
+  const { data: cstBrutes } = await service
+    .from("constantes").select("id, poids_kg, tension_sys")
+    .eq("medecin_id", ids.medecinId).eq("patient_id", ids.patientId).gte("cree_le", debutTest);
+  const cst = (cstBrutes ?? []).filter(
+    (c) => (Number(c.poids_kg) === 72.5 && c.tension_sys === 152) || (Number(c.poids_kg) === 74 && c.tension_sys === 132)
+  );
   const tout = [...(notes ?? []), ...(cst ?? [])].map((x) => x.id);
   if (tout.length) await service.from("journal_audit").delete().in("cible_id", tout);
   if (notes?.length) await service.from("notes_consultation").delete().in("id", notes.map((n) => n.id));
@@ -294,7 +304,9 @@ async function main() {
     const zone = await page.eval(`(() => { const r = ${SVG}.querySelector('rect[tabindex]').getBoundingClientRect(); return { x: r.right - 6, y: r.top + r.height / 2 }; })()`);
     await page.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: zone.x, y: zone.y });
     await sleep(300);
-    check("[1280] info-bulle au survol (valeur + état)", await page.eval(`(() => { const t = ${PANNEAU}.querySelector('.shadow-card')?.textContent ?? ''; return t.includes('152 mmHg') && t.includes('Élevée'); })()`));
+    // Indépendant des autres mesures du patient (la base est partagée) :
+    // l'info-bulle paraît, avec une valeur en mmHg et un état.
+    check("[1280] info-bulle au survol (valeur + état)", await page.eval(`(() => { const t = ${PANNEAU}.querySelector('.shadow-card')?.textContent ?? ''; return /\\d+ mmHg/.test(t) && /Élevée|Normale|Basse|Très élevée/.test(t); })()`));
     await page.shot("1280-courbe-survol");
     await page.send("Input.dispatchMouseEvent", { type: "mouseMoved", x: 5, y: 5 });
 
@@ -303,9 +315,12 @@ async function main() {
     // la suivante recule d'une mesure.
     await page.eval(`${SVG}.querySelector('rect[tabindex]').focus()`);
     await page.touche("ArrowLeft", 37);
-    check("[1280] clavier : la première flèche prend la dernière mesure", await page.eval(`(${PANNEAU}.querySelector('.shadow-card')?.textContent ?? '').includes('152 mmHg')`));
+    const bulle = `(${PANNEAU}.querySelector('.shadow-card')?.textContent ?? '')`;
+    const premiere = await page.eval(bulle);
+    check("[1280] clavier : la première flèche affiche une mesure", /\d+ mmHg/.test(premiere), premiere.slice(0, 40));
     await page.touche("ArrowLeft", 37);
-    check("[1280] clavier : la suivante recule d'une mesure", await page.eval(`(${PANNEAU}.querySelector('.shadow-card')?.textContent ?? '').includes('132 mmHg')`));
+    const seconde = await page.eval(bulle);
+    check("[1280] clavier : la suivante passe à une autre mesure", /\d+ mmHg/.test(seconde) && seconde !== premiere, seconde.slice(0, 40));
 
     // Période
     await page.cliquer(DANS(PANNEAU, "3 mois"));

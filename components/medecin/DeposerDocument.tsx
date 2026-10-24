@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import ChampsCertificat, { champsInitiaux, texteModele, type BaseModele } from "@/components/medecin/ordonnance/ChampsCertificat";
+import EditeurPrescription, { compterAlertes } from "@/components/medecin/ordonnance/EditeurPrescription";
+import SignatureElectronique from "@/components/medecin/SignatureElectronique";
 import Icone from "@/components/site/Icone";
 import {
   corrigerDocument,
@@ -12,26 +15,28 @@ import {
   type DocumentPatient,
   type TypeDocument,
 } from "@/lib/documents";
+import { useSignature } from "@/lib/medicaments";
+import { LIGNE_VIDE, ligneRemplie, problemePrescription, texteOrdonnance, type LignePrescription } from "@/lib/prescription";
 
 /*
  * Remise (ou correction) d'un document, depuis l'espace médecin.
  *
  * Deux façons de produire la pièce jointe :
- *  - « Générer » (défaut) : le serveur compose un PDF à partir du type et du
- *    texte saisis, avec l'en-tête du praticien relu en base. C'est le cas
- *    courant — une ordonnance se tape, elle ne se scanne pas ;
- *  - « Joindre un fichier » : un PDF ou une image déjà produits ailleurs.
+ *  - « Générer » (défaut) : le serveur compose un PDF à l'en-tête du
+ *    praticien, avec sa signature électronique et un code + QR de
+ *    vérification (migration 0065). Selon le type :
+ *      · ordonnance → éditeur structuré (médicaments de la base, posologie,
+ *        durée, quantité), modèles réutilisables, alerte allergie ;
+ *      · certificat, arrêt de travail → modèle pré-rempli, texte modifiable ;
+ *      · autres → texte libre ;
+ *  - « Joindre un fichier » : un PDF ou une image déjà produits ailleurs —
+ *    sans QR : on ne certifie pas une pièce qu'on n'a pas composée.
  *
- * Un seul rendu pour web et mobile, contrairement au reste de l'application :
- * le formulaire déplié dans la ligne débordait de l'écran sur téléphone. Ici
- * c'est une feuille plein écran en dessous de md, une carte centrée au-dessus.
+ * Feuille plein écran en dessous de md, carte centrée au-dessus.
  *
- * Depuis la migration 0063, CORRIGER ne réécrit plus la ligne : la base crée
- * une version suivante et conserve la précédente. Deux conséquences visibles
- * ici — le type ne se change plus (une ordonnance corrigée reste une
- * ordonnance, sinon la chaîne de versions n'a plus de sens), et le PDF est
- * recomposé à partir du texte corrigé, sans quoi la v2 porterait encore le
- * fichier de la v1.
+ * Corriger ne réécrit pas la ligne : la base crée une version suivante, avec
+ * son PROPRE code de vérification — le QR de la précédente répondra
+ * désormais « corrigé ».
  */
 
 type Mode = "generer" | "fichier";
@@ -39,12 +44,25 @@ type Mode = "generer" | "fichier";
 const VIDE = { type: "ordonnance" as TypeDocument, titre: "", contenu: "" };
 
 /** Une pièce rédigée en clair se recompose ; un scan se remplace. */
-const modeInitial = (doc?: DocumentPatient): Mode =>
-  !doc ? "generer" : doc.contenu ? "generer" : "fichier";
+const modeInitial = (doc?: DocumentPatient): Mode => (!doc ? "generer" : doc.contenu ? "generer" : "fichier");
+
+/** Les remarques d'une ordonnance structurée vivent en fin de texte. */
+const remarquesDe = (contenu: string | null) => contenu?.match(/\n?\n?Remarques : ([\s\S]*)$/)?.[1]?.trim() ?? "";
+
+const estCertificat = (t: TypeDocument): t is "certificat" | "arret_travail" =>
+  t === "certificat" || t === "arret_travail";
+
+/** « Ordonnance remise », « Certificat remis »… */
+function confirmation(type: TypeDocument, nomPatient: string): string {
+  const feminin = type === "ordonnance";
+  return `${libelleType(type)} remis${feminin ? "e" : ""} à ${nomPatient}`;
+}
 
 export default function DeposerDocument({
   cle,
   nomPatient,
+  patient,
+  medecin,
   document: aModifier,
   declencheur,
   classeDeclencheur,
@@ -53,11 +71,13 @@ export default function DeposerDocument({
   /** « c-<uuid> » ou « p-<uuid> », tel que fourni par la liste des patients. */
   cle: string;
   nomPatient: string;
+  /** Ce que l'ordonnance et les certificats ont besoin de savoir du patient. */
+  patient?: { allergies: string[]; naissance: string | null; genre: string | null };
+  /** Le praticien, pour pré-remplir les certificats. */
+  medecin?: { nom: string; specialite: string } | null;
   /** Fourni = correction d'un document existant plutôt que nouveau dépôt. */
   document?: DocumentPatient;
-  /** Libellé du bouton d'ouverture. */
   declencheur?: string;
-  /** Classes du bouton d'ouverture, pour l'aligner sur la rangée d'actions. */
   classeDeclencheur?: string;
   apres?: (message: string) => void;
 }) {
@@ -65,24 +85,46 @@ export default function DeposerDocument({
   const [ouvert, setOuvert] = useState(false);
   const [mode, setMode] = useState<Mode>(modeInitial(aModifier));
   const [champs, setChamps] = useState(VIDE);
+  const [lignes, setLignes] = useState<LignePrescription[]>([{ ...LIGNE_VIDE }]);
+  const [remarques, setRemarques] = useState("");
+  const [confirmationAllergie, setConfirmationAllergie] = useState(false);
   const [remplacerFichier, setRemplacerFichier] = useState(false);
   const [enCours, setEnCours] = useState(false);
   const [apercuEnCours, setApercuEnCours] = useState(false);
   const [message, setMessage] = useState<{ texte: string; erreur: boolean } | null>(null);
+  const [revisionSignature, setRevisionSignature] = useState(0);
+  const [signatureOuverte, setSignatureOuverte] = useState(false);
+  const { signature } = useSignature(revisionSignature);
   const fichierRef = useRef<HTMLInputElement>(null);
 
   const [prefixe, id] = [cle.slice(0, 1), cle.slice(2)];
   const destinataire = prefixe === "c" ? { patientId: id } : { procheId: id };
+  const allergies = patient?.allergies ?? [];
 
-  /* Une ordonnance ne se titre plus à la main : « Ordonnance du JJ/MM/AAAA »,
-     date d'émission (voir titreDocument). Le titre saisi produisait « Ordo »,
-     « Ordo du… » et des dates qui n'étaient pas celle de l'émission. */
+  /* Ordonnance structurée — sauf pour corriger une ordonnance d'avant, tapée
+     en texte libre : elle se corrige comme elle a été écrite. */
+  const ancienneLibre = enCorrection && !aModifier?.prescription?.length && !!aModifier?.contenu;
+  const structuree = mode === "generer" && champs.type === "ordonnance" && !ancienneLibre;
+
+  /* Une ordonnance ne se titre plus à la main : « Ordonnance du JJ/MM/AAAA ». */
   const titreAuto = champs.type === "ordonnance";
-  const aEnvoyer = { ...champs, titre: titreAuto ? titreOrdonnanceDuJour() : champs.titre };
+  const titre = titreAuto ? titreOrdonnanceDuJour() : champs.titre;
+  const contenu = structuree ? texteOrdonnance(lignes, remarques) : champs.contenu;
 
+  const probleme = structuree ? problemePrescription(lignes) : null;
+  const nbAlertes = structuree ? compterAlertes(lignes, allergies) : 0;
   const valide =
-    aEnvoyer.titre.trim() !== "" &&
-    (mode === "generer" ? champs.contenu.trim() !== "" : true);
+    titre.trim() !== "" &&
+    (mode === "generer" ? (structuree ? probleme === null : contenu.trim() !== "") : true) &&
+    (nbAlertes === 0 || confirmationAllergie);
+
+  const baseModele: BaseModele = {
+    medecin: medecin?.nom ?? "Le médecin",
+    specialite: medecin?.specialite ?? "",
+    patient: nomPatient,
+    naissance: patient?.naissance ?? null,
+    genre: patient?.genre ?? null,
+  };
 
   // Échap referme, comme tout dialogue.
   useEffect(() => {
@@ -97,15 +139,17 @@ export default function DeposerDocument({
   function ouvrir() {
     setChamps(
       aModifier
-        ? {
-            type: aModifier.type as TypeDocument,
-            titre: aModifier.titre,
-            contenu: aModifier.contenu ?? "",
-          }
+        ? { type: aModifier.type as TypeDocument, titre: aModifier.titre, contenu: aModifier.contenu ?? "" }
         : VIDE
     );
+    setLignes(
+      aModifier?.prescription?.length ? aModifier.prescription.map((l) => ({ ...LIGNE_VIDE, ...l })) : [{ ...LIGNE_VIDE }]
+    );
+    setRemarques(aModifier?.prescription?.length ? remarquesDe(aModifier.contenu) : "");
+    setConfirmationAllergie(false);
     setMode(modeInitial(aModifier));
     setRemplacerFichier(false);
+    setSignatureOuverte(false);
     setMessage(null);
     if (fichierRef.current) fichierRef.current.value = "";
     setOuvert(true);
@@ -123,6 +167,17 @@ export default function DeposerDocument({
     if (nouveau === "generer" && fichierRef.current) fichierRef.current.value = "";
   }
 
+  function changerType(type: TypeDocument) {
+    // Un certificat ou un arrêt de travail part de son modèle, pré-rempli.
+    if (estCertificat(type)) {
+      const { titre: t, texte } = texteModele(baseModele, champsInitiaux(type));
+      setChamps({ type, titre: t, contenu: texte });
+    } else {
+      setChamps({ ...champs, type, titre: champs.type === type ? champs.titre : "" });
+    }
+    setMessage(null);
+  }
+
   /** Ouvre le PDF composé sans rien enregistrer : le médecin se relit. */
   async function apercu() {
     if (!valide || apercuEnCours) return;
@@ -130,7 +185,7 @@ export default function DeposerDocument({
     // le prendrait pour une fenêtre surgissante et le bloquerait.
     const onglet = window.open("", "_blank", "noopener");
     setApercuEnCours(true);
-    const res = await genererPdf({ ...destinataire, ...aEnvoyer });
+    const res = await genererPdf({ ...destinataire, type: champs.type, titre, contenu }, "apercu");
     setApercuEnCours(false);
     if (res.erreur || !res.fichier) {
       onglet?.close();
@@ -148,28 +203,43 @@ export default function DeposerDocument({
     setEnCours(true);
 
     let fichier: File | null = fichierRef.current?.files?.[0] ?? null;
+    let code: string | null = null;
     if (mode === "generer") {
-      const res = await genererPdf({ ...destinataire, ...aEnvoyer });
+      // Mode « final » : le serveur tire le code de vérification et l'imprime.
+      const res = await genererPdf({ ...destinataire, type: champs.type, titre, contenu }, "final");
       if (res.erreur || !res.fichier) {
         setEnCours(false);
-          setMessage({ texte: res.erreur ?? "Génération impossible.", erreur: true });
+        setMessage({ texte: res.erreur ?? "Génération impossible.", erreur: true });
         return;
       }
       fichier = res.fichier;
+      code = res.code ?? null;
     }
+    const prescription = structuree ? lignes.filter(ligneRemplie) : null;
 
     const res = aModifier
       ? await corrigerDocument(aModifier.id, {
-          titre: aEnvoyer.titre,
-          contenu: champs.contenu,
+          titre,
+          contenu,
           fichier,
           // Sans nouveau fichier, la version reprend celui de la précédente :
           // l'ancien n'est PAS retiré du bucket, il appartient maintenant à
           // la v(n-1), qu'on doit pouvoir rouvrir.
           fichierActuel: aModifier.fichierPath,
           fichierNomActuel: aModifier.fichierNom,
+          prescription,
+          codeVerification: code,
         })
-      : await deposerDocument({ ...destinataire, ...aEnvoyer, fichier, origine: "medecin" });
+      : await deposerDocument({
+          ...destinataire,
+          type: champs.type,
+          titre,
+          contenu,
+          fichier,
+          origine: "medecin",
+          prescription,
+          codeVerification: code,
+        });
 
     setEnCours(false);
     if (res.erreur) {
@@ -184,17 +254,27 @@ export default function DeposerDocument({
       apres?.(texte);
       return;
     }
+    const texte = confirmation(champs.type, nomPatient);
     setChamps(VIDE);
+    setLignes([{ ...LIGNE_VIDE }]);
+    setRemarques("");
+    setConfirmationAllergie(false);
     // Le panneau reste ouvert sur la confirmation : refermer aussitôt
     // laisserait le médecin sans preuve que le document est bien parti.
-    const texte = `Document remis à ${nomPatient}`;
-    setMessage({ texte, erreur: false });
+    setMessage({ texte: code ? `${texte} — code de vérification ${code}` : texte, erreur: false });
     apres?.(texte);
   }
 
-  const etiquette = "mb-1.5 text-[12.5px] font-bold";
+  const etiquette = "mb-1.5 block text-[12.5px] font-bold";
   const champ =
-    "mb-3 w-full rounded-[11px] border border-line bg-white px-[13px] py-2.5 text-[13.5px] outline-none focus:border-teal";
+    "mb-3 w-full rounded-[11px] border border-line bg-white px-[13px] py-2.5 text-[13.5px] outline-none focus:border-teal pointer-coarse:min-h-11";
+  const large = structuree || estCertificat(champs.type);
+  const avertissement =
+    nbAlertes > 0 && !confirmationAllergie
+      ? "Allergie déclarée : confirmez la prescription pour l’émettre."
+      : structuree && probleme && lignes.some(ligneRemplie)
+        ? probleme
+        : null;
 
   return (
     <>
@@ -222,7 +302,11 @@ export default function DeposerDocument({
           }}
         >
           {/* Feuille plein écran sur téléphone, carte centrée à partir de md. */}
-          <div className="ui-modal-in flex max-h-[92vh] w-full flex-col rounded-t-2xl border border-line bg-white md:max-h-none md:max-w-[560px] md:rounded-2xl md:shadow-xl">
+          <div
+            className={`ui-modal-in flex max-h-[92vh] w-full flex-col rounded-t-2xl border border-line bg-white md:max-h-none md:rounded-2xl md:shadow-xl ${
+              large ? "md:max-w-[720px]" : "md:max-w-[560px]"
+            }`}
+          >
             <div className="flex items-start justify-between gap-3 border-b border-line p-4 md:border-b-0 md:pb-2">
               <h4 className="text-[15px] font-extrabold">
                 {enCorrection ? "Corriger le document" : "Remettre un document"}
@@ -253,9 +337,7 @@ export default function DeposerDocument({
                     aria-checked={mode === valeur}
                     onClick={() => changerMode(valeur)}
                     className={`flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-[11px] border-[1.5px] px-2 text-[12px] font-bold transition-colors ${
-                      mode === valeur
-                        ? "border-teal bg-teal-soft text-blue"
-                        : "border-line bg-white text-muted hover:bg-bg"
+                      mode === valeur ? "border-teal bg-teal-soft text-blue" : "border-line bg-white text-muted hover:bg-bg"
                     }`}
                   >
                     <Icone nom={icone} taille={14} />
@@ -265,19 +347,21 @@ export default function DeposerDocument({
               </div>
 
               {/* Le type ne se change pas en correction : la v2 d'une
-                  ordonnance reste une ordonnance, et la base reprend de
-                  toute façon celui de la version précédente. */}
+                  ordonnance reste une ordonnance. */}
               {enCorrection ? (
                 <p className="mb-3 rounded-xl bg-bg px-3 py-2 text-[12px] font-semibold">
                   {libelleType(champs.type)} · version {(aModifier?.version ?? 1) + 1} à créer
                 </p>
               ) : (
                 <>
-                  <div className={etiquette}>Type</div>
+                  <label htmlFor="doc-type" className={etiquette}>
+                    Type
+                  </label>
                   <select
-                    className={`${champ} min-h-11`}
+                    id="doc-type"
+                    className={champ}
                     value={champs.type}
-                    onChange={(e) => setChamps({ ...champs, type: e.target.value as TypeDocument })}
+                    onChange={(e) => changerType(e.target.value as TypeDocument)}
                   >
                     {TYPES_DOCUMENT.map((t) => (
                       <option key={t.valeur} value={t.valeur}>
@@ -291,13 +375,16 @@ export default function DeposerDocument({
               {titreAuto ? (
                 <p className="mb-3 flex flex-wrap items-center gap-x-1.5 rounded-xl bg-bg px-3 py-2 text-[12px]">
                   <span className="text-muted">Titre :</span>
-                  <b>{aEnvoyer.titre}</b>
+                  <b>{titre}</b>
                   <span className="text-muted">· automatique</span>
                 </p>
               ) : (
                 <>
-                  <div className={etiquette}>Titre *</div>
+                  <label htmlFor="doc-titre" className={etiquette}>
+                    Titre *
+                  </label>
                   <input
+                    id="doc-titre"
                     className={champ}
                     placeholder="Bilan lipidique"
                     value={champs.titre}
@@ -306,25 +393,76 @@ export default function DeposerDocument({
                 </>
               )}
 
-              <div className={etiquette}>
-                Contenu {mode === "generer" ? "*" : "(visible par le patient)"}
-              </div>
-              <textarea
-                rows={6}
-                className={champ}
-                placeholder={
-                  "LIDOCAINE 2,5 % + PRILOCAINE 2,5 % patch\n2 boîtes — à poser 1 h avant le vaccin\n\nPARACETAMOL 24 mg/ml suspension buvable\n1 dose-poids toutes les 6 h si douleur ou fièvre"
-                }
-                value={champs.contenu}
-                onChange={(e) => setChamps({ ...champs, contenu: e.target.value })}
-              />
+              {mode === "generer" && estCertificat(champs.type) && !enCorrection && (
+                <ChampsCertificat
+                  key={champs.type}
+                  type={champs.type}
+                  base={baseModele}
+                  onRemplir={({ titre: t, texte }) => setChamps((c) => ({ ...c, titre: t, contenu: texte }))}
+                />
+              )}
+
+              {structuree ? (
+                <div className="mb-3">
+                  <EditeurPrescription
+                    lignes={lignes}
+                    onLignes={setLignes}
+                    remarques={remarques}
+                    onRemarques={setRemarques}
+                    allergies={allergies}
+                    confirmationAllergie={confirmationAllergie}
+                    onConfirmationAllergie={setConfirmationAllergie}
+                  />
+                </div>
+              ) : (
+                <>
+                  <label htmlFor="doc-contenu" className={etiquette}>
+                    Contenu {mode === "generer" ? "*" : "(visible par le patient)"}
+                  </label>
+                  <textarea
+                    id="doc-contenu"
+                    rows={estCertificat(champs.type) ? 9 : 6}
+                    className={`${champ} leading-relaxed`}
+                    placeholder="Compte rendu, résultat, conclusions…"
+                    value={champs.contenu}
+                    onChange={(e) => setChamps({ ...champs, contenu: e.target.value })}
+                  />
+                </>
+              )}
 
               {mode === "generer" && (
-                <p className="mb-3 text-[11.5px] leading-relaxed text-muted">
-                  Un PDF sera composé à votre en-tête (nom, spécialité, établissement) et joint au
-                  document. Il porte la mention « généré électroniquement » et n’est pas signé de
-                  votre main.
-                </p>
+                <div className="mb-3 rounded-xl border border-line p-3">
+                  <p className="flex flex-wrap items-center gap-1.5 text-[12px] leading-relaxed">
+                    <Icone nom={signature ? "coche" : "alerte"} taille={14} className={signature ? "text-green" : "text-amber"} />
+                    {signature ? (
+                      <span>
+                        Votre <b>signature électronique</b> et un <b>QR de vérification</b> seront apposés sur le PDF.
+                      </span>
+                    ) : (
+                      <span>
+                        Aucune signature enregistrée : le PDF portera un QR de vérification et la mention « signature non
+                        enregistrée ».
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setSignatureOuverte((o) => !o)}
+                      className="min-h-9 rounded-lg px-2 font-bold text-teal hover:underline pointer-coarse:min-h-11"
+                    >
+                      {signatureOuverte ? "Masquer" : signature ? "Voir ma signature" : "Créer ma signature"}
+                    </button>
+                  </p>
+                  {signatureOuverte && (
+                    <div className="mt-3">
+                      <SignatureElectronique
+                        onChange={(m) => {
+                          setRevisionSignature((r) => r + 1);
+                          setMessage({ texte: m, erreur: false });
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
               )}
 
               {mode === "fichier" && (
@@ -345,10 +483,11 @@ export default function DeposerDocument({
                     </div>
                   ) : (
                     <>
-                      <div className={etiquette}>
+                      <label htmlFor="doc-fichier" className={etiquette}>
                         {enCorrection ? "Nouveau fichier" : "Fichier joint"} (PDF ou image, 8 Mo max)
-                      </div>
+                      </label>
                       <input
+                        id="doc-fichier"
                         ref={fichierRef}
                         type="file"
                         accept=".pdf,.jpg,.jpeg,.png,.webp"
@@ -356,12 +495,15 @@ export default function DeposerDocument({
                       />
                     </>
                   )}
+                  <p className="mb-2 text-[11.5px] leading-relaxed text-muted">
+                    Un fichier joint ne porte pas de QR de vérification : seuls les documents générés ici sont certifiés.
+                  </p>
                 </>
               )}
 
               <p className="text-[11.5px] leading-relaxed text-muted">
-                Le fichier est déposé dans un espace privé : seuls {nomPatient} et vous pourrez
-                l’ouvrir, par un lien temporaire.
+                Le document est déposé dans un espace privé : seuls {nomPatient} et vous pourrez l’ouvrir, par un lien
+                temporaire.
               </p>
             </div>
 
@@ -372,18 +514,14 @@ export default function DeposerDocument({
                 disabled={!valide || enCours}
                 className="min-h-11 rounded-[9px] bg-teal px-[14px] text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {enCours
-                  ? "Envoi…"
-                  : enCorrection
-                    ? "Enregistrer la correction"
-                    : "Remettre le document"}
+                {enCours ? "Émission…" : enCorrection ? "Enregistrer la correction" : "Émettre et remettre"}
               </button>
               {mode === "generer" && (
                 <button
                   type="button"
                   onClick={apercu}
                   disabled={!valide || apercuEnCours}
-                  title={valide ? "Ouvrir le PDF sans l’enregistrer" : "Renseignez un titre et un contenu"}
+                  title={valide ? "Ouvrir le PDF sans l’émettre" : "Complétez le document"}
                   className="min-h-11 rounded-[9px] border-[1.5px] border-line bg-white px-[14px] text-[12.5px] font-bold text-blue transition-colors hover:bg-bg disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {apercuEnCours ? "Composition…" : "Aperçu du PDF"}
@@ -396,13 +534,12 @@ export default function DeposerDocument({
               >
                 Fermer
               </button>
-              {message && (
+              {(message || avertissement) && (
                 <span
-                  className={`w-full text-[12.5px] font-bold ${
-                    message.erreur ? "text-red" : "text-green"
-                  }`}
+                  role={message?.erreur || (!message && avertissement) ? "alert" : "status"}
+                  className={`w-full text-[12.5px] font-bold ${message && !message.erreur ? "text-green" : "text-red"}`}
                 >
-                  {message.texte}
+                  {message?.texte ?? avertissement}
                 </span>
               )}
             </div>

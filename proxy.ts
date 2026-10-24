@@ -61,6 +61,9 @@ const MAINTENANCE_OUVERTS = [
   "/desinscription",
   "/maintenance",
   "/api",
+  // Une ordonnance déjà remise doit rester vérifiable en pharmacie, même
+  // pendant une maintenance : le patient est au comptoir, pas devant le site.
+  "/verifier",
 ];
 
 function maintenanceOuvert(chemin: string): boolean {

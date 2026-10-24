@@ -233,6 +233,7 @@ function pagesParRole({ medecinId, patientId, rdvId }) {
         "/", "/a-propos", "/conseils-sante", "/faq", "/connexion", "/inscription", "/inscription/patient",
         "/inscription/professionnel", "/resultats", `/medecin/${medecinId}`, `/medecin/${medecinId}/creneaux`,
         `/reservation?medecin=${medecinId}`, "/maintenance", "/confirmation", "/desinscription", "/espace-admin/connexion",
+        "/verifier", "/verifier/D224-AAAA-BBBB-CCCC",
       ],
     },
     patient: {
@@ -277,6 +278,7 @@ function pagesParRole({ medecinId, patientId, rdvId }) {
         "/espace-admin/equipe", "/espace-admin/etablissements", "/espace-admin/finances", "/espace-admin/messagerie",
         "/espace-admin/moderation", "/espace-admin/mon-compte", "/espace-admin/nouveau-rdv", "/espace-admin/parametres",
         "/espace-admin/pilotage", "/espace-admin/plus", "/espace-admin/utilisateurs", "/espace-admin/validations",
+        "/espace-admin/medicaments",
       ],
     },
   };

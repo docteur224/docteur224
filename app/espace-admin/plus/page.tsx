@@ -22,6 +22,7 @@ const TOUTES_ENTREES = [
   { href: "/espace-admin/finances", icone: "💳", titre: "Finances", sous: "Revenus et abonnements" },
   { href: "/espace-admin/abonnements", icone: "🏷️", titre: "Abonnements", sous: "Configurer les offres" },
   { href: "/espace-admin/parametres", icone: "⚙️", titre: "Paramètres", sous: "Spécialités, villes, réglages" },
+  { href: "/espace-admin/medicaments", icone: "💊", titre: "Médicaments", sous: "Base de prescription, import Excel" },
   { href: "/espace-admin/equipe", icone: "🛡️", titre: "Équipe admin", sous: "Comptes et rôles" },
   { href: "/espace-admin/audit", icone: "📜", titre: "Journal d'audit", sous: "Traçabilité" },
   { href: "/espace-admin/mon-compte", icone: "🔐", titre: "Mon compte", sous: "Mot de passe et sécurité" },

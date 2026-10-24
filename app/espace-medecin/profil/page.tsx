@@ -5,6 +5,7 @@ import MedecinShell from "@/components/medecin/MedecinShell";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import PhotoProfil from "@/components/pro/PhotoProfil";
 import GaleriePhotos from "@/components/pro/GaleriePhotos";
+import SignatureElectronique from "@/components/medecin/SignatureElectronique";
 import GrilleTarifs from "@/components/pro/GrilleTarifs";
 import HorairesHebdo, {
   JOURS_DEFAUT,
@@ -1263,6 +1264,21 @@ export default function ProfilMedecin() {
           <GaleriePhotos proprietaireId={medecinConnecte.id} type="medecin" />
         </div>
       </div>
+
+      {/* Signature électronique : une seule fois pour les deux mises en page
+          (le pavé de signature ne doit pas exister en double dans la page). */}
+      <section
+        aria-labelledby="titre-signature"
+        className="mx-4 mb-24 mt-4 rounded-2xl border border-line bg-white p-5 md:mx-0 md:mb-0"
+      >
+        <h3 id="titre-signature" className="mb-1 text-[15px] font-extrabold">
+          ✍️ Signature électronique
+        </h3>
+        <p className="mb-3 text-[12.5px] text-muted">
+          Apposée sur vos ordonnances, certificats et arrêts de travail, avec un QR de vérification.
+        </p>
+        <SignatureElectronique />
+      </section>
     </MedecinShell>
   );
 }

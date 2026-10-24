@@ -69,7 +69,7 @@ function FichePatient({ cle }: { cle: string }) {
   /* `medecinId` et non `medecin` : la fiche n'a besoin que de l'identifiant,
      publié dès qu'il est connu. Attendre l'objet complet — tarifs, horaires,
      assurances — retardait la première requête du dossier d'une seconde. */
-  const { medecinId, role } = useContextePro();
+  const { medecinId, medecin, role } = useContextePro();
   const {
     dossier,
     chargement,
@@ -103,6 +103,9 @@ function FichePatient({ cle }: { cle: string }) {
     dossier,
     nomComplet,
     medecinId: medecinId ?? null,
+    medecin: medecin
+      ? { nom: `${medecin.civilite} ${medecin.prenom} ${medecin.nom}`.trim(), specialite: medecin.specialite }
+      : null,
     role,
     annoncer,
     signalerEchec,

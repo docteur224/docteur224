@@ -21,6 +21,8 @@ export interface ContexteFiche {
   dossier: DossierPatient | null;
   nomComplet: string;
   medecinId: string | null;
+  /** Le praticien connecté, pour pré-remplir certificats et arrêts de travail. */
+  medecin: { nom: string; specialite: string } | null;
   role: ContextePro["role"];
   annoncer: (message: string) => void;
   signalerEchec: (message: string) => void;

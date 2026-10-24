@@ -42,6 +42,7 @@ const LIENS = [
   { href: "/espace-admin/abonnements", icone: "🏷️", label: "Abonnements" },
   { href: "/espace-admin/messagerie", icone: "💬", label: "Messagerie" },
   { href: "/espace-admin/parametres", icone: "⚙️", label: "Paramètres" },
+  { href: "/espace-admin/medicaments", icone: "💊", label: "Médicaments" },
   { href: "/espace-admin/equipe", icone: "🛡️", label: "Équipe admin" },
   { href: "/espace-admin/audit", icone: "📜", label: "Journal d'audit" },
   { href: "/espace-admin/mon-compte", icone: "🔐", label: "Mon compte" },

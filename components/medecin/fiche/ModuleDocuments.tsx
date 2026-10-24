@@ -10,7 +10,7 @@ import { calculerAge } from "@/lib/dates";
 import {
   heureDe,
   jourDe,
-  resumeContenu,
+  resumeDocument,
   titreDocument,
   useMesDocuments,
   type DocumentPatient,
@@ -48,7 +48,12 @@ import {
  * jour sans les ouvrir.
  */
 export default function ModuleDocuments({ ctx }: { ctx: ContexteFiche }) {
-  const { cle, pour, dossier, nomComplet, medecinId, annoncer, signalerEchec } = ctx;
+  const { cle, pour, dossier, nomComplet, medecinId, medecin, annoncer, signalerEchec } = ctx;
+  // Ce que l'ordonnance (alerte allergie) et les certificats (pré-remplissage)
+  // ont besoin de savoir du patient.
+  const patient = dossier
+    ? { allergies: dossier.infos.allergies, naissance: dossier.dateNaissance, genre: dossier.genre }
+    : undefined;
   const { documents, chargement, recharger } = useDocumentsDuDossier(pour);
   const [apercu, setApercu] = useState<DocumentPatient | null>(null);
   const [aAnnuler, setAAnnuler] = useState<DocumentPatient | null>(null);
@@ -95,7 +100,7 @@ export default function ModuleDocuments({ ctx }: { ctx: ContexteFiche }) {
 
     const jour = jourDe(d.creeLe);
     const heure = heureDe(d.creeLe);
-    const resume = d.type === "ordonnance" ? resumeContenu(d.contenu) : "";
+    const resume = d.type === "ordonnance" ? resumeDocument(d) : "";
     const dateLigne =
       variante === "recu"
         ? `Reçu le ${jour} · envoyé par le patient`
@@ -134,6 +139,8 @@ export default function ModuleDocuments({ ctx }: { ctx: ContexteFiche }) {
               <DeposerDocument
                 cle={cle}
                 nomPatient={nomComplet}
+                patient={patient}
+                medecin={medecin}
                 document={d}
                 classeDeclencheur={`${BTN_NEUTRE} max-md:flex-1`}
                 apres={apresEcriture}
@@ -200,6 +207,8 @@ export default function ModuleDocuments({ ctx }: { ctx: ContexteFiche }) {
               <DeposerDocument
                 cle={cle}
                 nomPatient={nomComplet}
+                patient={patient}
+                medecin={medecin}
                 declencheur="+ Document"
                 classeDeclencheur={`${BTN_PRIMAIRE} flex-1 md:flex-none`}
                 apres={apresEcriture}

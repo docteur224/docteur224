@@ -28,9 +28,9 @@ import {
  *    reste lisible — il faut savoir ce qui avait été prescrit — mais elle ne
  *    doit jamais passer pour valable.
  *
- * Le QR de vérification a sa place réservée, vide : la plateforme ne sait
- * pas encore vérifier une signature, et dessiner un code qui ne mène nulle
- * part fabriquerait une marque d'authenticité sans authenticité.
+ * Le code de vérification (migration 0065) est rappelé en bas, avec le lien
+ * de la page publique que le QR du PDF ouvre. Les pièces d'avant, et les
+ * fichiers joints, n'en ont pas : on le dit plutôt que de laisser un vide.
  */
 
 /** Découpe « Amlodipine 5 mg — 1 comprimé le matin » en deux colonnes. */
@@ -74,7 +74,18 @@ export default function ApercuDocument({
 
   const estOrdonnance = doc.type === "ordonnance";
   const annulee = !!doc.annuleLe;
-  const lignes = doc.contenu ? enLignes(doc.contenu) : [];
+  // Ordonnance structurée : les lignes telles que prescrites. Sinon, le texte
+  // libre découpé au mieux.
+  const lignes = doc.prescription?.length
+    ? doc.prescription.map((l) => ({
+        nom: l.libelle,
+        posologie: [l.posologie, l.duree && `pendant ${l.duree}`, l.quantite && `Quantité : ${l.quantite}`]
+          .filter(Boolean)
+          .join(" · "),
+      }))
+    : doc.contenu
+      ? enLignes(doc.contenu)
+      : [];
 
   /**
    * Le PDF, d'où qu'il vienne : le fichier déposé s'il existe, sinon celui
@@ -240,13 +251,27 @@ export default function ApercuDocument({
           <div>
             <b className="block text-[13px] font-extrabold">{doc.medecinNom}</b>
             <span className="text-[11.5px] text-muted">
-              Signature électronique · généré par Docteur 224
+              {doc.codeVerification ? "Signé électroniquement · émis par Docteur 224" : "Émis par Docteur 224"}
             </span>
           </div>
-          <div className="grid h-[84px] w-[84px] place-items-center rounded-[10px] border-[1.5px] border-dashed border-muted px-1.5 text-center text-[10.5px] leading-tight text-muted">
-            QR de vérification
-            <br />à venir
-          </div>
+          {doc.codeVerification ? (
+            <div className="rounded-[10px] border border-line bg-bg px-3 py-2 text-[11.5px]">
+              <span className="block text-muted">Code de vérification</span>
+              <b className="block font-mono text-[12.5px] tracking-[0.04em]">{doc.codeVerification}</b>
+              <a
+                href={`/verifier/${doc.codeVerification}`}
+                target="_blank"
+                rel="noopener"
+                className="inline-flex min-h-9 items-center font-bold text-teal hover:underline pointer-coarse:min-h-11"
+              >
+                Vérifier ce document
+              </a>
+            </div>
+          ) : (
+            <p className="max-w-[220px] text-right text-[11px] leading-snug text-muted">
+              Sans code de vérification : document antérieur à la vérification en ligne, ou fichier joint.
+            </p>
+          )}
         </div>
 
         {versions.length > 0 && (
