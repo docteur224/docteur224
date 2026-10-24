@@ -23,6 +23,7 @@ import { SqueletteModule } from "./ui";
 
 const charger = () => <SqueletteModule />;
 
+const ModuleDossierClinique = dynamic(() => import("./clinique/ModuleDossierClinique"), { loading: charger });
 const ModuleDocuments = dynamic(() => import("./ModuleDocuments"), { loading: charger });
 
 /** Pastille de l'onglet Documents : le nombre de pièces en cours au dossier. */
@@ -31,17 +32,7 @@ function CompteurDocuments({ ctx }: { ctx: ContexteFiche }) {
   return n ? <>{n}</> : null;
 }
 
-/* Contenus d'attente, remplacés aux étapes 2 et 4 de la livraison. */
-function DossierCliniqueEnPreparation() {
-  return (
-    <ModuleEnPreparation
-      icone="pouls"
-      titre="Dossier clinique"
-      texte="Notes de consultation privées, constantes et leurs courbes, historique des consultations et chronologie du patient."
-    />
-  );
-}
-
+/* Contenu d'attente, remplacé à l'étape 4 de la livraison. */
 function RelationEnPreparation() {
   return (
     <ModuleEnPreparation
@@ -60,7 +51,7 @@ export const MODULES: ModuleFiche[] = [
     libelle: "Dossier clinique",
     libelleCourt: "Clinique",
     icone: "pouls",
-    Composant: DossierCliniqueEnPreparation,
+    Composant: ModuleDossierClinique,
     permission: seulementMedecin,
   },
   {
