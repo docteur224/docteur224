@@ -36,6 +36,17 @@ export interface ContextePro {
   chargement: boolean;
   /** Rôle réel du compte connecté */
   role: "medecin" | "assistant" | null;
+  /**
+   * Identifiant du médecin concerné, publié DÈS QU'IL EST CONNU — c'est-à-dire
+   * avant `medecin`, qui demande une requête à six jointures.
+   *
+   * La distinction n'est pas cosmétique : un écran qui n'a besoin que de
+   * l'identifiant (la fiche d'un patient, par exemple, pour filtrer ses
+   * rendez-vous) attendait la fiche complète du praticien — ses tarifs, ses
+   * horaires, ses assurances — avant de lancer sa première requête. Une
+   * seconde de cascade pour un uuid.
+   */
+  medecinId: string | null;
   /** Médecin concerné (lui-même, ou celui auquel l'assistant est rattaché) */
   medecin: MedecinAvecPlages | null;
   /** Permissions (toutes vraies pour un médecin) */
@@ -66,6 +77,7 @@ export function useContextePro(): ContextePro {
   const [ctx, setCtx] = useState<ContextePro>({
     chargement: true,
     role: null,
+    medecinId: null,
     medecin: null,
     permissions: AUCUNE_PERMISSION,
     utilisateur: null,
@@ -75,27 +87,34 @@ export function useContextePro(): ContextePro {
     let actif = true;
     (async () => {
       const supabase = creerClientNavigateur();
-      const { data: auth } = await supabase.auth.getUser();
-      if (!auth.user) {
+      /* `getSession` et non `getUser` : le premier lit le jeton déjà en
+         mémoire (et le renouvelle au besoin), le second interroge le serveur
+         d'authentification — deux cents millisecondes en tête de cascade pour
+         un identifiant qu'on a déjà. Ce n'est pas une barrière de sécurité :
+         la RLS revérifie le jeton à chaque requête, et une valeur forgée ici
+         ne donnerait accès à rien. */
+      const { data: auth } = await supabase.auth.getSession();
+      const utilisateurConnecte = auth.session?.user;
+      if (!utilisateurConnecte) {
         if (actif) setCtx((c) => ({ ...c, chargement: false }));
         return;
       }
       const { data: u } = await supabase
         .from("utilisateurs")
         .select("role, nom, prenom")
-        .eq("id", auth.user.id)
+        .eq("id", utilisateurConnecte.id)
         .single();
       if (!u || (u.role !== "medecin" && u.role !== "assistant")) {
         if (actif) setCtx((c) => ({ ...c, chargement: false }));
         return;
       }
-      let medecinId = auth.user.id;
+      let medecinId = utilisateurConnecte.id;
       let permissions = TOUTES_PERMISSIONS;
       if (u.role === "assistant") {
         const { data: a } = await supabase
           .from("assistants")
           .select("medecin_id, peut_voir_agenda, peut_confirmer_annuler, peut_reprogrammer, peut_creer_rdv, peut_messagerie, peut_gerer_creneaux")
-          .eq("id", auth.user.id)
+          .eq("id", utilisateurConnecte.id)
           .single();
         if (!a) {
           if (actif) setCtx((c) => ({ ...c, chargement: false }));
@@ -111,6 +130,22 @@ export function useContextePro(): ContextePro {
           gererCreneaux: a.peut_gerer_creneaux,
         };
       }
+
+      /* On publie ici ce qui est déjà su — rôle, identifiant du médecin,
+         permissions — sans attendre la requête ci-dessous. Les écrans qui
+         n'ont besoin que de l'identifiant peuvent lancer leurs propres
+         requêtes maintenant, en parallèle de celle-là, au lieu de faire la
+         queue derrière elle. `chargement` reste vrai : le contexte n'est pas
+         complet, et un écran qui attend `medecin` doit continuer d'attendre. */
+      if (!actif) return;
+      setCtx((c) => ({
+        ...c,
+        role: u.role as "medecin" | "assistant",
+        medecinId,
+        permissions,
+        utilisateur: { nom: u.nom ?? "", prenom: u.prenom ?? "" },
+      }));
+
       const { data: ligneMedecin, error: errMedecin } = await supabase
         .from("medecins")
         .select(`
@@ -246,6 +281,7 @@ export function useContextePro(): ContextePro {
         setCtx({
           chargement: false,
           role: u.role,
+          medecinId,
           medecin,
           permissions,
           utilisateur: { nom: u.nom ?? "", prenom: u.prenom ?? "" },
@@ -811,15 +847,30 @@ export function lirePatientCle(cle: string): {
 export function useDossierPatient(
   cle: string,
   medecinId: string | undefined
-): { dossier: DossierPatient | null; chargement: boolean; recharger: () => void } {
+): {
+  dossier: DossierPatient | null;
+  /** Identité et bloc médical : ce qui remplit la carte du patient. */
+  chargement: boolean;
+  /** Les rendez-vous arrivent après, sans retenir le reste de la fiche. */
+  chargementRdvs: boolean;
+  recharger: () => void;
+} {
   const [resultat, setResultat] = useState<{ cle: string; dossier: DossierPatient | null } | null>(
     null
   );
   const [version, setVersion] = useState(0);
-  const cleRequete = `${cle}#${medecinId}#${version}`;
+  const cleRequete = `${cle}#${version}`;
 
+  /*
+   * Deux effets, et c'est tout l'objet de la découpe : QUI est ce patient et
+   * ce qu'il faut savoir avant de prescrire ne dépendent pas du praticien —
+   * seuls ses rendez-vous en dépendent. Les demander ensemble faisait
+   * attendre l'identité derrière l'identifiant du médecin, lui-même derrière
+   * une requête à six jointures : la fiche restait sur « Chargement… »
+   * plus de deux secondes, alors que les documents, eux, s'affichaient tout
+   * de suite puisqu'ils ne dépendaient de rien.
+   */
   useEffect(() => {
-    if (!medecinId) return;
     let actif = true;
     (async () => {
       const supabase = creerClientNavigateur();
@@ -875,25 +926,12 @@ export function useDossierPatient(
         }
       }
 
-      const colonne =
-        type === "compte" ? "patient_id" : type === "proche" ? "proche_id" : "patient_sans_compte_id";
-      // La même colonne désigne le bénéficiaire dans les deux tables : les
-      // rendez-vous et les informations médicales se demandent ensemble, en
-      // parallèle, plutôt que l'une après l'autre.
-      const [{ data: rdvs }, { data: infos }] = await Promise.all([
-        supabase
-          .from("rendez_vous")
-          .select("id, date, heure, motif, statut")
-          .eq("medecin_id", medecinId)
-          .eq(colonne, id)
-          .order("date", { ascending: false })
-          .order("heure", { ascending: false }),
-        supabase
-          .from("infos_medicales")
-          .select("groupe_sanguin, allergies, antecedents, traitements, maj_le")
-          .eq(colonne, id)
-          .maybeSingle(),
-      ]);
+      const colonne = colonneBeneficiaire(type);
+      const { data: infos } = await supabase
+        .from("infos_medicales")
+        .select("groupe_sanguin, allergies, antecedents, traitements, maj_le")
+        .eq(colonne, id)
+        .maybeSingle();
 
       if (!actif) return;
       setResultat({
@@ -901,13 +939,7 @@ export function useDossierPatient(
         dossier: base
           ? {
               ...base,
-              rdvs: (rdvs ?? []).map((r) => ({
-                id: r.id,
-                date: r.date,
-                heure: String(r.heure).slice(0, 5),
-                motif: r.motif ?? "",
-                statut: r.statut,
-              })),
+              rdvs: [],
               infos: infos
                 ? {
                     groupeSanguin: infos.groupe_sanguin,
@@ -924,15 +956,58 @@ export function useDossierPatient(
     return () => {
       actif = false;
     };
-  }, [cle, cleRequete, medecinId]);
+  }, [cle, cleRequete]);
+
+  /* Les rendez-vous, dès que l'identifiant du praticien est connu. Ils
+     arrivent dans leur propre état : la carte d'identité n'a pas à les
+     attendre, et la liste affiche ses propres squelettes. */
+  const [rdvs, setRdvs] = useState<{ cle: string; liste: RdvDossier[] } | null>(null);
+  const cleRdv = `${cle}#${medecinId}#${version}`;
+
+  useEffect(() => {
+    if (!medecinId) return;
+    let actif = true;
+    (async () => {
+      const { type, id } = lirePatientCle(cle);
+      const { data } = await creerClientNavigateur()
+        .from("rendez_vous")
+        .select("id, date, heure, motif, statut")
+        .eq("medecin_id", medecinId)
+        .eq(colonneBeneficiaire(type), id)
+        .order("date", { ascending: false })
+        .order("heure", { ascending: false });
+      if (!actif) return;
+      setRdvs({
+        cle: cleRdv,
+        liste: (data ?? []).map((r) => ({
+          id: r.id,
+          date: r.date,
+          heure: String(r.heure).slice(0, 5),
+          motif: r.motif ?? "",
+          statut: r.statut,
+        })),
+      });
+    })();
+    return () => {
+      actif = false;
+    };
+  }, [cle, cleRdv, medecinId]);
 
   const aJour = resultat?.cle === cleRequete;
+  const rdvsAJour = rdvs?.cle === cleRdv;
   return {
-    dossier: aJour ? resultat.dossier : null,
+    dossier: aJour
+      ? resultat.dossier && { ...resultat.dossier, rdvs: rdvsAJour ? rdvs.liste : [] }
+      : null,
     chargement: !aJour,
+    chargementRdvs: !rdvsAJour,
     recharger: () => setVersion((v) => v + 1),
   };
 }
+
+/** Colonne qui désigne le bénéficiaire, identique dans toutes les tables du dossier. */
+const colonneBeneficiaire = (type: PatientCabinet["type"]) =>
+  type === "compte" ? "patient_id" : type === "proche" ? "proche_id" : "patient_sans_compte_id";
 
 /* ===== Qualification d'un rendez-vous passé ===== */
 

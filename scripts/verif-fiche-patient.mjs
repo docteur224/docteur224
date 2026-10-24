@@ -116,6 +116,11 @@ class Page {
     await this.send("Page.navigate", { url });
     await sleep(1500);
   }
+  /** Navigue sans attente fixe : pour chronométrer, le `sleep` de `goto`
+      masquerait tout ce qu'on cherche à mesurer. */
+  async gotoRapide(url) {
+    await this.send("Page.navigate", { url });
+  }
   async eval(expression) {
     const r = await this.send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true });
     if (r.exceptionDetails) {
@@ -123,11 +128,11 @@ class Page {
     }
     return r.result.value;
   }
-  async waitFor(expression, timeout = 15000) {
+  async waitFor(expression, timeout = 15000, pas = 150) {
     const debut = Date.now();
     while (Date.now() - debut < timeout) {
       if (await this.eval(`!!(${expression})`)) return true;
-      await sleep(150);
+      await sleep(pas);
     }
     throw new Error(`waitFor timeout: ${expression}`);
   }
@@ -354,6 +359,29 @@ async function main() {
     await page.goto(`${APP}${lien}`);
     await page.waitFor(DOSSIER_PRET, 30000);
     await sleep(600);
+
+    /* Combien de temps avant que le dossier dise quelque chose ?
+       La fiche est restée plus de deux secondes sur « Chargement… » parce
+       qu'elle attendait l'identifiant du praticien derrière une requête à
+       six jointures. Le seuil est large à dessein : il doit attraper un
+       retour de la cascade, pas la variation du réseau. */
+    const mesures = [];
+    for (let i = 0; i < 3; i++) {
+      await page.goto(`${APP}/espace-medecin/patients`);
+      const depart = Date.now();
+      await page.gotoRapide(`${APP}${lien}`);
+      await page.waitFor(DOSSIER_PRET, 30000, 40);
+      mesures.push(Date.now() - depart);
+    }
+    const delai = Math.min(...mesures);
+    // Mesuré à 913 ms avant la mise en parallèle, 312 ms après, sur cette
+    // machine. Le seuil laisse de la marge au réseau tout en attrapant le
+    // retour d une cascade séquentielle, qui se verrait aussitôt.
+    check(
+      "le nom du patient paraît en moins de 700 ms",
+      delai < 700,
+      `${delai} ms (relevés : ${mesures.join(", ")})`
+    );
 
     check(
       "[1280] fil d’Ariane « Mes patients »",

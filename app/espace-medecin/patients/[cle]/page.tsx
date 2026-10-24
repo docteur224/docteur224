@@ -81,8 +81,16 @@ export default function DossierPatientMedecin({
   params: Promise<{ cle: string }>;
 }) {
   const { cle } = use(params);
-  const { medecin, role } = useContextePro();
-  const { dossier, chargement, recharger: rechargerDossier } = useDossierPatient(cle, medecin?.id);
+  /* `medecinId` et non `medecin` : la fiche n a besoin que de l identifiant,
+     publie des qu il est connu. Attendre l objet complet — tarifs, horaires,
+     assurances — retardait la premiere requete du dossier d une seconde. */
+  const { medecinId, role } = useContextePro();
+  const {
+    dossier,
+    chargement,
+    chargementRdvs,
+    recharger: rechargerDossier,
+  } = useDossierPatient(cle, medecinId ?? undefined);
   const { avis, annoncer, signalerEchec } = useToast();
 
   const { type, id } = lirePatientCle(cle);
@@ -173,7 +181,7 @@ export default function DossierPatientMedecin({
      avec ce médecin (table partages_document). Sans cette distinction, un tel
      document apparaissait comme « le vôtre », avec des actions qui
      échouaient silencieusement. */
-  const estMoi = (d: DocumentPatient) => d.medecinId === medecin?.id;
+  const estMoi = (d: DocumentPatient) => d.medecinId === medecinId;
   // Seules les versions EN COURS sont listées : les précédentes restent
   // consultables, mais depuis l'aperçu de la pièce, pas comme des documents
   // séparés — sinon une ordonnance corrigée deux fois occuperait trois
@@ -193,6 +201,11 @@ export default function DossierPatientMedecin({
   /* ---------- Rendu ---------- */
 
   const pan = (o: Onglet) => (onglet === o ? "" : "max-lg:hidden");
+
+  /* Tant que les rendez-vous arrivent, le compteur ne dit pas « 0 » : une
+     liste encore vide n est pas une liste vide, et annoncer zéro pour se
+     corriger une seconde plus tard se lit comme une erreur. */
+  const compte = (n: number) => (chargementRdvs ? "(…)" : `(${n})`);
 
   const carteDocument = (d: DocumentPatient, variante: "remis" | "recu" | "partage") => {
     const annule = !!d.annuleLe;
@@ -484,14 +497,14 @@ export default function DossierPatientMedecin({
                 <section className={`${CARTE} ${pan("rdv")}`}>
                   <h3 className={`${TITRE_SECTION} mb-3`}>
                     Rendez-vous{" "}
-                    <span className="text-[12.5px] font-semibold text-muted">({rdvs.length})</span>
+                    <span className="text-[12.5px] font-semibold text-muted">{compte(rdvs.length)}</span>
                   </h3>
 
                   <div role="tablist" className="mb-2 flex gap-0.5 rounded-[10px] bg-bg p-[3px]">
                     {(
                       [
-                        ["a_venir", `À venir (${aVenir.length})`],
-                        ["historique", `Historique (${historique.length})`],
+                        ["a_venir", `À venir ${compte(aVenir.length)}`],
+                        ["historique", `Historique ${compte(historique.length)}`],
                       ] as ["a_venir" | "historique", string][]
                     ).map(([valeur, libelle]) => (
                       <button
@@ -511,7 +524,7 @@ export default function DossierPatientMedecin({
                     ))}
                   </div>
 
-                  {chargement ? (
+                  {chargementRdvs ? (
                     squelettes(3)
                   ) : listeRdv.length === 0 ? (
                     <p className="py-6 text-center text-[12.5px] text-muted">
