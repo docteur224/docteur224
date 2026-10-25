@@ -293,10 +293,10 @@ export interface Evenement {
   extra: Record<string, unknown>;
 }
 
-export const PAR_PAGE_CHRONOLOGIE = 15;
+export const PAR_PAGE_CHRONOLOGIE = 10;
 
 /**
- * Chronologie paginée par « Voir plus » : `pages` pages de 15 événements,
+ * Chronologie paginée par « Voir plus » : `pages` pages de 10 événements,
  * en une requête (la base renvoie le total sur chaque ligne).
  */
 export function useChronologie(b: Beneficiaire, types: TypeEvenement[] | null, pages: number, revision: number) {
