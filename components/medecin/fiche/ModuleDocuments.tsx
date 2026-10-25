@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import AdresserConfrere from "@/components/medecin/AdresserConfrere";
 import AnnulerDocument from "@/components/medecin/AnnulerDocument";
 import ApercuDocument from "@/components/medecin/ApercuDocument";
@@ -48,7 +48,40 @@ import {
  * (« Ordonnance du JJ/MM/AAAA », voir titreDocument), et la ligne du dessous
  * cite les premiers médicaments, pour distinguer deux ordonnances du même
  * jour sans les ouvrir.
+ *
+ * Chaque section n'affiche que les 5 pièces les plus récentes ; « Voir plus »
+ * déplie le reste sur place (sans quitter la fiche), « Voir moins » referme.
  */
+const PAR_SECTION = 5;
+
+function SectionPaginee({
+  items,
+  rendu,
+}: {
+  items: DocumentPatient[];
+  rendu: (d: DocumentPatient) => ReactNode;
+}) {
+  const [tout, setTout] = useState(false);
+  const visibles = tout ? items : items.slice(0, PAR_SECTION);
+  const reste = items.length - PAR_SECTION;
+  return (
+    <>
+      <div className="grid gap-3">{visibles.map(rendu)}</div>
+      {reste > 0 && (
+        <button
+          type="button"
+          onClick={() => setTout((v) => !v)}
+          aria-expanded={tout}
+          className="mt-3 inline-flex min-h-11 items-center gap-1.5 text-[12.5px] font-bold text-teal hover:underline"
+        >
+          <Icone nom="chevron-droite" taille={14} className={tout ? "-rotate-90" : "rotate-90"} />
+          {tout ? "Voir moins" : `Voir les ${reste} de plus`}
+        </button>
+      )}
+    </>
+  );
+}
+
 export default function ModuleDocuments({ ctx }: { ctx: ContexteFiche }) {
   const { cle, pour, dossier, nomComplet, medecinId, medecin, annoncer, signalerEchec } = ctx;
   // Ce que l'ordonnance (alerte allergie) et les certificats (pré-remplissage)
@@ -241,7 +274,7 @@ export default function ModuleDocuments({ ctx }: { ctx: ContexteFiche }) {
             texte="« + Document » génère une ordonnance à votre en-tête ou joint une pièce existante."
           />
         ) : (
-          <div className="grid gap-3">{remis.map((d) => carteDocument(d, "remis"))}</div>
+          <SectionPaginee items={remis} rendu={(d) => carteDocument(d, "remis")} />
         )}
       </section>
 
@@ -258,7 +291,7 @@ export default function ModuleDocuments({ ctx }: { ctx: ContexteFiche }) {
             espace.
           </p>
         ) : (
-          <div className="grid gap-3">{recus.map((d) => carteDocument(d, "recu"))}</div>
+          <SectionPaginee items={recus} rendu={(d) => carteDocument(d, "recu")} />
         )}
       </section>
 
@@ -272,7 +305,7 @@ export default function ModuleDocuments({ ctx }: { ctx: ContexteFiche }) {
             Le patient a donné accès à des documents rédigés ou reçus par un autre médecin. Vous
             pouvez les lire, pas les modifier.
           </p>
-          <div className="grid gap-3">{partages.map((d) => carteDocument(d, "partage"))}</div>
+          <SectionPaginee items={partages} rendu={(d) => carteDocument(d, "partage")} />
         </section>
       )}
 
