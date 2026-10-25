@@ -184,7 +184,7 @@ export default function CarteResultatsWeb({
               <button
                 type="button"
                 onClick={toutRevoir}
-                className="mt-4 rounded-[11px] bg-teal px-[18px] py-[11px] text-[13.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+                className="mt-4 rounded-[11px] bg-teal px-[18px] py-[11px] text-[13.5px] font-bold text-white transition-colors hover:bg-teal-hover"
               >
                 Revoir toute la recherche
               </button>
@@ -353,7 +353,7 @@ function FicheCarte({
         <Link
           href={`/medecin/${point.id}`}
           onClick={(e) => e.stopPropagation()}
-          className="pointer-coarse:py-[13px] ui-btn ml-auto rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white hover:bg-[#2790bc]"
+          className="pointer-coarse:py-[13px] ui-btn ml-auto rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white hover:bg-teal-hover"
         >
           Voir le profil
         </Link>

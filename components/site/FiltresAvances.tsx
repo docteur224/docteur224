@@ -164,7 +164,7 @@ function Popup({
           <button
             type="button"
             onClick={appliquer}
-            className="rounded-[11px] bg-teal px-5 py-[11px] text-[12.5px] font-bold uppercase tracking-[.03em] text-white transition-colors hover:bg-[#2790bc]"
+            className="rounded-[11px] bg-teal px-5 py-[11px] text-[12.5px] font-bold uppercase tracking-[.03em] text-white transition-colors hover:bg-teal-hover"
           >
             Afficher les résultats
           </button>

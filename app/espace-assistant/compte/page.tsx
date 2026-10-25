@@ -39,7 +39,7 @@ export default function CompteAssistant() {
             <span
               className="av"
               aria-hidden
-              style={{ background: "linear-gradient(135deg,#2E9CCA,#15506B)" }}
+              style={{ background: "var(--avatar-bleu)" }}
             >
               {initialesAssistant}
             </span>
@@ -186,7 +186,7 @@ export default function CompteAssistant() {
                 Autorisé
               </span>
             ) : (
-              <span className="rounded-lg bg-[#FBE9E7] px-[9px] py-1 text-[11px] font-bold text-red">
+              <span className="rounded-lg bg-red-soft px-[9px] py-1 text-[11px] font-bold text-red">
                 Interdit
               </span>
             )}
@@ -194,17 +194,17 @@ export default function CompteAssistant() {
         ))}
         <div className="flex items-center justify-between gap-[14px] border-b border-line py-[15px]">
           <b className="text-[13.5px] font-bold">🔒 Voir les dossiers médicaux</b>
-          <span className="rounded-lg bg-[#FBE9E7] px-[9px] py-1 text-[11px] font-bold text-red">
+          <span className="rounded-lg bg-red-soft px-[9px] py-1 text-[11px] font-bold text-red">
             Interdit
           </span>
         </div>
         <div className="flex items-center justify-between gap-[14px] py-[15px]">
           <b className="text-[13.5px] font-bold">🔒 Voir les paiements et revenus</b>
-          <span className="rounded-lg bg-[#FBE9E7] px-[9px] py-1 text-[11px] font-bold text-red">
+          <span className="rounded-lg bg-red-soft px-[9px] py-1 text-[11px] font-bold text-red">
             Interdit
           </span>
         </div>
-        <div className="mt-1.5 flex items-start gap-[9px] rounded-xl border border-[#F2D9B6] bg-[#FFF5E9] px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-[#8A5A1B]">
+        <div className="mt-1.5 flex items-start gap-[9px] rounded-xl border border-amber-line bg-amber-soft px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-amber-ink">
           <span aria-hidden>🔒</span>
           <div>
             Les dossiers médicaux et les données financières restent réservés au médecin, quelles

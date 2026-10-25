@@ -129,7 +129,7 @@ function EcranCorrespondance({ vue }: { vue: Vue }) {
         <button
           type="button"
           onClick={() => ouvrirFichier(p.fichierPath)}
-          className="flex-none rounded-[9px] bg-teal px-3 py-1 text-[11px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+          className="flex-none rounded-[9px] bg-teal px-3 py-1 text-[11px] font-bold text-white transition-colors hover:bg-teal-hover"
         >
           Ouvrir
         </button>
@@ -143,14 +143,14 @@ function EcranCorrespondance({ vue }: { vue: Vue }) {
       <div
         key={t.id}
         className={`rounded-2xl border bg-white p-4 ${
-          t.urgence === "prioritaire" && !revoquee ? "border-[#F2D9B6]" : "border-line"
+          t.urgence === "prioritaire" && !revoquee ? "border-amber-line" : "border-line"
         } ${revoquee ? "opacity-70" : ""}`}
       >
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0">
             <div className="mb-1 flex flex-wrap items-center gap-1.5">
               {t.urgence === "prioritaire" && !revoquee && (
-                <span className="rounded bg-[#FFF5E9] px-1.5 py-0.5 text-[10.5px] font-bold text-[#8A5A1B]">
+                <span className="rounded bg-amber-soft px-1.5 py-0.5 text-[10.5px] font-bold text-amber-ink">
                   Prioritaire
                 </span>
               )}
@@ -177,7 +177,7 @@ function EcranCorrespondance({ vue }: { vue: Vue }) {
               {deplie === t.id ? "Replier le courrier" : "Lire le courrier"}
             </button>
             {deplie === t.id && (
-              <pre className="mt-2 whitespace-pre-wrap border-t border-line pt-2 font-sans text-[12.5px] leading-[1.7] text-[#3f5360]">
+              <pre className="mt-2 whitespace-pre-wrap border-t border-line pt-2 font-sans text-[12.5px] leading-[1.7] text-ink-soft">
                 {t.note}
               </pre>
             )}
@@ -205,7 +205,7 @@ function EcranCorrespondance({ vue }: { vue: Vue }) {
             <button
               type="button"
               onClick={() => accuserReception(t)}
-              className="rounded-[9px] bg-teal px-3 py-1.5 text-[11.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+              className="rounded-[9px] bg-teal px-3 py-1.5 text-[11.5px] font-bold text-white transition-colors hover:bg-teal-hover"
             >
               Accuser réception
             </button>
@@ -228,7 +228,7 @@ function EcranCorrespondance({ vue }: { vue: Vue }) {
                 <button
                   type="button"
                   onClick={() => revoquer(t)}
-                  className="ml-auto rounded-[9px] border-[1.5px] border-[#F3C9C2] bg-white px-3 py-1.5 text-[11.5px] font-bold text-red transition-colors hover:bg-red-soft"
+                  className="ml-auto rounded-[9px] border-[1.5px] border-red-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-red transition-colors hover:bg-red-soft"
                 >
                   {aRevoquer === t.id ? "Confirmer le retrait" : "Retirer l’accès"}
                 </button>
@@ -271,7 +271,7 @@ function EcranCorrespondance({ vue }: { vue: Vue }) {
           <button
             type="button"
             onClick={() => ouvrirFichier(d.fichierPath)}
-            className="flex-none rounded-[9px] bg-teal px-3 py-1.5 text-[11.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+            className="flex-none rounded-[9px] bg-teal px-3 py-1.5 text-[11.5px] font-bold text-white transition-colors hover:bg-teal-hover"
           >
             Ouvrir
           </button>
@@ -287,7 +287,7 @@ function EcranCorrespondance({ vue }: { vue: Vue }) {
             {deplie === d.documentId ? "Replier" : "Lire le contenu"}
           </button>
           {deplie === d.documentId && (
-            <pre className="mt-2 whitespace-pre-wrap border-t border-line pt-2 font-sans text-[13px] leading-[1.7] text-[#3f5360]">
+            <pre className="mt-2 whitespace-pre-wrap border-t border-line pt-2 font-sans text-[13px] leading-[1.7] text-ink-soft">
               {d.contenu}
             </pre>
           )}

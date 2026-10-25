@@ -78,7 +78,7 @@ export default function CarteLocalisation({
           >
             <path
               d="M12 0C5.4 0 0 5.3 0 11.9 0 20.6 12 32 12 32s12-11.4 12-20.1C24 5.3 18.6 0 12 0z"
-              fill="#15506B"
+              fill="var(--blue)"
             />
             <circle cx="12" cy="11.5" r="4.6" fill="#fff" />
           </svg>
@@ -103,7 +103,7 @@ export default function CarteLocalisation({
           href={lienItineraire}
           target="_blank"
           rel="noopener"
-          className="pointer-coarse:py-3 inline-flex items-center justify-center gap-2 rounded-[11px] bg-teal px-[18px] py-[11px] text-[13.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+          className="pointer-coarse:py-3 inline-flex items-center justify-center gap-2 rounded-[11px] bg-teal px-[18px] py-[11px] text-[13.5px] font-bold text-white transition-colors hover:bg-teal-hover"
         >
           🧭 Voir l’itinéraire
         </a>

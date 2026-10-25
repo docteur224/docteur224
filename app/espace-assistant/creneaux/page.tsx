@@ -40,7 +40,7 @@ export default function CreneauxAssistant() {
               </div>
             </div>
           ) : (
-            <div className="abannerm" style={{ background: "var(--red-soft)", borderColor: "#F3C9C2", color: "var(--red)" }}>
+            <div className="abannerm" style={{ background: "var(--red-soft)", borderColor: "var(--red-line)", color: "var(--red)" }}>
               <span aria-hidden>⛔</span>
               <div>
                 La permission <b>« Ouvrir / fermer des créneaux »</b> ne vous a pas été accordée.
@@ -76,7 +76,7 @@ export default function CreneauxAssistant() {
       </div>
 
       {permissions.gererCreneaux ? (
-        <div className="mb-[18px] flex items-start gap-[9px] rounded-xl border border-[#BFE0EF] bg-teal-soft px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-blue">
+        <div className="mb-[18px] flex items-start gap-[9px] rounded-xl border border-teal-line bg-teal-soft px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-blue">
           <span aria-hidden>✅</span>
           <div>
             {nomMedecin} vous a accordé la permission de <b>gérer les créneaux</b>. Vos
@@ -84,7 +84,7 @@ export default function CreneauxAssistant() {
           </div>
         </div>
       ) : (
-        <div className="mb-[18px] flex items-start gap-[9px] rounded-xl border border-[#F3C9C2] bg-red-soft px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-red">
+        <div className="mb-[18px] flex items-start gap-[9px] rounded-xl border border-red-line bg-red-soft px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-red">
           <span aria-hidden>⛔</span>
           <div>
             La permission <b>« Ouvrir / fermer des créneaux »</b> ne vous a pas été accordée par

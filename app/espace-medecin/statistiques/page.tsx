@@ -33,7 +33,7 @@ const AVIS = [
 
 export default function StatistiquesMedecin() {
   const { medecin } = useContextePro();
-  const medecinConnecte = medecin ?? { gradient: "linear-gradient(135deg,#2E9CCA,#15506B)", initiales: "…", civilite: "Dr", prenom: "", nom: "", note: 0, specialite: "" };
+  const medecinConnecte = medecin ?? { gradient: "var(--avatar-bleu)", initiales: "…", civilite: "Dr", prenom: "", nom: "", note: 0, specialite: "" };
   return (
     <MedecinShell>
       {/* ===== Version mobile (écran « m-med-stats » de la maquette mobile) ===== */}
@@ -144,7 +144,7 @@ export default function StatistiquesMedecin() {
         {AVIS.map((avis) => (
           <div key={avis.titre} className="border-b border-line py-[15px] last:border-b-0">
             <b className="block text-[13px] font-bold text-amber">{avis.titre}</b>
-            <small className="text-[12.5px] text-[#3f5360]">{avis.texte}</small>
+            <small className="text-[12.5px] text-ink-soft">{avis.texte}</small>
           </div>
         ))}
       </div>

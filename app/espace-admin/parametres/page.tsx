@@ -59,7 +59,7 @@ function CarteListe({ cle, titre, question }: (typeof LISTES)[number]) {
         {elements.map((element) => (
           <span
             key={element}
-            className="rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
+            className="rounded-full border border-teal-line bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
           >
             {element}
           </span>
@@ -67,7 +67,7 @@ function CarteListe({ cle, titre, question }: (typeof LISTES)[number]) {
         <button
           type="button"
           onClick={ajouter}
-          className="rounded-full border border-[#DCE4EA] bg-[#EEF2F5] px-[14px] py-2 text-xs font-bold text-[#3A4A55] transition-colors hover:bg-bg"
+          className="rounded-full border border-line bg-bg px-[14px] py-2 text-xs font-bold text-ink-soft transition-colors hover:bg-bg"
         >
           + Ajouter
         </button>
@@ -118,7 +118,7 @@ function EditeurMaintenance({
   }
 
   return (
-    <div className="mt-3 rounded-[13px] border border-[#CDE6F2] bg-teal-soft/50 p-4">
+    <div className="mt-3 rounded-[13px] border border-teal-line bg-teal-soft/50 p-4">
       <div className="mb-3 flex items-start gap-2 text-[12.5px] font-semibold text-blue">
         <span aria-hidden>🛠️</span>
         <span>
@@ -170,7 +170,7 @@ function EditeurMaintenance({
           type="button"
           onClick={enregistrer}
           disabled={enCours}
-          className="rounded-[9px] bg-teal px-[16px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:cursor-not-allowed disabled:opacity-50"
+          className="rounded-[9px] bg-teal px-[16px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-teal-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
           {enCours ? "Enregistrement…" : "Enregistrer le message"}
         </button>

@@ -19,7 +19,7 @@ export default function Etoiles({
   const pleines = Math.round(note);
   return (
     <span className="whitespace-nowrap" style={{ fontSize: taille }}>
-      <span aria-hidden className="text-[#E8A33D]">
+      <span aria-hidden className="text-amber-hover">
         {"★".repeat(pleines)}
         <span className="text-[#D6DEE4]">{"☆".repeat(5 - pleines)}</span>
       </span>

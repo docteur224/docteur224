@@ -155,7 +155,7 @@ export default function Parametres() {
 
       <div className="mb-4 rounded-2xl border border-line bg-white p-5">
         <h3 className="mb-1 text-[15px] font-extrabold">Mon compte</h3>
-        <div className="flex flex-wrap items-center justify-between gap-[14px] py-[15px]">
+        <div className="flex flex-wrap items-center justify-between gap-[14px] border-b border-line py-[15px]">
           <div>
             <b className="block text-[13.5px] font-bold">Sécurité, données et fermeture</b>
             <small className="text-xs text-muted">
@@ -167,6 +167,24 @@ export default function Parametres() {
             className="pointer-coarse:py-[13px] rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg"
           >
             Ouvrir « Mon compte »
+          </Link>
+        </div>
+        {/* Renvoi et non copie de l'écran : le réglage des couleurs est commun
+            aux cinq rôles et n'a qu'une seule implantation. Il est signalé ici
+            parce que c'est une préférence d'affichage, comme la langue
+            au-dessus, et qu'on la chercherait d'abord sur cette page. */}
+        <div className="flex flex-wrap items-center justify-between gap-[14px] py-[15px]">
+          <div>
+            <b className="block text-[13.5px] font-bold">Couleurs de mon espace</b>
+            <small className="text-xs text-muted">
+              Choisir une autre charte ou revenir aux couleurs d’origine
+            </small>
+          </div>
+          <Link
+            href="/patient/mon-compte#couleurs"
+            className="pointer-coarse:py-[13px] rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg"
+          >
+            Choisir mes couleurs
           </Link>
         </div>
       </div>

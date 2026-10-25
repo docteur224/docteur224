@@ -58,8 +58,8 @@ export default function BoutonFavori({
         className="btnm gh"
         style={{
           opacity: pret ? 1 : 0.5,
-          color: estFavori ? "#c0392b" : undefined,
-          borderColor: estFavori ? "#f3c9c2" : undefined,
+          color: estFavori ? "var(--red)" : undefined,
+          borderColor: estFavori ? "var(--red-line)" : undefined,
         }}
       >
         {estFavori ? "♥ Favori" : "♡ Favori"}
@@ -76,7 +76,7 @@ export default function BoutonFavori({
       title={libelle}
       className={`flex items-center gap-1.5 rounded-[9px] border-[1.5px] px-3 py-1.5 text-[11.5px] pointer-coarse:min-h-11 font-bold transition-colors ${
         estFavori
-          ? "border-[#F3C9C2] bg-red-soft text-red"
+          ? "border-red-line bg-red-soft text-red"
           : "border-line bg-white text-blue hover:bg-bg"
       } ${pret ? "" : "opacity-50"}`}
     >

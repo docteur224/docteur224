@@ -18,11 +18,11 @@ const COUVERTURE_VILLES = [
 ];
 
 const COUVERTURE_SPECIALITES = [
-  { nom: "Médecine générale · 64", classes: "border-[#DCE4EA] bg-[#EEF2F5] text-[#3A4A55]" },
-  { nom: "Pédiatrie · 38", classes: "border-[#DCE4EA] bg-[#EEF2F5] text-[#3A4A55]" },
-  { nom: "Gynécologie · 21", classes: "border-[#DCE4EA] bg-[#EEF2F5] text-[#3A4A55]" },
-  { nom: "Neurologie · 2 ⚠", classes: "border-[#EAD3AE] bg-amber-soft text-amber" },
-  { nom: "Psychiatrie · 0 ⚠", classes: "border-[#F1C9C2] bg-red-soft text-red" },
+  { nom: "Médecine générale · 64", classes: "border-line bg-bg text-ink-soft" },
+  { nom: "Pédiatrie · 38", classes: "border-line bg-bg text-ink-soft" },
+  { nom: "Gynécologie · 21", classes: "border-line bg-bg text-ink-soft" },
+  { nom: "Neurologie · 2 ⚠", classes: "border-amber-line bg-amber-soft text-amber" },
+  { nom: "Psychiatrie · 0 ⚠", classes: "border-red-line bg-red-soft text-red" },
 ];
 
 export default function PilotageAdmin() {
@@ -75,8 +75,8 @@ export default function PilotageAdmin() {
                   style={
                     chip.nom.includes("⚠")
                       ? chip.nom.includes("0")
-                        ? { background: "var(--red-soft)", color: "var(--red)", borderColor: "#F1C9C2" }
-                        : { background: "var(--amber-soft)", color: "var(--amber)", borderColor: "#EAD3AE" }
+                        ? { background: "var(--red-soft)", color: "var(--red)", borderColor: "var(--red-line)" }
+                        : { background: "var(--amber-soft)", color: "var(--amber)", borderColor: "var(--amber-line)" }
                       : undefined
                   }
                 >
@@ -196,7 +196,7 @@ export default function PilotageAdmin() {
           18 400{" "}
           <span className="text-[13px] font-semibold text-muted">/ 25 000 ce mois</span>
         </b>
-        <div className="my-[9px] h-[10px] overflow-hidden rounded-full bg-[#E7EEF3]">
+        <div className="my-[9px] h-[10px] overflow-hidden rounded-full bg-bg">
           <span className="block h-full bg-teal" style={{ width: "74%" }} />
         </div>
         <small className="text-xs text-muted">

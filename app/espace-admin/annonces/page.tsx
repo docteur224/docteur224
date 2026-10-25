@@ -131,7 +131,7 @@ export default function AnnoncesAdmin() {
                 <span
                   className="av"
                   aria-hidden
-                  style={{ background: "linear-gradient(135deg,#2E9CCA,#15506B)" }}
+                  style={{ background: "var(--badge)" }}
                 >
                   📢
                 </span>
@@ -196,8 +196,8 @@ export default function AnnoncesAdmin() {
                   onClick={() => basculerCanal(canal)}
                   className={`rounded-full border px-[14px] py-2 text-xs font-bold ${
                     actif
-                      ? "border-[#BFE3CC] bg-green-soft text-green"
-                      : "border-[#CDE6F2] bg-teal-soft text-blue"
+                      ? "border-green-line bg-green-soft text-green"
+                      : "border-teal-line bg-teal-soft text-blue"
                   }`}
                 >
                   {canal}
@@ -220,7 +220,7 @@ export default function AnnoncesAdmin() {
           type="button"
           onClick={envoyer}
           disabled={!message.trim() || canaux.length === 0}
-          className="mt-[14px] rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:cursor-not-allowed disabled:opacity-50"
+          className="mt-[14px] rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-teal-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
           📢 Envoyer l’annonce
         </button>
@@ -236,7 +236,7 @@ export default function AnnoncesAdmin() {
             <span
               aria-hidden
               className="grid h-[42px] w-[42px] flex-none place-items-center rounded-xl text-sm text-white"
-              style={{ background: "linear-gradient(135deg,#2E9CCA,#15506B)" }}
+              style={{ background: "var(--badge)" }}
             >
               📢
             </span>

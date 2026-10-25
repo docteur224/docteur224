@@ -46,11 +46,11 @@ import {
  */
 
 const GRADIENTS = [
-  "linear-gradient(135deg,#15506B,#0B2E3D)",
-  "linear-gradient(135deg,#6C5CE7,#341F97)",
-  "linear-gradient(135deg,#16A085,#0E6655)",
-  "linear-gradient(135deg,#2E9CCA,#15506B)",
-  "linear-gradient(135deg,#E08E45,#C0392B)",
+  "var(--avatar-marine)",
+  "var(--avatar-violet)",
+  "var(--avatar-vert)",
+  "var(--avatar-bleu)",
+  "var(--avatar-ambre)",
 ];
 
 const gradientPour = (id: string) => {
@@ -127,7 +127,7 @@ export default function EquipeAdmin() {
         <div className="pad">
           <div
             className="abannerm"
-            style={{ background: "var(--red-soft)", borderColor: "#F3C9C2", color: "var(--red)" }}
+            style={{ background: "var(--red-soft)", borderColor: "var(--red-line)", color: "var(--red)" }}
           >
             <span aria-hidden>🔒</span>
             <div>
@@ -209,7 +209,7 @@ export default function EquipeAdmin() {
           </div>
         </div>
 
-        <div className="mb-4 flex items-start gap-[9px] rounded-xl border border-[#F3C9C2] bg-red-soft px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-red">
+        <div className="mb-4 flex items-start gap-[9px] rounded-xl border border-red-line bg-red-soft px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-red">
           <span aria-hidden>🔒</span>
           <div>
             <b>Cloisonnement.</b> Aucun administrateur ne peut consulter les{" "}
@@ -251,7 +251,7 @@ export default function EquipeAdmin() {
                   <b className="flex flex-wrap items-center gap-2 text-sm font-extrabold">
                     {admin.nom}
                     {admin.principal && (
-                      <span className="rounded-full bg-[#EEF1F4] px-2 py-0.5 text-[10.5px] font-bold text-[#7E8C97]">
+                      <span className="rounded-full bg-bg px-2 py-0.5 text-[10.5px] font-bold text-muted">
                         compte principal
                       </span>
                     )}
@@ -267,7 +267,7 @@ export default function EquipeAdmin() {
                 </div>
                 <span
                   className={`flex-none text-[11.5px] font-bold ${
-                    admin.actif ? "text-green" : "text-[#7E8C97]"
+                    admin.actif ? "text-green" : "text-muted"
                   }`}
                 >
                   <span aria-hidden>●</span> {admin.actif ? "Actif" : "Désactivé"}
@@ -667,7 +667,7 @@ function DialoguePermissions({
               className={`rounded-full border px-[13px] py-[7px] text-[11.5px] font-bold disabled:opacity-40 ${
                 roleCourant === r.libelle
                   ? "border-blue bg-blue text-white"
-                  : "border-[#CDE6F2] bg-teal-soft text-blue"
+                  : "border-teal-line bg-teal-soft text-blue"
               }`}
             >
               {r.libelle}
@@ -689,7 +689,7 @@ function DialoguePermissions({
                 <small className="text-[11.5px] leading-snug text-muted">{p.detail}</small>
               </div>
               {fige ? (
-                <span className="flex-none rounded-lg bg-[#EEF1F4] px-[9px] py-1 text-[11px] font-bold text-[#7E8C97]">
+                <span className="flex-none rounded-lg bg-bg px-[9px] py-1 text-[11px] font-bold text-muted">
                   {admin.principal ? "Toujours" : "Verrouillé"}
                 </span>
               ) : (
@@ -703,7 +703,7 @@ function DialoguePermissions({
           ))}
         </div>
 
-        <div className="mt-3 flex items-center justify-between gap-[14px] rounded-xl border border-[#F3C9C2] bg-red-soft px-[13px] py-3">
+        <div className="mt-3 flex items-center justify-between gap-[14px] rounded-xl border border-red-line bg-red-soft px-[13px] py-3">
           <div>
             <b className="block text-[13px] font-bold text-red">🔒 Dossiers médicaux</b>
             <small className="text-[11.5px] text-muted">

@@ -76,7 +76,7 @@ export default function TableauDeBordAssistant() {
             </div>
           </div>
           {erreur && (
-            <div className="noteboxm" style={{ marginTop: 12, background: "var(--red-soft)", borderColor: "#F3C9C2", color: "var(--red)" }}>
+            <div className="noteboxm" style={{ marginTop: 12, background: "var(--red-soft)", borderColor: "var(--red-line)", color: "var(--red)" }}>
               <div>{erreur}</div>
             </div>
           )}
@@ -149,7 +149,7 @@ export default function TableauDeBordAssistant() {
         </small>
       </div>
 
-      <div className="mb-[18px] flex items-start gap-[9px] rounded-xl border border-[#BFE0EF] bg-teal-soft px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-blue">
+      <div className="mb-[18px] flex items-start gap-[9px] rounded-xl border border-teal-line bg-teal-soft px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-blue">
         <span aria-hidden>🔒</span>
         <div>
           Vous gérez les <b>rendez-vous</b>, les <b>créneaux</b> et la <b>communication</b> selon
@@ -194,7 +194,7 @@ export default function TableauDeBordAssistant() {
       </div>
 
       {erreur && (
-        <div className="mb-4 rounded-xl border border-[#F3C9C2] bg-red-soft px-[14px] py-3 text-[12.5px] font-bold text-red">
+        <div className="mb-4 rounded-xl border border-red-line bg-red-soft px-[14px] py-3 text-[12.5px] font-bold text-red">
           {erreur}
         </div>
       )}
@@ -217,7 +217,7 @@ export default function TableauDeBordAssistant() {
               <button
                 type="button"
                 onClick={() => traiterDemande(demande.id)}
-                className={`rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc] ${
+                className={`rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-teal-hover ${
                   permissions.confirmerAnnuler ? "" : "opacity-50"
                 }`}
               >
@@ -226,7 +226,7 @@ export default function TableauDeBordAssistant() {
               <button
                 type="button"
                 onClick={() => traiterDemande(demande.id)}
-                className={`rounded-[9px] border-[1.5px] border-[#F3C9C2] bg-white px-[14px] py-2 text-[12.5px] font-bold text-red transition-colors hover:bg-red-soft ${
+                className={`rounded-[9px] border-[1.5px] border-red-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-red transition-colors hover:bg-red-soft ${
                   permissions.confirmerAnnuler ? "" : "opacity-50"
                 }`}
               >
@@ -245,19 +245,19 @@ export default function TableauDeBordAssistant() {
         <div className="flex flex-wrap gap-2">
           <Link
             href="/espace-assistant/rendez-vous"
-            className="pointer-coarse:py-[13px] rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
+            className="pointer-coarse:py-[13px] rounded-full border border-teal-line bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
           >
             📅 Gérer les rendez-vous
           </Link>
           <Link
             href="/espace-assistant/creneaux"
-            className="pointer-coarse:py-[13px] rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
+            className="pointer-coarse:py-[13px] rounded-full border border-teal-line bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
           >
             🕐 Ouvrir/fermer des créneaux
           </Link>
           <Link
             href="/espace-assistant/messages"
-            className="pointer-coarse:py-[13px] rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
+            className="pointer-coarse:py-[13px] rounded-full border border-teal-line bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
           >
             💬 Répondre aux messages
           </Link>

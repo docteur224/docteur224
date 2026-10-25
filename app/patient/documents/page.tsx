@@ -126,7 +126,7 @@ export default function MesDocuments() {
           <button
             type="button"
             onClick={() => ouvrir(d)}
-            className="flex-none rounded-[9px] bg-teal px-3 py-1.5 text-[11.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+            className="flex-none rounded-[9px] bg-teal px-3 py-1.5 text-[11.5px] font-bold text-white transition-colors hover:bg-teal-hover"
           >
             Ouvrir
           </button>
@@ -137,7 +137,7 @@ export default function MesDocuments() {
           qui avait été prescrit — mais elle ne doit jamais passer pour
           valable au comptoir d'une pharmacie. */}
       {d.annuleLe && (
-        <p className="mt-2 rounded-[10px] border border-[#F3C9C2] bg-red-soft px-3 py-2 text-[12px] font-bold text-red">
+        <p className="mt-2 rounded-[10px] border border-red-line bg-red-soft px-3 py-2 text-[12px] font-bold text-red">
           Annulée le {formatDateCourte(d.annuleLe.slice(0, 10))} par {d.medecinNom} — motif :{" "}
           {d.motifAnnulation}. Ce document n’est plus valable.
         </p>
@@ -153,7 +153,7 @@ export default function MesDocuments() {
             {deplie === d.id ? "Replier" : "Lire le contenu"}
           </button>
           {deplie === d.id && (
-            <pre className="mt-2 whitespace-pre-wrap border-t border-line pt-2 font-sans text-[13px] leading-[1.7] text-[#3f5360]">
+            <pre className="mt-2 whitespace-pre-wrap border-t border-line pt-2 font-sans text-[13px] leading-[1.7] text-ink-soft">
               {d.contenu}
             </pre>
           )}
@@ -167,7 +167,7 @@ export default function MesDocuments() {
           <button
             type="button"
             onClick={() => supprimer(d)}
-            className="rounded-[9px] border-[1.5px] border-[#F3C9C2] bg-white px-3 py-1.5 text-[11.5px] font-bold text-red transition-colors hover:bg-red-soft"
+            className="rounded-[9px] border-[1.5px] border-red-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-red transition-colors hover:bg-red-soft"
           >
             {aSupprimer === d.id ? "Confirmer" : "Retirer"}
           </button>

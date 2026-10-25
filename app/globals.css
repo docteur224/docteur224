@@ -28,6 +28,45 @@
   --orange: #9a3412;
   --orange-soft: #ffedd5;
   --shadow: 0 14px 40px rgba(16, 59, 80, 0.12);
+
+  /* Compagnes des couleurs ci-dessus. Elles existaient déjà, mais écrites en
+     dur au fil des écrans : le survol du bouton teal (#2790bc) apparaissait
+     47 fois, la bordure des encarts rouges (#f3c9c2) 28 fois. Les nommer est
+     le préalable à une charte personnalisable : ce qui n'a pas de nom ne peut
+     pas être recalculé. Les valeurs sont reprises à l'identique de l'existant.
+     Convention : « -soft » = un fond, « -line » = une bordure sur ce fond. */
+  --teal-hover: #2790bc;
+  --teal-line: #cde6f2;
+  --blue-line: #bfd3f6;
+  --ink-soft: #3f5360;
+  --muted-soft: #9aa8b2;
+  --green-line: #bfe3cc;
+  --amber-line: #f2d9b6;
+  --amber-ink: #8a5a1b;
+  --amber-hover: #e08e45;
+  --red-line: #f3c9c2;
+
+  /* Pastilles d'avatar. Volontairement HORS charte personnalisable : leur rôle
+     est de distinguer les personnes d'un coup d'œil. Teintes de la couleur
+     choisie par l'utilisateur, elles deviendraient toutes semblables et ne
+     distingueraient plus rien. Chaque écran garde son propre ordre de tirage :
+     les renommer ne change aucune attribution. */
+  --avatar-bleu: linear-gradient(135deg, #2e9cca, #15506b);
+  --avatar-marine: linear-gradient(135deg, #15506b, #0b2e3d);
+  --avatar-ambre: linear-gradient(135deg, #e08e45, #c0392b);
+  --avatar-violet: linear-gradient(135deg, #6c5ce7, #341f97);
+  --avatar-vert: linear-gradient(135deg, #16a085, #0e6655);
+  --avatar-gris: linear-gradient(135deg, #9aa8b2, #647a89);
+
+  /* Badges décoratifs d'en-tête : un emoji posé sur un aplat dégradé (🛡️
+     console d'administration, 📢 annonces, ⚠️ modération). Mêmes teintes que
+     les avatars, rôle opposé : ils ne distinguent personne, ils habillent un
+     titre. Ils suivent donc la charte — sans quoi un écusson bleu marine
+     flotterait au milieu d'une page terracotta. Construits sur les variables
+     de charte, ils se recolorent tout seuls. */
+  --badge: linear-gradient(135deg, var(--teal), var(--blue));
+  --badge-sombre: linear-gradient(135deg, var(--blue), var(--blue-deep));
+  --badge-neutre: linear-gradient(135deg, var(--muted-soft), var(--muted));
 }
 
 @theme inline {
@@ -48,6 +87,16 @@
   --color-red-soft: var(--red-soft);
   --color-orange: var(--orange);
   --color-orange-soft: var(--orange-soft);
+  --color-teal-hover: var(--teal-hover);
+  --color-teal-line: var(--teal-line);
+  --color-blue-line: var(--blue-line);
+  --color-ink-soft: var(--ink-soft);
+  --color-muted-soft: var(--muted-soft);
+  --color-green-line: var(--green-line);
+  --color-amber-line: var(--amber-line);
+  --color-amber-ink: var(--amber-ink);
+  --color-amber-hover: var(--amber-hover);
+  --color-red-line: var(--red-line);
   --font-sans: var(--font-jakarta);
   --shadow-card: var(--shadow);
 }

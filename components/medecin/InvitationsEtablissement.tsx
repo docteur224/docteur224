@@ -27,7 +27,7 @@ import { repondreInvitation, useInvitationsRecues } from "@/lib/etablissement";
 const LIBELLES = {
   envoyee: { texte: "En attente", classes: "bg-amber-soft text-amber" },
   acceptee: { texte: "Acceptée", classes: "bg-green-soft text-green" },
-  refusee: { texte: "Refusée", classes: "bg-[#FBE9E7] text-red" },
+  refusee: { texte: "Refusée", classes: "bg-red-soft text-red" },
 } as const;
 
 export default function InvitationsEtablissement({
@@ -186,7 +186,7 @@ export default function InvitationsEtablissement({
       {message && (
         <p
           role="status"
-          className={`mt-2 text-[12.5px] font-bold ${message.erreur ? "text-[#C0392B]" : "text-green"}`}
+          className={`mt-2 text-[12.5px] font-bold ${message.erreur ? "text-red" : "text-green"}`}
         >
           {message.erreur ? "⚠️ " : "✓ "}
           {message.texte}

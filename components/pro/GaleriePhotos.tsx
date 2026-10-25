@@ -169,7 +169,7 @@ export default function GaleriePhotos({
             type="button"
             onClick={() => champ.current?.click()}
             disabled={envoi}
-            className="grid h-[104px] w-[132px] place-items-center rounded-[11px] border-[1.5px] border-dashed border-[#CDE6F2] bg-teal-soft px-2 text-center text-[12px] font-bold text-blue transition-colors hover:bg-[#DCEEF6] disabled:opacity-60"
+            className="grid h-[104px] w-[132px] place-items-center rounded-[11px] border-[1.5px] border-dashed border-teal-line bg-teal-soft px-2 text-center text-[12px] font-bold text-blue transition-colors hover:bg-teal-soft disabled:opacity-60"
           >
             {envoi ? "Envoi…" : "＋ Ajouter une photo"}
           </button>

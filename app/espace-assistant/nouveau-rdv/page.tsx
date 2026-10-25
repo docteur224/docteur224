@@ -40,7 +40,7 @@ export default function NouveauRendezVousAssistant() {
           </p>
           <Link
             href="/espace-assistant"
-            className="mt-6 inline-block rounded-[11px] bg-teal px-[18px] py-[11px] text-[13.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+            className="mt-6 inline-block rounded-[11px] bg-teal px-[18px] py-[11px] text-[13.5px] font-bold text-white transition-colors hover:bg-teal-hover"
           >
             ← Retour au tableau de bord
           </Link>

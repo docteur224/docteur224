@@ -59,7 +59,7 @@ export default function SectionNotes({
             return (
               <article
                 key={n.id}
-                className="flex flex-wrap items-start gap-3 rounded-xl border border-line p-3.5 transition-colors hover:border-[#CBD8E4]"
+                className="flex flex-wrap items-start gap-3 rounded-xl border border-line p-3.5 transition-colors hover:border-line"
               >
                 <span className="grid h-[38px] w-[38px] flex-none place-items-center rounded-[10px] bg-teal-soft text-teal">
                   <Icone nom="presse_papiers" taille={18} />

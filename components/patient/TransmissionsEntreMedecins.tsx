@@ -70,7 +70,7 @@ export default function TransmissionsEntreMedecins() {
             >
               <div className="mb-1 flex flex-wrap items-center gap-1.5">
                 {t.urgence === "prioritaire" && !revoquee && (
-                  <span className="rounded bg-[#FFF5E9] px-1.5 py-0.5 text-[10.5px] font-bold text-[#8A5A1B]">
+                  <span className="rounded bg-amber-soft px-1.5 py-0.5 text-[10.5px] font-bold text-amber-ink">
                     Prioritaire
                   </span>
                 )}
@@ -114,7 +114,7 @@ export default function TransmissionsEntreMedecins() {
                     {deplie === t.id ? "Replier le courrier" : "Lire le courrier transmis"}
                   </button>
                   {deplie === t.id && (
-                    <pre className="mt-2 whitespace-pre-wrap border-t border-line pt-2 font-sans text-[12.5px] leading-[1.7] text-[#3f5360]">
+                    <pre className="mt-2 whitespace-pre-wrap border-t border-line pt-2 font-sans text-[12.5px] leading-[1.7] text-ink-soft">
                       {t.note}
                     </pre>
                   )}
@@ -137,7 +137,7 @@ export default function TransmissionsEntreMedecins() {
                     <button
                       type="button"
                       onClick={() => revoquer(t)}
-                      className="ml-auto rounded-[9px] border-[1.5px] border-[#F3C9C2] bg-white px-3 py-1.5 text-[11.5px] font-bold text-red transition-colors hover:bg-red-soft"
+                      className="ml-auto rounded-[9px] border-[1.5px] border-red-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-red transition-colors hover:bg-red-soft"
                     >
                       {aRevoquer === t.id ? "Confirmer le retrait" : "Retirer l’accès"}
                     </button>

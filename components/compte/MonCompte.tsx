@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import ChangerMotDePasse from "@/components/patient/ChangerMotDePasse";
+import CouleursEspace from "@/components/compte/CouleursEspace";
 import ExporterMesDonnees from "@/components/patient/ExporterMesDonnees";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { useProfilConnecte } from "@/lib/patient";
@@ -143,6 +144,8 @@ export default function MonCompte({
 
           <Identite profil={profil} chargement={chargement} suspendu={suspendu} />
 
+          <CouleursEspace />
+
           <section className={CARTE}>
             <h3 className={TITRE_CARTE}>Sécurité</h3>
             <ChangerMotDePasse />
@@ -203,7 +206,7 @@ function Identite({
         <span
           aria-hidden
           className="grid h-[46px] w-[46px] flex-none place-items-center rounded-xl text-[15px] font-extrabold text-white"
-          style={{ background: "linear-gradient(135deg,#2E9CCA,#15506B)" }}
+          style={{ background: "var(--avatar-bleu)" }}
         >
           {initiales}
         </span>
@@ -280,7 +283,7 @@ function Abonnement({
             className={`rounded-full border px-[13px] py-[7px] text-[11.5px] font-bold ${
               onglet === o.cle
                 ? "border-blue bg-blue text-white"
-                : "border-[#CDE6F2] bg-teal-soft text-blue"
+                : "border-teal-line bg-teal-soft text-blue"
             }`}
           >
             {o.libelle}
@@ -361,7 +364,7 @@ function Abonnement({
                 <span
                   aria-hidden
                   className="mt-1 h-2 w-2 flex-none rounded-full"
-                  style={{ background: h.evenement === "resiliation" ? "#C0392B" : "#2E9CCA" }}
+                  style={{ background: h.evenement === "resiliation" ? "var(--red)" : "var(--teal)" }}
                 />
                 <div className="min-w-0 flex-1">
                   <b className="block text-[13px] font-bold">
@@ -507,7 +510,7 @@ function ZoneSensible({
   }
 
   return (
-    <section className="rounded-2xl border border-[#F3C9C2] bg-white p-5">
+    <section className="rounded-2xl border border-red-line bg-white p-5">
       <h3 className="mb-1 text-[15px] font-extrabold text-red">Zone sensible</h3>
 
       {/* Les deux gestes s'empilent sous 640 px : côte à côte, le texte se
@@ -557,7 +560,7 @@ function ZoneSensible({
             setOuvert((o) => !o);
             setSaisie("");
           }}
-          className="w-full flex-none rounded-[9px] border-[1.5px] border-[#F3C9C2] bg-white px-[14px] py-2 text-[12.5px] font-bold text-red transition-colors hover:bg-red-soft sm:w-auto"
+          className="w-full flex-none rounded-[9px] border-[1.5px] border-red-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-red transition-colors hover:bg-red-soft sm:w-auto"
         >
           {ouvert ? "Annuler" : "Fermer mon compte"}
         </button>
@@ -585,7 +588,7 @@ function ZoneSensible({
               type="button"
               onClick={fermer}
               disabled={!confirme || enCours !== null}
-              className="rounded-[9px] bg-red px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#a5301f] disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-[9px] bg-red px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-orange disabled:cursor-not-allowed disabled:opacity-50"
             >
               {enCours === "fermeture" ? "Fermeture…" : "Fermer définitivement"}
             </button>

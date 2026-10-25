@@ -189,7 +189,7 @@ export default function SpecialitesProposees() {
         {specialites.map((specialite) => (
           <span
             key={specialite.id}
-            className="relative flex items-center rounded-full border border-[#CDE6F2] bg-teal-soft"
+            className="relative flex items-center rounded-full border border-teal-line bg-teal-soft"
           >
             {/* Deux actions sur une même puce : changer l'icône (le libellé)
                 et retirer la spécialité (la croix). */}
@@ -209,7 +209,7 @@ export default function SpecialitesProposees() {
               title="Retirer"
               aria-label={`Retirer ${specialite.nom}`}
               onClick={() => retirer(specialite.id, specialite.nom)}
-              className="rounded-r-full py-2 pl-1 pr-[12px] text-xs font-bold text-[#7C93A3] transition-colors hover:text-red"
+              className="rounded-r-full py-2 pl-1 pr-[12px] text-xs font-bold text-muted transition-colors hover:text-red"
             >
               ✕
             </button>
@@ -226,7 +226,7 @@ export default function SpecialitesProposees() {
           <button
             type="button"
             onClick={() => setOuvert(true)}
-            className="rounded-full border border-[#DCE4EA] bg-[#EEF2F5] px-[14px] py-2 text-xs font-bold text-[#3A4A55] transition-colors hover:bg-bg"
+            className="rounded-full border border-line bg-bg px-[14px] py-2 text-xs font-bold text-ink-soft transition-colors hover:bg-bg"
           >
             + Ajouter
           </button>

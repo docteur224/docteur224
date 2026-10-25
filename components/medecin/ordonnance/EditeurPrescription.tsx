@@ -188,7 +188,7 @@ export default function EditeurPrescription({
       {/* ---- Lignes ---- */}
       <ol className="grid gap-2.5">
         {lignes.map((l, i) => (
-          <li key={i} className={`rounded-xl border p-3 ${alertes[i]?.length ? "border-[#F4C9C9] bg-red-soft/40" : "border-line"}`}>
+          <li key={i} className={`rounded-xl border p-3 ${alertes[i]?.length ? "border-red-line bg-red-soft/40" : "border-line"}`}>
             <div className="mb-2 flex items-center gap-2">
               <span className="grid h-6 w-6 flex-none place-items-center rounded-full bg-teal-soft text-[11.5px] font-extrabold text-blue">
                 {i + 1}
@@ -300,7 +300,7 @@ export default function EditeurPrescription({
         type="button"
         onClick={() => onLignes([...lignes, { ...LIGNE_VIDE }])}
         disabled={!ligneRemplie(lignes[lignes.length - 1] ?? LIGNE_VIDE)}
-        className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[#BFD3F6] bg-white px-3.5 text-[12.5px] font-bold text-blue transition-colors hover:bg-teal-soft disabled:opacity-45"
+        className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-blue-line bg-white px-3.5 text-[12.5px] font-bold text-blue transition-colors hover:bg-teal-soft disabled:opacity-45"
       >
         <Icone nom="plus" taille={14} epaisseur={2.4} />
         Ajouter un médicament
@@ -322,12 +322,12 @@ export default function EditeurPrescription({
       </div>
 
       {nbAlertes > 0 && (
-        <label className="flex min-h-11 cursor-pointer items-start gap-2.5 rounded-xl border border-[#F4C9C9] bg-white px-3 py-2.5 text-[12.5px] font-semibold text-red">
+        <label className="flex min-h-11 cursor-pointer items-start gap-2.5 rounded-xl border border-red-line bg-white px-3 py-2.5 text-[12.5px] font-semibold text-red">
           <input
             type="checkbox"
             checked={confirmationAllergie}
             onChange={(e) => onConfirmationAllergie(e.target.checked)}
-            className="mt-0.5 h-4 w-4 flex-none accent-[#C0392B]"
+            className="mt-0.5 h-4 w-4 flex-none accent-red"
           />
           Je maintiens cette prescription en connaissance de l’allergie déclarée.
         </label>

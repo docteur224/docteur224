@@ -70,7 +70,7 @@ export default function ConnexionAdmin() {
             <span
               aria-hidden
               className="grid h-[42px] w-[42px] flex-none place-items-center rounded-xl text-lg text-white"
-              style={{ background: "linear-gradient(135deg,#15506B,#0B2E3D)" }}
+              style={{ background: "var(--badge-sombre)" }}
             >
               🛡️
             </span>
@@ -129,7 +129,7 @@ export default function ConnexionAdmin() {
             type="button"
             onClick={connecter}
             disabled={enCours}
-            className="mt-1 flex w-full items-center justify-center gap-2 rounded-[11px] bg-teal px-6 py-[14px] text-[15px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:opacity-60"
+            className="mt-1 flex w-full items-center justify-center gap-2 rounded-[11px] bg-teal px-6 py-[14px] text-[15px] font-bold text-white transition-colors hover:bg-teal-hover disabled:opacity-60"
           >
             {enCours ? "Connexion…" : "Accéder à la console"}
           </button>

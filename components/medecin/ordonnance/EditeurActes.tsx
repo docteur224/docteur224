@@ -220,7 +220,7 @@ export default function EditeurActes({
         type="button"
         onClick={() => onLignes([...lignes, { ...LIGNE_ACTE_VIDE }])}
         disabled={!ligneActeRemplie(lignes[lignes.length - 1] ?? LIGNE_ACTE_VIDE)}
-        className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-[#BFD3F6] bg-white px-3.5 text-[12.5px] font-bold text-blue transition-colors hover:bg-teal-soft disabled:opacity-45"
+        className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[10px] border border-dashed border-blue-line bg-white px-3.5 text-[12.5px] font-bold text-blue transition-colors hover:bg-teal-soft disabled:opacity-45"
       >
         <Icone nom="plus" taille={14} epaisseur={2.4} />
         Ajouter {domaine === "biologie" ? "une analyse" : "un examen"}
@@ -272,7 +272,7 @@ export default function EditeurActes({
               type="checkbox"
               checked={!!options[cle]}
               onChange={(e) => onOptions({ ...options, [cle]: e.target.checked })}
-              className="h-4 w-4 flex-none accent-[#2E9CCA]"
+              className="h-4 w-4 flex-none accent-teal"
             />
             {libelle}
           </label>

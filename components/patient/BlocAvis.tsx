@@ -126,7 +126,7 @@ export default function BlocAvis({
             <button
               type="submit"
               disabled={envoi}
-              className="rounded-[10px] bg-teal px-[18px] py-[10px] text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:opacity-60"
+              className="rounded-[10px] bg-teal px-[18px] py-[10px] text-[12.5px] font-bold text-white transition-colors hover:bg-teal-hover disabled:opacity-60"
             >
               {envoi ? "Envoi…" : avis ? "Enregistrer" : "Publier mon avis"}
             </button>
@@ -155,7 +155,7 @@ export default function BlocAvis({
         <small className="text-[11.5px] text-muted">Publié le {dateLisible(avis.creeLe)}</small>
       </div>
       {avis.commentaire && (
-        <p className="mt-2 text-[13px] leading-[1.6] text-[#3f5360]">{avis.commentaire}</p>
+        <p className="mt-2 text-[13px] leading-[1.6] text-ink-soft">{avis.commentaire}</p>
       )}
 
       {avis.statut !== "publie" && (
@@ -169,7 +169,7 @@ export default function BlocAvis({
       {avis.reponseMedecin && (
         <div className="mt-3 rounded-xl border-l-[3px] border-teal bg-teal-soft/50 px-[14px] py-[11px]">
           <b className="block text-[12px] font-extrabold text-blue">Réponse de {medecinNom}</b>
-          <p className="mt-1 text-[12.5px] leading-[1.6] text-[#3f5360]">{avis.reponseMedecin}</p>
+          <p className="mt-1 text-[12.5px] leading-[1.6] text-ink-soft">{avis.reponseMedecin}</p>
         </div>
       )}
 

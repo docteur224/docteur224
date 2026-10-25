@@ -165,19 +165,19 @@ export default function GrilleDisponibilites({
       {/* Légende (couleurs exactes de la maquette) */}
       <div className="my-[14px] flex flex-wrap gap-4 text-[11.5px] font-semibold text-muted">
         <span className="inline-flex items-center gap-1.5">
-          <i className="inline-block h-[13px] w-[13px] rounded border-[1.5px] border-[#9FE3C0] bg-[#E7F7EF]" />
+          <i className="inline-block h-[13px] w-[13px] rounded border-[1.5px] border-green-line bg-green-soft" />
           Ouvert
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <i className="inline-block h-[13px] w-[13px] rounded border-[1.5px] border-[#DCE4E9] bg-[#F1F4F6]" />
+          <i className="inline-block h-[13px] w-[13px] rounded border-[1.5px] border-line bg-bg" />
           Fermé
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <i className="inline-block h-[13px] w-[13px] rounded border-[1.5px] border-[#BBD9EE] bg-[repeating-linear-gradient(45deg,#EAF3FA,#EAF3FA_4px,#D5E8F5_4px,#D5E8F5_8px)]" />
+          <i className="inline-block h-[13px] w-[13px] rounded border-[1.5px] border-teal-line bg-[repeating-linear-gradient(45deg,var(--teal-soft),var(--teal-soft)_4px,var(--teal-line)_4px,var(--teal-line)_8px)]" />
           Réservé
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <i className="inline-block h-[13px] w-[13px] rounded border-[1.5px] border-dashed border-[#DCE4E9] bg-[#FAFBFC]" />
+          <i className="inline-block h-[13px] w-[13px] rounded border-[1.5px] border-dashed border-line bg-card" />
           Passé
         </span>
       </div>
@@ -189,7 +189,7 @@ export default function GrilleDisponibilites({
       )}
 
       {message && (
-        <div className="mb-3 rounded-xl border border-[#F3C9C2] bg-red-soft px-[14px] py-3 text-[12.5px] font-bold text-red">
+        <div className="mb-3 rounded-xl border border-red-line bg-red-soft px-[14px] py-3 text-[12.5px] font-bold text-red">
           {message}
         </div>
       )}
@@ -204,10 +204,10 @@ export default function GrilleDisponibilites({
                 key={creneau.heure}
                 type="button"
                 title={`Réservé — ${creneau.patient}. Annulez d’abord le rendez-vous associé pour fermer ce créneau.`}
-                className="cursor-not-allowed rounded-[11px] border-[1.5px] border-[#BBD9EE] bg-[repeating-linear-gradient(45deg,#EAF3FA,#EAF3FA_6px,#D5E8F5_6px,#D5E8F5_12px)] px-1 py-[10px] text-center text-[13.5px] font-extrabold text-[#15506B]"
+                className="cursor-not-allowed rounded-[11px] border-[1.5px] border-teal-line bg-[repeating-linear-gradient(45deg,var(--teal-soft),var(--teal-soft)_6px,var(--teal-line)_6px,var(--teal-line)_12px)] px-1 py-[10px] text-center text-[13.5px] font-extrabold text-blue"
               >
                 {creneau.heure}
-                <span className="mt-[3px] block text-[9px] font-bold uppercase tracking-[.04em] text-[#3E7CA6]">
+                <span className="mt-[3px] block text-[9px] font-bold uppercase tracking-[.04em] text-teal">
                   Réservé
                 </span>
               </button>
@@ -223,10 +223,10 @@ export default function GrilleDisponibilites({
                 type="button"
                 disabled
                 title="Créneau passé — il n'est plus modifiable."
-                className="cursor-not-allowed rounded-[11px] border-[1.5px] border-dashed border-[#DCE4E9] bg-[#FAFBFC] px-1 py-[10px] text-center text-[13.5px] font-extrabold text-[#B7C2CA]"
+                className="cursor-not-allowed rounded-[11px] border-[1.5px] border-dashed border-line bg-card px-1 py-[10px] text-center text-[13.5px] font-extrabold text-muted-soft"
               >
                 {creneau.heure}
-                <span className="mt-[3px] block text-[9px] font-bold uppercase tracking-[.04em] text-[#C3CDD4]">
+                <span className="mt-[3px] block text-[9px] font-bold uppercase tracking-[.04em] text-line">
                   Passé
                 </span>
               </button>
@@ -245,20 +245,20 @@ export default function GrilleDisponibilites({
               onClick={() => cliquerCreneau(creneau.heure)}
               className={`rounded-[11px] border-[1.5px] px-1 py-[10px] text-center text-[13.5px] font-extrabold transition-colors ${
                 ouvert
-                  ? "border-[#9FE3C0] bg-[#E7F7EF] text-[#16794A]"
-                  : "border-[#DCE4E9] bg-[#F1F4F6] text-[#9AA8B2]"
+                  ? "border-green-line bg-green-soft text-green"
+                  : "border-line bg-bg text-muted-soft"
               } ${
                 peutModifier
                   ? ouvert
-                    ? "hover:border-[#2BA86A]"
-                    : "hover:border-[#9AA8B2]"
+                    ? "hover:border-green"
+                    : "hover:border-muted-soft"
                   : "cursor-not-allowed opacity-60"
               }`}
             >
               {creneau.heure}
               <span
                 className={`mt-[3px] block text-[9px] font-bold uppercase tracking-[.04em] ${
-                  ouvert ? "text-[#2BA86A]" : "text-[#AEBCC4]"
+                  ouvert ? "text-green" : "text-muted-soft"
                 }`}
               >
                 {ouvert ? "Ouvert" : "Fermé"}

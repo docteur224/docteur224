@@ -69,7 +69,7 @@ const LIBELLES_STATUT_DOC: Record<string, string> = {
 
 const MEDECIN_VIDE = {
   id: "",
-  gradient: "linear-gradient(135deg,#2E9CCA,#15506B)",
+  gradient: "var(--avatar-bleu)",
   initiales: "…",
   photoUrl: null as string | null,
   civilite: "Dr" as const,
@@ -672,7 +672,7 @@ export default function ProfilMedecin() {
         type="button"
         onClick={recupererPosition}
         disabled={geolocEnCours}
-        className="inline-flex items-center gap-2 rounded-[11px] border border-[#CDE6F2] bg-teal-soft px-[15px] py-[11px] text-[13px] font-extrabold text-blue disabled:opacity-60"
+        className="inline-flex items-center gap-2 rounded-[11px] border border-teal-line bg-teal-soft px-[15px] py-[11px] text-[13px] font-extrabold text-blue disabled:opacity-60"
       >
         🎯 {geolocEnCours ? "Localisation en cours…" : "Récupérer ma position actuelle"}
       </button>
@@ -1041,7 +1041,7 @@ export default function ProfilMedecin() {
         {/* Documents de validation */}
         <div className="mb-4 rounded-2xl border border-line bg-white p-5">
           <h3 className="mb-3 text-[15px] font-extrabold">📄 Documents de validation</h3>
-          <label className="flex cursor-pointer items-center gap-[14px] rounded-[14px] border-[1.5px] border-dashed border-[#BCD3E0] bg-[#F6FAFC] p-4">
+          <label className="flex cursor-pointer items-center gap-[14px] rounded-[14px] border-[1.5px] border-dashed border-teal-line bg-card p-4">
             <span className="text-2xl" aria-hidden>
               ⬆️
             </span>
@@ -1083,7 +1083,7 @@ export default function ProfilMedecin() {
               </span>
             </div>
           ))}
-          <div className="mt-[14px] flex items-start gap-[9px] rounded-[11px] bg-amber-soft px-[13px] py-[11px] text-[12.5px] font-semibold leading-relaxed text-[#7A5320]">
+          <div className="mt-[14px] flex items-start gap-[9px] rounded-[11px] bg-amber-soft px-[13px] py-[11px] text-[12.5px] font-semibold leading-relaxed text-amber-ink">
             <span aria-hidden>🔒</span>
             <div>
               <b>Privé.</b> Ces documents sont visibles uniquement par l’administrateur lors de la
@@ -1125,7 +1125,7 @@ export default function ProfilMedecin() {
           <button
             type="button"
             onClick={ajouterDiplome}
-            className="rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
+            className="rounded-full border border-teal-line bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
           >
             + Ajouter un diplôme
           </button>
@@ -1164,7 +1164,7 @@ export default function ProfilMedecin() {
           <button
             type="button"
             onClick={ajouterEtape}
-            className="rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
+            className="rounded-full border border-teal-line bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
           >
             + Ajouter une étape
           </button>
@@ -1180,7 +1180,7 @@ export default function ProfilMedecin() {
                 type="button"
                 title="Retirer"
                 onClick={() => retirerLangue(langue)}
-                className="rounded-full border border-[#DCE4EA] bg-[#EEF2F5] px-[14px] py-2 text-xs font-bold text-[#3A4A55] hover:border-red"
+                className="rounded-full border border-line bg-bg px-[14px] py-2 text-xs font-bold text-ink-soft hover:border-red"
               >
                 {langue} ✕
               </button>
@@ -1188,7 +1188,7 @@ export default function ProfilMedecin() {
             <button
               type="button"
               onClick={() => ajouterLangue("Langue à ajouter :")}
-              className="rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
+              className="rounded-full border border-teal-line bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
             >
               + Ajouter
             </button>
@@ -1220,7 +1220,7 @@ export default function ProfilMedecin() {
                   className={`rounded-full border px-[14px] py-2 text-xs font-bold transition-colors ${
                     actif
                       ? "border-teal bg-teal-soft text-blue"
-                      : "border-[#DCE4EA] bg-[#EEF2F5] text-[#3A4A55] hover:border-teal"
+                      : "border-line bg-bg text-ink-soft hover:border-teal"
                   }`}
                 >
                   {o.label}
@@ -1246,8 +1246,8 @@ export default function ProfilMedecin() {
                   onClick={() => basculerAssurance(assurance)}
                   className={`rounded-full border px-[14px] py-2 text-xs font-bold ${
                     active
-                      ? "border-[#BFE3CC] bg-green-soft text-green"
-                      : "border-[#CDE6F2] bg-teal-soft text-blue"
+                      ? "border-green-line bg-green-soft text-green"
+                      : "border-teal-line bg-teal-soft text-blue"
                   }`}
                 >
                   {assurance}

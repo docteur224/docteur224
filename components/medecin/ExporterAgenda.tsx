@@ -130,7 +130,7 @@ export default function ExporterAgenda({
             type="button"
             onClick={() => telecharger("pdf")}
             disabled={!!enCours || bloque}
-            className="flex-1 rounded-[10px] bg-teal px-4 py-2.5 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex-1 rounded-[10px] bg-teal px-4 py-2.5 text-[12.5px] font-bold text-white transition-colors hover:bg-teal-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             {enCours === "pdf" ? "Génération…" : "📄 PDF"}
           </button>

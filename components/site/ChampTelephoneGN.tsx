@@ -61,7 +61,7 @@ export default function ChampTelephoneGN({
         </div>
       ) : (
         <div className="mb-3 flex gap-2">
-          <span className="flex flex-none items-center gap-1.5 whitespace-nowrap rounded-xl border border-line bg-[#F4F8FA] px-[13px] text-sm font-bold">
+          <span className="flex flex-none items-center gap-1.5 whitespace-nowrap rounded-xl border border-line bg-card px-[13px] text-sm font-bold">
             🇬🇳 +224
           </span>
           {champ}

@@ -156,7 +156,7 @@ export default function SignatureElectronique({ onChange }: { onChange?: (messag
     <div className="grid gap-3">
       {edition ? (
         <>
-          <div className="relative w-full max-w-[480px] rounded-xl border-2 border-dashed border-[#BFD3F6] bg-white" style={{ aspectRatio: `${RATIO}` }}>
+          <div className="relative w-full max-w-[480px] rounded-xl border-2 border-dashed border-blue-line bg-white" style={{ aspectRatio: `${RATIO}` }}>
             <canvas
               ref={toile}
               aria-label="Zone de signature : tracez votre signature au doigt ou à la souris"
@@ -205,11 +205,11 @@ export default function SignatureElectronique({ onChange }: { onChange?: (messag
                 setNbTraits(0);
                 setEdition(true);
               }}
-              className={`${BTN} border border-[#BFD3F6] bg-white text-blue hover:bg-teal-soft`}
+              className={`${BTN} border border-blue-line bg-white text-blue hover:bg-teal-soft`}
             >
               Refaire ma signature
             </button>
-            <button type="button" onClick={retirer} disabled={enCours} className={`${BTN} border border-[#F4C9C9] bg-white text-red hover:bg-red-soft`}>
+            <button type="button" onClick={retirer} disabled={enCours} className={`${BTN} border border-red-line bg-white text-red hover:bg-red-soft`}>
               Retirer
             </button>
           </div>

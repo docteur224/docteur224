@@ -74,7 +74,7 @@ export default function AnnulerDocument({
             type="button"
             onClick={confirmer}
             disabled={!retenu || enCours}
-            className="min-h-11 flex-1 rounded-[10px] bg-red px-4 text-[13px] font-bold text-white transition-colors hover:bg-[#99291d] disabled:opacity-45 md:flex-none"
+            className="min-h-11 flex-1 rounded-[10px] bg-red px-4 text-[13px] font-bold text-white transition-colors hover:bg-orange disabled:opacity-45 md:flex-none"
           >
             {enCours ? "Annulation…" : "Confirmer l’annulation"}
           </button>

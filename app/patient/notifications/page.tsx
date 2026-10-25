@@ -34,7 +34,7 @@ export default function NotificationsPatient() {
                 ? "av"
                 : "grid h-[38px] w-[38px] flex-none place-items-center rounded-xl bg-teal-soft text-base"
             }
-            style={mobile ? { background: "#EAF4F9", color: "#15506B" } : undefined}
+            style={mobile ? { background: "var(--teal-soft)", color: "var(--blue)" } : undefined}
           >
             {iconeNotification(n.type)}
           </span>
@@ -63,7 +63,7 @@ export default function NotificationsPatient() {
       const classe = mobile
         ? "asstrowm"
         : `flex items-start gap-3 border-b border-line px-4 py-[13px] last:border-b-0 ${
-            n.lu ? "" : "bg-[#F7FBFD]"
+            n.lu ? "" : "bg-card"
           }`;
 
       return n.lien ? (
@@ -157,7 +157,7 @@ export default function NotificationsPatient() {
               <button
                 type="button"
                 onClick={toutMarquerLu}
-                className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+                className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-teal-hover"
               >
                 Tout marquer comme lu
               </button>

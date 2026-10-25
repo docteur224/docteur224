@@ -201,7 +201,7 @@ export default function TableauDeBordEtablissement() {
           </div>
           <Link
             href="/espace-etablissement/medecins"
-            className="pointer-coarse:py-[13px] rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+            className="pointer-coarse:py-[13px] rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-teal-hover"
           >
             + Inviter un médecin
           </Link>

@@ -75,9 +75,9 @@ export default function PanneauAvis({
           {lignes.map((l) => (
             <div key={l.etoiles} className="flex items-center gap-[10px] text-[12px]">
               <span className="w-[38px] flex-none font-bold text-muted">{l.etoiles} ★</span>
-              <span className="h-[7px] flex-1 overflow-hidden rounded-full bg-[#E3EAEF]">
+              <span className="h-[7px] flex-1 overflow-hidden rounded-full bg-line">
                 <span
-                  className="block h-full rounded-full bg-[#E8A33D]"
+                  className="block h-full rounded-full bg-amber-hover"
                   style={{ width: `${l.pourcentage}%` }}
                 />
               </span>
@@ -105,7 +105,7 @@ export default function PanneauAvis({
                   <small className="text-[11.5px] text-muted">{dateLisible(a.creeLe)}</small>
                 </div>
                 {a.commentaire && (
-                  <p className="mt-2 text-[13px] leading-[1.6] text-[#3f5360]">{a.commentaire}</p>
+                  <p className="mt-2 text-[13px] leading-[1.6] text-ink-soft">{a.commentaire}</p>
                 )}
 
                 {a.reponseMedecin && (
@@ -113,7 +113,7 @@ export default function PanneauAvis({
                     <b className="block text-[12px] font-extrabold text-blue">
                       Réponse de {nomMedecin}
                     </b>
-                    <p className="mt-1 text-[12.5px] leading-[1.6] text-[#3f5360]">
+                    <p className="mt-1 text-[12.5px] leading-[1.6] text-ink-soft">
                       {a.reponseMedecin}
                     </p>
                     {a.reponseLe && (

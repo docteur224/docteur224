@@ -126,7 +126,7 @@ export default function RendezVousAssistant() {
             </div>
           </div>
           {erreur && (
-            <div className="noteboxm" style={{ marginBottom: 12, background: "var(--red-soft)", borderColor: "#F3C9C2", color: "var(--red)" }}>
+            <div className="noteboxm" style={{ marginBottom: 12, background: "var(--red-soft)", borderColor: "var(--red-line)", color: "var(--red)" }}>
               <div>{erreur}</div>
             </div>
           )}
@@ -210,7 +210,7 @@ export default function RendezVousAssistant() {
           {peutCreer ? (
             <Link
               href="/espace-assistant/nouveau-rdv"
-              className="pointer-coarse:py-[13px] rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+              className="pointer-coarse:py-[13px] rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-teal-hover"
             >
               + Nouveau RDV
             </Link>
@@ -246,7 +246,7 @@ export default function RendezVousAssistant() {
         </div>
       </div>
 
-      <div className="mb-[18px] flex items-start gap-[9px] rounded-xl border border-[#BFE0EF] bg-teal-soft px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-blue">
+      <div className="mb-[18px] flex items-start gap-[9px] rounded-xl border border-teal-line bg-teal-soft px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-blue">
         <span aria-hidden>🔒</span>
         <div>
           Vous voyez le <b>nom</b>, le <b>motif</b> et le <b>contact</b> du patient pour organiser
@@ -255,7 +255,7 @@ export default function RendezVousAssistant() {
       </div>
 
       {erreur && (
-        <div className="mb-4 rounded-xl border border-[#F3C9C2] bg-red-soft px-[14px] py-3 text-[12.5px] font-bold text-red">
+        <div className="mb-4 rounded-xl border border-red-line bg-red-soft px-[14px] py-3 text-[12.5px] font-bold text-red">
           {erreur}
         </div>
       )}
@@ -304,7 +304,7 @@ export default function RendezVousAssistant() {
                         : "Rendez-vous de démonstration — réservez un vrai RDV pour tester"
                     }
                     onClick={() => annuler(creneau.heure)}
-                    className={`rounded-[9px] border-[1.5px] border-[#F3C9C2] bg-white px-[14px] py-2 text-[12.5px] font-bold text-red transition-colors hover:bg-red-soft ${
+                    className={`rounded-[9px] border-[1.5px] border-red-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-red transition-colors hover:bg-red-soft ${
                       reel && permissions.confirmerAnnuler ? "" : "cursor-not-allowed opacity-50"
                     }`}
                   >
@@ -313,7 +313,7 @@ export default function RendezVousAssistant() {
                 </span>
               </div>
               {enReprogrammation === creneau.heure && (
-                <div className="mt-2 rounded-xl border border-dashed border-line bg-[#FAFCFD] p-3">
+                <div className="mt-2 rounded-xl border border-dashed border-line bg-card p-3">
                   <div className="mb-2 text-[12.5px] font-bold">
                     Choisir un nouvel horaire (même journée) :
                   </div>

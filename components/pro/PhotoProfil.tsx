@@ -149,14 +149,14 @@ export default function PhotoProfil({
             <button
               type="button"
               onClick={retirer}
-              className="rounded-[9px] border-[1.5px] border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-muted transition-colors hover:border-[#E08E45] hover:text-[#C0392B]"
+              className="rounded-[9px] border-[1.5px] border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-muted transition-colors hover:border-amber-hover hover:text-red"
             >
               Retirer
             </button>
           )}
         </div>
         {erreur ? (
-          <p className="mt-1.5 text-[11.5px] font-bold text-[#C0392B]">{erreur}</p>
+          <p className="mt-1.5 text-[11.5px] font-bold text-red">{erreur}</p>
         ) : (
           <p className="mt-1.5 text-[11.5px] text-muted">JPEG, PNG ou WebP · 5 Mo maximum</p>
         )}

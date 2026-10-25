@@ -283,7 +283,7 @@ export default function AdresserConfrere({
                         type="checkbox"
                         checked={jointes.includes(d.id)}
                         onChange={() => basculerPiece(d.id)}
-                        className="h-4 w-4 flex-none accent-[#2E9CCA]"
+                        className="h-4 w-4 flex-none accent-teal"
                       />
                       <Icone
                         nom={glypheType(d.type)}
@@ -303,14 +303,14 @@ export default function AdresserConfrere({
               )}
 
               {/* ---- 4. Consentement ---- */}
-              <label className="mb-3 flex cursor-pointer items-start gap-2.5 rounded-xl border border-[#F2D9B6] bg-[#FFF5E9] px-3 py-2.5">
+              <label className="mb-3 flex cursor-pointer items-start gap-2.5 rounded-xl border border-amber-line bg-amber-soft px-3 py-2.5">
                 <input
                   type="checkbox"
                   checked={consentement}
                   onChange={(e) => setConsentement(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 flex-none accent-[#8A5A1B]"
+                  className="mt-0.5 h-4 w-4 flex-none accent-amber-ink"
                 />
-                <span className="text-[11.5px] font-semibold leading-relaxed text-[#8A5A1B]">
+                <span className="text-[11.5px] font-semibold leading-relaxed text-amber-ink">
                   J’atteste avoir informé {nomPatient} de cette transmission et recueilli son
                   accord. Cette attestation est enregistrée avec la transmission.
                 </span>
@@ -328,7 +328,7 @@ export default function AdresserConfrere({
                 type="button"
                 onClick={envoyer}
                 disabled={!valide || enCours}
-                className="min-h-11 rounded-[9px] bg-teal px-[14px] text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:cursor-not-allowed disabled:opacity-50"
+                className="min-h-11 rounded-[9px] bg-teal px-[14px] text-[12.5px] font-bold text-white transition-colors hover:bg-teal-hover disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {enCours ? "Transmission…" : "Transmettre le dossier"}
               </button>

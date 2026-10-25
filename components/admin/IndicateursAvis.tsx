@@ -202,9 +202,9 @@ export default function IndicateursAvis() {
               {repartition.map((r) => (
                 <div key={r.etoiles} className="flex items-center gap-[10px] text-[12px]">
                   <span className="w-[34px] flex-none font-bold text-muted">{r.etoiles} ★</span>
-                  <span className="h-[7px] flex-1 overflow-hidden rounded-full bg-[#E3EAEF]">
+                  <span className="h-[7px] flex-1 overflow-hidden rounded-full bg-line">
                     <span
-                      className="block h-full rounded-full bg-[#E8A33D]"
+                      className="block h-full rounded-full bg-amber-hover"
                       style={{ width: `${(r.nb / maxRepartition) * 100}%` }}
                     />
                   </span>
@@ -273,9 +273,9 @@ export default function IndicateursAvis() {
                 {repartition.map((r) => (
                   <div key={r.etoiles} className="flex items-center gap-[10px] text-[12.5px]">
                     <span className="w-[38px] flex-none font-bold text-muted">{r.etoiles} ★</span>
-                    <span className="h-[9px] flex-1 overflow-hidden rounded-full bg-[#E3EAEF]">
+                    <span className="h-[9px] flex-1 overflow-hidden rounded-full bg-line">
                       <span
-                        className="block h-full rounded-full bg-[#E8A33D]"
+                        className="block h-full rounded-full bg-amber-hover"
                         style={{ width: `${(r.nb / maxRepartition) * 100}%` }}
                       />
                     </span>
@@ -292,14 +292,14 @@ export default function IndicateursAvis() {
               sinon un admin qui voit un 5,0 en 3e position croira à un bug. */}
           <div className="rounded-2xl border border-line bg-bg p-5">
             <h3 className="mb-2 text-[15px] font-extrabold">Comment lire le classement</h3>
-            <p className="text-[12.5px] leading-relaxed text-[#3f5360]">
+            <p className="text-[12.5px] leading-relaxed text-ink-soft">
               Le rang ne suit pas la moyenne brute mais une <b>moyenne pondérée</b> : tant qu’un
               médecin a peu d’avis, sa note est ramenée vers la moyenne de la plateforme
               ({stats.avisPublies > 0 ? formatNote(stats.noteMoyenne) : "—"}). Sans cela, un
               médecin noté 5,0 par un seul patient passerait devant un médecin noté 4,8 par
               quarante — et une récompense irait au hasard plutôt qu’au mérite.
             </p>
-            <p className="mt-2 text-[12.5px] leading-relaxed text-[#3f5360]">
+            <p className="mt-2 text-[12.5px] leading-relaxed text-ink-soft">
               Le badge <b className="text-green">Éligible</b> n’apparaît qu’à partir de{" "}
               <b>{seuil} avis</b> : en dessous, l’échantillon est trop mince pour récompenser ou
               sanctionner qui que ce soit.
@@ -421,7 +421,7 @@ function BadgeEligible({
 }) {
   if (ordre === "sans_avis") {
     return (
-      <span className="whitespace-nowrap rounded-lg bg-[#EEF1F4] px-[9px] py-1 text-[11px] font-bold text-[#7e8c97]">
+      <span className="whitespace-nowrap rounded-lg bg-bg px-[9px] py-1 text-[11px] font-bold text-muted">
         À relancer
       </span>
     );
@@ -430,7 +430,7 @@ function BadgeEligible({
     return (
       <span
         title={`Moins de ${seuil} avis : échantillon trop mince pour conclure.`}
-        className="whitespace-nowrap rounded-lg bg-[#EEF1F4] px-[9px] py-1 text-[11px] font-bold text-[#7e8c97]"
+        className="whitespace-nowrap rounded-lg bg-bg px-[9px] py-1 text-[11px] font-bold text-muted"
       >
         Trop peu d’avis
       </span>

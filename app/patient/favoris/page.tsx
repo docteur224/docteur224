@@ -47,7 +47,7 @@ function BoutonRetirer({
       className={
         mobile
           ? "btnm dg"
-          : "rounded-[9px] border-[1.5px] border-[#F3C9C2] bg-white px-3 py-1.5 text-[11.5px] font-bold text-red transition-colors hover:bg-red-soft"
+          : "rounded-[9px] border-[1.5px] border-red-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-red transition-colors hover:bg-red-soft"
       }
     >
       ♥ Retirer
@@ -134,7 +134,7 @@ export default function MesFavoris() {
             </p>
             <Link
               href="/resultats"
-              className="pointer-coarse:py-[13px] mt-4 inline-block rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+              className="pointer-coarse:py-[13px] mt-4 inline-block rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-teal-hover"
             >
               Trouver un médecin
             </Link>
@@ -150,7 +150,7 @@ export default function MesFavoris() {
               <AvatarMedecin
                 photoUrl={m.photo}
                 initiales={initiales(m.nom)}
-                gradient="linear-gradient(135deg,#2E9CCA,#15506B)"
+                gradient="var(--avatar-bleu)"
                 taille={52}
                 arrondi={14}
               />
@@ -180,7 +180,7 @@ export default function MesFavoris() {
                 <div className="mt-3 flex flex-wrap gap-2">
                   <Link
                     href={`/medecin/${m.id}`}
-                    className="rounded-[9px] bg-teal px-3 py-1.5 text-[11.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+                    className="rounded-[9px] bg-teal px-3 py-1.5 text-[11.5px] font-bold text-white transition-colors hover:bg-teal-hover"
                   >
                     Prendre rendez-vous
                   </Link>

@@ -47,7 +47,7 @@ import FicheMedecin from "@/components/etablissement/FicheMedecin";
 const LIBELLES_STATUT = {
   envoyee: { texte: "En attente", classes: "bg-amber-soft text-amber" },
   acceptee: { texte: "Acceptée", classes: "bg-green-soft text-green" },
-  refusee: { texte: "Refusée", classes: "bg-[#FBE9E7] text-red" },
+  refusee: { texte: "Refusée", classes: "bg-red-soft text-red" },
 } as const;
 
 /** Ce que la confirmation en cours va faire, et à qui. */
@@ -157,7 +157,7 @@ export default function MedecinsEtablissement() {
   const champ =
     "w-full rounded-[11px] border border-line bg-white px-[13px] py-3 text-[13.5px] outline-none focus:border-teal";
   const boutonDiscret =
-    "rounded-[9px] border-[1.5px] border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-muted transition-colors hover:border-[#E08E45] hover:text-[#C0392B]";
+    "rounded-[9px] border-[1.5px] border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-muted transition-colors hover:border-amber-hover hover:text-red";
 
   /*
    * Une ligne de résultat doit permettre de RECONNAÎTRE quelqu'un, pas
@@ -315,7 +315,7 @@ export default function MedecinsEtablissement() {
       {listeResultats}
       {message && (
         <p
-          className={`mt-2 text-[12.5px] font-bold ${message.erreur ? "text-[#C0392B]" : "text-green"}`}
+          className={`mt-2 text-[12.5px] font-bold ${message.erreur ? "text-red" : "text-green"}`}
           role="status"
         >
           {message.erreur ? "⚠️ " : "✓ "}
@@ -560,7 +560,7 @@ export default function MedecinsEtablissement() {
                 type="button"
                 onClick={confirmer}
                 disabled={enCours}
-                className="rounded-[9px] bg-[#C0392B] px-[14px] py-2 text-[12.5px] font-bold text-white disabled:opacity-60"
+                className="rounded-[9px] bg-red px-[14px] py-2 text-[12.5px] font-bold text-white disabled:opacity-60"
               >
                 {enCours
                   ? "…"

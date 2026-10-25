@@ -110,7 +110,7 @@ function DialogueMotif({
             type="button"
             onClick={() => onConfirmer(retenu)}
             disabled={!retenu}
-            className="rounded-[9px] border-[1.5px] border-[#F3CDC8] bg-white px-[14px] py-2 text-[12.5px] font-bold text-red transition-colors hover:bg-[#FBE9E7] disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-[9px] border-[1.5px] border-red-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-red transition-colors hover:bg-red-soft disabled:cursor-not-allowed disabled:opacity-50"
           >
             ✕ Confirmer le rejet
           </button>
@@ -130,7 +130,7 @@ function ProfilDossier({ detail, chargement }: { detail: DetailDossier | null; c
   const listes = detail.listes.filter((l) => l.valeurs.length);
 
   return (
-    <div className="rounded-xl border border-line bg-[#F6FAFC] p-4">
+    <div className="rounded-xl border border-line bg-card p-4">
       <div className="mb-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <b className="text-[13.5px] font-extrabold">
           {`${detail.contact.prenom} ${detail.contact.nom}`.trim() || "—"}
@@ -228,7 +228,7 @@ function Vignette({ piece, mobile = false }: { piece: PieceDossier; mobile?: boo
       className={
         mobile
           ? "docthumb"
-          : "flex h-[104px] w-[82px] flex-col items-center justify-center gap-1.5 rounded-[9px] border border-line bg-[#F6FAFC] text-2xl text-muted transition-colors hover:border-teal hover:bg-teal-soft"
+          : "flex h-[104px] w-[82px] flex-col items-center justify-center gap-1.5 rounded-[9px] border border-line bg-card text-2xl text-muted transition-colors hover:border-teal hover:bg-teal-soft"
       }
     >
       <span aria-hidden>{ouverture ? "⏳" : ICONE_PIECE[piece.type] ?? "📄"}</span>
@@ -256,7 +256,7 @@ function LigneDossierMobile({
       <span
         className="av"
         aria-hidden
-        style={{ background: "linear-gradient(135deg,#9AA8B2,#647A89)" }}
+        style={{ background: "var(--avatar-gris)" }}
       >
         {dossier.initiales}
       </span>
@@ -315,7 +315,7 @@ function LigneDossier({
       <span
         aria-hidden
         className="grid h-[42px] w-[42px] flex-none place-items-center rounded-xl text-sm font-extrabold text-white"
-        style={{ background: "linear-gradient(135deg,#9AA8B2,#647A89)" }}
+        style={{ background: "var(--avatar-gris)" }}
       >
         {dossier.initiales}
       </span>
@@ -349,14 +349,14 @@ function LigneDossier({
       <button
         type="button"
         onClick={() => approuver(dossier)}
-        className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+        className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-teal-hover"
       >
         Approuver
       </button>
       <button
         type="button"
         onClick={() => demanderRejet(dossier)}
-        className="rounded-[9px] border-[1.5px] border-[#F3CDC8] bg-white px-[14px] py-2 text-[12.5px] font-bold text-red transition-colors hover:bg-[#FBE9E7]"
+        className="rounded-[9px] border-[1.5px] border-red-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-red transition-colors hover:bg-red-soft"
       >
         Rejeter
       </button>
@@ -656,7 +656,7 @@ export default function ValidationsAdmin() {
         </small>
       </div>
 
-      <div className="mb-4 flex items-start gap-[9px] rounded-xl border border-[#BFE0EF] bg-teal-soft px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-blue">
+      <div className="mb-4 flex items-start gap-[9px] rounded-xl border border-teal-line bg-teal-soft px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-blue">
         <span aria-hidden>ℹ️</span>
         <div>
           Vérifiez les pièces (diplôme, carte de l’ordre des médecins, autorisation d’exercice,
@@ -738,7 +738,7 @@ export default function ValidationsAdmin() {
               type="button"
               onClick={() => decider(dossierEnCours, "valide")}
               disabled={enCours}
-              className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-teal-hover disabled:cursor-not-allowed disabled:opacity-50"
             >
               ✔ Approuver
             </button>
@@ -754,7 +754,7 @@ export default function ValidationsAdmin() {
               type="button"
               onClick={() => rejeterAvecMotif(dossierEnCours)}
               disabled={enCours}
-              className="rounded-[9px] border-[1.5px] border-[#F3CDC8] bg-white px-[14px] py-2 text-[12.5px] font-bold text-red transition-colors hover:bg-[#FBE9E7] disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-[9px] border-[1.5px] border-red-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-red transition-colors hover:bg-red-soft disabled:cursor-not-allowed disabled:opacity-50"
             >
               ✕ Rejeter avec motif
             </button>

@@ -97,7 +97,7 @@ export default function EnvoyerDocument({ apres }: { apres?: () => void }) {
       <button
         type="button"
         onClick={ouvrir}
-        className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+        className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-teal-hover"
       >
         ✉️ Envoyer un document
       </button>
@@ -223,7 +223,7 @@ export default function EnvoyerDocument({ apres }: { apres?: () => void }) {
                   type="button"
                   onClick={envoyer}
                   disabled={!valide || enCours}
-                  className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-teal-hover disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {enCours ? "Envoi…" : "Envoyer"}
                 </button>

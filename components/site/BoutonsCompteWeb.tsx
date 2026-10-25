@@ -38,7 +38,7 @@ export default function BoutonsCompteWeb() {
       </Link>
       <Link
         href="/inscription"
-        className="ui-btn inline-flex items-center rounded-[11px] bg-teal px-[18px] py-[11px] pointer-coarse:min-h-11 text-[13.5px] font-bold text-white hover:bg-[#2790bc]"
+        className="ui-btn inline-flex items-center rounded-[11px] bg-teal px-[18px] py-[11px] pointer-coarse:min-h-11 text-[13.5px] font-bold text-white hover:bg-teal-hover"
       >
         S&apos;inscrire
       </Link>

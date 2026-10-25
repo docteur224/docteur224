@@ -20,7 +20,7 @@ export default function Interrupteur({
       // Zone de clic de 45px de haut (pseudo-élément) : la pastille garde ses
       // 27px de maquette, le doigt dispose de la hauteur réglementaire.
       className={`relative h-[27px] w-[46px] flex-none cursor-pointer rounded-full transition-colors after:absolute after:inset-x-0 after:-inset-y-[9px] ${
-        actif ? "bg-teal" : "bg-[#CBD8E0]"
+        actif ? "bg-teal" : "bg-line"
       }`}
     >
       <span

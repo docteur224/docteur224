@@ -31,7 +31,7 @@ const FILTRES: { valeur: TypeEvenement | null; libelle: string }[] = [
 const APPARENCE: Record<TypeEvenement, { icone: NomIcone; teinte: string; nom: string }> = {
   rdv: { icone: "calendrier", teinte: "bg-teal-soft text-blue", nom: "Rendez-vous" },
   document: { icone: "document", teinte: "bg-green-soft text-green", nom: "Document" },
-  note: { icone: "presse_papiers", teinte: "bg-[#ECE9FB] text-[#4B3BB8]", nom: "Note" },
+  note: { icone: "presse_papiers", teinte: "bg-bg text-[#4B3BB8]", nom: "Note" },
   constante: { icone: "pouls", teinte: "bg-amber-soft text-amber", nom: "Constantes" },
 };
 

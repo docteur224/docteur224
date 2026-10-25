@@ -81,7 +81,7 @@ export default function MonProfil() {
             <span
               className="av"
               aria-hidden
-              style={{ background: "linear-gradient(135deg,#2E9CCA,#15506B)" }}
+              style={{ background: "var(--avatar-bleu)" }}
             >
               {initialesPatient(patient)}
             </span>
@@ -187,7 +187,7 @@ export default function MonProfil() {
           <span
             aria-hidden
             className="grid h-[72px] w-[72px] place-items-center rounded-[20px] text-2xl font-extrabold text-white"
-            style={{ background: "linear-gradient(135deg,#2E9CCA,#15506B)" }}
+            style={{ background: "var(--avatar-bleu)" }}
           >
             {initialesPatient(patient)}
           </span>
@@ -288,7 +288,7 @@ export default function MonProfil() {
           <button
             type="button"
             onClick={enregistrer}
-            className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+            className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-teal-hover"
           >
             💾 Enregistrer
           </button>

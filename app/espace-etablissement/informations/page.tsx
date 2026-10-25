@@ -144,7 +144,7 @@ export default function InformationsEtablissement() {
           aria-invalid={nomVide || undefined}
         />
         {nomVide && (
-          <p className="mt-1.5 text-[11.5px] font-bold text-[#C0392B]">
+          <p className="mt-1.5 text-[11.5px] font-bold text-red">
             Le nom ne peut pas être vide.
           </p>
         )}
@@ -243,7 +243,7 @@ export default function InformationsEtablissement() {
           aria-invalid={emailInvalide || undefined}
         />
         {emailInvalide && (
-          <p className="mt-1.5 text-[11.5px] font-bold text-[#C0392B]">
+          <p className="mt-1.5 text-[11.5px] font-bold text-red">
             Adresse e-mail incomplète.
           </p>
         )}
@@ -269,7 +269,7 @@ export default function InformationsEtablissement() {
       <button
         type="submit"
         disabled={enregistrement || bloque || !modifie}
-        className="rounded-[9px] bg-teal px-[18px] py-2.5 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:cursor-not-allowed disabled:opacity-50"
+        className="rounded-[9px] bg-teal px-[18px] py-2.5 text-[12.5px] font-bold text-white transition-colors hover:bg-teal-hover disabled:cursor-not-allowed disabled:opacity-50"
       >
         {enregistrement ? "Enregistrement…" : "Enregistrer les modifications"}
       </button>
@@ -288,7 +288,7 @@ export default function InformationsEtablissement() {
       {message && (
         <span
           role="status"
-          className={`text-[12.5px] font-bold ${message.erreur ? "text-[#C0392B]" : "text-green"}`}
+          className={`text-[12.5px] font-bold ${message.erreur ? "text-red" : "text-green"}`}
         >
           {message.erreur ? "⚠️ " : "✓ "}
           {message.texte}

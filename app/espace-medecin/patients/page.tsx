@@ -187,7 +187,7 @@ export default function PatientsMedecin() {
         </div>
 
         <div className="overflow-hidden rounded-2xl border border-line bg-white">
-          <div className="grid grid-cols-[1fr_150px_150px_120px] items-center gap-3 bg-[#F3F7FA] px-[18px] py-[13px] text-[11px] font-extrabold uppercase tracking-[.04em] text-muted">
+          <div className="grid grid-cols-[1fr_150px_150px_120px] items-center gap-3 bg-bg px-[18px] py-[13px] text-[11px] font-extrabold uppercase tracking-[.04em] text-muted">
             <span>Patient</span>
             <span>Téléphone</span>
             <span>Dernière visite</span>

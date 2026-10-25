@@ -53,7 +53,7 @@ const CHAMP =
 const BTN_LEGER =
   "rounded-[10px] border-[1.5px] border-line bg-white px-3 py-1.5 text-[12px] font-bold text-blue transition-colors hover:bg-bg disabled:cursor-not-allowed disabled:opacity-40";
 const BTN_ROUGE =
-  "rounded-[10px] border-[1.5px] border-[#F3C9C2] bg-white px-3 py-1.5 text-[12px] font-bold text-red transition-colors hover:bg-red-soft disabled:cursor-not-allowed disabled:opacity-40";
+  "rounded-[10px] border-[1.5px] border-red-line bg-white px-3 py-1.5 text-[12px] font-bold text-red transition-colors hover:bg-red-soft disabled:cursor-not-allowed disabled:opacity-40";
 
 const TEINTE_STATUT: Record<string, string> = {
   confirme: "bg-green-soft text-green",
@@ -282,7 +282,7 @@ function LigneAppel({
         </span>
         <span className="flex flex-none items-center gap-2">
           <span
-            className={`rounded-lg px-2 py-1 text-[11px] font-bold ${TEINTE_STATUT[appel.statut] ?? "bg-[#F1F4F6] text-muted"}`}
+            className={`rounded-lg px-2 py-1 text-[11px] font-bold ${TEINTE_STATUT[appel.statut] ?? "bg-bg text-muted"}`}
           >
             {LIBELLE_STATUT[appel.statut] ?? appel.statut}
           </span>
@@ -511,7 +511,7 @@ function DialogueDeplacer({
                     heure === c.heure
                       ? "border-teal bg-teal-soft text-blue"
                       : pris
-                        ? "cursor-not-allowed border-line bg-[#F7F9FA] text-muted line-through"
+                        ? "cursor-not-allowed border-line bg-card text-muted line-through"
                         : "border-line bg-white"
                   }`}
                 >

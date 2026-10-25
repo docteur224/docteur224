@@ -37,7 +37,7 @@ const ONGLETS: { valeur: Mesure; libelle: string }[] = [
 
 // Couleurs de série validées (contraste, daltonisme) sur fond blanc.
 // L'ambre et le rouge restent réservés aux valeurs anormales.
-const SERIE_1 = "#2e9cca";
+const SERIE_1 = "var(--teal)";
 const SERIE_2 = "#6250d6";
 
 const PAR_PAGE = 8;

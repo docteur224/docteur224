@@ -220,7 +220,7 @@ export default function ModuleDocuments({ ctx }: { ctx: ContexteFiche }) {
     return (
       <article
         key={d.id}
-        className="flex flex-wrap items-center gap-3 rounded-xl border border-line p-3.5 transition-colors hover:border-[#CBD8E4]"
+        className="flex flex-wrap items-center gap-3 rounded-xl border border-line p-3.5 transition-colors hover:border-line"
       >
         <span className={`grid h-[38px] w-[38px] flex-none place-items-center rounded-[10px] ${teinte}`}>
           <Icone nom={icone} taille={18} />

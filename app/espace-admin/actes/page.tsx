@@ -48,7 +48,7 @@ const CHAMP =
 const BTN =
   "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[10px] px-3.5 text-[12.5px] font-bold transition-colors disabled:opacity-45";
 const BTN_PRIMAIRE = `${BTN} bg-teal text-white hover:bg-blue`;
-const BTN_CONTOUR = `${BTN} border border-[#BFD3F6] bg-white text-blue hover:bg-teal-soft`;
+const BTN_CONTOUR = `${BTN} border border-blue-line bg-white text-blue hover:bg-teal-soft`;
 const BTN_NEUTRE = `${BTN} border border-line bg-white text-ink hover:border-muted`;
 
 const LIBELLE_DOMAINE: Record<Domaine, string> = { biologie: "Biologie", imagerie: "Imagerie" };
@@ -612,7 +612,7 @@ function ImportActes({ onFermer, onFait }: { onFermer: () => void; onFait: (mess
             {rien && <p className="text-[12.5px] font-bold">Rien à appliquer : la base contient déjà ce fichier.</p>}
 
             {analyse.nbErreurs > 0 && (
-              <details open className="rounded-xl border border-[#F4C9C9] bg-red-soft p-3 text-[12.5px]">
+              <details open className="rounded-xl border border-red-line bg-red-soft p-3 text-[12.5px]">
                 <summary className="cursor-pointer font-bold text-red">
                   {analyse.nbErreurs} ligne(s) écartée(s) — elles ne seront pas importées
                 </summary>

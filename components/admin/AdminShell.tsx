@@ -113,7 +113,7 @@ export default function AdminShell({
       <BarreLaterale
         avatar="🛡️"
         avatarEmoji
-        fondAvatar="linear-gradient(135deg,#15506B,#0B2E3D)"
+        fondAvatar="var(--avatar-marine)"
         nom="Administrateur"
         sousTitre="Docteur 224"
         liens={liens}

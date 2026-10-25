@@ -49,7 +49,7 @@ export default function ComptePatient() {
             <span
               className="av"
               aria-hidden
-              style={{ background: "linear-gradient(135deg,#2E9CCA,#15506B)" }}
+              style={{ background: "var(--avatar-bleu)" }}
             >
               {initialesPatient(patient)}
             </span>
@@ -118,7 +118,7 @@ export default function ComptePatient() {
                 <b className="block text-sm font-bold">{e.titre}</b>
                 {e.sous && <small className="text-[11.5px] text-muted">{e.sous}</small>}
               </span>
-              <span className="ml-auto text-lg text-[#B9C7D0]" aria-hidden>
+              <span className="ml-auto text-lg text-muted-soft" aria-hidden>
                 ›
               </span>
             </Link>
@@ -135,7 +135,7 @@ export default function ComptePatient() {
               ↩️
             </span>
             <b className="text-sm font-bold">Déconnexion</b>
-            <span className="ml-auto text-lg text-[#B9C7D0]" aria-hidden>
+            <span className="ml-auto text-lg text-muted-soft" aria-hidden>
               ›
             </span>
           </button>

@@ -442,7 +442,7 @@ export default function MessagerieAdmin() {
               type="button"
               onClick={enregistrer}
               disabled={Object.keys(brouillon).length === 0 || envoi}
-              className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-teal-hover disabled:cursor-not-allowed disabled:opacity-50"
             >
               {envoi ? "Enregistrement…" : "💾 Enregistrer"}
             </button>

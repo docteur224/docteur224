@@ -184,7 +184,7 @@ export default function ApercuDocument({
             type="button"
             onClick={telecharger}
             disabled={enCours !== null}
-            className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[10px] border border-[#BFD3F6] bg-white px-4 text-[13px] font-bold text-blue transition-colors hover:bg-teal-soft disabled:opacity-45 md:flex-none"
+            className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-[10px] border border-blue-line bg-white px-4 text-[13px] font-bold text-blue transition-colors hover:bg-teal-soft disabled:opacity-45 md:flex-none"
           >
             <Icone nom="telecharger" taille={15} />
             {enCours === "pdf" ? "Préparation…" : "Télécharger le PDF"}
@@ -201,7 +201,7 @@ export default function ApercuDocument({
     >
       <div className="flex flex-col gap-3.5 p-4">
         {annulee && (
-          <p className="flex items-start gap-2 rounded-[10px] border border-[#F4C9C9] bg-red-soft px-3 py-2.5 text-[12.5px] font-bold text-red">
+          <p className="flex items-start gap-2 rounded-[10px] border border-red-line bg-red-soft px-3 py-2.5 text-[12.5px] font-bold text-red">
             <Icone nom="interdit" taille={15} className="mt-px flex-none" />
             <span>
               Document annulé le {formatDateCourte(doc.annuleLe!.slice(0, 10))} — motif :{" "}
@@ -224,7 +224,7 @@ export default function ApercuDocument({
         <p
           className={`flex items-start gap-2 rounded-[10px] px-3 py-2.5 text-[12.5px] font-bold ${
             patient.allergies.length
-              ? "border border-[#F3D9B8] bg-amber-soft text-amber"
+              ? "border border-amber-line bg-amber-soft text-amber"
               : "border border-line bg-bg text-muted"
           }`}
         >

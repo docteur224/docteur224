@@ -14,9 +14,9 @@ export const COMPTE = "text-[12.5px] font-semibold text-muted";
 const BTN_BASE =
   "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-[10px] px-3.5 text-[12.5px] font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-45";
 export const BTN_PRIMAIRE = `${BTN_BASE} bg-teal text-white hover:bg-blue`;
-export const BTN_CONTOUR = `${BTN_BASE} border border-[#BFD3F6] bg-white text-blue hover:bg-teal-soft`;
+export const BTN_CONTOUR = `${BTN_BASE} border border-blue-line bg-white text-blue hover:bg-teal-soft`;
 export const BTN_NEUTRE = `${BTN_BASE} border border-line bg-white text-ink hover:border-muted`;
-export const BTN_DANGER = `${BTN_BASE} border border-[#F4C9C9] bg-white text-red hover:bg-red-soft`;
+export const BTN_DANGER = `${BTN_BASE} border border-red-line bg-white text-red hover:bg-red-soft`;
 
 /** Lignes grises animées, à la hauteur d'une carte de document. */
 export function Squelettes({ n, hauteur = 66 }: { n: number; hauteur?: number }) {

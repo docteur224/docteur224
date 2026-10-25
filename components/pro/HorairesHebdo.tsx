@@ -88,7 +88,7 @@ export default function HorairesHebdo({
                 type="checkbox"
                 checked={j.ouvert}
                 onChange={(e) => onChange(jour, { ouvert: e.target.checked })}
-                className="h-[18px] w-[18px] accent-[#2E9CCA]"
+                className="h-[18px] w-[18px] accent-teal"
               />
               <b className="flex-1 text-[13.5px]">{nom}</b>
               <small className={`text-[12px] font-bold ${j.ouvert ? "text-blue" : "text-muted"}`}>

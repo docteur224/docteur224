@@ -96,7 +96,7 @@ export default function MesAvis() {
                 className={
                   mobile
                     ? "btnm dg"
-                    : "rounded-[9px] border-[1.5px] border-[#F3C9C2] bg-white px-3 py-1.5 text-[11.5px] font-bold text-red transition-colors hover:bg-red-soft"
+                    : "rounded-[9px] border-[1.5px] border-red-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-red transition-colors hover:bg-red-soft"
                 }
                 onClick={() => supprimer(a)}
               >
@@ -132,7 +132,7 @@ export default function MesAvis() {
                 className={
                   mobile
                     ? "btnm"
-                    : "rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+                    : "rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-teal-hover"
                 }
                 onClick={() => enregistrer(a)}
               >
@@ -156,7 +156,7 @@ export default function MesAvis() {
             <Etoiles note={a.note} />
             {a.commentaire && (
               <p
-                className={mobile ? "" : "mt-1.5 text-[13px] leading-relaxed text-[#3f5360]"}
+                className={mobile ? "" : "mt-1.5 text-[13px] leading-relaxed text-ink-soft"}
                 style={mobile ? { fontSize: 12.5, lineHeight: 1.6, marginTop: 6 } : undefined}
               >
                 {a.commentaire}
@@ -175,7 +175,7 @@ export default function MesAvis() {
                 className={mobile ? "" : "mt-2 rounded-xl bg-teal-soft px-3 py-2"}
                 style={
                   mobile
-                    ? { marginTop: 8, background: "var(--teal-soft, #EAF4F9)", borderRadius: 10, padding: "8px 10px" }
+                    ? { marginTop: 8, background: "var(--teal-soft, var(--teal-soft))", borderRadius: 10, padding: "8px 10px" }
                     : undefined
                 }
               >
@@ -183,7 +183,7 @@ export default function MesAvis() {
                   Réponse de {a.medecinNom}
                 </b>
                 <span
-                  className={mobile ? "" : "text-[12.5px] text-[#3f5360]"}
+                  className={mobile ? "" : "text-[12.5px] text-ink-soft"}
                   style={mobile ? { fontSize: 12 } : undefined}
                 >
                   {a.reponseMedecin}
@@ -267,7 +267,7 @@ export default function MesAvis() {
             </p>
             <Link
               href="/mes-rendez-vous"
-              className="mt-4 inline-block rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+              className="mt-4 inline-block rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-teal-hover"
             >
               Voir mes rendez-vous
             </Link>

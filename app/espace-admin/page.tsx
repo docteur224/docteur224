@@ -121,7 +121,7 @@ export default function TableauDeBordAdmin() {
             praticien. */}
         <Link
           href="/espace-admin/nouveau-rdv"
-          className="pointer-coarse:py-[13px] rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+          className="pointer-coarse:py-[13px] rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-teal-hover"
         >
           + RDV pour un patient
         </Link>
@@ -169,7 +169,7 @@ export default function TableauDeBordAdmin() {
           </div>
           <Link
             href="/espace-admin/validations"
-            className="pointer-coarse:py-[13px] rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+            className="pointer-coarse:py-[13px] rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-teal-hover"
           >
             Traiter
           </Link>
@@ -184,7 +184,7 @@ export default function TableauDeBordAdmin() {
           </div>
           <Link
             href="/espace-admin/validations"
-            className="pointer-coarse:py-[13px] rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+            className="pointer-coarse:py-[13px] rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-teal-hover"
           >
             Traiter
           </Link>

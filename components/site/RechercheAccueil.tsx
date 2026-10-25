@@ -61,7 +61,7 @@ export default function RechercheAccueil({
       />
       <button
         type="submit"
-        className="flex-none rounded-[11px] bg-teal px-[26px] py-[15px] text-[15px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+        className="flex-none rounded-[11px] bg-teal px-[26px] py-[15px] text-[15px] font-bold text-white transition-colors hover:bg-teal-hover"
       >
         🔎 Rechercher
       </button>

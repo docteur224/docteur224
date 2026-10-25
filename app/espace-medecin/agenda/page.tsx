@@ -201,10 +201,10 @@ export default function AgendaMedecin() {
             onClick={() => setOuvert(creneau.rdv!)}
             className={`flex w-full items-center gap-3 rounded-lg border-l-[3px] px-3 py-[9px] text-left text-[12.5px] transition-colors ${
               creneau.statutRdv === "en_attente"
-                ? "border-amber bg-amber-soft hover:bg-[#fbeacd]"
+                ? "border-amber bg-amber-soft hover:bg-amber-soft"
                 : creneau.lieu === "domicile"
-                  ? "border-green bg-green-soft hover:bg-[#d5efdf]"
-                  : "border-teal bg-teal-soft hover:bg-[#d6ecf6]"
+                  ? "border-green bg-green-soft hover:bg-green-soft"
+                  : "border-teal bg-teal-soft hover:bg-teal-soft"
             }`}
           >
             <span className="min-w-0 flex-1">
@@ -230,7 +230,7 @@ export default function AgendaMedecin() {
         ) : (
           <Link
             href={lienCreneau(creneau.heure)}
-            className="group flex items-center gap-3 rounded-lg border-l-[3px] border-[#CBD8E0] bg-[#F4F8FA] px-3 py-[9px] text-[12.5px] italic text-muted transition-colors hover:border-teal hover:bg-teal-soft"
+            className="group flex items-center gap-3 rounded-lg border-l-[3px] border-line bg-card px-3 py-[9px] text-[12.5px] italic text-muted transition-colors hover:border-teal hover:bg-teal-soft"
           >
             <span className="flex-1">Disponible</span>
             <span className="flex-none text-[11.5px] font-bold not-italic text-teal opacity-0 transition-opacity group-hover:opacity-100">
@@ -385,7 +385,7 @@ export default function AgendaMedecin() {
           <div className="flex flex-wrap gap-2">
             <Link
               href="/espace-medecin/nouveau-rdv"
-              className="pointer-coarse:py-[13px] rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+              className="pointer-coarse:py-[13px] rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-teal-hover"
             >
               + Nouveau RDV
             </Link>

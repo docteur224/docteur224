@@ -14,7 +14,7 @@ import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 const CONVERSATIONS = [
   {
     initiales: "MS",
-    gradient: "linear-gradient(135deg,#E08E45,#C0392B)",
+    gradient: "var(--avatar-ambre)",
     nom: "Mariama Sow",
     message: "Bonjour, puis-je décaler le RDV de mon fils à 15h ?",
     heure: "09:12",
@@ -22,7 +22,7 @@ const CONVERSATIONS = [
   },
   {
     initiales: "AS",
-    gradient: "linear-gradient(135deg,#2E9CCA,#15506B)",
+    gradient: "var(--avatar-bleu)",
     nom: "Aboubacar Sylla",
     message: "Merci pour la confirmation 🙏",
     heure: "08:40",
@@ -30,7 +30,7 @@ const CONVERSATIONS = [
   },
   {
     initiales: "AD",
-    gradient: "linear-gradient(135deg,#6C5CE7,#341F97)",
+    gradient: "var(--avatar-violet)",
     nom: "Aminata Diané",
     message: "Le cabinet est bien à Almamya ?",
     heure: "Hier",
@@ -59,7 +59,7 @@ export default function MessagesAssistant() {
         </div>
         <div className="pad">
           {!permissions.messagerie ? (
-            <div className="abannerm" style={{ background: "var(--red-soft)", borderColor: "#F3C9C2", color: "var(--red)" }}>
+            <div className="abannerm" style={{ background: "var(--red-soft)", borderColor: "var(--red-line)", color: "var(--red)" }}>
               <span aria-hidden>⛔</span>
               <div>
                 La permission <b>« Messagerie patients »</b> ne vous a pas été accordée par le
@@ -123,7 +123,7 @@ export default function MessagesAssistant() {
       </div>
 
       {!permissions.messagerie ? (
-        <div className="flex items-start gap-[9px] rounded-xl border border-[#F3C9C2] bg-red-soft px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-red">
+        <div className="flex items-start gap-[9px] rounded-xl border border-red-line bg-red-soft px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-red">
           <span aria-hidden>⛔</span>
           <div>
             La permission <b>« Messagerie patients »</b> ne vous a pas été accordée par le
@@ -176,7 +176,7 @@ export default function MessagesAssistant() {
               {REPONSES_RAPIDES.map((reponse) => (
                 <span
                   key={reponse}
-                  className="rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
+                  className="rounded-full border border-teal-line bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue"
                 >
                   {reponse}
                 </span>

@@ -118,7 +118,7 @@ export function AppelAction({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mt-6 rounded-2xl border border-[#cde6f2] bg-teal-soft p-[18px] md:mt-8 md:p-7">
+    <div className="mt-6 rounded-2xl border border-teal-line bg-teal-soft p-[18px] md:mt-8 md:p-7">
       <b className="block text-[15px] font-extrabold text-blue md:text-[18px]">{titre}</b>
       <p className="mt-1.5 text-[13px] leading-relaxed text-muted md:text-[14px]">{texte}</p>
       <div className="mt-4 flex flex-wrap gap-2.5">{children}</div>

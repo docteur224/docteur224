@@ -82,7 +82,7 @@ function CarteAvis({ avis, onRepondu }: { avis: AvisMedecin; onRepondu: () => vo
       </div>
 
       {avis.commentaire ? (
-        <p className="mt-2 text-[13px] leading-[1.6] text-[#3f5360]">{avis.commentaire}</p>
+        <p className="mt-2 text-[13px] leading-[1.6] text-ink-soft">{avis.commentaire}</p>
       ) : (
         <p className="mt-2 text-[13px] italic text-muted">Note sans commentaire.</p>
       )}
@@ -91,7 +91,7 @@ function CarteAvis({ avis, onRepondu }: { avis: AvisMedecin; onRepondu: () => vo
       {avis.reponseMedecin && !edition && (
         <div className="mt-3 rounded-xl border-l-[3px] border-teal bg-teal-soft/50 px-[14px] py-[11px]">
           <b className="block text-[12px] font-extrabold text-blue">Votre réponse</b>
-          <p className="mt-1 text-[12.5px] leading-[1.6] text-[#3f5360]">{avis.reponseMedecin}</p>
+          <p className="mt-1 text-[12.5px] leading-[1.6] text-ink-soft">{avis.reponseMedecin}</p>
           {avis.reponseLe && (
             <small className="mt-1 block text-[11px] text-muted">{dateLisible(avis.reponseLe)}</small>
           )}
@@ -122,7 +122,7 @@ function CarteAvis({ avis, onRepondu }: { avis: AvisMedecin; onRepondu: () => vo
             <button
               type="submit"
               disabled={envoi}
-              className="rounded-[10px] bg-teal px-[16px] py-[9px] text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:opacity-60"
+              className="rounded-[10px] bg-teal px-[16px] py-[9px] text-[12.5px] font-bold text-white transition-colors hover:bg-teal-hover disabled:opacity-60"
             >
               {envoi ? "Envoi…" : "Publier la réponse"}
             </button>
@@ -188,9 +188,9 @@ export default function AvisMedecinPage() {
         {lignes.map((l) => (
           <div key={l.etoiles} className="flex items-center gap-[10px] text-[12px]">
             <span className="w-[38px] flex-none font-bold text-muted">{l.etoiles} ★</span>
-            <span className="h-[7px] flex-1 overflow-hidden rounded-full bg-[#E3EAEF]">
+            <span className="h-[7px] flex-1 overflow-hidden rounded-full bg-line">
               <span
-                className="block h-full rounded-full bg-[#E8A33D]"
+                className="block h-full rounded-full bg-amber-hover"
                 style={{ width: `${l.pourcentage}%` }}
               />
             </span>

@@ -85,7 +85,7 @@ export default function SignalerAvis({ avisId }: { avisId: string }) {
         <button
           type="submit"
           disabled={etat === "envoi"}
-          className="rounded-[9px] bg-teal px-[13px] py-[7px] text-[11.5px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:opacity-60"
+          className="rounded-[9px] bg-teal px-[13px] py-[7px] text-[11.5px] font-bold text-white transition-colors hover:bg-teal-hover disabled:opacity-60"
         >
           {etat === "envoi" ? "Envoi…" : "Envoyer"}
         </button>

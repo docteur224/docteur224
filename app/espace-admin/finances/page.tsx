@@ -209,7 +209,7 @@ function DialogueDecision({
             type="button"
             onClick={() => onConfirmer(retenu, valeur)}
             disabled={!retenu || !sommeValide}
-            className="rounded-[9px] border-[1.5px] border-[#F3CDC8] bg-white px-[14px] py-2 text-[12.5px] font-bold text-red transition-colors hover:bg-[#FBE9E7] disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-[9px] border-[1.5px] border-red-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-red transition-colors hover:bg-red-soft disabled:cursor-not-allowed disabled:opacity-50"
           >
             {libelleAction}
           </button>
@@ -625,7 +625,7 @@ export default function FinancesAdmin() {
                   type="button"
                   onClick={() => confirmer(p)}
                   disabled={enCours === p.id}
-                  className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:opacity-50"
+                  className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-teal-hover disabled:opacity-50"
                 >
                   {enCours === p.id ? "…" : "✓ Confirmer"}
                 </button>
@@ -633,7 +633,7 @@ export default function FinancesAdmin() {
                   type="button"
                   onClick={() => setARefuser(p)}
                   disabled={enCours === p.id}
-                  className="rounded-[9px] border-[1.5px] border-[#F3CDC8] bg-white px-[14px] py-2 text-[12.5px] font-bold text-red transition-colors hover:bg-[#FBE9E7] disabled:opacity-50"
+                  className="rounded-[9px] border-[1.5px] border-red-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-red transition-colors hover:bg-red-soft disabled:opacity-50"
                 >
                   ✕ Refuser
                 </button>

@@ -136,7 +136,7 @@ export default function PartagerDocument({
                   type="button"
                   onClick={partager}
                   disabled={!choix || enCours}
-                  className="rounded-[9px] bg-teal px-3 py-2 text-[12px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:cursor-not-allowed disabled:opacity-50"
+                  className="rounded-[9px] bg-teal px-3 py-2 text-[12px] font-bold text-white transition-colors hover:bg-teal-hover disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {enCours ? "…" : "Partager"}
                 </button>

@@ -133,7 +133,7 @@ export default function TableauDeBordPatient() {
         </div>
         <Link
           href="/resultats"
-          className="pointer-coarse:py-[13px] rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+          className="pointer-coarse:py-[13px] rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-teal-hover"
         >
           + Nouveau rendez-vous
         </Link>

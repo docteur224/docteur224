@@ -219,7 +219,7 @@ export default function DialoguePaiement({
   const champ =
     "w-full rounded-xl border border-line bg-white px-[13px] py-2.5 text-[13.5px] outline-none focus:border-teal";
   const boutonPrincipal =
-    "w-full rounded-[11px] bg-teal px-[14px] py-3 text-[13px] font-extrabold text-white transition-colors hover:bg-[#2790bc] disabled:cursor-not-allowed disabled:opacity-50";
+    "w-full rounded-[11px] bg-teal px-[14px] py-3 text-[13px] font-extrabold text-white transition-colors hover:bg-teal-hover disabled:cursor-not-allowed disabled:opacity-50";
   const boutonSecondaire =
     "w-full rounded-[11px] border-[1.5px] border-line bg-white px-[14px] py-3 text-[13px] font-bold text-blue transition-colors hover:bg-bg disabled:opacity-50";
 
@@ -396,7 +396,7 @@ export default function DialoguePaiement({
                         className="flex w-full items-center gap-3 rounded-[14px] border-[1.5px] p-[13px] text-left transition-colors"
                         style={{
                           borderColor: choisi ? habillage.teinte : "var(--line)",
-                          background: choisi ? "#FBFCFD" : "#fff",
+                          background: choisi ? "var(--card)" : "#fff",
                         }}
                       >
                         <span

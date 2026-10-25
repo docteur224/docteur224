@@ -166,7 +166,7 @@ export default function PatientsAssistant() {
           />
         </div>
 
-        <div className="mb-4 flex items-start gap-[9px] rounded-xl border border-[#F2D9B6] bg-[#FFF5E9] px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-[#8A5A1B]">
+        <div className="mb-4 flex items-start gap-[9px] rounded-xl border border-amber-line bg-amber-soft px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-amber-ink">
           <span aria-hidden>🔒</span>
           <div>
             Vous accédez uniquement aux <b>coordonnées</b> (nom, téléphone) nécessaires à la prise

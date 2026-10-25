@@ -53,7 +53,7 @@ export default function EtoilesSaisie({
             />
             <span
               aria-hidden
-              className={valeur <= affichee ? "text-[#E8A33D]" : "text-[#D6DEE4]"}
+              className={valeur <= affichee ? "text-amber-hover" : "text-[#D6DEE4]"}
             >
               ★
             </span>

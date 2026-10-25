@@ -351,7 +351,7 @@ export default function DeposerDocument({
           classeDeclencheur ??
           (enCorrection
             ? "rounded-[9px] border-[1.5px] border-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-blue transition-colors hover:bg-bg"
-            : "rounded-[9px] bg-teal px-3 py-1.5 text-[11.5px] font-bold text-white transition-colors hover:bg-[#2790bc]")
+            : "rounded-[9px] bg-teal px-3 py-1.5 text-[11.5px] font-bold text-white transition-colors hover:bg-teal-hover")
         }
       >
         {declencheur ?? (enCorrection ? "Corriger" : "+ Document")}
@@ -588,7 +588,7 @@ export default function DeposerDocument({
                 type="button"
                 onClick={envoyer}
                 disabled={!valide || enCours}
-                className="min-h-11 rounded-[9px] bg-teal px-[14px] text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:cursor-not-allowed disabled:opacity-50"
+                className="min-h-11 rounded-[9px] bg-teal px-[14px] text-[12.5px] font-bold text-white transition-colors hover:bg-teal-hover disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {enCours ? "Émission…" : enCorrection ? "Enregistrer la correction" : "Émettre et remettre"}
               </button>

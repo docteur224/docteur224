@@ -75,8 +75,8 @@ export default function AbonnementEtablissement() {
   const LIBELLES_STATUT_ABO: Record<string, { texte: string; pill: string; classes: string }> = {
     essai: { texte: "Essai", pill: "soon", classes: "bg-amber-soft text-amber" },
     actif: { texte: "Actif", pill: "ok", classes: "bg-green-soft text-green" },
-    expire: { texte: "Expiré", pill: "no", classes: "bg-[#FBE9E7] text-red" },
-    annule: { texte: "Annulé", pill: "no", classes: "bg-[#FBE9E7] text-red" },
+    expire: { texte: "Expiré", pill: "no", classes: "bg-red-soft text-red" },
+    annule: { texte: "Annulé", pill: "no", classes: "bg-red-soft text-red" },
   };
   const statut = abonnement ? LIBELLES_STATUT_ABO[abonnement.statut] : null;
 

@@ -27,16 +27,16 @@ const NOM_PALIER: Record<string, string> = {
 };
 
 const DEGRADES = [
-  "linear-gradient(135deg,#16A085,#0E6655)",
-  "linear-gradient(135deg,#2E9CCA,#15506B)",
-  "linear-gradient(135deg,#6C5CE7,#341F97)",
+  "var(--avatar-vert)",
+  "var(--avatar-bleu)",
+  "var(--avatar-violet)",
 ];
 
 /** Teinte stable par structure : la même carte garde sa couleur d'un chargement à l'autre. */
 const degrade = (id: string, statut: string) =>
   statut === "valide"
     ? DEGRADES[[...id].reduce((s, c) => s + c.charCodeAt(0), 0) % DEGRADES.length]
-    : "linear-gradient(135deg,#9AA8B2,#647A89)";
+    : "var(--avatar-gris)";
 
 const palier = (formule: string | null) => (formule ? NOM_PALIER[formule] ?? formule : "sans abonnement");
 

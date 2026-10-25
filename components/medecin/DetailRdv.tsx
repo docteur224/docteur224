@@ -64,9 +64,9 @@ const MOTIFS_ANNULATION = [
 const BTN_LEGER =
   "rounded-[10px] border-[1.5px] border-line bg-white px-3 py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg disabled:cursor-not-allowed disabled:opacity-40";
 const BTN_ROUGE =
-  "rounded-[10px] border-[1.5px] border-[#F3C9C2] bg-white px-3 py-2 text-[12.5px] font-bold text-red transition-colors hover:bg-red-soft disabled:cursor-not-allowed disabled:opacity-40";
+  "rounded-[10px] border-[1.5px] border-red-line bg-white px-3 py-2 text-[12.5px] font-bold text-red transition-colors hover:bg-red-soft disabled:cursor-not-allowed disabled:opacity-40";
 const BTN_PLEIN =
-  "rounded-[10px] bg-teal px-4 py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:cursor-not-allowed disabled:opacity-50";
+  "rounded-[10px] bg-teal px-4 py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-teal-hover disabled:cursor-not-allowed disabled:opacity-50";
 
 const initiales = (nom: string) =>
   nom
@@ -263,7 +263,7 @@ export default function DetailRdv({
           </span>
           <span
             className={`rounded-lg px-2.5 py-1 text-[11.5px] font-bold ${
-              rdv.lieu === "domicile" ? "bg-green-soft text-green" : "bg-[#F1F4F6] text-muted"
+              rdv.lieu === "domicile" ? "bg-green-soft text-green" : "bg-bg text-muted"
             }`}
           >
             {rdv.lieu === "domicile" ? "🏠 Visite à domicile" : "🏥 Au cabinet"}

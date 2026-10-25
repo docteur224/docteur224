@@ -119,7 +119,7 @@ export default function ChampsCertificat({
               type="checkbox"
               checked={champs.competition}
               onChange={(e) => changer({ competition: e.target.checked })}
-              className="h-4 w-4 accent-[#2E9CCA]"
+              className="h-4 w-4 accent-teal"
             />
             En compétition
           </label>
@@ -158,7 +158,7 @@ export default function ChampsCertificat({
                 type="checkbox"
                 checked={champs.sortiesAutorisees}
                 onChange={(e) => changer({ sortiesAutorisees: e.target.checked })}
-                className="h-4 w-4 accent-[#2E9CCA]"
+                className="h-4 w-4 accent-teal"
               />
               Sorties autorisées
             </label>
@@ -167,7 +167,7 @@ export default function ChampsCertificat({
                 type="checkbox"
                 checked={champs.prolongation}
                 onChange={(e) => changer({ prolongation: e.target.checked })}
-                className="h-4 w-4 accent-[#2E9CCA]"
+                className="h-4 w-4 accent-teal"
               />
               Prolongation
             </label>

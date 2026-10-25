@@ -111,7 +111,7 @@ export default function ClocheNotifications({ surFonce = false }: { surFonce?: b
                     if (n.lien) router.push(n.lien);
                   }}
                   className={`mb-1.5 flex w-full items-start gap-[11px] rounded-xl border p-[11px] text-left transition-colors last:mb-0 ${
-                    n.lu ? "border-line bg-white hover:bg-bg" : "border-[#cde6f2] bg-teal-soft"
+                    n.lu ? "border-line bg-white hover:bg-bg" : "border-teal-line bg-teal-soft"
                   }`}
                 >
                   <span className="flex-none text-[15px]" aria-hidden>

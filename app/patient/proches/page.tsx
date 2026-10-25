@@ -262,7 +262,7 @@ export default function MesProches() {
         </small>
       </div>
 
-      <div className="mb-[18px] flex items-start gap-[9px] rounded-xl border border-[#BFE0EF] bg-teal-soft px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-blue">
+      <div className="mb-[18px] flex items-start gap-[9px] rounded-xl border border-teal-line bg-teal-soft px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-blue">
         <span aria-hidden>ℹ️</span>
         <div>
           Un proche <b>n’a pas besoin de son propre compte</b>. Vous prenez et gérez ses
@@ -307,7 +307,7 @@ export default function MesProches() {
               <button
                 type="button"
                 onClick={() => supprimer(proche)}
-                className="rounded-[9px] border-[1.5px] border-[#F3C9C2] bg-white px-3 py-1.5 text-[11.5px] font-bold text-red transition-colors hover:bg-red-soft"
+                className="rounded-[9px] border-[1.5px] border-red-line bg-white px-3 py-1.5 text-[11.5px] font-bold text-red transition-colors hover:bg-red-soft"
               >
                 {aSupprimer === proche.id ? "Confirmer" : "Supprimer"}
               </button>
@@ -400,7 +400,7 @@ export default function MesProches() {
             type="button"
             onClick={enregistrer}
             disabled={!valide}
-            className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-teal-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
             {enEdition ? "Enregistrer les modifications" : "Enregistrer le proche"}
           </button>

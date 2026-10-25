@@ -189,7 +189,7 @@ export default function NouveauRdvDelegue({
         <div className="mt-7 flex flex-wrap justify-center gap-3">
           <Link
             href={lienRetour}
-            className="rounded-[11px] bg-teal px-[18px] py-[11px] text-[13.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+            className="rounded-[11px] bg-teal px-[18px] py-[11px] text-[13.5px] font-bold text-white transition-colors hover:bg-teal-hover"
           >
             Voir l’agenda
           </Link>
@@ -217,7 +217,7 @@ export default function NouveauRdvDelegue({
         <h2 className="text-[22px] font-extrabold tracking-[-0.3px]">Nouveau rendez-vous</h2>
       </div>
 
-      <div className="mb-[18px] flex items-start gap-[9px] rounded-xl border border-[#BFE0EF] bg-teal-soft px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-blue">
+      <div className="mb-[18px] flex items-start gap-[9px] rounded-xl border border-teal-line bg-teal-soft px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-blue">
         <span aria-hidden>📞</span>
         <div>
           Réservez un rendez-vous <b>au nom d’un patient</b>. Il recevra une confirmation par{" "}
@@ -260,7 +260,7 @@ export default function NouveauRdvDelegue({
               <button
                 type="button"
                 onClick={() => setPatientChoisi(patient)}
-                className="rounded-[9px] bg-teal px-3 py-1.5 text-[11.5px] font-bold text-white transition-colors hover:bg-[#2790bc]"
+                className="rounded-[9px] bg-teal px-3 py-1.5 text-[11.5px] font-bold text-white transition-colors hover:bg-teal-hover"
               >
                 Choisir
               </button>
@@ -324,7 +324,7 @@ export default function NouveauRdvDelegue({
         <div className="mt-3">
           <div className="mb-1.5 text-[12.5px] font-bold">Téléphone *</div>
           <div className="flex gap-2">
-            <span className="flex flex-none items-center gap-1.5 rounded-[11px] border border-line bg-[#F4F8FA] px-[13px] text-[13.5px] font-bold">
+            <span className="flex flex-none items-center gap-1.5 rounded-[11px] border border-line bg-card px-[13px] text-[13.5px] font-bold">
               🇬🇳 +224
             </span>
             <input
@@ -342,7 +342,7 @@ export default function NouveauRdvDelegue({
       <div className="mb-[18px] rounded-[18px] border border-line bg-white p-6">
         <h3 className="mb-[14px] text-base font-extrabold">2 · Médecin &amp; créneau</h3>
         <div className="mb-1.5 text-[12.5px] font-bold">Médecin</div>
-        <div className="rounded-[11px] border border-line bg-[#F4F8FA] px-[13px] py-3 text-[13.5px] font-bold">
+        <div className="rounded-[11px] border border-line bg-card px-[13px] py-3 text-[13.5px] font-bold">
           {nomMedecin} · {medecinConnecte.specialite}
         </div>
         <div className="mb-1.5 mt-3 text-[12.5px] font-bold">Date</div>
@@ -396,7 +396,7 @@ export default function NouveauRdvDelegue({
           placeholder="Ex. Vaccination, suivi, fièvre…"
           className="w-full resize-none rounded-xl border border-line bg-white p-[13px] text-[13.5px] outline-none focus:border-teal"
         />
-        <div className="mt-3 flex items-start gap-[9px] rounded-xl border border-[#BFE0EF] bg-teal-soft px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-blue">
+        <div className="mt-3 flex items-start gap-[9px] rounded-xl border border-teal-line bg-teal-soft px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-blue">
           <span aria-hidden>🧾</span>
           <div>
             Réservé par : <b>{reservePar === "assistant" ? "l’assistante" : "le cabinet"}</b> ·
@@ -406,7 +406,7 @@ export default function NouveauRdvDelegue({
       </div>
 
       {erreur && (
-        <div className="mb-3 rounded-xl border border-[#F3C9C2] bg-red-soft px-[14px] py-3 text-[12.5px] font-bold text-red">
+        <div className="mb-3 rounded-xl border border-red-line bg-red-soft px-[14px] py-3 text-[12.5px] font-bold text-red">
           {erreur}
         </div>
       )}
@@ -422,7 +422,7 @@ export default function NouveauRdvDelegue({
           type="button"
           onClick={enregistrer}
           disabled={!tout || enCours}
-          className="flex-1 rounded-[11px] bg-green px-[18px] py-[11px] text-[13.5px] font-bold text-white transition-colors hover:bg-[#196a3b] disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex-1 rounded-[11px] bg-green px-[18px] py-[11px] text-[13.5px] font-bold text-white transition-colors hover:bg-green disabled:cursor-not-allowed disabled:opacity-50"
         >
           ✅ Enregistrer le rendez-vous
         </button>

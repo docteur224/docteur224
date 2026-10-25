@@ -250,7 +250,7 @@ export default function GrilleTarifs({
             type="button"
             onClick={ajouter}
             disabled={enCours}
-            className="flex-none rounded-xl border border-[#CDE6F2] bg-teal-soft px-4 py-3 text-[13px] font-bold text-blue disabled:opacity-60 sm:py-0"
+            className="flex-none rounded-xl border border-teal-line bg-teal-soft px-4 py-3 text-[13px] font-bold text-blue disabled:opacity-60 sm:py-0"
           >
             {enCours ? "Ajout…" : "+ Ajouter"}
           </button>

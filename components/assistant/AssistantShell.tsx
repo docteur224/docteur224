@@ -44,7 +44,7 @@ export default function AssistantShell({ children }: { children: React.ReactNode
     <div className="grid min-h-screen content-start bg-bg lg:grid-cols-[236px_1fr] lg:content-stretch">
       <BarreLaterale
         avatar="HD"
-        fondAvatar="linear-gradient(135deg,#2E9CCA,#15506B)"
+        fondAvatar="var(--avatar-bleu)"
         nom={nomAssistant}
         sousTitre={`Assistant(e)${nomMedecin ? ` · ${nomMedecin}` : ""}`}
         liens={LIENS}

@@ -70,7 +70,7 @@ const CHAMP =
   "w-full rounded-[11px] border border-line bg-white px-[13px] py-2.5 text-[13.5px] outline-none focus:border-teal";
 const CARTE = "rounded-[16px] border border-line bg-white p-[18px]";
 const BTN_PRIMAIRE =
-  "rounded-[10px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:cursor-not-allowed disabled:opacity-50";
+  "rounded-[10px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-teal-hover disabled:cursor-not-allowed disabled:opacity-50";
 const BTN_LEGER =
   "rounded-[10px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg pointer-coarse:py-[13px]";
 
@@ -438,7 +438,7 @@ export default function PriseRdvCentreAppel() {
                 </div>
 
                 {creationOuverte ? (
-                  <div className="rounded-[13px] border-[1.5px] border-line bg-[#F9FBFC] p-[14px]">
+                  <div className="rounded-[13px] border-[1.5px] border-line bg-card p-[14px]">
                     <p className="mb-3 flex items-start gap-2 text-[12px] font-semibold leading-relaxed text-blue">
                       <span aria-hidden>ℹ️</span>
                       <span>
@@ -467,7 +467,7 @@ export default function PriseRdvCentreAppel() {
                     <div className="mt-2.5">
                       <span className="mb-1 block text-[12px] font-bold">Téléphone *</span>
                       <div className="flex gap-2">
-                        <span className="flex flex-none items-center rounded-[11px] border border-line bg-[#F4F8FA] px-[13px] text-[13px] font-bold">
+                        <span className="flex flex-none items-center rounded-[11px] border border-line bg-card px-[13px] text-[13px] font-bold">
                           🇬🇳 +224
                         </span>
                         <input
@@ -790,7 +790,7 @@ export default function PriseRdvCentreAppel() {
             {erreur && (
               <p
                 role="alert"
-                className="mt-3 rounded-xl border border-[#F3C9C2] bg-red-soft px-3 py-2.5 text-[12.5px] font-bold text-red"
+                className="mt-3 rounded-xl border border-red-line bg-red-soft px-3 py-2.5 text-[12.5px] font-bold text-red"
               >
                 ⚠️ {erreur}
               </p>
@@ -800,7 +800,7 @@ export default function PriseRdvCentreAppel() {
               type="button"
               onClick={enregistrer}
               disabled={!complet || enCours}
-              className="mt-3 w-full rounded-[11px] bg-green px-[18px] py-3 text-[13.5px] font-bold text-white transition-colors hover:bg-[#196a3b] disabled:cursor-not-allowed disabled:opacity-50"
+              className="mt-3 w-full rounded-[11px] bg-green px-[18px] py-3 text-[13.5px] font-bold text-white transition-colors hover:bg-green disabled:cursor-not-allowed disabled:opacity-50"
             >
               {enCours ? "Enregistrement…" : "✅ Enregistrer le rendez-vous"}
             </button>
@@ -838,7 +838,7 @@ export default function PriseRdvCentreAppel() {
             ) : (
               <div className="grid gap-2">
                 {recents.map((r) => (
-                  <div key={r.id} className="rounded-[11px] bg-[#F7FAFB] px-3 py-2.5">
+                  <div key={r.id} className="rounded-[11px] bg-card px-3 py-2.5">
                     <b className="block text-[12.5px]">{r.patient}</b>
                     <small className="block text-[11.5px] text-muted">
                       {r.medecin} · {formatDateRelative(r.date)} {r.heure}
@@ -976,7 +976,7 @@ function FicheChoisie({ fiche, onChanger }: { fiche: FichePatient; onChanger: ()
 function BadgeDispo({ dispo }: { dispo: DispoMedecin | undefined }) {
   if (!dispo) {
     return (
-      <span className="rounded-lg bg-[#F1F4F6] px-2 py-1 text-[11px] font-bold text-muted">
+      <span className="rounded-lg bg-bg px-2 py-1 text-[11px] font-bold text-muted">
         Aucun créneau sous {JOURS_DISPO} jours
       </span>
     );
@@ -1137,7 +1137,7 @@ function ChoixCreneau({
                 j.iso === jour
                   ? "border-teal bg-teal-soft text-blue"
                   : j.ferme
-                    ? "border-line bg-[#F7F9FA] text-muted opacity-60"
+                    ? "border-line bg-card text-muted opacity-60"
                     : "border-line bg-white"
               }`}
             >
@@ -1185,7 +1185,7 @@ function ChoixCreneau({
                   actif
                     ? "border-teal bg-teal-soft text-blue"
                     : pris
-                      ? "cursor-not-allowed border-line bg-[#F7F9FA] text-muted line-through"
+                      ? "cursor-not-allowed border-line bg-card text-muted line-through"
                       : "border-line bg-white hover:border-teal"
                 }`}
               >

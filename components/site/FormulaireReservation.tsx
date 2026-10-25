@@ -450,7 +450,7 @@ export default function FormulaireReservation({
 
   /* Bandeau de rassurance : gratuité de la réservation, paiement sur place. */
   const blocGratuite = (
-    <div className="flex items-start gap-[9px] rounded-xl border border-[#BFE3CC] bg-green-soft px-[14px] py-3 text-[12.5px] font-semibold leading-normal text-blue">
+    <div className="flex items-start gap-[9px] rounded-xl border border-green-line bg-green-soft px-[14px] py-3 text-[12.5px] font-semibold leading-normal text-blue">
       <span aria-hidden>✅</span>
       <div>
         <b>Réservation gratuite.</b>{" "}
@@ -484,7 +484,7 @@ export default function FormulaireReservation({
               <span
                 className="ba"
                 aria-hidden
-                style={{ background: "linear-gradient(135deg,#2E9CCA,#15506B)" }}
+                style={{ background: "var(--avatar-bleu)" }}
               >
                 {initiales(patient.prenom, patient.nom)}
               </span>
@@ -649,7 +649,7 @@ export default function FormulaireReservation({
             <span
               aria-hidden
               className="grid h-10 w-10 flex-none place-items-center rounded-[11px] text-[13px] font-extrabold text-white"
-              style={{ background: "linear-gradient(135deg,#2E9CCA,#15506B)" }}
+              style={{ background: "var(--avatar-bleu)" }}
             >
               {initiales(patient.prenom, patient.nom)}
             </span>
@@ -722,7 +722,7 @@ export default function FormulaireReservation({
         {/* Formulaire d'ajout inline (comme la maquette) */}
         {ajoutOuvert && (
           <div className="mt-[14px] border-t border-line pt-4">
-            <div className="mb-3 flex items-start gap-[9px] rounded-xl border border-[#BFE0EF] bg-teal-soft px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-blue">
+            <div className="mb-3 flex items-start gap-[9px] rounded-xl border border-teal-line bg-teal-soft px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-blue">
               <span aria-hidden>ℹ️</span>
               <div>
                 Le proche <b>n’a pas besoin de compte</b>. Vous prenez et gérez ses rendez-vous
@@ -795,7 +795,7 @@ export default function FormulaireReservation({
                 type="button"
                 onClick={enregistrerNouveauProche}
                 disabled={!nouveauValide}
-                className="flex-1 rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex-1 rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-teal-hover disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Enregistrer le proche
               </button>
@@ -819,7 +819,7 @@ export default function FormulaireReservation({
           type="button"
           onClick={confirmer}
           disabled={enCours}
-          className="ui-btn flex-1 rounded-[11px] bg-green px-[18px] py-[11px] text-[13.5px] font-bold text-white hover:bg-[#196a3b] disabled:opacity-60"
+          className="ui-btn flex-1 rounded-[11px] bg-green px-[18px] py-[11px] text-[13.5px] font-bold text-white hover:bg-green disabled:opacity-60"
         >
           {enCours ? "Enregistrement…" : "✅ Confirmer le rendez-vous"}
         </button>

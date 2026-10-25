@@ -98,7 +98,7 @@ export default function CommunesCouvertes() {
             type="button"
             title="Retirer"
             onClick={() => retirer(commune.id, commune.nom)}
-            className="rounded-full border border-[#CDE6F2] bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue transition-colors hover:border-red hover:text-red"
+            className="rounded-full border border-teal-line bg-teal-soft px-[14px] py-2 text-xs font-bold text-blue transition-colors hover:border-red hover:text-red"
           >
             {commune.nom} ✕
           </button>
@@ -122,7 +122,7 @@ export default function CommunesCouvertes() {
         <button
           type="button"
           onClick={ajouter}
-          className="rounded-full border border-[#DCE4EA] bg-[#EEF2F5] px-[14px] py-2 text-xs font-bold text-[#3A4A55] transition-colors hover:bg-bg"
+          className="rounded-full border border-line bg-bg px-[14px] py-2 text-xs font-bold text-ink-soft transition-colors hover:bg-bg"
         >
           + Ajouter
         </button>

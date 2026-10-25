@@ -30,11 +30,11 @@ export default function ModerationAdmin() {
   const [vue, setVue] = useState<Vue>("file");
 
   const boutonPrimaire =
-    "rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-[#2790bc]";
+    "rounded-[9px] bg-teal px-[14px] py-2 text-[12.5px] font-bold text-white transition-colors hover:bg-teal-hover";
   const boutonGhost =
     "rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg";
   const boutonDanger =
-    "rounded-[9px] border-[1.5px] border-[#F3CDC8] bg-white px-[14px] py-2 text-[12.5px] font-bold text-red transition-colors hover:bg-[#FBE9E7]";
+    "rounded-[9px] border-[1.5px] border-red-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-red transition-colors hover:bg-red-soft";
 
   const pagiSignalements = usePagination(signalements, 10);
   const pagiAvis = usePagination(avis, 10);
@@ -97,7 +97,7 @@ export default function ModerationAdmin() {
                     <span
                       className="av"
                       aria-hidden
-                      style={{ background: "linear-gradient(135deg,#9AA8B2,#647A89)" }}
+                      style={{ background: "var(--badge-neutre)" }}
                     >
                       ⚠️
                     </span>
@@ -211,7 +211,7 @@ export default function ModerationAdmin() {
           <IndicateursAvis />
         ) : (
           <>
-            <div className="mb-4 flex items-start gap-[9px] rounded-xl border border-[#BFE0EF] bg-teal-soft px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-blue">
+            <div className="mb-4 flex items-start gap-[9px] rounded-xl border border-teal-line bg-teal-soft px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-blue">
               <span aria-hidden>🚩</span>
               <div>
                 Traitez les signalements et les avis abusifs. Un signalement confirmé peut entraîner
@@ -236,7 +236,7 @@ export default function ModerationAdmin() {
                   <span
                     aria-hidden
                     className="grid h-[42px] w-[42px] flex-none place-items-center rounded-xl text-sm text-white"
-                    style={{ background: "linear-gradient(135deg,#9AA8B2,#647A89)" }}
+                    style={{ background: "var(--badge-neutre)" }}
                   >
                     ⚠️
                   </span>

@@ -73,7 +73,7 @@ export default function MedecinShell({
   const refuse = reserveAuMedecin && !chargement && role !== "medecin";
 
   const medecinConnecte = medecin ?? {
-    gradient: "linear-gradient(135deg,#2E9CCA,#15506B)",
+    gradient: "var(--avatar-bleu)",
     initiales: "…",
     civilite: "Dr",
     prenom: "",

@@ -28,11 +28,11 @@ const ROLE_PAR_CATEGORIE: Record<(typeof CATEGORIES)[number], string | null> = {
 };
 
 const GRADIENTS = [
-  "linear-gradient(135deg,#2E9CCA,#15506B)",
-  "linear-gradient(135deg,#E08E45,#C0392B)",
-  "linear-gradient(135deg,#6C5CE7,#341F97)",
-  "linear-gradient(135deg,#16A085,#0E6655)",
-  "linear-gradient(135deg,#9AA8B2,#647A89)",
+  "var(--avatar-bleu)",
+  "var(--avatar-ambre)",
+  "var(--avatar-violet)",
+  "var(--avatar-vert)",
+  "var(--avatar-gris)",
 ];
 
 const gradientPour = (id: string) => {
@@ -204,9 +204,9 @@ export default function UtilisateursAdmin() {
                         minWidth: 120,
                         padding: "9px 12px",
                         fontSize: 12,
-                        color: aSupprimer === compte.id ? "#fff" : "#DC2626",
-                        background: aSupprimer === compte.id ? "#DC2626" : undefined,
-                        borderColor: aSupprimer === compte.id ? "#DC2626" : undefined,
+                        color: aSupprimer === compte.id ? "#fff" : "var(--red)",
+                        background: aSupprimer === compte.id ? "var(--red)" : undefined,
+                        borderColor: aSupprimer === compte.id ? "var(--red)" : undefined,
                       }}
                       disabled={enCours === compte.id}
                       onClick={() => supprimer(compte.id, compte.nom)}
@@ -267,7 +267,7 @@ export default function UtilisateursAdmin() {
             className={`rounded-full border px-[14px] py-2 text-xs font-bold ${
               categorie === c
                 ? "border-blue bg-blue text-white"
-                : "border-[#CDE6F2] bg-teal-soft text-blue"
+                : "border-teal-line bg-teal-soft text-blue"
             }`}
           >
             {c}
@@ -305,7 +305,7 @@ export default function UtilisateursAdmin() {
                   ? "bg-red-50 text-red-600"
                   : compte.actif
                     ? "bg-green-soft text-green"
-                    : "bg-[#EEF1F4] text-[#7E8C97]"
+                    : "bg-bg text-muted"
               }`}
             >
               {compte.supprime ? "Supprimé" : compte.actif ? "Actif" : "Suspendu"}

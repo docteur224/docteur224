@@ -218,7 +218,7 @@ export default function PanneauReservation({
       {heure ? (
         <Link
           href={`/reservation?medecin=${medecinId}&date=${jourAffiche}&heure=${encodeURIComponent(heure)}`}
-          className="ui-btn mt-[18px] block w-full rounded-[11px] bg-teal py-[14px] text-center text-[15px] font-bold text-white hover:bg-[#2790bc]"
+          className="ui-btn mt-[18px] block w-full rounded-[11px] bg-teal py-[14px] text-center text-[15px] font-bold text-white hover:bg-teal-hover"
         >
           Continuer · {heure}
         </Link>
