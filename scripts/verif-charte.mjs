@@ -125,6 +125,39 @@ async function main() {
       if (!e) return false;
       e.scrollIntoView({ block: "center" }); e.click(); return true;
     })()`);
+  /**
+   * Enregistre la charte en cours. On attend que le bouton soit réactivé
+   * plutôt que de cliquer dans la foulée du choix : React réaffiche après
+   * coup, et un clic trop prompt tombe sur un bouton encore grisé — le
+   * script croit alors avoir enregistré, et juge la suite sur un état faux.
+   */
+  const enregistrer = async () => {
+    const actif = await attendre(
+      `[...document.querySelectorAll("button")]
+         .some((b) => b.textContent.trim() === "Enregistrer" && !b.disabled)`, 6000);
+    if (!actif) {
+      // Un bouton grisé a toujours une raison affichée à l'écran : on la
+      // rapporte, au lieu de laisser deviner.
+      const etat = await ev(`(() => {
+        const s = document.getElementById("couleurs");
+        const champs = [...s.querySelectorAll('input[type=text]')].map((i) => i.value);
+        const verdicts = [...s.querySelectorAll("span")]
+          .map((e) => e.textContent.trim())
+          .filter((t) => /Lisible|Illisible|Contraste/.test(t));
+        return JSON.stringify({ champs, verdict: verdicts[verdicts.length - 1] });
+      })()`);
+      console.log(`   (Enregistrer reste grisé — ${etat})`);
+      return false;
+    }
+    // On relève l'avance locale AVANT de cliquer, pour guetter sa
+    // modification plutôt que le message de confirmation : celui-ci est
+    // passager, et un relevé toutes les 250 ms peut le manquer. Ce qui
+    // compte est l'effet, pas l'accusé de réception.
+    const avant = await ev(`localStorage.getItem("docteur224.charte")`);
+    if (!(await cliquerTexte("Enregistrer"))) return false;
+    return attendre(
+      `localStorage.getItem("docteur224.charte") !== ${JSON.stringify(avant)}`);
+  };
   /** Saisit les deux couleurs comme le ferait un clavier (React écoute « input »). */
   const ecrireCouleurs = async (principale, accent) => {
     await ev(`(() => {
@@ -144,7 +177,11 @@ async function main() {
    * fixe : l'écriture passe par le réseau et met entre 0,8 et 1,6 seconde —
    * une pause calée au jugé rend le test tantôt vert tantôt rouge.
    */
-  const attendre = async (expression, limite = 12000) => {
+  // Large par défaut : l'écriture part chez l'hébergeur, et la latence varie
+  // d'une seconde à plusieurs dizaines selon la liaison. Un délai serré fait
+  // échouer le contrôle alors que la charte finit par s'appliquer — on
+  // mesurerait la connexion, pas le logiciel.
+  const attendre = async (expression, limite = 40000) => {
     const fin = Date.now() + limite;
     while (Date.now() < fin) {
       if (await ev(expression)) return true;
@@ -221,9 +258,7 @@ async function main() {
     check("l'aperçu, lui, prend les nouvelles couleurs", !!apercuTeinte && apercuTeinte !== "#eaf1f6", apercuTeinte);
 
     // ---------- enregistrement ----------
-    check("le bouton Enregistrer s'active", await cliquerTexte("Enregistrer"));
-    check("l'enregistrement aboutit",
-      await attendre(`document.querySelector('#couleurs [role=status]')?.textContent?.includes("enregistrées")`),
+    check("l'enregistrement aboutit", await enregistrer(),
       await ev(`document.querySelector('#couleurs [role=status]')?.textContent ?? "(aucun message)"`));
     const fondEnregistre = await fondPage();
     check("après enregistrement, tout l'espace suit",
@@ -252,6 +287,19 @@ async function main() {
     check("sur un appareil neuf, la charte revient du compte",
       fondSansCache === fondEnregistre,
       `fond ${fondSansCache}, attendu ${fondEnregistre}`);
+
+    // ---------- le renvoi depuis Paramètres ----------
+    // Le réglage n'a qu'une implantation, mais c'est une préférence
+    // d'affichage : on la cherche d'abord sur l'écran des préférences.
+    await aller("/patient/parametres", 3000);
+    check("Paramètres renvoie vers les couleurs",
+      await ev(`!!document.querySelector('a[href="/patient/mon-compte#couleurs"]')`));
+    check("le renvoi mène bien à la section",
+      await ev(`(() => {
+        const a = document.querySelector('a[href="/patient/mon-compte#couleurs"]');
+        if (!a) return false;
+        a.click(); return true;
+      })()`) && await attendre(`location.hash === "#couleurs" && !!document.getElementById("couleurs")`, 8000));
 
     // ---------- le site public reste intact ----------
     await aller("/", 2600);
@@ -287,10 +335,12 @@ async function main() {
     // Une charte AUTRE que celle enregistrée plus haut : reprendre la même
     // laisserait « Enregistrer » grisé, faute de changement — et l'étape
     // s'exécuterait sans rien avoir à effacer.
+    // La charte du compte doit être revenue avant qu'on en choisisse une
+    // autre : agir sur l'écran encore vierge, c'est partir d'un état qu'on
+    // croit connaître.
+    await attendre(`!!localStorage.getItem("docteur224.charte")`, 8000);
     check("la charte Océan se choisit", await cliquerTexte("Océan"));
-    check("l'enregistrement de la seconde charte aboutit",
-      (await cliquerTexte("Enregistrer")) &&
-      (await attendre(`document.querySelector('#couleurs [role=status]')?.textContent?.includes("enregistrées")`)));
+    check("l'enregistrement de la seconde charte aboutit", await enregistrer());
     cdp.erreurs.length = 0;
     check("le bouton « Couleurs d'origine » répond", await cliquerTexte("Couleurs d’origine"));
     check("le rétablissement aboutit",
@@ -310,9 +360,8 @@ async function main() {
     // ---------- la charte part avec son titulaire ----------
     // En dernier : la session se referme ici. Une charte est reposée juste
     // avant, pour qu'il y ait quelque chose à oublier.
-    await ecrireCouleurs("#5a2a14", "#c25400");
-    await cliquerTexte("Enregistrer");
-    await attendre(`document.querySelector('#couleurs [role=status]')?.textContent?.includes("enregistrées")`);
+    await cliquerTexte("Terracotta");
+    check("une charte est posée avant de partir", await enregistrer());
     check("le bouton Déconnexion répond", await cliquerTexte("Déconnexion"));
     await attendre(`location.pathname === "/"`, 10000);
     check("à la déconnexion, l'avance locale est oubliée",
