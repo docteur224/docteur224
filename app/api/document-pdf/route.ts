@@ -90,7 +90,7 @@ export async function POST(requete: Request) {
   const { data: medecin } = await supabase
     .from("medecins")
     .select(
-      `civilite, telephone_secretariat, quartier,
+      `civilite, telephone_secretariat, quartier, numero_ordre, rccm,
        utilisateurs ( nom, prenom, telephone, role ),
        specialites ( nom ),
        villes ( nom ),
@@ -179,6 +179,18 @@ export async function POST(requete: Request) {
     .join(", ");
   if (adressePostale) pdf.texte(adressePostale, { taille: 9, gris: 0.35, align: "centre" });
   if (telephone) pdf.texte(`Tél : ${telephone}`, { taille: 9, gris: 0.35, align: "centre" });
+
+  // Mentions légales du praticien : numéro au Conseil de l'ordre et RCCM.
+  // Chacune ne s'affiche que si elle est renseignée au profil.
+  const numeroOrdre = (medecin.numero_ordre as string | null)?.trim() || "";
+  const rccm = (medecin.rccm as string | null)?.trim() || "";
+  const mentionsLegales = [
+    numeroOrdre && `N° Ordre : ${numeroOrdre}`,
+    rccm && `RCCM : ${rccm}`,
+  ]
+    .filter(Boolean)
+    .join("  ·  ");
+  if (mentionsLegales) pdf.texte(mentionsLegales, { taille: 9, gris: 0.35, align: "centre" });
 
   pdf.saut(6).filet().saut(6);
 

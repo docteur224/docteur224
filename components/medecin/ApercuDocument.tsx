@@ -146,6 +146,12 @@ export default function ApercuDocument({
       /\s+/g,
       "-"
     );
+    // Pour un fichier déposé, l'URL signée est cross-origin : le navigateur
+    // ignore alors `download` et, sans cible, remplacerait l'onglet courant —
+    // on quitterait le dossier. On force un nouvel onglet ; un blob
+    // same-origin, lui, se télécharge quand même sans quitter la page.
+    lien.target = "_blank";
+    lien.rel = "noopener noreferrer";
     window.document.body.appendChild(lien);
     lien.click();
     lien.remove();
