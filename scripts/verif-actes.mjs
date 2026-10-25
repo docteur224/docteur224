@@ -559,9 +559,19 @@ async function main() {
       await page.taille(1280, 900, false);
       await page.goto(`${APP}/espace-admin/actes`);
       check("[1280] admin : référentiel listé", await page.waitFor(`document.querySelectorAll('main table tbody tr').length > 10`, 20000));
+      /*
+       * On affiche le libellé LU, et pas seulement « non » : lire encore
+       * « Actes et analyses » ici ne veut pas dire que le code est faux,
+       * mais que le serveur sert un build d'avant le renommage — c'est
+       * arrivé, et sans ce détail la cause n'est pas devinable.
+       */
+      const entreeMenu = await page.eval(
+        `document.querySelector('a[href="/espace-admin/actes"][aria-current="page"]')?.textContent.trim() ?? '(aucune entrée signalée courante)'`
+      );
       check(
         "[1280] admin : entrée de menu « Analyses et imagerie », signalée courante",
-        await page.eval(`document.querySelector('a[href="/espace-admin/actes"][aria-current="page"]')?.textContent.includes('Analyses et imagerie') ?? false`)
+        entreeMenu.includes("Analyses et imagerie"),
+        `lu : « ${entreeMenu} »${entreeMenu.includes("Actes et analyses") ? " — build antérieur au renommage, reconstruisez" : ""}`
       );
 
       /*
