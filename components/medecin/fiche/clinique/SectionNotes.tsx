@@ -61,7 +61,7 @@ export default function SectionNotes({
                 key={n.id}
                 className="flex flex-wrap items-start gap-3 rounded-xl border border-line p-3.5 transition-colors hover:border-line"
               >
-                <span className="grid h-[38px] w-[38px] flex-none place-items-center rounded-[10px] bg-teal-soft text-teal">
+                <span className="grid h-[38px] w-[38px] flex-none place-items-center rounded-[10px] bg-teal-soft text-blue">
                   <Icone nom="presse_papiers" taille={18} />
                 </span>
                 <div className="min-w-0 flex-1">

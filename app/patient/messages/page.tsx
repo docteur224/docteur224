@@ -84,7 +84,7 @@ function Messagerie() {
         </div>
       ) : conversations.length === 0 && sansFil.length === 0 ? (
         <div className="rounded-2xl border border-line bg-white p-6 text-center">
-          <span className="mx-auto mb-2 grid h-11 w-11 place-items-center rounded-2xl bg-teal-soft text-teal">
+          <span className="mx-auto mb-2 grid h-11 w-11 place-items-center rounded-2xl bg-teal-soft text-blue">
             <Icone nom="message" taille={20} />
           </span>
           <b className="block text-sm font-extrabold">Pas encore de conversation</b>
@@ -235,7 +235,7 @@ function LigneConversation({ c, actif, onClick }: { c: Conversation; actif: bool
         actif ? "border-teal bg-teal-soft" : "border-line bg-white hover:bg-bg"
       }`}
     >
-      <span className="grid h-9 w-9 flex-none place-items-center rounded-full bg-teal-soft text-teal">
+      <span className="grid h-9 w-9 flex-none place-items-center rounded-full bg-teal-soft text-blue">
         <Icone nom="message" taille={16} />
       </span>
       <span className="min-w-0 flex-1">

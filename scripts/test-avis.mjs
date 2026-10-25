@@ -44,14 +44,45 @@ const idMedecin = (await medecin.auth.getUser()).data.user.id;
 // L'un honoré (notable), l'autre confirmé (non notable). Créés en
 // service_role pour ne pas dépendre de l'état du seed.
 const creesRdv = [];
-async function creerRdv(statut, jourDecale) {
-  const date = new Date(Date.now() + jourDecale * 86400000).toISOString().slice(0, 10);
+
+/*
+ * Les créneaux sont pris dans l'AGENDA RÉEL du praticien, et non à une
+ * heure choisie au hasard : le verrou de la migration 0053 refuse tout
+ * rendez-vous posé sur un créneau fermé, y compris en clé de service.
+ * Ce qui compte ici est le STATUT — `peut_noter_rdv` n'exige qu'un
+ * rendez-vous honoré, jamais une date passée —, pas la date elle-même.
+ */
+const jourPlus = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
+
+async function creneauxLibres(combien) {
+  const libres = [];
+  for (let j = 3; j <= 40 && libres.length < combien; j++) {
+    for (const heure of ["09:00", "10:00", "11:00", "14:00", "15:00", "16:00"]) {
+      const date = jourPlus(j);
+      const { data: ouvert } = await admin.rpc("creneau_ouvert_medecin", {
+        p_medecin_id: idMedecin, p_date: date, p_heure: heure,
+      });
+      if (ouvert) { libres.push({ date, heure }); break; }
+    }
+  }
+  if (libres.length < combien) {
+    throw new Error(`pas ${combien} créneau(x) ouvert(s) sur 40 jours pour medecin1`);
+  }
+  return libres;
+}
+
+// Trois créneaux : la consultation notée, une non honorée, et une honorée
+// laissée VIERGE — sans elle, le refus « médecin jamais consulté » serait
+// rendu par l'unicité par rendez-vous et ne prouverait rien.
+const libres = await creneauxLibres(3);
+
+async function creerRdv(statut, creneau) {
   const { data, error } = await admin
     .from("rendez_vous")
     .insert({
       medecin_id: idMedecin,
-      date,
-      heure: `${String(8 + creesRdv.length).padStart(2, "0")}:00`,
+      date: creneau.date,
+      heure: creneau.heure,
       reserve_par: idPatient,
       reserve_par_role: "patient",
       patient_id: idPatient,
@@ -66,8 +97,9 @@ async function creerRdv(statut, jourDecale) {
   return data.id;
 }
 
-const rdvHonore = await creerRdv("honore", -10);
-const rdvConfirme = await creerRdv("confirme", 5);
+const rdvHonore = await creerRdv("honore", libres[0]);
+const rdvConfirme = await creerRdv("confirme", libres[1]);
+const rdvHonoreVierge = await creerRdv("honore", libres[2]);
 
 /** Note et nombre d'avis actuels du médecin — la base peut déjà en contenir. */
 async function noteMedecin() {
@@ -79,10 +111,55 @@ async function noteMedecin() {
   return { moyenne: Number(data.note_moyenne), nb: data.nb_avis };
 }
 
-// Les tests de recalcul sont relatifs à cet état de départ : le seed de démo
-// (scripts/seed-avis.mjs) peut avoir déjà noté ce médecin.
+/**
+ * La vérité, calculée depuis les avis publiés. C'est à elle que la fiche
+ * doit se conformer : c'est toute la promesse de `recalculer_note_medecin`.
+ *
+ * On ne déduit plus l'attendu d'une formule appliquée à l'état relevé au
+ * départ. Cette façon de faire supposait qu'un seul avis s'ajouterait et
+ * que la fiche était juste au moment du relevé — deux hypothèses fausses,
+ * qui faisaient échouer le test sans qu'aucun défaut n'existe. Comparer à
+ * la vérité est à la fois plus simple et plus exigeant.
+ */
+async function veriteDepuisAvis() {
+  const { data } = await admin
+    .from("avis").select("note").eq("medecin_id", idMedecin).eq("statut", "publie");
+  const notes = (data ?? []).map((a) => Number(a.note));
+  const nb = notes.length;
+  return {
+    nb,
+    moyenne: nb ? Math.round((notes.reduce((s, n) => s + n, 0) / nb) * 100) / 100 : 0,
+  };
+}
+
+/** La fiche concorde-t-elle avec les avis publiés ? */
+async function ficheConforme() {
+  const [fiche, vrai] = await Promise.all([noteMedecin(), veriteDepuisAvis()]);
+  return {
+    ok: fiche.nb === vrai.nb && Math.abs(fiche.moyenne - vrai.moyenne) < 0.011,
+    detail: `fiche ${fiche.moyenne}/${fiche.nb} · avis publiés ${vrai.moyenne}/${vrai.nb}`,
+  };
+}
+
+/*
+ * Un passage interrompu laisse son avis derrière lui : le `finally` est bien
+ * exécuté, mais une exception au niveau supérieur éteint le processus avant
+ * que son nettoyage asynchrone n'aboutisse. On balaie donc AVANT de
+ * commencer, en ciblant le commentaire exact déposé par ce script — jamais
+ * « tout ce que ce médecin a reçu », ce qui emporterait les avis du seed.
+ */
+const COMMENTAIRE = "Médecin très à l'écoute, explications claires.";
+{
+  const { data: residus } = await admin
+    .from("avis").delete()
+    .eq("medecin_id", idMedecin).eq("commentaire", COMMENTAIRE).select("id");
+  if ((residus ?? []).length) {
+    console.log(`ℹ️  ${residus.length} avis d'un passage précédent retiré(s).`);
+  }
+}
+
+// État de départ, pour vérifier à la fin qu'on a tout rendu.
 const depart = await noteMedecin();
-const sommeDepart = depart.moyenne * depart.nb;
 
 let idAvis = null;
 
@@ -96,7 +173,7 @@ try {
         medecin_id: idMedecin,
         rendez_vous_id: rdvHonore,
         note: 5,
-        commentaire: "Médecin très à l'écoute, explications claires.",
+        commentaire: COMMENTAIRE,
       })
       .select("id, statut")
       .single();
@@ -114,6 +191,18 @@ try {
       note: 5,
     });
     test("Refus d'un avis sur un RDV non honoré", !!error, error?.code);
+  }
+  {
+    // La consultation honorée appartient bien à ce patient, mais chez un
+    // AUTRE praticien : noter le second reviendrait à inventer une visite.
+    const idMedecin2 = (await medecin2.auth.getUser()).data.user.id;
+    const { error } = await patient.from("avis").insert({
+      patient_id: idPatient,
+      medecin_id: idMedecin2,
+      rendez_vous_id: rdvHonoreVierge,
+      note: 1,
+    });
+    test("Refus d'un avis sur un médecin jamais consulté", !!error, error?.code);
   }
   {
     const { error } = await patient.from("avis").insert({
@@ -145,12 +234,14 @@ try {
 
   // ---------- 3. Recalcul de la note du médecin ----------
   {
+    // Le trigger a-t-il fait son travail ? La fiche doit concorder avec les
+    // avis publiés — et compter un avis de plus qu'avant le dépôt.
     const apres = await noteMedecin();
-    const attendue = (sommeDepart + 5) / (depart.nb + 1);
+    const { ok, detail } = await ficheConforme();
     test(
       "La note du médecin est recalculée par trigger",
-      apres.nb === depart.nb + 1 && Math.abs(apres.moyenne - attendue) < 0.01,
-      `moyenne=${apres.moyenne} (attendu ~${attendue.toFixed(2)}) nb=${apres.nb}`
+      ok && apres.nb === depart.nb + 1,
+      detail
     );
   }
 
@@ -286,13 +377,8 @@ try {
   {
     const { error } = await patient.from("avis").update({ note: 4 }).eq("id", idAvis);
     test("Le patient modifie sa propre note", !error, error?.message);
-    const apres = await noteMedecin();
-    const attendue = (sommeDepart + 4) / (depart.nb + 1);
-    test(
-      "La moyenne suit la correction",
-      Math.abs(apres.moyenne - attendue) < 0.01,
-      `${apres.moyenne} (attendu ~${attendue.toFixed(2)})`
-    );
+    const { ok, detail } = await ficheConforme();
+    test("La moyenne suit la correction", ok, detail);
   }
   {
     const { data } = await patient2.from("avis").update({ note: 1 }).eq("id", idAvis).select("id");
@@ -307,12 +393,8 @@ try {
       "Un avis masqué disparaît de la fiche publique",
       !(pub ?? []).some((a) => a.id === idAvis)
     );
-    const masque = await noteMedecin();
-    test(
-      "Un avis masqué ne compte plus dans la moyenne",
-      masque.nb === depart.nb,
-      `nb=${masque.nb} (attendu ${depart.nb})`
-    );
+    const { ok, detail } = await ficheConforme();
+    test("Un avis masqué ne compte plus dans la moyenne", ok, detail);
 
     const { data: vuMedecin } = await medecin.from("avis").select("id").eq("id", idAvis);
     test("Le médecin voit toujours l'avis masqué", (vuMedecin ?? []).length === 1);
@@ -322,13 +404,17 @@ try {
 
   // ---------- 8. Retrait par l'auteur ----------
   {
-    const { error } = await patient.from("avis").delete().eq("id", idAvis);
-    test("Le patient retire son avis", !error, error?.message);
-    idAvis = null;
+    // `.select()` pour SAVOIR si la ligne est partie : une suppression qui
+    // ne touche rien — refusée par une policy, par exemple — ne rend aucune
+    // erreur. Sans cela le test passait au vert et l'avis restait en base.
+    const { data: parti, error } = await patient
+      .from("avis").delete().eq("id", idAvis).select("id");
+    test("Le patient retire son avis", !error && (parti ?? []).length === 1, error?.message);
+    if ((parti ?? []).length === 1) idAvis = null;
     const apres = await noteMedecin();
     test(
       "La fiche retrouve son état d'avant l'avis",
-      apres.nb === depart.nb && Math.abs(apres.moyenne - depart.moyenne) < 0.01,
+      apres.nb === depart.nb && Math.abs(apres.moyenne - depart.moyenne) < 0.011,
       `moyenne=${apres.moyenne} nb=${apres.nb} (départ ${depart.moyenne}/${depart.nb})`
     );
   }

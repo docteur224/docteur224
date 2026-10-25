@@ -198,7 +198,7 @@ export default function ModuleDocuments({ ctx }: { ctx: ContexteFiche }) {
     const icone: NomIcone = glypheType(d.type);
     const teinte =
       variante === "remis"
-        ? "bg-teal-soft text-teal"
+        ? "bg-teal-soft text-blue"
         : variante === "recu"
           ? "bg-green-soft text-green"
           : "bg-amber-soft text-amber";

@@ -86,21 +86,27 @@ function juger(
  * qu'elle occupe. Seuls les emoji concernés figurent ici — ceux posés sur du
  * blanc ou sur une couleur de statut ne bougent pas avec la charte.
  */
-const COULEURS_EMOJI: Record<string, [string, number][]> = {
+export const COULEURS_EMOJI: Record<string, [string, number][]> = {
   "ℹ️": [["#55a1f2", 0.83], ["#447adc", 0.09], ["#f4eeff", 0.07]],
   "↩️": [["#56a1f2", 0.70], ["#f7f0ff", 0.20], ["#447adc", 0.09]],
+  "⏳": [["#a6dafb", 0.34], ["#dda95e", 0.24], ["#a0a4a6", 0.14], ["#d7e4e6", 0.09], ["#f8c96c", 0.09]],
   "⚠️": [["#fbaf55", 0.66], ["#ffcc5a", 0.24], ["#534951", 0.09]],
+  "⚕️": [["#488ff3", 0.82], ["#3979e1", 0.16]],
+  "⚕": [["#488ff3", 0.82], ["#3979e1", 0.16]],
   "✅": [["#58d38d", 0.70], ["#46a976", 0.13], ["#f7f1fc", 0.10]],
   "✉️": [["#e6daee", 0.91], ["#d7bbe0", 0.09]],
   "✔️": [["#6859a4", 0.43], ["#7957cc", 0.27], ["#8556db", 0.13], ["#9589ce", 0.07], ["#6f3dce", 0.06]],
   "🎯": [["#dd396a", 0.33], ["#54b4ea", 0.13], ["#c9bad4", 0.10], ["#ccc2dd", 0.10], ["#d64876", 0.09]],
   "🏠": [["#d79d70", 0.27], ["#926456", 0.15], ["#e3b28b", 0.13], ["#e85839", 0.13]],
   "🏥": [["#a69cb1", 0.30], ["#e8d9f8", 0.20], ["#d0b1ec", 0.16], ["#89759d", 0.16], ["#b7a7cb", 0.06]],
+  "👥": [["#492e73", 0.58], ["#583888", 0.32], ["#68459f", 0.06]],
   "💬": [["#eae2f1", 0.81], ["#c7b8dc", 0.09], ["#b4a7d4", 0.09]],
+  "💼": [["#794b59", 0.78], ["#86535c", 0.14]],
   "💾": [["#d9cde7", 0.35], ["#5b5297", 0.31], ["#322657", 0.12], ["#4f3774", 0.07], ["#d62c5d", 0.05]],
   "📅": [["#e0d3ee", 0.55], ["#329efa", 0.20], ["#a69db5", 0.09], ["#cfb6e5", 0.07]],
   "📋": [["#e5dcef", 0.49], ["#e19d69", 0.27], ["#99919d", 0.15]],
   "📜": [["#ffd095", 0.64], ["#e39362", 0.19], ["#fec97a", 0.07], ["#f8b382", 0.06]],
+  "📄": [["#e5ddef", 0.89], ["#a09ba7", 0.08]],
   "📞": [["#e2345e", 0.38], ["#e43593", 0.21], ["#e54571", 0.13], ["#d351a1", 0.12], ["#b04492", 0.07]],
   "📢": [["#da356c", 0.42], ["#ccc7d4", 0.16], ["#bbacd1", 0.14], ["#c3b8d3", 0.08], ["#f14f87", 0.07]],
   "🔄": [["#56a0f2", 0.71], ["#f8f0ff", 0.18], ["#447adc", 0.09]],
@@ -169,15 +175,23 @@ export type Controle = {
   fond: string;
 };
 
-/** Où chaque icône est réellement posée, dans les espaces connectés. */
-const ICONES_PLACEES: { emoji: string[]; fond: "teal" | "teal-hover" | "blue"; ou: string }[] = [
+/**
+ * Où chaque icône est réellement posée, dans les espaces connectés.
+ * Exportée pour qu'un test puisse confronter cette liste au code : tenue à
+ * la main, elle dériverait sans bruit à la première page écrite.
+ */
+export const ICONES_PLACEES: { emoji: string[]; fond: "teal" | "teal-hover" | "blue"; ou: string }[] = [
   {
     fond: "teal",
     ou: "les boutons et pastilles d'action",
-    emoji: ["ℹ️", "↩️", "✅", "✉️", "✔️", "🎯", "🏠", "🏥", "💬", "💾", "📅", "📋",
-      "📜", "📞", "📢", "🔍", "🔎", "🔒", "🕐", "🗣️", "🗺️", "🚩", "🛠️", "🧑", "🧭", "🧾"],
+    emoji: ["ℹ️", "↩️", "⏳", "⚕️", "✅", "✉️", "✔️", "🎯", "🏠", "🏥", "💬", "💼", "💾",
+      "📄", "📅", "📋", "📜", "📞", "📢", "🔍", "🔎", "🔒", "🕐", "🗣️", "🗺️", "🚩",
+      "🛠️", "🧑", "🧭", "🧾"],
   },
-  { fond: "teal-hover", ou: "les boutons au survol", emoji: ["✉️", "✔️", "💾", "📢", "🔎", "🧭"] },
+  {
+    fond: "teal-hover", ou: "les boutons au survol",
+    emoji: ["✉️", "✔️", "👥", "💾", "📄", "📢", "🔎", "🧭"],
+  },
   { fond: "blue", ou: "les aplats de la couleur principale", emoji: ["🔄", "🛡️", "📢"] },
 ];
 

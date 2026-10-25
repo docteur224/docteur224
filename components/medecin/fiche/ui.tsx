@@ -63,7 +63,7 @@ export function EtatVide({
 }) {
   return (
     <div className="flex flex-col items-center px-4 py-8 text-center">
-      <span className="mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-teal-soft text-teal">
+      <span className="mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-teal-soft text-blue">
         <Icone nom={icone} taille={22} />
       </span>
       <b className="text-[14px] font-extrabold">{titre}</b>

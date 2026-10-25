@@ -20,13 +20,19 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import {
   construireCharte, CHARTE_DEFAUT, charteVersCss, normaliserHex, contraste,
 } from "../../lib/charte-couleurs.ts";
 import {
   controlerCharte, verdictGlobal, verdictTexte, verdictIcone, partVisible,
-  accentPlusSombre, ecartPerceptuel,
+  accentPlusSombre, ecartPerceptuel, COULEURS_EMOJI, ICONES_PLACEES,
 } from "../../lib/lisibilite.ts";
+import { CHARTES_PRETES } from "../../lib/chartes-pretes.ts";
+
+const RACINE = fileURLToPath(new URL("../../", import.meta.url));
 
 /** La palette telle qu'elle est écrite dans globals.css aujourd'hui. */
 const PALETTE_ACTUELLE = {
@@ -167,4 +173,92 @@ test("chaque contrôle décrit un endroit reconnaissable, pas une variable", () 
     assert.doesNotMatch(c.libelle, /--|var\(/, c.libelle);
     assert.ok(c.libelle.length > 8, c.libelle);
   }
+});
+
+test("chaque charte proposée passe le contrôle de lisibilité", () => {
+  // Proposer une charte que notre propre outil condamne serait indéfendable.
+  // Ce test est le garde-fou du jour où un seuil bougera : sans lui, un
+  // préréglage se mettrait à avertir sans que rien ne le signale.
+  for (const c of CHARTES_PRETES) {
+    const ctrl = controlerCharte(c.principale, c.accent);
+    const fautifs = ctrl.filter((x) => x.verdict !== "lisible").map((x) => x.libelle);
+    assert.deepEqual(fautifs, [], `${c.nom} (${c.principale} / ${c.accent})`);
+    assert.equal(accentPlusSombre(c.principale, c.accent), false, `${c.nom} : accent trop sombre`);
+  }
+});
+
+test("les chartes proposées sont distinctes et valides", () => {
+  const vues = new Set();
+  for (const c of CHARTES_PRETES) {
+    assert.ok(normaliserHex(c.principale), `${c.nom} : principale invalide`);
+    assert.ok(normaliserHex(c.accent), `${c.nom} : accent invalide`);
+    const cle = `${normaliserHex(c.principale)}|${normaliserHex(c.accent)}`;
+    assert.ok(!vues.has(cle), `${c.nom} : doublon`);
+    vues.add(cle);
+  }
+});
+
+/** Les fichiers des espaces connectés, là où la charte s'applique. */
+function* fichiersConnectes() {
+  const zones = ["app/espace-medecin", "app/espace-admin", "app/espace-assistant",
+    "app/espace-etablissement", "app/patient", "components/admin", "components/medecin",
+    "components/patient", "components/assistant", "components/etablissement",
+    "components/pro", "components/compte"];
+  function* descendre(dir) {
+    let entrees;
+    try { entrees = readdirSync(dir); } catch { return; }
+    for (const e of entrees) {
+      const p = join(dir, e);
+      if (statSync(p).isDirectory()) yield* descendre(p);
+      else if (p.endsWith(".tsx")) yield p;
+    }
+  }
+  for (const z of zones) yield* descendre(join(RACINE, z));
+}
+
+test("aucune icône posée sur un aplat de la charte n'échappe au contrôle", () => {
+  /*
+   * `partVisible` rend 1 pour un emoji qu'elle ne connaît pas : elle ne
+   * prétend pas savoir. C'est honnête, mais silencieux — une icône ajoutée
+   * demain sur un bouton passerait sans être jugée. Ce test est le rappel :
+   * il relit le code et exige que toute icône posée sur une couleur de la
+   * charte figure dans la table des couleurs relevées.
+   */
+  // La classe de fond et l'icône sont presque toujours sur des lignes
+  // différentes — l'attribut d'un côté, le contenu de l'autre. Un balayage
+  // ligne à ligne ne trouve donc RIEN et le test passe à vide. D'où la
+  // fenêtre qui suit l'aplat, et le garde-fou de volume plus bas.
+  const surCharte = /\b(bg-teal-hover|bg-teal|bg-blue)\b/g;
+  const inconnues = new Map();
+  let reperees = 0;
+
+  for (const fichier of fichiersConnectes()) {
+    const texte = readFileSync(fichier, "utf8");
+    for (const m of texte.matchAll(surCharte)) {
+      const fenetre = texte.slice(m.index, m.index + 300);
+      for (const icone of fenetre.match(/\p{Extended_Pictographic}/gu) ?? []) {
+        reperees++;
+        if (!Object.keys(COULEURS_EMOJI).some((e) => e.startsWith(icone))) {
+          inconnues.set(icone, (inconnues.get(icone) ?? 0) + 1);
+        }
+      }
+    }
+  }
+
+  // Sans cela, une expression devenue inopérante ferait passer le test en
+  // silence : c'est précisément le défaut qu'il est chargé de prévenir.
+  assert.ok(reperees > 20, `le balayage ne trouve que ${reperees} icônes : il ne cherche plus au bon endroit`);
+  assert.deepEqual([...inconnues.keys()], [],
+    "icônes à relever puis à ajouter à COULEURS_EMOJI");
+});
+
+test("chaque icône surveillée a bien ses couleurs relevées", () => {
+  // L'inverse du test précédent : la liste des emplacements ne doit pas
+  // citer d'icône absente de la table, sans quoi elle serait réputée
+  // visible partout et le contrôle ne dirait plus rien.
+  const manquantes = [];
+  for (const { emoji, ou } of ICONES_PLACEES) {
+    for (const e of emoji) if (!COULEURS_EMOJI[e]) manquantes.push(`${e} (${ou})`);
+  }
+  assert.deepEqual(manquantes, []);
 });

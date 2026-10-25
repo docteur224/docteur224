@@ -7,6 +7,7 @@ import {
   analyser, estCharteDefaut, instantane, instantaneServeur, sAbonner, type Charte,
 } from "@/lib/charte-stockage";
 import { ecrireCharteDuCompte } from "@/lib/charte-compte";
+import { CHARTES_PRETES } from "@/lib/chartes-pretes";
 
 /*
  * « Couleurs de mon espace » — le réglage de charte, commun aux cinq rôles.
@@ -23,16 +24,6 @@ import { ecrireCharteDuCompte } from "@/lib/charte-compte";
  * aucune ne déclenche d'avertissement. Des teintes séduisantes en ont été
  * écartées — un accent violet avale le ✔️ des boutons de validation.
  */
-
-/** Chartes prêtes à l'emploi, toutes vérifiées sans réserve. */
-const CHARTES: { nom: string; principale: string; accent: string }[] = [
-  { nom: "Docteur 224", principale: CHARTE_DEFAUT.principale, accent: CHARTE_DEFAUT.accent },
-  { nom: "Océan", principale: "#0b3f4a", accent: "#0097aa" },
-  { nom: "Émeraude", principale: "#0a4030", accent: "#109d7b" },
-  { nom: "Terracotta", principale: "#5a2a14", accent: "#c25400" },
-  { nom: "Bordeaux", principale: "#3a1218", accent: "#b4123a" },
-  { nom: "Nuit & or", principale: "#232323", accent: "#9c7400" },
-];
 
 const CARTE = "rounded-2xl border border-line bg-white p-5";
 const TITRE_CARTE = "mb-1 text-[15px] font-extrabold";
@@ -119,7 +110,7 @@ export default function CouleursEspace() {
 
       {/* ---- chartes prêtes à l'emploi ---- */}
       <div className="mb-4 flex flex-wrap gap-2">
-        {CHARTES.map((c) => {
+        {CHARTES_PRETES.map((c) => {
           const actif =
             normaliserHex(charte.principale) === c.principale &&
             normaliserHex(charte.accent) === c.accent;
