@@ -262,9 +262,11 @@ export default function FilMessages({
           <button
             type="submit"
             disabled={enCours || (!texte.trim() && !fichier)}
-            className="inline-flex h-11 flex-none items-center justify-center gap-1.5 rounded-[10px] bg-teal px-4 text-[13px] font-bold text-white transition-colors hover:bg-blue disabled:opacity-45"
+            aria-label={enCours ? "Envoi en cours" : "Envoyer"}
+            className="inline-flex h-11 w-11 flex-none items-center justify-center gap-1.5 rounded-[10px] bg-teal px-0 text-[13px] font-bold text-white transition-colors hover:bg-blue disabled:opacity-45 sm:w-auto sm:px-4"
           >
-            {enCours ? "Envoi…" : "Envoyer"}
+            <Icone nom="envoyer" taille={17} className="sm:hidden" />
+            <span className="hidden sm:inline">{enCours ? "Envoi…" : "Envoyer"}</span>
           </button>
         </div>
         {erreur && (

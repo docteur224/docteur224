@@ -35,6 +35,7 @@ const TRACES = {
   horloge: "M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18M12 7v5l3 2",
   historique: "M3 3v18h18M7 14l3-4 3 3 4-6",
   message: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z",
+  envoyer: "M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z",
   utilisateur: "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 3a4 4 0 1 0 0 8a4 4 0 1 0 0-8",
   points: "M5 12h.01M12 12h.01M19 12h.01",
   camera: "M23 7l-7 5 7 5V7zM3 5h11a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z",
