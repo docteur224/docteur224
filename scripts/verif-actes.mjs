@@ -547,7 +547,10 @@ async function main() {
       await page.taille(1280, 900, false);
       await page.goto(`${APP}/espace-admin/actes`);
       check("[1280] admin : référentiel listé", await page.waitFor(`document.querySelectorAll('main table tbody tr').length > 10`, 20000));
-      check("[1280] admin : entrée de menu « Actes et analyses »", await page.eval(`!!document.querySelector('a[href="/espace-admin/actes"][aria-current="page"]')`));
+      check(
+        "[1280] admin : entrée de menu « Analyses et imagerie », signalée courante",
+        await page.eval(`document.querySelector('a[href="/espace-admin/actes"][aria-current="page"]')?.textContent.includes('Analyses et imagerie') ?? false`)
+      );
 
       /*
        * On lit la PREMIÈRE CELLULE (l'acte), pas la ligne entière : celle-ci

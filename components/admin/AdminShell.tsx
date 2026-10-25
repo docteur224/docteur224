@@ -43,7 +43,10 @@ const LIENS = [
   { href: "/espace-admin/messagerie", icone: "💬", label: "Messagerie" },
   { href: "/espace-admin/parametres", icone: "⚙️", label: "Paramètres" },
   { href: "/espace-admin/medicaments", icone: "💊", label: "Médicaments" },
-  { href: "/espace-admin/actes", icone: "🔬", label: "Actes et analyses" },
+  // « et imagerie » n'est pas décoratif : l'écran couvre les deux domaines,
+  // et sans le dire on cherche l'imagerie dans une entrée de menu qui
+  // n'existe pas.
+  { href: "/espace-admin/actes", icone: "🔬", label: "Analyses et imagerie" },
   { href: "/espace-admin/equipe", icone: "🛡️", label: "Équipe admin" },
   { href: "/espace-admin/audit", icone: "📜", label: "Journal d'audit" },
   { href: "/espace-admin/mon-compte", icone: "🔐", label: "Mon compte" },

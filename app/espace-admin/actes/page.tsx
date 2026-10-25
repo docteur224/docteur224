@@ -132,7 +132,7 @@ export default function PageActes() {
   return (
     <AdminShell permission="parametres">
       <div className="md:hidden">
-        <EnTeteMobile retour="/espace-admin/plus" titre="Actes et analyses" />
+        <EnTeteMobile retour="/espace-admin/plus" titre="Analyses et imagerie" />
       </div>
       <Toast avis={avis} />
 
@@ -162,7 +162,7 @@ export default function PageActes() {
       <div className="px-4 pb-8 md:px-0">
         <div className="mb-4 flex flex-wrap items-end justify-between gap-3 pt-3 md:pt-0">
           <div>
-            <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Actes et analyses</h2>
+            <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Analyses et imagerie</h2>
             <p className="max-w-[640px] text-[13px] leading-relaxed text-muted">
               Ce que les médecins trouvent en rédigeant une ordonnance de biologie ou d’imagerie. Les synonymes décident
               de ce qu’on peut taper pour retrouver un acte. Biologie amorcée sur la liste OMS des diagnostics in vitro
