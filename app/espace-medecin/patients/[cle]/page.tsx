@@ -1,8 +1,8 @@
 "use client";
 
-import { Suspense, use, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, use, useCallback, useMemo, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import MedecinShell from "@/components/medecin/MedecinShell";
 import {
   idOnglet,
@@ -20,7 +20,7 @@ import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import Icone from "@/components/site/Icone";
 import Toast, { useToast } from "@/components/site/Toast";
 import { lirePatientCle, useContextePro, useDossierPatient } from "@/lib/pro";
-import { noterRecent } from "@/lib/acces-rapide";
+import PaletteCommandes, { type ActionPalette } from "@/components/medecin/PaletteCommandes";
 import { numeroComposable } from "@/lib/rdv-utils";
 
 /*
@@ -90,11 +90,7 @@ function FichePatient({ cle }: { cle: string }) {
 
   const nomComplet = dossier ? `${dossier.prenom} ${dossier.nom}` : "";
   const introuvable = !chargement && !dossier;
-
-  // Mémorise l'ouverture pour la palette d'accès rapide (« patients récents »).
-  useEffect(() => {
-    if (nomComplet) noterRecent({ cle, nom: nomComplet });
-  }, [cle, nomComplet]);
+  const router = useRouter();
 
   /* ---------- Révisions : un module signale qu'il a écrit ---------- */
   const [revisions, setRevisions] = useState<Record<string, number>>({});
@@ -166,6 +162,41 @@ function FichePatient({ cle }: { cle: string }) {
   /** Visible sur téléphone seulement si c'est la vue choisie ; toujours au-delà de lg. */
   const surMobile = (vue: string) => (vueMobile === vue ? "" : "max-lg:hidden");
 
+  /* Actions de la fiche, pour la palette (Ctrl/Cmd+K) : aller à une section,
+     prendre un RDV, appeler. Rien d'autre que les gestes de CET écran. */
+  const actionsFiche: ActionPalette[] = dossier
+    ? [
+        {
+          id: "act-rdv",
+          groupe: "Actions",
+          icone: <Icone nom="plus" taille={15} epaisseur={2.4} />,
+          label: "Nouveau RDV pour ce patient",
+          run: () => router.push(`/espace-medecin/nouveau-rdv?patient=${encodeURIComponent(cle)}`),
+        },
+        ...(dossier.telephone
+          ? [
+              {
+                id: "act-appel",
+                groupe: "Actions",
+                icone: <Icone nom="telephone" taille={15} />,
+                label: "Appeler le patient",
+                sous: dossier.telephone,
+                run: () => {
+                  window.location.href = `tel:${numeroComposable(dossier.telephone)}`;
+                },
+              } satisfies ActionPalette,
+            ]
+          : []),
+        ...puces.map((p) => ({
+          id: `act-section-${p.id}`,
+          groupe: "Aller à la section",
+          icone: <Icone nom={p.icone} taille={15} />,
+          label: p.libelle,
+          run: () => choisir(p.id),
+        })),
+      ]
+    : [];
+
   return (
     <>
       <div className="md:hidden">
@@ -222,6 +253,15 @@ function FichePatient({ cle }: { cle: string }) {
             </div>
           )}
         </div>
+
+        {dossier && (
+          <div className="mb-4 hidden md:block">
+            <PaletteCommandes
+              actions={actionsFiche}
+              libelleBouton="Rechercher une action de la fiche…"
+            />
+          </div>
+        )}
 
         {introuvable ? (
           <div className={`${CARTE} py-12 text-center text-[13px] text-muted`}>
