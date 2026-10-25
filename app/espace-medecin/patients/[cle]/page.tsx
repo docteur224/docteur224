@@ -228,7 +228,15 @@ function FichePatient({ cle }: { cle: string }) {
             </small>
           </div>
           {dossier && (
-            <div className="flex w-full gap-2.5 md:w-auto">
+            <div className="flex w-full flex-wrap items-center gap-2.5 md:w-auto md:flex-nowrap">
+              {/* Palette d'actions de la fiche : à gauche des boutons, bureau
+                  seulement, séparée par une marge généreuse. */}
+              <div className="hidden md:block md:mr-10 md:w-[300px]">
+                <PaletteCommandes
+                  actions={actionsFiche}
+                  libelleBouton="Rechercher une action de la fiche…"
+                />
+              </div>
               {dossier.telephone ? (
                 <a
                   href={`tel:${numeroComposable(dossier.telephone)}`}
@@ -253,15 +261,6 @@ function FichePatient({ cle }: { cle: string }) {
             </div>
           )}
         </div>
-
-        {dossier && (
-          <div className="mb-4 hidden md:block">
-            <PaletteCommandes
-              actions={actionsFiche}
-              libelleBouton="Rechercher une action de la fiche…"
-            />
-          </div>
-        )}
 
         {introuvable ? (
           <div className={`${CARTE} py-12 text-center text-[13px] text-muted`}>
