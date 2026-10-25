@@ -57,6 +57,10 @@ function creerAdmin() {
   });
 }
 
+/** Instant du lancement : les contrôles en base ne regardent que ce qui s'est
+ *  passé pendant cette exécution. */
+const DEBUT = new Date().toISOString();
+
 let echecs = 0;
 const check = (label, ok, detail = "") => {
   if (!ok) echecs++;
@@ -329,11 +333,19 @@ async function main() {
     ssl: { rejectUnauthorized: false }, connectionTimeoutMillis: 15000,
   });
   await bdd.connect();
+  /*
+   * Borné au compte de démonstration et à la durée de cette exécution : la
+   * base est partagée avec la production, et les demandes faites ailleurs —
+   * par un vrai utilisateur pendant que le script tourne — ne sont pas ce
+   * qu'on cherche à savoir.
+   */
   const { rows } = await bdd.query(
-    `select count(*)::int as n from emails_en_attente
-     where type = 'mot_de_passe_oublie' and cree_le > now() - interval '30 minutes'`);
+    `select count(*)::int as n from emails_en_attente f
+     join utilisateurs u on u.id = f.destinataire_id
+     where f.type = 'mot_de_passe_oublie' and u.email = $1 and f.cree_le >= $2`,
+    [COMPTE_DEMO, DEBUT]);
   await bdd.end();
-  check("aucun courriel n'a été mis en file pendant la vérification", rows[0].n === 0, `${rows[0].n} ligne(s)`);
+  check("aucun courriel n'a été mis en file pour le compte de démonstration", rows[0].n === 0, `${rows[0].n} ligne(s)`);
 
   console.log(`\nCaptures : ${OUT}`);
   console.log(echecs === 0 ? "\n✅ Tout est passé." : `\n❌ ${echecs} vérification(s) en échec.`);

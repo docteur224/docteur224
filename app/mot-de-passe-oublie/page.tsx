@@ -62,9 +62,24 @@ export default function MotDePasseOublie() {
       <div className="mb-4 rounded-[11px] bg-green-soft px-[13px] py-[11px] text-[13px] font-semibold text-green">
         Si un compte est associé à cette adresse, un message vient d’y être envoyé.
       </div>
-      <p className="mb-5 text-[13.5px] leading-relaxed text-muted">
+      <p className="mb-3 text-[13.5px] leading-relaxed text-muted">
         Ouvrez-le et suivez le lien pour choisir un nouveau mot de passe : il est valable une heure
         et ne fonctionne qu’une fois. Pensez à regarder dans les indésirables.
+      </p>
+      {/*
+       * Le plafond d'envoi (3 par quart d'heure) est annoncé ICI, en texte
+       * constant, et jamais comme un refus.
+       *
+       * Un message « trop de demandes, réessayez plus tard » ne s'afficherait
+       * que pour les adresses qui ont bel et bien un compte — il suffirait de
+       * demander quatre fois pour savoir qui est inscrit chez un service de
+       * santé. Dit à tout le monde, il n'apprend rien à personne, et il
+       * explique à celui qui est vraiment plafonné pourquoi le message suivant
+       * se fait attendre : le lien qu'il a déjà reçu est le bon.
+       */}
+      <p className="mb-5 text-[13px] leading-relaxed text-muted">
+        Vous en avez déjà demandé un il y a quelques minutes ? C’est le dernier message reçu qui
+        vaut — au-delà de quelques demandes rapprochées, l’envoi suivant attend un quart d’heure.
       </p>
       <button
         type="button"
