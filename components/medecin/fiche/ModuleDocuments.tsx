@@ -49,12 +49,23 @@ import {
  * cite les premiers médicaments, pour distinguer deux ordonnances du même
  * jour sans les ouvrir.
  *
- * Chaque section n'affiche que les 5 pièces les plus récentes ; « Voir plus »
- * déplie le reste sur place (sans quitter la fiche), « Voir moins » referme.
+ * Chaque section n'affiche par défaut que les pièces des 6 derniers mois, par
+ * blocs de 5 (« Voir plus »). Les pièces plus anciennes ne sont PAS supprimées
+ * — un document remis reste au dossier à vie — mais repliées derrière « Voir
+ * les anciennes », pour désencombrer sans rien perdre.
  */
 const PAR_SECTION = 5;
+const MOIS_ARCHIVE = 6;
 
-function SectionPaginee({
+/** Instant au-delà duquel une pièce est considérée « ancienne ». */
+function seuilArchive(): number {
+  const d = new Date();
+  d.setMonth(d.getMonth() - MOIS_ARCHIVE);
+  return d.getTime();
+}
+
+/** Liste dépliable par blocs de 5 (« Voir plus » / « Voir moins »). */
+function ListePliable({
   items,
   rendu,
 }: {
@@ -77,6 +88,63 @@ function SectionPaginee({
           <Icone nom="chevron-droite" taille={14} className={tout ? "-rotate-90" : "rotate-90"} />
           {tout ? "Voir moins" : `Voir les ${reste} de plus`}
         </button>
+      )}
+    </>
+  );
+}
+
+/**
+ * Une section : les pièces des 6 derniers mois d'abord, les plus anciennes
+ * repliées. `seuil` est l'instant de bascule, calculé une fois par le parent.
+ */
+function SectionPaginee({
+  items,
+  seuil,
+  rendu,
+}: {
+  items: DocumentPatient[];
+  seuil: number;
+  rendu: (d: DocumentPatient) => ReactNode;
+}) {
+  const [anciennesVisibles, setAnciennesVisibles] = useState(false);
+  // Les listes arrivent déjà triées du plus récent au plus ancien ; le filtre
+  // préserve cet ordre.
+  const recentes = items.filter((d) => new Date(d.creeLe).getTime() >= seuil);
+  const anciennes = items.filter((d) => new Date(d.creeLe).getTime() < seuil);
+
+  return (
+    <>
+      {recentes.length > 0 ? (
+        <ListePliable items={recentes} rendu={rendu} />
+      ) : (
+        anciennes.length > 0 && (
+          <p className="text-[12.5px] text-muted">Rien dans les 6 derniers mois.</p>
+        )
+      )}
+
+      {anciennes.length > 0 && (
+        <div className="mt-3 border-t border-line pt-3">
+          <button
+            type="button"
+            onClick={() => setAnciennesVisibles((v) => !v)}
+            aria-expanded={anciennesVisibles}
+            className="inline-flex min-h-11 items-center gap-1.5 text-[12.5px] font-bold text-muted hover:text-ink hover:underline"
+          >
+            <Icone
+              nom="chevron-droite"
+              taille={14}
+              className={anciennesVisibles ? "-rotate-90" : "rotate-90"}
+            />
+            {anciennesVisibles
+              ? "Masquer les anciennes"
+              : `Voir les ${anciennes.length} anciennes · + de 6 mois`}
+          </button>
+          {anciennesVisibles && (
+            <div className="mt-3">
+              <ListePliable items={anciennes} rendu={rendu} />
+            </div>
+          )}
+        </div>
       )}
     </>
   );
@@ -106,6 +174,8 @@ export default function ModuleDocuments({ ctx }: { ctx: ContexteFiche }) {
   const remis = documents.filter((d) => d.origine === "medecin" && estMoi(d) && !d.remplaceParId);
   const recus = documents.filter((d) => d.origine === "patient" && estMoi(d) && !d.remplaceParId);
   const partages = documents.filter((d) => !estMoi(d) && !d.remplaceParId);
+  // Bascule « récent / ancien », la même pour les trois sections.
+  const seuil = seuilArchive();
 
   /** Les versions antérieures d'une pièce, de la plus récente à la plus ancienne. */
   const versionsDe = (d: DocumentPatient) => {
@@ -274,7 +344,7 @@ export default function ModuleDocuments({ ctx }: { ctx: ContexteFiche }) {
             texte="« + Document » génère une ordonnance à votre en-tête ou joint une pièce existante."
           />
         ) : (
-          <SectionPaginee items={remis} rendu={(d) => carteDocument(d, "remis")} />
+          <SectionPaginee items={remis} seuil={seuil} rendu={(d) => carteDocument(d, "remis")} />
         )}
       </section>
 
@@ -291,7 +361,7 @@ export default function ModuleDocuments({ ctx }: { ctx: ContexteFiche }) {
             espace.
           </p>
         ) : (
-          <SectionPaginee items={recus} rendu={(d) => carteDocument(d, "recu")} />
+          <SectionPaginee items={recus} seuil={seuil} rendu={(d) => carteDocument(d, "recu")} />
         )}
       </section>
 
@@ -305,7 +375,7 @@ export default function ModuleDocuments({ ctx }: { ctx: ContexteFiche }) {
             Le patient a donné accès à des documents rédigés ou reçus par un autre médecin. Vous
             pouvez les lire, pas les modifier.
           </p>
-          <SectionPaginee items={partages} rendu={(d) => carteDocument(d, "partage")} />
+          <SectionPaginee items={partages} seuil={seuil} rendu={(d) => carteDocument(d, "partage")} />
         </section>
       )}
 
