@@ -14,6 +14,7 @@ import {
 } from "@/lib/dates";
 import { useAgenda, useContextePro, type CreneauAgenda, type RdvAgenda } from "@/lib/pro";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
+import Icone from "@/components/site/Icone";
 
 /*
  * Mon agenda — la journée du praticien, heure par heure.
@@ -290,6 +291,18 @@ export default function AgendaMedecin() {
             <button type="button" className="chip grey" onClick={() => setExporter(true)}>
               ⤓ Exporter
             </button>
+            <label className="chip grey relative flex cursor-pointer items-center gap-1.5 whitespace-nowrap">
+              <Icone nom="calendrier" taille={13} className="flex-none" />
+              Choisir une date
+              {/* L'input natif couvre le chip : un tap ouvre le calendrier du téléphone. */}
+              <input
+                type="date"
+                value={dateISO}
+                onChange={(e) => e.target.value && setDateISO(e.target.value)}
+                aria-label="Choisir une date"
+                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+              />
+            </label>
           </div>
 
           <div className="statcards inpad" style={{ paddingTop: 12 }}>
