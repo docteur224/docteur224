@@ -231,7 +231,7 @@ function FichePatient({ cle }: { cle: string }) {
             <div className="flex w-full flex-wrap items-center gap-2.5 md:w-auto md:flex-nowrap">
               {/* Palette d'actions de la fiche : à gauche des boutons, bureau
                   seulement, séparée par une marge généreuse. */}
-              <div className="hidden md:block md:mr-10 md:w-[300px]">
+              <div className="hidden md:block md:mr-10 md:w-[440px]">
                 <PaletteCommandes
                   actions={actionsFiche}
                   libelleBouton="Rechercher une action de la fiche…"
