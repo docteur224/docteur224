@@ -23,6 +23,17 @@ import { lireRecents, type PatientRecent } from "@/lib/acces-rapide";
 
 type Lien = { href: string; icone: string; label: string };
 
+/*
+ * Champ vide : on ne montre que les écrans les plus ouverts d'une journée,
+ * pour une liste courte et lisible. Dès qu'on tape, la recherche porte sur
+ * TOUT le menu (voir plus bas), donc rien n'est perdu — juste dépriorisé.
+ */
+const COURANTS = [
+  "/espace-medecin/agenda",
+  "/espace-medecin/patients",
+  "/espace-medecin/correspondance",
+];
+
 export default function PaletteCommandes({ liens }: { liens: Lien[] }) {
   const [ouvert, setOuvert] = useState(false);
 
@@ -117,7 +128,9 @@ function Panneau({ liens, onFermer }: { liens: Lien[]; onFermer: () => void }) {
   if (actionsF.length) groupes.push({ titre: "Actions", items: actionsF });
 
   // --- Aller à (navigation) ---
-  const nav: Element[] = liens
+  // Champ vide : seulement les écrans courants. En recherche : tout le menu.
+  const sourceNav = qlc ? liens : liens.filter((l) => COURANTS.includes(l.href));
+  const nav: Element[] = sourceNav
     .filter((l) => correspond(l.label))
     .map((l) => ({ id: `nav-${l.href}`, icone: l.icone, label: l.label, action: () => aller(l.href) }));
   if (nav.length) groupes.push({ titre: "Aller à", items: nav });
