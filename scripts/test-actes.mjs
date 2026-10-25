@@ -252,6 +252,34 @@ async function main() {
     !JSON.stringify(vPublic).includes("Asthénie") && !JSON.stringify(vPublic).includes("URGENT")
   );
 
+  /* ---- Imagerie : le type existe-t-il ? (migration 0069) ---- */
+  const { data: docImagerie, error: eImagerie } = await medecin
+    .from("documents_patient")
+    .insert({
+      origine: "medecin",
+      depose_par: medecinId,
+      medecin_id: medecinId,
+      patient_id: patientId,
+      type: "ordonnance_imagerie",
+      titre: "Ordonnance d’imagerie (TEST-ACTES)",
+      contenu: "1. Échographie abdominale\n\nRenseignements cliniques : Douleurs",
+      prescription: [{ acteId: null, libelle: "Échographie abdominale" }],
+      prescription_options: { renseignements: "Douleurs" },
+      code_verification: code(),
+    })
+    .select("id")
+    .single();
+  if (docImagerie) cree.documents.push(docImagerie.id);
+  check(
+    "ordonnance d’imagerie émise",
+    !eImagerie && !!docImagerie,
+    // 22P02 = valeur hors enum : le diagnostic utile, sinon on lit un
+    // message Postgres qui ne dit pas quelle migration manque.
+    eImagerie?.code === "22P02"
+      ? "valeur d’enum « ordonnance_imagerie » absente — migration 0069 non appliquée"
+      : eImagerie?.message
+  );
+
   const { error: eTableau } = await medecin.from("documents_patient").insert({
     origine: "medecin", depose_par: medecinId, medecin_id: medecinId, patient_id: patientId,
     type: "ordonnance_biologie", titre: "Options mal formées (TEST-ACTES)", contenu: "x",

@@ -55,6 +55,17 @@ export const TYPES_DOCUMENT = [
     public: "Ordonnance de biologie",
   },
   {
+    valeur: "ordonnance_imagerie",
+    libelle: "Ordonnance d’imagerie",
+    icone: "🩻",
+    titreAuto: "Ordonnance d’imagerie",
+    structure: "acte",
+    feminin: true,
+    glyphe: "pouls",
+    pdf: "ORDONNANCE D’IMAGERIE MÉDICALE",
+    public: "Ordonnance d’imagerie",
+  },
+  {
     valeur: "compte_rendu",
     libelle: "Compte rendu",
     icone: "📋",

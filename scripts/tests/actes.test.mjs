@@ -103,10 +103,25 @@ test("actes : les lignes vides ne se numérotent pas", () => {
   assert.equal(texte, "1. VS");
 });
 
-test("actes : validation", () => {
-  assert.equal(problemeActes([]), "Ajoutez au moins un acte.");
-  assert.equal(problemeActes([{ acteId: null, libelle: "   " }]), "Ajoutez au moins un acte.");
-  assert.equal(problemeActes(LIGNES), null);
+test("actes : validation — il faut au moins un acte, nommé selon le domaine", () => {
+  assert.equal(problemeActes([], "biologie"), "Ajoutez au moins une analyse.");
+  assert.equal(problemeActes([], "imagerie"), "Ajoutez au moins un examen.");
+  assert.equal(problemeActes([{ acteId: null, libelle: "   " }], "biologie"), "Ajoutez au moins une analyse.");
+  assert.equal(problemeActes(LIGNES, "biologie"), null);
+});
+
+/*
+ * La seule règle qui distingue vraiment les deux domaines : le radiologue
+ * tire son protocole de l'indication, le laboratoire non.
+ */
+test("actes : les renseignements cliniques sont exigés en imagerie, pas en biologie", () => {
+  assert.equal(problemeActes(LIGNES, "biologie", {}), null, "la biologie n’exige rien");
+  assert.match(problemeActes(LIGNES, "imagerie", {}) ?? "", /renseignements cliniques/);
+  assert.match(problemeActes(LIGNES, "imagerie", { renseignements: "   " }) ?? "", /renseignements cliniques/);
+  assert.equal(problemeActes(LIGNES, "imagerie", { renseignements: "Traumatisme du genou" }), null);
+  // L'acte manquant passe AVANT : on ne reproche pas l'indication d'une
+  // ordonnance encore vide.
+  assert.equal(problemeActes([], "imagerie", {}), "Ajoutez au moins un examen.");
 });
 
 test("actes : rien de coché ne s’enregistre pas comme un objet vide", () => {

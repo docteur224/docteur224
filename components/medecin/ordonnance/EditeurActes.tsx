@@ -228,10 +228,15 @@ export default function EditeurActes({
 
       {/* ---- Renseignements cliniques ---- */}
       <div>
+        {/* Obligatoires en imagerie : c'est l'indication qui décide des
+            incidences et de l'injection. Facultatifs en biologie, où
+            l'analyse demandée se suffit le plus souvent à elle-même. */}
         <label htmlFor="actes-renseignements" className="mb-1 block text-[12.5px] font-bold">
-          Renseignements cliniques{" "}
+          Renseignements cliniques{domaine === "imagerie" ? " *" : ""}{" "}
           <span className="font-semibold text-muted">
-            (facultatif, imprimé sur l’ordonnance — ce qui aide à interpréter)
+            {domaine === "imagerie"
+              ? "(le radiologue en tire le protocole de l’examen)"
+              : "(facultatif, imprimé sur l’ordonnance — ce qui aide à interpréter)"}
           </span>
         </label>
         <textarea
@@ -240,7 +245,11 @@ export default function EditeurActes({
           value={options.renseignements ?? ""}
           maxLength={1000}
           onChange={(e) => onOptions({ ...options, renseignements: e.target.value })}
-          placeholder="Asthénie depuis 3 semaines, suspicion d’anémie."
+          placeholder={
+            domaine === "imagerie"
+              ? "Traumatisme du genou droit, suspicion de lésion méniscale."
+              : "Asthénie depuis 3 semaines, suspicion d’anémie."
+          }
           className={`${CHAMP} resize-y`}
         />
       </div>

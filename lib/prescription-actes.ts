@@ -105,9 +105,34 @@ export function texteOrdonnanceActes(lignes: LigneActe[], options: OptionsActes 
   return [entete.join("\n"), actes, fin].filter(Boolean).join("\n\n");
 }
 
-/** Valide une ordonnance d'actes avant envoi : le message à afficher, ou null. */
-export function problemeActes(lignes: LigneActe[]): string | null {
-  if (lignes.filter(ligneActeRemplie).length === 0) return "Ajoutez au moins un acte.";
+/**
+ * Valide une ordonnance d'actes avant envoi : le message à afficher, ou
+ * null.
+ *
+ * Le `domaine` n'a pas de valeur par défaut : la règle n'est pas la même
+ * des deux côtés, et un appelant qui l'oublierait appliquerait la mauvaise
+ * sans s'en apercevoir.
+ */
+export function problemeActes(
+  lignes: LigneActe[],
+  domaine: DomaineActe,
+  options: OptionsActes = {}
+): string | null {
+  if (lignes.filter(ligneActeRemplie).length === 0) {
+    return domaine === "biologie" ? "Ajoutez au moins une analyse." : "Ajoutez au moins un examen.";
+  }
+  /*
+   * En imagerie, les renseignements cliniques ne sont pas un confort : le
+   * radiologue en tire le protocole — incidences, injection de produit de
+   * contraste, urgence de la relecture. Un examen demandé sans indication
+   * est souvent à refaire, et c'est le patient qui se redéplace.
+   *
+   * En biologie, l'analyse demandée se suffit le plus souvent à elle-même :
+   * on n'impose rien.
+   */
+  if (domaine === "imagerie" && !(options.renseignements ?? "").trim()) {
+    return "Indiquez les renseignements cliniques : ils déterminent le protocole de l’examen.";
+  }
   return null;
 }
 

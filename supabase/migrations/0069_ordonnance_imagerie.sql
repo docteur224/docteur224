@@ -1,0 +1,27 @@
+-- ============================================================
+-- 0069 — Ordonnance d'imagerie
+--
+-- Une seule instruction, et c'est voulu : TOUT le reste existe déjà depuis
+-- la 0068.
+--
+--   * les 56 examens d'imagerie sont dans `actes_prescriptibles`, semés
+--     mais invisibles — faute d'un type de document pour les prescrire ;
+--   * `modeles_ordonnance.domaine` accepte déjà 'imagerie' ;
+--   * `prescription_options` et la reprise par `corriger_document` ne
+--     connaissent pas les domaines : elles valent pour tous.
+--
+-- C'était l'intérêt de bâtir UN mécanisme pour les deux domaines plutôt que
+-- d'en cloner un : l'imagerie coûte une valeur d'enum.
+--
+-- ------------------------------------------------------------
+-- ⚠ APPLICATION À LA MAIN (éditeur SQL)
+-- ------------------------------------------------------------
+-- Exécuter ce fichier SEUL, sans l'encadrer de BEGIN/ROLLBACK :
+-- `ALTER TYPE … ADD VALUE` ne le supporte pas et l'éditeur rejette alors le
+-- script entier avec « syntax error at or near "alter" ».
+--
+-- Une valeur d'enum ajoutée ne se retire pas : l'opération est définitive.
+-- Elle reste sans effet tant que personne ne l'emploie.
+-- ============================================================
+
+alter type type_doc_patient add value if not exists 'ordonnance_imagerie';

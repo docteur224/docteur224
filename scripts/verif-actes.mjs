@@ -1,6 +1,7 @@
 /*
- * Vérification des ordonnances de biologie (migration 0068) dans Chrome, par
- * CDP. Parcours RÉELS, données de test posées puis retirées :
+ * Vérification des ordonnances d'ACTES — biologie (migration 0068) et
+ * imagerie (0069) — dans Chrome, par CDP. Parcours RÉELS, données de test
+ * posées puis retirées :
  *
  *   Médecin (1280)
  *     - choisit « Ordonnance de biologie » : le titre devient automatique et
@@ -15,13 +16,16 @@
  *       sans rien livrer des renseignements cliniques ;
  *   Cloisonnement : le modèle de biologie n'apparaît PAS dans la liste des
  *     modèles de l'ordonnance de médicaments.
+ *   Imagerie : le type existe, l'éditeur parle d'« examens », la recherche
+ *     porte sur le référentiel d'imagerie, et les RENSEIGNEMENTS CLINIQUES
+ *     sont exigés — l'émission reste bloquée tant qu'ils manquent.
  *   Téléphone (390) : éditeur sans débordement, cibles ≥ 44 px.
  *   Administrateur : /espace-admin/actes — bascule biologie/imagerie,
  *     recherche par synonyme, export Excel, import CSV relu (1 ajout,
  *     1 ligne en erreur) ; mobile 390.
  *   Aucune erreur console.
  *
- * Usage : APP_URL=http://localhost:3993 ADMIN_MDP=… node scripts/verif-biologie.mjs
+ * Usage : APP_URL=http://localhost:3993 ADMIN_MDP=… node scripts/verif-actes.mjs
  */
 import { spawn } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -32,7 +36,7 @@ import { createClient } from "@supabase/supabase-js";
 const CHROME = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 const APP = process.env.APP_URL ?? "http://localhost:3993";
 const PORT = 9347;
-const ICI = path.join(os.tmpdir(), "docteur224-verif-biologie");
+const ICI = path.join(os.tmpdir(), "docteur224-verif-actes");
 const OUT = path.join(ICI, "captures");
 mkdirSync(OUT, { recursive: true });
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -176,8 +180,6 @@ const DIALOGUE = `[...document.querySelectorAll('[role="dialog"]')].find(d => (d
 const DANS = (racine, texte) =>
   `[...(${racine})?.querySelectorAll('button, [role="option"], a, label') ?? []].find(b => b.offsetParent !== null && b.textContent.trim().startsWith(${JSON.stringify(texte)}))`;
 const DEBORDE = `document.documentElement.scrollWidth > window.innerWidth + 1`;
-/** Première suggestion issue du référentiel (la dernière option est la saisie libre). */
-const SUGGESTION = `[...document.querySelectorAll('[role="option"]')].find(o => o.offsetParent && !o.textContent.startsWith('Prescrire'))`;
 /*
  * Une suggestion DÉSIGNÉE, et non la première venue : « hemo » remonte
  * légitimement « Électrophorèse de l'hémoglobine » ET « NFS (hémogramme) »,
@@ -188,7 +190,7 @@ const SUGGESTION_DE = (texte) =>
   `[...document.querySelectorAll('[role="option"]')].find(o => o.offsetParent && !o.textContent.startsWith('Prescrire') && o.textContent.includes(${JSON.stringify(texte)}))`;
 
 /* ---------- Données de test ---------- */
-const MARQUE = "VERIF-BIO";
+const MARQUE = "VERIF-ACTES";
 let ids;
 let debutTest;
 
@@ -212,7 +214,7 @@ async function nettoyer() {
   const { data: candidats } = await service
     .from("documents_patient").select("id, fichier_path, type")
     .eq("medecin_id", ids.medecinId).eq("patient_id", ids.patientId)
-    .eq("type", "ordonnance_biologie").gte("cree_le", debutTest);
+    .in("type", ["ordonnance_biologie", "ordonnance_imagerie"]).gte("cree_le", debutTest);
   const docs = candidats ?? [];
   if (docs.length) {
     const chemins = docs.map((d) => d.fichier_path).filter(Boolean);
@@ -395,6 +397,79 @@ async function main() {
     check("[public] le type est nommé « Ordonnance de biologie »", texteVerif.includes("Ordonnance de biologie"), texteVerif.slice(0, 120).replace(/\n/g, " · "));
     check("[public] rien des renseignements cliniques", !texteVerif.includes("Asthénie") && !texteVerif.includes("URGENT"));
     await page.shot("1280-verifier-biologie");
+
+    /* ---------- Imagerie : le même mécanisme, une règle en plus ---------- */
+    await page.goto(fiche);
+    await page.waitFor(`document.querySelector('#panneau-fiche-documents article')`, 30000);
+    await page.cliquer(`[...document.querySelectorAll('#panneau-fiche-documents button')].find(b => b.offsetParent && b.textContent.trim() === '+ Document')`);
+    check("[1280] imagerie : dialogue rouvert", await page.waitFor(DIALOGUE, 10000));
+    check(
+      "[1280] « Ordonnance d’imagerie » proposée",
+      await page.eval(`[...document.querySelectorAll('#doc-type option')].some(o => o.value === 'ordonnance_imagerie')`)
+    );
+    await page.valeur("doc-type", "ordonnance_imagerie");
+    check("[1280] imagerie : éditeur d’actes affiché", await page.waitFor(`document.getElementById('acte-0')`, 10000));
+    check(
+      "[1280] imagerie : l’éditeur parle d’examens, pas d’analyses",
+      await page.eval(`(${DIALOGUE}).innerText.includes('Ajouter un examen')`)
+    );
+
+    await page.saisir("acte-0", "echo abdo");
+    check(
+      "[1280] imagerie : la recherche porte sur le référentiel d’imagerie",
+      await page.waitFor(SUGGESTION_DE("Échographie abdominale"), 8000)
+    );
+    await page.cliquer(SUGGESTION_DE("Échographie abdominale"));
+
+    /*
+     * LA règle propre à l'imagerie. On vérifie les DEUX faces : le bouton
+     * refuse, ET le médecin sait pourquoi — un bouton grisé sans motif est
+     * un cul-de-sac.
+     */
+    check(
+      "[1280] imagerie : le motif du refus est affiché",
+      await page.waitFor(`(${DIALOGUE}).innerText.includes('Indiquez les renseignements cliniques')`, 8000)
+    );
+    check(
+      "[1280] imagerie : émission bloquée sans renseignements cliniques",
+      await page.eval(`(${DANS(DIALOGUE, "Émettre et remettre")})?.disabled === true`)
+    );
+
+    await page.saisir("actes-renseignements", `Douleurs abdominales persistantes (${MARQUE})`);
+    check(
+      "[1280] imagerie : l’avertissement lève une fois l’indication saisie",
+      await page.waitFor(`!(${DIALOGUE}).innerText.includes('Indiquez les renseignements cliniques')`, 8000)
+    );
+
+    await page.cliquer(DANS(DIALOGUE, "Émettre et remettre"));
+    check("[1280] imagerie : ordonnance émise", await page.waitFor(`(${DIALOGUE})?.textContent.includes('remise à') ?? false`, 40000));
+    await page.shot("1280-imagerie-emise");
+
+    const { data: docImg } = await service
+      .from("documents_patient")
+      .select("type, titre, prescription, prescription_options, code_verification")
+      .eq("patient_id", ids.patientId).eq("type", "ordonnance_imagerie").gte("cree_le", debutTest)
+      .order("cree_le", { ascending: false }).limit(1).maybeSingle();
+    check("en base : type « ordonnance_imagerie »", docImg?.type === "ordonnance_imagerie");
+    if (docImg) {
+      check("en base : titre automatique d’imagerie", /^Ordonnance d’imagerie du /.test(docImg.titre ?? ""), docImg.titre);
+      check(
+        "en base : l’examen est enregistré",
+        !!docImg.prescription?.[0]?.libelle?.includes("Échographie"),
+        JSON.stringify(docImg.prescription?.[0])
+      );
+      check(
+        "en base : les renseignements cliniques sont rangés dans les options",
+        !!docImg.prescription_options?.renseignements?.includes(MARQUE),
+        JSON.stringify(docImg.prescription_options)
+      );
+      await page.goto(`${APP}/verifier/${docImg.code_verification}`);
+      await page.waitFor(`document.body.innerText.includes('Document')`, 15000);
+      check(
+        "[public] le type est nommé « Ordonnance d’imagerie »",
+        (await page.eval(`document.body.innerText`)).includes("Ordonnance d’imagerie")
+      );
+    }
 
     /* ---------- Téléphone ---------- */
     await page.taille(390, 844, true);

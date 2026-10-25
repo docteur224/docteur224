@@ -132,7 +132,12 @@ export default function DeposerDocument({
       ? texteOrdonnance(lignes, remarques)
       : champs.contenu;
 
-  const probleme = actes ? problemeActes(lignesActes) : structuree ? problemePrescription(lignes) : null;
+  const domaineActe = domaineActeDe(champs.type) ?? "biologie";
+  const probleme = actes
+    ? problemeActes(lignesActes, domaineActe, options)
+    : structuree
+      ? problemePrescription(lignes)
+      : null;
   // L'alerte allergie ne vaut que pour les médicaments : on ne compare pas
   // une allergie déclarée à une analyse de sang.
   const nbAlertes = structure === "medicament" ? compterAlertes(lignes, allergies) : 0;
@@ -319,10 +324,21 @@ export default function DeposerDocument({
   const champ =
     "mb-3 w-full rounded-[11px] border border-line bg-white px-[13px] py-2.5 text-[13.5px] outline-none focus:border-teal pointer-coarse:min-h-11";
   const large = structuree || estCertificat(champs.type);
+  /*
+   * Le motif du refus ne s'affiche qu'une fois la saisie commencée : sur un
+   * formulaire encore vide, « ajoutez au moins une analyse » est un reproche
+   * avant la faute.
+   *
+   * Le tableau consulté doit être CELUI du type en cours. Il ne l'était pas :
+   * `lignes` porte les médicaments et reste vide dans une ordonnance
+   * d'actes, si bien que le message n'y paraissait jamais — en imagerie, le
+   * bouton d'émission se serait désactivé sans dire pourquoi.
+   */
+  const saisieCommencee = actes ? lignesActes.some(ligneActeRemplie) : lignes.some(ligneRemplie);
   const avertissement =
     nbAlertes > 0 && !confirmationAllergie
       ? "Allergie déclarée : confirmez la prescription pour l’émettre."
-      : structuree && probleme && lignes.some(ligneRemplie)
+      : structuree && probleme && saisieCommencee
         ? probleme
         : null;
 
@@ -455,7 +471,7 @@ export default function DeposerDocument({
               {actes ? (
                 <div className="mb-3">
                   <EditeurActes
-                    domaine={domaineActeDe(champs.type) ?? "biologie"}
+                    domaine={domaineActe}
                     lignes={lignesActes}
                     onLignes={setLignesActes}
                     options={options}
