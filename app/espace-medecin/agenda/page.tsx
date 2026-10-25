@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import MedecinShell from "@/components/medecin/MedecinShell";
 import DetailRdv from "@/components/medecin/DetailRdv";
 import ExporterAgenda from "@/components/medecin/ExporterAgenda";
@@ -109,6 +109,15 @@ export default function AgendaMedecin() {
     setDateISO(versISO(decalerDate(depuisISO(dateISO), jours)));
   }
 
+  /* La bande des jours défile horizontalement (swipe / glissement) ; on y
+     ramène le jour choisi à chaque changement de date ou de semaine. */
+  const bande = useRef<HTMLDivElement>(null);
+  const jourChoisi = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    const el = jourChoisi.current;
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+  }, [dateISO]);
+
   /** Lien de prise de rendez-vous préréglé sur un créneau libre. */
   const lienCreneau = (heure: string) =>
     `/espace-medecin/nouveau-rdv?date=${dateISO}&heure=${heure}`;
@@ -124,7 +133,10 @@ export default function AgendaMedecin() {
       >
         ‹
       </button>
-      <div className="grid flex-1 grid-cols-7 gap-1.5">
+      <div
+        ref={bande}
+        className="flex flex-1 snap-x gap-1.5 overflow-x-auto scroll-smooth pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      >
         {semaine.map((iso) => {
           const jour = depuisISO(iso);
           const choisi = iso === dateISO;
@@ -132,10 +144,11 @@ export default function AgendaMedecin() {
           return (
             <button
               key={iso}
+              ref={choisi ? jourChoisi : undefined}
               type="button"
               onClick={() => setDateISO(iso)}
               aria-current={choisi ? "date" : undefined}
-              className={`rounded-[11px] border-[1.5px] px-1 py-2 text-center transition-colors ${
+              className={`flex min-w-[58px] flex-1 snap-center flex-col items-center rounded-[11px] border-[1.5px] px-1 py-2 text-center transition-colors ${
                 choisi
                   ? "border-teal bg-teal text-white"
                   : iso === aujourdhui
@@ -150,7 +163,7 @@ export default function AgendaMedecin() {
                 {jour.getDate()}
               </span>
               <span
-                className={`mt-0.5 block text-[10px] font-bold ${
+                className={`mt-0.5 block whitespace-nowrap text-[10px] font-bold ${
                   compte === 0 ? "opacity-40" : choisi ? "" : "text-teal"
                 }`}
               >
