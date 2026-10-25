@@ -45,6 +45,9 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 class CDP {
   constructor(ws) {
     this.ws = ws; this.id = 0; this.attente = new Map();
+    /** Erreurs de la page : une promesse qui ne se règle jamais ne se voit
+     *  pas autrement qu'ici. */
+    this.erreurs = [];
     ws.onmessage = (ev) => {
       const m = JSON.parse(ev.data);
       if (m.id && this.attente.has(m.id)) {
@@ -52,6 +55,11 @@ class CDP {
         this.attente.delete(m.id);
         if (m.error) rej(new Error(m.error.message));
         else res(m.result);
+      } else if (m.method === "Runtime.exceptionThrown") {
+        const d = m.params.exceptionDetails;
+        this.erreurs.push(`exception : ${d.exception?.description ?? d.text}`);
+      } else if (m.method === "Runtime.consoleAPICalled" && m.params.type === "error") {
+        this.erreurs.push(`console : ${m.params.args.map((a) => a.value ?? a.description ?? "").join(" ")}`);
       }
     };
   }
@@ -117,16 +125,39 @@ async function main() {
       if (!e) return false;
       e.scrollIntoView({ block: "center" }); e.click(); return true;
     })()`);
-
-  try {
-    await preparer();
-
-    // ---------- connexion ----------
+  /** Saisit les deux couleurs comme le ferait un clavier (React écoute « input »). */
+  const ecrireCouleurs = async (principale, accent) => {
+    await ev(`(() => {
+      const d = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
+      const p = (id, v) => {
+        const c = document.getElementById(id);
+        if (!c) return;
+        d.call(c, v); c.dispatchEvent(new Event("input", { bubbles: true }));
+      };
+      p("charte-principale", ${JSON.stringify(principale)});
+      p("charte-accent", ${JSON.stringify(accent)});
+    })()`);
+    await sleep(700);
+  };
+  /**
+   * Attend qu'une condition soit vraie dans la page. Préférable à une pause
+   * fixe : l'écriture passe par le réseau et met entre 0,8 et 1,6 seconde —
+   * une pause calée au jugé rend le test tantôt vert tantôt rouge.
+   */
+  const attendre = async (expression, limite = 12000) => {
+    const fin = Date.now() + limite;
+    while (Date.now() < fin) {
+      if (await ev(expression)) return true;
+      await sleep(250);
+    }
+    return false;
+  };
+  const connecter = async () => {
     await aller("/connexion", 2500);
     await ev(`(() => {
+      const d = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
       const p = (s, v) => {
         const e = document.querySelector(s);
-        const d = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
         d.call(e, v); e.dispatchEvent(new Event("input", { bubbles: true }));
       };
       p('input[type="email"]', ${JSON.stringify(PATIENT.email)});
@@ -137,7 +168,14 @@ async function main() {
         .filter((b) => b.textContent.trim() === "S'identifier").pop()?.click();
     })()`);
     await sleep(4000);
-    const connecte = !(await ev("location.pathname")).startsWith("/connexion");
+    return !(await ev("location.pathname")).startsWith("/connexion");
+  };
+
+  try {
+    await preparer();
+
+    // ---------- connexion ----------
+    const connecte = await connecter();
     check("connexion au compte d'essai", connecte, await ev("location.pathname"));
     if (!connecte) return;
 
@@ -152,6 +190,19 @@ async function main() {
     await aller(ECRAN, 3000);
     check("la section « Couleurs de mon espace » est présente",
       await ev(`document.body.innerText.includes("Couleurs de mon espace")`));
+
+    // Le compte d'essai peut sortir d'un passage précédent : on repart d'un
+    // état connu plutôt que de le supposer. Un test qui dépend de ce que le
+    // précédent a laissé ne prouve rien le jour où il échoue.
+    //
+    // On attend d'abord que la charte du compte soit revenue de la base :
+    // décider avant, c'est juger sur l'écran encore vierge et conclure à
+    // tort qu'il n'y a rien à remettre.
+    await attendre(`!!localStorage.getItem("docteur224.charte")`, 5000);
+    if (await cliquerTexte("Couleurs d’origine")) {
+      await attendre(`document.querySelector('#couleurs [role=status]')?.textContent?.includes("rétablies")`);
+      await aller(ECRAN, 2500);
+    }
 
     const fondPage = () => ev(`getComputedStyle(document.body).backgroundColor`).then(rgbVersHex);
     const fondOrigine = await fondPage();
@@ -171,7 +222,9 @@ async function main() {
 
     // ---------- enregistrement ----------
     check("le bouton Enregistrer s'active", await cliquerTexte("Enregistrer"));
-    await sleep(900);
+    check("l'enregistrement aboutit",
+      await attendre(`document.querySelector('#couleurs [role=status]')?.textContent?.includes("enregistrées")`),
+      await ev(`document.querySelector('#couleurs [role=status]')?.textContent ?? "(aucun message)"`));
     const fondEnregistre = await fondPage();
     check("après enregistrement, tout l'espace suit",
       fondEnregistre !== fondOrigine, `fond ${fondEnregistre}`);
@@ -186,6 +239,20 @@ async function main() {
       tot === true,
       tot === true ? "" : "absente à DOMContentLoaded : la page s'afficherait d'abord en bleu");
 
+    // ---------- appareil neuf : la charte vient du compte ----------
+    // On vide l'avance locale : il ne reste que ce que la base sait. C'est
+    // la situation d'une première connexion sur un autre poste.
+    // Seulement la charte : un `localStorage.clear()` emporterait aussi la
+    // session, et l'on testerait alors la déconnexion sans le savoir.
+    await ev(`localStorage.removeItem("docteur224.charte")`);
+    await aller(ECRAN, 2000);
+    check("et l'avance locale est reconstituée depuis le compte",
+      await attendre(`!!localStorage.getItem("docteur224.charte")`));
+    const fondSansCache = await fondPage();
+    check("sur un appareil neuf, la charte revient du compte",
+      fondSansCache === fondEnregistre,
+      `fond ${fondSansCache}, attendu ${fondEnregistre}`);
+
     // ---------- le site public reste intact ----------
     await aller("/", 2600);
     const bleuPublic = await ev(
@@ -194,12 +261,7 @@ async function main() {
 
     // ---------- une charte illisible ne s'enregistre pas ----------
     await aller(ECRAN, 3000);
-    await ev(`(() => {
-      const d = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value").set;
-      const champs = [document.getElementById("charte-principale"), document.getElementById("charte-accent")];
-      for (const c of champs) { d.call(c, "#fdf6b2"); c.dispatchEvent(new Event("input", { bubbles: true })); }
-    })()`);
-    await sleep(700);
+    await ecrireCouleurs("#fdf6b2", "#fdf6b2");
     const bloque = await ev(`(() => {
       const b = [...document.querySelectorAll("button")].find((x) => x.textContent.trim() === "Enregistrer");
       return !!b && b.disabled;
@@ -218,8 +280,23 @@ async function main() {
 
     // ---------- retour aux couleurs d'origine ----------
     await aller(ECRAN, 3000);
+    // On se donne quelque chose à rétablir plutôt que de compter sur ce que
+    // les étapes précédentes ont laissé : une épreuve qui dépend de son
+    // histoire passe ou échoue sans rien prouver.
+    //
+    // Une charte AUTRE que celle enregistrée plus haut : reprendre la même
+    // laisserait « Enregistrer » grisé, faute de changement — et l'étape
+    // s'exécuterait sans rien avoir à effacer.
+    check("la charte Océan se choisit", await cliquerTexte("Océan"));
+    check("l'enregistrement de la seconde charte aboutit",
+      (await cliquerTexte("Enregistrer")) &&
+      (await attendre(`document.querySelector('#couleurs [role=status]')?.textContent?.includes("enregistrées")`)));
+    cdp.erreurs.length = 0;
     check("le bouton « Couleurs d'origine » répond", await cliquerTexte("Couleurs d’origine"));
-    await sleep(900);
+    check("le rétablissement aboutit",
+      await attendre(`document.querySelector('#couleurs [role=status]')?.textContent?.includes("rétablies")`),
+      (await ev(`document.querySelector('#couleurs [role=status]')?.textContent`))
+        ?? `(aucun message) ${cdp.erreurs.slice(0, 2).join(" | ")}`);
     const fondRetabli = await fondPage();
     check("les couleurs d'origine reviennent à l'identique",
       fondRetabli === fondOrigine, `fond ${fondRetabli}, attendu ${fondOrigine}`);
@@ -229,6 +306,36 @@ async function main() {
 
     await aller(ECRAN, 3000);
     console.log(`Capture (écran au repos) : ${await capture("ecran-repos.png")}`);
+
+    // ---------- la charte part avec son titulaire ----------
+    // En dernier : la session se referme ici. Une charte est reposée juste
+    // avant, pour qu'il y ait quelque chose à oublier.
+    await ecrireCouleurs("#5a2a14", "#c25400");
+    await cliquerTexte("Enregistrer");
+    await attendre(`document.querySelector('#couleurs [role=status]')?.textContent?.includes("enregistrées")`);
+    check("le bouton Déconnexion répond", await cliquerTexte("Déconnexion"));
+    await attendre(`location.pathname === "/"`, 10000);
+    check("à la déconnexion, l'avance locale est oubliée",
+      await attendre(`!localStorage.getItem("docteur224.charte")`, 6000),
+      "sinon le compte suivant hériterait de ces couleurs");
+
+    // Le compte ne doit rien garder non plus pour la prochaine fois.
+    await aller(ECRAN, 3000);
+    check("la session est bien close", (await ev("location.pathname")).includes("connexion"),
+      await ev("location.pathname"));
+
+    // Le compte d'essai repart avec la charte Docteur 224 : un test ne
+    // laisse pas derrière lui ce qu'il a écrit.
+    if (await connecter()) {
+      await aller(ECRAN, 3000);
+      // La charte du compte doit être revenue avant qu'on propose de
+      // l'effacer, sans quoi le bouton est encore grisé.
+      await attendre(`!!localStorage.getItem("docteur224.charte")`, 8000);
+      if (await cliquerTexte("Couleurs d’origine")) {
+        await attendre(`document.querySelector('#couleurs [role=status]')?.textContent?.includes("rétablies")`);
+      }
+      check("le compte d'essai est remis d'origine", (await fondPage()) === fondOrigine);
+    }
   } finally {
     const ko = resultats.filter((r) => !r.ok).length;
     console.log(`\n${resultats.length - ko}/${resultats.length} contrôles passés`);

@@ -1,4 +1,5 @@
 import { creerClientNavigateur } from "@/lib/supabase/client";
+import { oublierCharte } from "@/lib/charte-compte";
 
 /*
  * Authentification réelle (Supabase Auth + table `utilisateurs`).
@@ -75,10 +76,16 @@ export async function seConnecter(
 /** Referme une session ouverte par la mauvaise porte. */
 export async function refuserSession(): Promise<void> {
   await creerClientNavigateur().auth.signOut();
+  oublierCharte();
 }
 
 export async function seDeconnecter(): Promise<void> {
   await creerClientNavigateur().auth.signOut();
+  // Les couleurs partent avec leur titulaire : sans cela, la page de
+  // connexion puis le compte suivant — un assistant après le praticien, sur
+  // le poste de l'accueil — garderaient la charte du précédent. Le choix
+  // reste au compte et revient à la prochaine connexion.
+  oublierCharte();
 }
 
 export interface DonneesInscriptionPatient {

@@ -4,9 +4,9 @@ import { useMemo, useState, useSyncExternalStore } from "react";
 import { CHARTE_DEFAUT, construireCharte, normaliserHex } from "@/lib/charte-couleurs";
 import { accentPlusSombre, controlerCharte, verdictGlobal, type Verdict } from "@/lib/lisibilite";
 import {
-  analyser, effacerCharte, enregistrerCharte, estCharteDefaut, instantane,
-  instantaneServeur, sAbonner, type Charte,
+  analyser, estCharteDefaut, instantane, instantaneServeur, sAbonner, type Charte,
 } from "@/lib/charte-stockage";
+import { ecrireCharteDuCompte } from "@/lib/charte-compte";
 
 /*
  * « Couleurs de mon espace » — le réglage de charte, commun aux cinq rôles.
@@ -57,7 +57,7 @@ export default function CouleursEspace() {
   const enregistree = useMemo(() => analyser(brut) ?? CHARTE_DEFAUT, [brut]);
 
   const [essai, setEssai] = useState<Charte | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<{ texte: string; erreur: boolean } | null>(null);
   const charte = essai ?? enregistree;
   const setCharte = (c: Charte | ((p: Charte) => Charte)) =>
     setEssai((p) => (typeof c === "function" ? c(p ?? enregistree) : c));
@@ -81,16 +81,30 @@ export default function CouleursEspace() {
     normaliserHex(charte.principale) !== normaliserHex(enregistree.principale) ||
     normaliserHex(charte.accent) !== normaliserHex(enregistree.accent);
 
-  const enregistrer = () => {
-    enregistrerCharte(charte);
-    setEssai(null); // l'essai devient la charte enregistrée
-    setMessage("Couleurs enregistrées.");
+  const [enCours, setEnCours] = useState(false);
+
+  // La base d'abord, l'avance locale ensuite : c'est l'écriture distante qui
+  // décide, et un échec ne doit pas laisser l'écran affirmer le contraire.
+  const appliquerEnBase = async (voulue: Charte | null, succes: string) => {
+    setEnCours(true);
+    setMessage(null);
+    // Le rejet est rattrapé ici et pas seulement l'échec annoncé : réseau
+    // coupé ou session expirée lèvent une exception, et sans ce filet le
+    // bouton resterait indéfiniment sur « Enregistrement… », sans un mot
+    // pour dire ce qui s'est passé.
+    const ok = await ecrireCharteDuCompte(voulue).catch(() => false);
+    setEnCours(false);
+    if (!ok) {
+      setMessage({ texte: "Enregistrement impossible. Vérifiez votre connexion.", erreur: true });
+      return;
+    }
+    setEssai(null); // l'essai devient la charte du compte
+    setMessage({ texte: succes, erreur: false });
   };
-  const reinitialiser = () => {
-    effacerCharte();
-    setEssai(null);
-    setMessage("Couleurs d’origine rétablies.");
-  };
+
+  const enregistrer = () => appliquerEnBase(charte, "Couleurs enregistrées.");
+  const reinitialiser = () =>
+    appliquerEnBase(null, "Couleurs d’origine rétablies.");
 
   return (
     // L'ancre sert aux renvois depuis les écrans de réglages propres à un
@@ -243,15 +257,15 @@ export default function CouleursEspace() {
           // Une charte illisible ne s'enregistre pas : l'avertissement seul
           // laisserait des comptes bloqués sur une interface inutilisable,
           // sans pouvoir retrouver le bouton qui l'en sortirait.
-          disabled={!valide || verdict === "illisible" || !modifie}
+          disabled={!valide || verdict === "illisible" || !modifie || enCours}
           className="pointer-coarse:py-[13px] rounded-[10px] bg-teal px-[18px] py-[11px] text-[13.5px] font-bold text-white transition-colors hover:bg-teal-hover disabled:cursor-not-allowed disabled:opacity-50"
         >
-          Enregistrer
+          {enCours ? "Enregistrement…" : "Enregistrer"}
         </button>
         <button
           type="button"
           onClick={reinitialiser}
-          disabled={estCharteDefaut(charte) && estCharteDefaut(enregistree)}
+          disabled={enCours || (estCharteDefaut(charte) && estCharteDefaut(enregistree))}
           className="pointer-coarse:py-[13px] rounded-[10px] border-[1.5px] border-line bg-white px-[18px] py-[11px] text-[13.5px] font-bold text-blue transition-colors hover:bg-bg disabled:cursor-not-allowed disabled:opacity-50"
         >
           Couleurs d’origine
@@ -262,8 +276,11 @@ export default function CouleursEspace() {
           </small>
         )}
         {message && (
-          <small role="status" className="text-[12px] font-semibold text-green">
-            {message}
+          <small
+            role="status"
+            className={`text-[12px] font-semibold ${message.erreur ? "text-red" : "text-green"}`}
+          >
+            {message.texte}
           </small>
         )}
       </div>

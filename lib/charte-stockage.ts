@@ -8,13 +8,22 @@
  * Les fonctions ci-dessous touchent au navigateur et ne s'appellent que
  * depuis un composant client.
  *
- * Volontairement réduit à quatre fonctions : quand la préférence passera en
- * base, c'est ce fichier seul qui change, pas l'écran de réglage.
+ * Ce n'est plus le lieu de la vérité — la charte appartient au compte
+ * (`charte-compte`). Ceci n'en est que l'avance : les pages connectées sont
+ * servies statiques, le serveur ne sait donc pas qui regarde, et interroger
+ * la base avant d'afficher ferait apparaître chaque page en bleu d'origine
+ * le temps de la réponse. Le cache répond, lui, immédiatement ; la base
+ * corrige ensuite s'il se trompe.
  *
- * On range aussi le CSS déjà calculé à côté des deux couleurs. C'est ce qui
- * permet au petit script de démarrage de reposer la charte avant le premier
- * affichage sans embarquer le moteur de calcul, et donc sans faire clignoter
- * la page au bleu d'origine à chaque changement de page.
+ * On range le CSS déjà calculé à côté des deux couleurs : le script de
+ * démarrage le repose tel quel, sans embarquer le moteur de calcul.
+ *
+ * Le cache retient aussi À QUI il appartient. Deux comptes se succèdent sur
+ * le même navigateur — un praticien et son assistant sur le poste de
+ * l'accueil — et le second hériterait sinon des couleurs du premier.
+ *
+ * Aucune dépendance à Supabase ici : ce fichier est lu par un composant
+ * serveur, qui n'a besoin que des deux identifiants ci-dessous.
  */
 
 import { CHARTE_DEFAUT, charteVersCss, normaliserHex } from "@/lib/charte-couleurs";
@@ -67,14 +76,27 @@ export function analyser(brut: string | null): Charte | null {
   }
 }
 
-export function enregistrerCharte(charte: Charte): void {
+/** À quel compte appartient ce qui est en cache, s'il le dit. */
+export function compteEnCache(brut: string | null): string | null {
+  try {
+    const c = brut ? JSON.parse(brut)?.compte : null;
+    return typeof c === "string" && c ? c : null;
+  } catch {
+    return null;
+  }
+}
+
+export function enregistrerCharte(charte: Charte, compte?: string | null): void {
   const principale = normaliserHex(charte.principale);
   const accent = normaliserHex(charte.accent);
   if (!principale || !accent) return;
   try {
     localStorage.setItem(
       CLE_CHARTE,
-      JSON.stringify({ principale, accent, css: charteVersCss(principale, accent) }),
+      JSON.stringify({
+        principale, accent, compte: compte ?? null,
+        css: charteVersCss(principale, accent),
+      }),
     );
   } catch { /* stockage indisponible : la charte vaut pour la session */ }
   appliquer({ principale, accent });
