@@ -1,7 +1,7 @@
 "use client";
 
 import { creerClientNavigateur } from "@/lib/supabase/client";
-import { normaliserRecherche, type ActeRef, type DomaineActe } from "@/lib/prescription-actes";
+import { classerActes, normaliserRecherche, type ActeRef, type DomaineActe } from "@/lib/prescription-actes";
 
 /*
  * Référentiel des actes prescriptibles (migration 0068) : ce que le médecin
@@ -17,7 +17,20 @@ interface LigneActeRef {
   domaine: DomaineActe;
   libelle: string;
   categorie: string | null;
+  /** Libellé + code + synonymes, normalisé par la base. Sert au classement. */
+  recherche: string | null;
 }
+
+/*
+ * Ramenés avant classement, puis réduits à `PROPOSES`.
+ *
+ * Il FAUT ramener plus que ce qu'on affiche : trier côté base par libellé
+ * puis couper à 12 écarterait le meilleur résultat avant même de l'avoir
+ * jugé. Le référentiel tient en quelques centaines de lignes, la requête
+ * reste immédiate.
+ */
+const RAMENES = 60;
+const PROPOSES = 12;
 
 /**
  * Actes actifs du domaine dont le libellé, le code ou l'un des synonymes
@@ -40,16 +53,13 @@ export async function rechercherActes(domaine: DomaineActe, saisie: string): Pro
   if (propre.length < 2) return [];
   const { data } = await creerClientNavigateur()
     .from("actes_prescriptibles")
-    .select("id, domaine, libelle, categorie")
+    .select("id, domaine, libelle, categorie, recherche")
     .eq("domaine", domaine)
     .eq("actif", true)
     .ilike("recherche", `%${propre}%`)
     .order("libelle")
-    .limit(12);
-  return ((data ?? []) as LigneActeRef[]).map((a) => ({
-    id: a.id,
-    domaine: a.domaine,
-    libelle: a.libelle,
-    categorie: a.categorie,
-  }));
+    .limit(RAMENES);
+  return classerActes((data ?? []) as LigneActeRef[], propre)
+    .slice(0, PROPOSES)
+    .map((a) => ({ id: a.id, domaine: a.domaine, libelle: a.libelle, categorie: a.categorie }));
 }

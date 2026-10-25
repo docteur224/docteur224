@@ -10,9 +10,11 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import {
+  classerActes,
   normaliserRecherche,
   optionsEnBase,
   problemeActes,
+  rangCorrespondance,
   texteOrdonnanceActes,
 } from "../../lib/prescription-actes.ts";
 import { analyserImport, cle, lireSynonymes } from "../../lib/import-actes.ts";
@@ -71,6 +73,74 @@ test("recherche : le JavaScript reproduit exactement la fonction SQL", () => {
     assert.ok(bloc[0].includes(`'${avant}', '${apres}'`), `le replace de « ${avant} » manque au SQL`);
     assert.equal(normaliserRecherche(avant), apres);
   }
+});
+
+/* ===================== Classement des résultats ===================== */
+
+/** Tel que la base le construit : libellé + code + synonymes, normalisé. */
+const acte = (libelle, ...synonymes) => ({
+  libelle,
+  recherche: normaliserRecherche([libelle, ...synonymes].join(" ")),
+});
+
+/* Tous repris tels quels du référentiel (migration 0068) : un fixture qui
+   invente un synonyme teste une donnée qui n'existe pas. */
+const NFS = acte("NFS (hémogramme)", "nfs", "hemogramme", "numeration formule sanguine", "numeration");
+const HEMOCULTURE = acte("Hémoculture", "hemoculture");
+const ELECTRO = acte("Électrophorèse de l'hémoglobine", "electrophorese", "drepanocytose", "hemoglobinopathie");
+const SCANNER = acte("Scanner cérébral sans injection", "tdm cerebrale", "scanner cerebral", "scanner crane");
+const ANGIOSCANNER = acte("Angioscanner pulmonaire", "angioscanner", "embolie pulmonaire");
+
+test("classement : rangs selon l’endroit de la correspondance", () => {
+  // Le libellé commence par la saisie.
+  assert.equal(rangCorrespondance(HEMOCULTURE.libelle, HEMOCULTURE.recherche, "hemo"), 0);
+  assert.equal(rangCorrespondance(SCANNER.libelle, SCANNER.recherche, "scanner"), 0);
+  // Un mot du libellé ou d’un synonyme commence par la saisie.
+  assert.equal(rangCorrespondance(NFS.libelle, NFS.recherche, "hemo"), 1);
+  // La saisie n’apparaît qu’au milieu d’un mot : « angioSCANNER ».
+  assert.equal(rangCorrespondance(ANGIOSCANNER.libelle, ANGIOSCANNER.recherche, "scanner"), 2);
+});
+
+test("classement : ce qui commence par la saisie passe devant", () => {
+  assert.deepEqual(
+    classerActes([ELECTRO, NFS, HEMOCULTURE], "hemo").map((a) => a.libelle),
+    ["Hémoculture", "Électrophorèse de l'hémoglobine", "NFS (hémogramme)"]
+  );
+});
+
+/*
+ * À rang égal, l'ordre reste alphabétique et ne dépend pas de l'ordre
+ * d'arrivée. Un classement par longueur avait été essayé puis retiré : sur
+ * le référentiel réel il rendait « Radiographie du pied, du coude, du
+ * crâne », que rien ne laisse prévoir.
+ */
+test("classement : à rang égal, alphabétique, quel que soit l’ordre d’entrée", () => {
+  const attendu = ["Électrophorèse de l'hémoglobine", "NFS (hémogramme)"];
+  assert.deepEqual(classerActes([NFS, ELECTRO], "hemo").map((a) => a.libelle), attendu);
+  assert.deepEqual(classerActes([ELECTRO, NFS], "hemo").map((a) => a.libelle), attendu);
+});
+
+test("classement : le rang prime sur l’alphabet", () => {
+  // « Angioscanner » précède « Scanner » dans l'alphabet, mais n'a la saisie
+  // qu'au milieu d'un mot : le libellé qui commence par elle passe devant.
+  assert.deepEqual(
+    classerActes([ANGIOSCANNER, SCANNER], "scanner").map((a) => a.libelle),
+    ["Scanner cérébral sans injection", "Angioscanner pulmonaire"]
+  );
+});
+
+test("classement : la saisie accentuée vaut la saisie sans accent", () => {
+  assert.deepEqual(
+    classerActes([ELECTRO, NFS], "hémo").map((a) => a.libelle),
+    classerActes([ELECTRO, NFS], "hemo").map((a) => a.libelle)
+  );
+});
+
+test("classement : une saisie à métacaractères ne casse pas l’expression", () => {
+  // Le « + » d'une saisie comme « c+ » serait un quantificateur invalide.
+  assert.doesNotThrow(() => classerActes([NFS], "c+"));
+  assert.doesNotThrow(() => classerActes([NFS], "a-b"));
+  assert.doesNotThrow(() => classerActes([NFS], "["));
 });
 
 /* ===================== Texte imprimé ===================== */

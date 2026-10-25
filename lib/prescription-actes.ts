@@ -83,6 +83,48 @@ export function normaliserRecherche(texte: string): string {
   return sortie;
 }
 
+/* ===================== Classement des résultats ===================== */
+
+const echapperRegex = (t: string) => t.replace(/[.*+?^${}()|[\]\\-]/g, "\\$&");
+
+/**
+ * Rang d'une correspondance, du meilleur (0) au moins bon (2) :
+ *
+ *   0 — le LIBELLÉ commence par la saisie : « radio » → « Radiographie… » ;
+ *   1 — un MOT du libellé, d'un synonyme ou du code commence par la saisie :
+ *       « hemo » → « NFS (hémogramme) », « tgo » → les transaminases ;
+ *   2 — la saisie se trouve ailleurs, au milieu d'un mot.
+ *
+ * `recherche` est la colonne tenue par la base : libellé + code + synonymes,
+ * déjà normalisée de la même façon que la saisie.
+ */
+export function rangCorrespondance(libelle: string, recherche: string, q: string): number {
+  if (normaliserRecherche(libelle).startsWith(q)) return 0;
+  if (new RegExp(`(^|[^a-z0-9])${echapperRegex(q)}`).test(recherche ?? "")) return 1;
+  return 2;
+}
+
+/**
+ * Classe les actes trouvés : d'abord ceux dont le libellé commence par la
+ * saisie, puis ceux qu'un mot ou un synonyme rattache, puis le reste.
+ *
+ * À rang égal, l'ordre reste ALPHABÉTIQUE. Un classement par longueur avait
+ * été essayé — « le libellé le plus court est l'acte le plus courant » —
+ * et mesuré sur le référentiel réel il dégradait tout : « radio » rendait
+ * « Radiographie du pied, du coude, du crâne », un ordre que rien ne laisse
+ * prévoir. Une liste qu'on parcourt des yeux doit rester alphabétique.
+ */
+export function classerActes<T extends { libelle: string; recherche?: string | null }>(
+  actes: T[],
+  saisie: string
+): T[] {
+  const q = normaliserRecherche(saisie);
+  const rang = new Map(actes.map((a) => [a, rangCorrespondance(a.libelle, a.recherche ?? "", q)]));
+  return [...actes].sort(
+    (a, b) => rang.get(a)! - rang.get(b)! || a.libelle.localeCompare(b.libelle, "fr")
+  );
+}
+
 /**
  * Le texte de l'ordonnance, tel que l'imprime le PDF.
  *
