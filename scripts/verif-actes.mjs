@@ -180,6 +180,34 @@ const DIALOGUE = `[...document.querySelectorAll('[role="dialog"]')].find(d => (d
 const DANS = (racine, texte) =>
   `[...(${racine})?.querySelectorAll('button, [role="option"], a, label') ?? []].find(b => b.offsetParent !== null && b.textContent.trim().startsWith(${JSON.stringify(texte)}))`;
 const DEBORDE = `document.documentElement.scrollWidth > window.innerWidth + 1`;
+const BOUTON_NOUVEAU = `[...document.querySelectorAll('#panneau-fiche-documents button')].find(b => b.offsetParent && b.textContent.trim() === '+ Document')`;
+
+/*
+ * Ouvre le dialogue de dépôt depuis la fiche patient, en CONSTATANT chaque
+ * étape. Trois conditions s'enchaînent — l'onglet s'affiche, le bouton
+ * existe, le dialogue s'ouvre — et un `waitFor` qui expire rend `false`
+ * sans rien dire. Sans ces constats, c'est l'étape suivante qui échoue, sur
+ * un « introuvable : [...document.querySelectorAll… » qui ne désigne
+ * aucune des trois.
+ */
+async function ouvrirDepot(page, ou) {
+  if (!(await page.waitFor(`document.querySelector('#panneau-fiche-documents article')`, 30000))) {
+    check(`${ou} onglet Documents chargé`, false, await page.eval(`document.body.innerText.slice(0, 180).replace(/\\n+/g, ' · ')`));
+    return false;
+  }
+  if (!(await page.waitFor(BOUTON_NOUVEAU, 15000))) {
+    check(
+      `${ou} bouton « + Document » présent`,
+      false,
+      await page.eval(`[...document.querySelectorAll('#panneau-fiche-documents button')].map(b => b.textContent.trim()).join(' / ').slice(0, 180)`)
+    );
+    return false;
+  }
+  await page.cliquer(BOUTON_NOUVEAU);
+  const ouvert = await page.waitFor(DIALOGUE, 10000);
+  check(`${ou} dialogue de dépôt ouvert`, ouvert);
+  return ouvert;
+}
 /*
  * Une suggestion DÉSIGNÉE, et non la première venue : « hemo » remonte
  * légitimement « Électrophorèse de l'hémoglobine » ET « NFS (hémogramme) »,
@@ -257,11 +285,9 @@ async function main() {
     check("connexion médecin", c1.ok);
     await page.taille(1280, 900, false);
     await page.goto(fiche);
-    await page.waitFor(`document.querySelector('#panneau-fiche-documents article')`, 30000);
 
     /* ---------- Le type et son éditeur ---------- */
-    await page.cliquer(`[...document.querySelectorAll('#panneau-fiche-documents button')].find(b => b.offsetParent && b.textContent.trim() === '+ Document')`);
-    check("[1280] dialogue de dépôt ouvert", await page.waitFor(DIALOGUE, 5000));
+    if (!(await ouvrirDepot(page, "[1280]"))) throw new Error("dialogue de dépôt inaccessible à 1280 px");
     check(
       "[1280] le menu dit « Ordonnance médicale », plus seulement « Ordonnance »",
       await page.eval(`[...document.querySelectorAll('#doc-type option')].some(o => o.textContent === 'Ordonnance médicale')`)
@@ -400,9 +426,7 @@ async function main() {
 
     /* ---------- Imagerie : le même mécanisme, une règle en plus ---------- */
     await page.goto(fiche);
-    await page.waitFor(`document.querySelector('#panneau-fiche-documents article')`, 30000);
-    await page.cliquer(`[...document.querySelectorAll('#panneau-fiche-documents button')].find(b => b.offsetParent && b.textContent.trim() === '+ Document')`);
-    check("[1280] imagerie : dialogue rouvert", await page.waitFor(DIALOGUE, 10000));
+    if (!(await ouvrirDepot(page, "[1280] imagerie :"))) throw new Error("dialogue de dépôt inaccessible pour l’imagerie");
     check(
       "[1280] « Ordonnance d’imagerie » proposée",
       await page.eval(`[...document.querySelectorAll('#doc-type option')].some(o => o.value === 'ordonnance_imagerie')`)
@@ -474,14 +498,7 @@ async function main() {
     /* ---------- Téléphone ---------- */
     await page.taille(390, 844, true);
     await page.goto(fiche);
-    await page.waitFor(`document.querySelector('#panneau-fiche-documents article')`, 30000);
-    await page.cliquer(`[...document.querySelectorAll('#panneau-fiche-documents button')].find(b => b.offsetParent && b.textContent.trim() === '+ Document')`);
-    // Constaté, et pas supposé : un `waitFor` qui expire rend `false` sans
-    // rien dire, et l'étape suivante partait alors sur un dialogue absent
-    // — d'où un « Cannot read properties of null » illisible.
-    const feuilleOuverte = await page.waitFor(DIALOGUE, 15000);
-    check("[390] dialogue ouvert en feuille", feuilleOuverte);
-    if (!feuilleOuverte) throw new Error("le dialogue ne s’est pas ouvert à 390 px — section téléphone abandonnée");
+    if (!(await ouvrirDepot(page, "[390]"))) throw new Error("le dialogue ne s’est pas ouvert à 390 px — section téléphone abandonnée");
     await page.valeur("doc-type", "ordonnance_biologie");
     check("[390] éditeur d’actes affiché", await page.waitFor(`document.getElementById('acte-0')`, 10000));
     check("[390] pas de débordement horizontal", !(await page.eval(DEBORDE)));
@@ -510,21 +527,54 @@ async function main() {
     if (!process.env.ADMIN_MDP) {
       console.log("ℹ️  ADMIN_MDP absent : écran d’administration non vérifié");
     } else {
-      const c2 = await seConnecter(page, cdp, "admin@docteur224.com", process.env.ADMIN_MDP, "/connexion", "/S.identifier/");
+      // L'administration a SA porte et SON bouton : /espace-admin/connexion
+      // et « Accéder à la console ». Pas /connexion, qui est celle des
+      // patients et des praticiens.
+      const c2 = await seConnecter(
+        page,
+        cdp,
+        "admin@docteur224.com",
+        process.env.ADMIN_MDP,
+        "/espace-admin/connexion",
+        "/Accéder à la console/"
+      );
       page = c2.page;
       check("connexion administrateur", c2.ok);
+      // Sans ce garde-fou, une connexion refusée produisait trois échecs de
+      // plus — tous les mêmes — puis une exception sur un sélecteur, et la
+      // vraie cause se perdait en tête de liste.
+      if (!c2.ok) throw new Error("connexion administrateur refusée — mot de passe (ADMIN_MDP) ou compte à vérifier");
       await page.taille(1280, 900, false);
       await page.goto(`${APP}/espace-admin/actes`);
       check("[1280] admin : référentiel listé", await page.waitFor(`document.querySelectorAll('main table tbody tr').length > 10`, 20000));
       check("[1280] admin : entrée de menu « Actes et analyses »", await page.eval(`!!document.querySelector('a[href="/espace-admin/actes"][aria-current="page"]')`));
 
+      /*
+       * On lit la PREMIÈRE CELLULE (l'acte), pas la ligne entière : celle-ci
+       * concatène les synonymes et la catégorie. Et on confronte le libellé
+       * au RÉFÉRENTIEL plutôt qu'à une liste de mots devinée — « Écho-Doppler
+       * artériel » est bien de l'imagerie, mais ne contient ni
+       * « Échographie », ni « Scanner », ni « IRM ».
+       */
+      const { data: actesImagerie } = await service
+        .from("actes_prescriptibles").select("libelle").eq("domaine", "imagerie").eq("actif", true);
+      const libellesImagerie = (actesImagerie ?? []).map((a) => a.libelle);
+      const PREMIER_ACTE = `document.querySelector('main table tbody tr td')?.textContent.trim() ?? ''`;
+
+      const premierBio = await page.eval(PREMIER_ACTE);
       const nbBio = await page.eval(`document.querySelectorAll('main table tbody tr').length`);
       await page.cliquer(`[...document.querySelectorAll('main [role="radio"]')].find(b => b.textContent.startsWith('Imagerie'))`);
-      await sleep(500);
-      const premierImagerie = await page.eval(`document.querySelector('main table tbody tr')?.textContent ?? ''`);
-      check("[1280] admin : la bascule change de domaine", /Radiographie|Échographie|Scanner|IRM|Panoramique|Mammographie/.test(premierImagerie), premierImagerie.slice(0, 50));
+      // Attendre que la liste ait VRAIMENT changé, plutôt qu'un délai fixe.
+      await page.waitFor(`(${PREMIER_ACTE}) !== ${JSON.stringify(premierBio)}`, 8000);
+      const premierImagerie = await page.eval(PREMIER_ACTE);
+      check(
+        "[1280] admin : la bascule change de domaine",
+        libellesImagerie.some((l) => premierImagerie.startsWith(l)),
+        premierImagerie.slice(0, 60)
+      );
+
       await page.cliquer(`[...document.querySelectorAll('main [role="radio"]')].find(b => b.textContent.startsWith('Biologie'))`);
-      await sleep(500);
+      await page.waitFor(`(${PREMIER_ACTE}) === ${JSON.stringify(premierBio)}`, 8000);
       check("[1280] admin : retour en biologie", (await page.eval(`document.querySelectorAll('main table tbody tr').length`)) === nbBio);
 
       await page.saisir("recherche-acte", "tgo");
@@ -538,9 +588,22 @@ async function main() {
       const exp = await page.eval(`fetch('/api/admin/actes/export').then(async r => ({ s: r.status, t: r.headers.get('content-type'), n: (await r.arrayBuffer()).byteLength }))`);
       check("[1280] admin : export Excel", exp.s === 200 && exp.t.includes("spreadsheetml") && exp.n > 4000, JSON.stringify(exp));
 
-      // Import d'un CSV : 1 ajout, 1 ligne en erreur (domaine inconnu)
+      /*
+       * Import d'un CSV : 1 ajout, 1 ligne en erreur (domaine inconnu).
+       *
+       * La cellule des synonymes est ENTRE GUILLEMETS : le point-virgule qui
+       * les sépare est aussi le délimiteur du fichier. Sans les guillemets,
+       * les colonnes se décalent, « biochimie » tombe dans « Actif », et la
+       * ligne est écartée pour la mauvaise raison — ce qui s'est produit au
+       * premier passage.
+       */
       const csv = path.join(ICI, "import-verif.csv");
-      writeFileSync(csv, `Domaine;Libellé;Synonymes;Catégorie;Actif\nbiologie;Dosage ${MARQUE};essai ; bidon;biochimie;oui\nchirurgie;Acte hors domaine ${MARQUE};;;oui\n`);
+      writeFileSync(
+        csv,
+        `Domaine;Libellé;Synonymes;Catégorie;Actif\n` +
+          `biologie;Dosage ${MARQUE};"essai ; bidon";biochimie;oui\n` +
+          `chirurgie;Acte hors domaine ${MARQUE};;;oui\n`
+      );
       await page.cliquer(`[...document.querySelectorAll('main button')].find(b => b.offsetParent && b.textContent.trim() === 'Importer')`);
       await page.waitFor(`document.getElementById('fichier-import-actes')`, 5000);
       const { root } = await page.send("DOM.getDocument", { depth: -1 });
