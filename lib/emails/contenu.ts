@@ -67,7 +67,11 @@ function jourLisible(dateISO: string): string {
 const heureLisible = (h: string) => h.slice(0, 5);
 
 function site(): string {
-  return (process.env.NEXT_PUBLIC_SITE_URL ?? "https://docteur224-gn.vercel.app").replace(/\/$/, "");
+  // Le repli est le domaine public, et non celui de la préproduction : une
+  // variable absente d’un déploiement ferait partir des liens vers une adresse
+  // que le lecteur ne reconnaît pas — dans un courriel, cela ressemble à une
+  // tentative d’hameçonnage.
+  return (process.env.NEXT_PUBLIC_SITE_URL ?? "https://docteur224.com").replace(/\/$/, "");
 }
 
 /** Les faits saillants d'un rendez-vous, dans l'ordre où on se les demande. */
@@ -228,6 +232,33 @@ function rediger(ligne: LigneFile, details: DetailsRdv | null): Message {
           note: NOTE_REGLAGE,
         };
     }
+  }
+
+  /*
+   * Réinitialisation du mot de passe (route /api/mot-de-passe/demander).
+   *
+   * Le seul courriel de la plateforme dont le LIEN est le contenu : tout le
+   * reste du message n'est là que pour permettre de juger s'il faut cliquer.
+   * D'où ce qu'il dit et ce qu'il ne dit pas — ni nom, ni rôle, ni rien qui
+   * identifie le compte : une boîte partagée au secrétariat d'un cabinet lit
+   * les objets de tout le monde.
+   *
+   * La phrase sur la demande non faite n'est pas une formule de politesse :
+   * c'est la seule indication utile à qui reçoit ce message sans l'avoir
+   * demandé — son mot de passe actuel, lui, n'a pas bougé.
+   */
+  if (ligne.type === "mot_de_passe_oublie") {
+    return {
+      titre: "Réinitialiser votre mot de passe",
+      apercu: "Le lien est valable une heure.",
+      paragraphes: [
+        "Vous avez demandé à choisir un nouveau mot de passe pour votre compte Docteur 224.",
+        "Le lien ci-dessous est valable une heure et ne fonctionne qu’une fois.",
+        "Si vous n’êtes pas à l’origine de cette demande, ignorez ce message : votre mot de passe actuel reste valable.",
+      ],
+      bouton: lien ? { libelle: "Choisir un nouveau mot de passe", url: lien } : undefined,
+      note: "Nous ne vous demanderons jamais votre mot de passe par e-mail ni par téléphone.",
+    };
   }
 
   /*

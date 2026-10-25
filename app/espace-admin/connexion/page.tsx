@@ -111,9 +111,16 @@ export default function ConnexionAdmin() {
             onKeyDown={(e) => e.key === "Enter" && connecter()}
           />
 
-          <label htmlFor="admin-mdp" className="mb-1.5 block text-[12.5px] font-bold text-ink">
-            Mot de passe
-          </label>
+          <div className="mb-1.5 flex items-center justify-between gap-3">
+            <label htmlFor="admin-mdp" className="block text-[12.5px] font-bold text-ink">
+              Mot de passe
+            </label>
+            {/* Même écran que pour les autres rôles : le lien reçu renvoie
+                vers cette console une fois le mot de passe changé. */}
+            <Link href="/mot-de-passe-oublie" className="text-xs font-bold text-teal">
+              Mot de passe oublié ?
+            </Link>
+          </div>
           <input
             id="admin-mdp"
             className={champ}

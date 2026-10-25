@@ -58,6 +58,9 @@ const MAINTENANCE_OUVERTS = [
   "/espace-assistant",
   "/espace-etablissement",
   "/connexion",
+  // Un professionnel qui a perdu son mot de passe doit pouvoir le reprendre
+  // pendant une maintenance : c’est précisément là qu’on a besoin de lui.
+  "/mot-de-passe-oublie",
   "/desinscription",
   "/maintenance",
   "/api",

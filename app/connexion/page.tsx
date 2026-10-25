@@ -129,13 +129,12 @@ export default function Connexion() {
           {enCours ? "Connexion…" : "S'identifier"}
         </button>
         <div style={{ textAlign: "right", marginTop: 10 }}>
-          <span
-            className="muted"
-            title="Bientôt disponible"
-            style={{ color: "var(--teal)", fontSize: 12.5, fontWeight: 700, opacity: 0.6 }}
+          <Link
+            href="/mot-de-passe-oublie"
+            style={{ color: "var(--teal)", fontSize: 12.5, fontWeight: 700 }}
           >
             Mot de passe oublié ?
-          </span>
+          </Link>
         </div>
         <div className="linkline">
           Pas encore de compte ? <Link href="/inscription">S&apos;inscrire</Link>
@@ -163,14 +162,9 @@ export default function Connexion() {
             />
             <div className="mb-1.5 mt-0.5 flex items-center justify-between text-[12.5px] font-bold text-ink">
               Mot de passe
-              <button
-                type="button"
-                disabled
-                title="Bientôt disponible"
-                className="cursor-not-allowed text-xs font-bold text-teal opacity-60"
-              >
+              <Link href="/mot-de-passe-oublie" className="text-xs font-bold text-teal">
                 Mot de passe oublié ?
-              </button>
+              </Link>
             </div>
             <input
               className={champ}

@@ -53,12 +53,23 @@ const MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", 
  * médical — un SMS se lit par-dessus l'épaule. Le motif de consultation n'y
  * figure donc pas.
  */
+/**
+ * Le domaine, sans le protocole : un SMS ne doit pas dépenser huit caractères
+ * en « https:// », et le téléphone rend le lien cliquable sans cela. Il suit
+ * `NEXT_PUBLIC_SITE_URL` plutôt que d’être écrit en dur — un rappel qui nomme
+ * une adresse de préproduction ne sera pas reconnu par son lecteur.
+ */
+function domaine(): string {
+  const brut = process.env.NEXT_PUBLIC_SITE_URL ?? "https://docteur224.com";
+  return brut.replace(/^https?:\/\//, "").replace(/\/$/, "");
+}
+
 export function texteRappel(r: Pick<Reserve, "date_rdv" | "heure_rdv" | "medecin" | "pour_qui" | "delai_heures">): string {
   const [, m, j] = r.date_rdv.split("-").map(Number);
   const heure = r.heure_rdv.slice(0, 5);
   const quand = r.delai_heures >= 24 ? `le ${j} ${MOIS[m - 1]} à ${heure}` : `aujourd’hui à ${heure}`;
   const pour = r.pour_qui ? ` pour ${r.pour_qui}` : "";
-  return `Docteur 224 : rappel de votre RDV${pour} avec ${r.medecin} ${quand}. Empêché ? Annulez sur docteur224-gn.vercel.app/mes-rendez-vous`;
+  return `Docteur 224 : rappel de votre RDV${pour} avec ${r.medecin} ${quand}. Empêché ? Annulez sur ${domaine()}/mes-rendez-vous`;
 }
 
 function clientAdmin(): SupabaseClient {
