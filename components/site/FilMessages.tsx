@@ -135,7 +135,7 @@ export default function FilMessages({
   const dernierDeMoi = [...messages].reverse().find((m) => m.expediteurId === moiId);
 
   return (
-    <div className="flex flex-col overflow-hidden rounded-xl border border-line bg-bg">
+    <div className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-line bg-bg">
       <div
         ref={fil}
         role="log"
@@ -257,7 +257,7 @@ export default function FilMessages({
               }
             }}
             placeholder="Votre message…"
-            className="max-h-32 min-h-11 flex-1 resize-none rounded-[10px] border border-line px-3 py-2.5 text-[13.5px] outline-none focus:border-teal"
+            className="max-h-32 min-h-11 w-full min-w-0 flex-1 resize-none rounded-[10px] border border-line px-3 py-2.5 text-[13.5px] outline-none focus:border-teal"
           />
           <button
             type="submit"
