@@ -389,7 +389,16 @@ export default function AgendaMedecin() {
             <button type="button" onClick={() => decaler(-1)} className={BTN_BARRE}>
               ‹ Hier
             </button>
-            <button type="button" onClick={() => setDateISO(aujourdhui)} className={BTN_BARRE}>
+            <button
+              type="button"
+              onClick={() => setDateISO(aujourdhui)}
+              aria-current={dateISO === aujourdhui ? "date" : undefined}
+              className={
+                dateISO === aujourdhui
+                  ? "rounded-[9px] border-[1.5px] border-teal bg-teal-soft px-[14px] py-2 text-[12.5px] font-bold text-blue"
+                  : BTN_BARRE
+              }
+            >
               Aujourd’hui
             </button>
             <button type="button" onClick={() => decaler(1)} className={BTN_BARRE}>
