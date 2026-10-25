@@ -335,9 +335,9 @@ async function main() {
 
     /* ---------- Modèle, et son cloisonnement ---------- */
     await page.cliquer(DANS(DIALOGUE, "Enregistrer comme modèle"));
-    await page.waitFor(`document.getElementById('nom-modele-actes')`, 5000);
+    check("[1280] champ du nom de modèle ouvert", await page.waitFor(`document.getElementById('nom-modele-actes')`, 10000));
     await page.saisir("nom-modele-actes", `Bilan ${MARQUE}`);
-    await page.cliquer(DANS(DIALOGUE, "Enregistrer"));
+
     /*
      * On vise le <p role="status"> de l'éditeur, et NON le texte du
      * dialogue entier : celui-ci contient déjà « Aucune signature
@@ -346,7 +346,19 @@ async function main() {
      * au lieu de se deviner.
      */
     const STATUT = `[...document.querySelectorAll('[role=status], [role=alert]')].map(p => p.textContent.trim()).filter(Boolean).join(' | ')`;
-    await page.waitFor(`/Modèle/.test(${STATUT})`, 8000);
+
+    /*
+     * UN SEUL clic, et une attente large.
+     *
+     * Une nouvelle tentative avait été écrite ici, au cas où le clic
+     * manquerait sa cible. Elle créait un DOUBLON : le premier clic
+     * aboutissait, simplement plus lentement que l'attente ne le croyait, et
+     * `enregistrerModele` ne reconnaît un modèle existant que s'il figure
+     * déjà dans la liste rechargée. Enregistrer n'est pas idempotent — on ne
+     * réessaie pas une création à l'aveugle.
+     */
+    await page.cliquer(DANS(DIALOGUE, "Enregistrer"));
+    await page.waitFor(`/Modèle/.test(${STATUT})`, 20000);
     const messageModele = await page.eval(STATUT);
     check(
       "[1280] modèle enregistré — confirmation affichée",
