@@ -265,7 +265,19 @@ export default function AgendaMedecin() {
               {capitaliser(formatDateLongue(dateISO))}
             </div>
           </div>
-          <Link href="/espace-medecin/nouveau-rdv" className="btnm" style={{ marginLeft: "auto" }}>
+          <label className="btnm gh relative" style={{ marginLeft: "auto" }} title="Choisir une date">
+            <Icone nom="calendrier" taille={17} />
+            <span className="sr-only">Choisir une date</span>
+            {/* L'input natif couvre le bouton : un tap ouvre le calendrier du téléphone. */}
+            <input
+              type="date"
+              value={dateISO}
+              onChange={(e) => e.target.value && setDateISO(e.target.value)}
+              aria-label="Choisir une date"
+              className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+            />
+          </label>
+          <Link href="/espace-medecin/nouveau-rdv" className="btnm">
             + RDV
           </Link>
         </div>
@@ -291,18 +303,6 @@ export default function AgendaMedecin() {
             <button type="button" className="chip grey" onClick={() => setExporter(true)}>
               ⤓ Exporter
             </button>
-            <label className="chip grey relative flex cursor-pointer items-center gap-1.5 whitespace-nowrap">
-              <Icone nom="calendrier" taille={13} className="flex-none" />
-              Choisir une date
-              {/* L'input natif couvre le chip : un tap ouvre le calendrier du téléphone. */}
-              <input
-                type="date"
-                value={dateISO}
-                onChange={(e) => e.target.value && setDateISO(e.target.value)}
-                aria-label="Choisir une date"
-                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-              />
-            </label>
           </div>
 
           <div className="statcards inpad" style={{ paddingTop: 12 }}>
