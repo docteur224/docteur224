@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, use, useCallback, useMemo, useState } from "react";
+import { Suspense, use, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import MedecinShell from "@/components/medecin/MedecinShell";
@@ -20,6 +20,7 @@ import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import Icone from "@/components/site/Icone";
 import Toast, { useToast } from "@/components/site/Toast";
 import { lirePatientCle, useContextePro, useDossierPatient } from "@/lib/pro";
+import { noterRecent } from "@/lib/acces-rapide";
 import { numeroComposable } from "@/lib/rdv-utils";
 
 /*
@@ -89,6 +90,11 @@ function FichePatient({ cle }: { cle: string }) {
 
   const nomComplet = dossier ? `${dossier.prenom} ${dossier.nom}` : "";
   const introuvable = !chargement && !dossier;
+
+  // Mémorise l'ouverture pour la palette d'accès rapide (« patients récents »).
+  useEffect(() => {
+    if (nomComplet) noterRecent({ cle, nom: nomComplet });
+  }, [cle, nomComplet]);
 
   /* ---------- Révisions : un module signale qu'il a écrit ---------- */
   const [revisions, setRevisions] = useState<Record<string, number>>({});

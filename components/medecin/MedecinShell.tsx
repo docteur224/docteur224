@@ -9,6 +9,7 @@ import { useProfilConnecte } from "@/lib/patient";
 import CompteSuspendu from "@/components/compte/CompteSuspendu";
 import { useParcoursInscription } from "@/lib/inscription-pro";
 import BarreLaterale from "@/components/site/BarreLaterale";
+import PaletteCommandes from "@/components/medecin/PaletteCommandes";
 
 /**
  * Coquille de l'espace médecin — reproduit la structure .dash / .side / .snav
@@ -101,7 +102,13 @@ export default function MedecinShell({
         ) : refuse ? (
           <EcranReserve />
         ) : (
-          children
+          <>
+            {/* Accès rapide (bureau) : pastille en haut du contenu, Ctrl/Cmd+K. */}
+            <div className="mb-4 hidden md:block">
+              <PaletteCommandes liens={liens} />
+            </div>
+            {children}
+          </>
         )}
       </main>
       <TabBarMobile role="medecin" />
