@@ -12,7 +12,15 @@ import {
   numeroComposable,
   telechargerICS,
 } from "@/lib/rdv-utils";
-import { annulerRdvMedecin, majStatutRdv, useContextePro, type RdvAgenda } from "@/lib/pro";
+import {
+  annulerRdvMedecin,
+  majStatutRdv,
+  marquerAbsentRdv,
+  qualifierRdv,
+  useContextePro,
+  type RdvAgenda,
+} from "@/lib/pro";
+import { estCorrigeable, estMarquablePresent, statutAffiche } from "@/lib/statuts-rdv";
 
 /*
  * Détail d'un rendez-vous de l'agenda.
@@ -33,6 +41,7 @@ import { annulerRdvMedecin, majStatutRdv, useContextePro, type RdvAgenda } from 
 const TEINTE_STATUT: Record<string, string> = {
   confirme: "bg-green-soft text-green",
   en_attente: "bg-amber-soft text-amber",
+  present: "bg-teal-soft text-teal",
   honore: "bg-teal-soft text-blue",
   annule: "bg-red-soft text-red",
   absent: "bg-red-soft text-red",
@@ -41,9 +50,10 @@ const TEINTE_STATUT: Record<string, string> = {
 const LIBELLE_STATUT: Record<string, string> = {
   confirme: "Confirmé",
   en_attente: "En attente de confirmation",
+  present: "Présent",
   honore: "Honoré",
   annule: "Annulé",
-  absent: "Absent",
+  absent: "Non honoré",
 };
 
 const LIBELLE_SOURCE: Record<string, string> = {
@@ -99,11 +109,18 @@ export default function DetailRdv({
   const [motif, setMotif] = useState("");
   const [autre, setAutre] = useState("");
   const [enCours, setEnCours] = useState(false);
+  const [corrige, setCorrige] = useState(false);
   const [erreur, setErreur] = useState("");
 
   const peutAgir = role !== "assistant" || permissions.confirmerAnnuler;
   const aujourdhui = versISO(new Date());
   const passe = rdv.date < aujourdhui || (rdv.date === aujourdhui && heureDeFin(rdv.heure) <= new Date().toTimeString().slice(0, 5));
+  const etat = statutAffiche(rdv);
+  // « Passé » au sens de la base (date + heure de début) : c'est ce que teste
+  // `qualifier_rdv` avant d'accepter « honoré » ou « non honoré ».
+  const horaireDepasse =
+    rdv.date < aujourdhui ||
+    (rdv.date === aujourdhui && rdv.heure.slice(0, 5) <= new Date().toTimeString().slice(0, 5));
 
   const carte =
     rdv.lieu === "domicile"
@@ -114,11 +131,15 @@ export default function DetailRdv({
           ville: medecin?.ville,
         });
 
-  async function changerStatut(statut: "confirme" | "honore") {
+  /**
+   * Un geste sur l'état du rendez-vous. On recharge l'agenda et on ferme : le
+   * `rdv` affiché est figé (une prop), le rouvrir montrera le nouvel état.
+   */
+  async function agir(action: () => Promise<{ erreur?: string }>) {
     if (enCours) return;
     setEnCours(true);
     setErreur("");
-    const res = await majStatutRdv(rdv.id, statut);
+    const res = await action();
     setEnCours(false);
     if (res.erreur) return setErreur(res.erreur);
     apres();
@@ -268,7 +289,7 @@ export default function DetailRdv({
           >
             {rdv.lieu === "domicile" ? "🏠 Visite à domicile" : "🏥 Au cabinet"}
           </span>
-          {passe && rdv.statut !== "honore" && rdv.statut !== "annule" && (
+          {passe && (rdv.statut === "en_attente" || rdv.statut === "confirme") && (
             <span className="rounded-lg bg-amber-soft px-2.5 py-1 text-[11.5px] font-bold text-amber">
               Créneau passé
             </span>
@@ -354,37 +375,112 @@ export default function DetailRdv({
           <div className="border-t border-line pt-3">
             {peutAgir ? (
               <div className="flex flex-wrap gap-2">
-                {rdv.statut === "en_attente" && (
+                {/* Encore à venir : on confirme. */}
+                {etat === "en_attente" && !horaireDepasse && (
                   <button
                     type="button"
                     className={BTN_LEGER}
                     disabled={enCours}
-                    onClick={() => changerStatut("confirme")}
+                    onClick={() => agir(() => majStatutRdv(rdv.id, "confirme"))}
                   >
                     ✓ Confirmer
                   </button>
                 )}
-                {rdv.statut !== "honore" && (
+                {/* Le patient arrive → présent. */}
+                {estMarquablePresent(rdv) && (
                   <button
                     type="button"
                     className={BTN_LEGER}
                     disabled={enCours}
-                    onClick={() => changerStatut("honore")}
+                    onClick={() => agir(() => qualifierRdv(rdv.id, "present"))}
+                  >
+                    🙋 Patient présent
+                  </button>
+                )}
+                {/* Présent, ou passé non tranché : la consultation a eu lieu. */}
+                {(etat === "present" || etat === "a_qualifier") && (
+                  <button
+                    type="button"
+                    className={BTN_LEGER}
+                    disabled={enCours}
+                    onClick={() => agir(() => qualifierRdv(rdv.id, "honore"))}
                   >
                     🩺 Marquer honoré
                   </button>
                 )}
-                <button
-                  type="button"
-                  className={BTN_ROUGE}
-                  disabled={enCours}
-                  onClick={() => {
-                    setErreur("");
-                    setVue("annuler");
-                  }}
-                >
-                  ✖️ Annuler
-                </button>
+                {/* Passé non tranché : le patient ne s'est pas présenté. */}
+                {etat === "a_qualifier" && (
+                  <button
+                    type="button"
+                    className={BTN_ROUGE}
+                    disabled={enCours}
+                    onClick={() => agir(() => marquerAbsentRdv(rdv.id))}
+                  >
+                    🚫 Non honoré
+                  </button>
+                )}
+                {/* Avant réalisation : l'annulation classique, avec motif. */}
+                {(rdv.statut === "en_attente" || rdv.statut === "confirme") && (
+                  <button
+                    type="button"
+                    className={BTN_ROUGE}
+                    disabled={enCours}
+                    onClick={() => {
+                      setErreur("");
+                      setVue("annuler");
+                    }}
+                  >
+                    ✖️ Annuler
+                  </button>
+                )}
+                {/* Reprise d'une erreur de saisie — seul chemin des retours arrière. */}
+                {estCorrigeable(rdv) && (
+                  <button
+                    type="button"
+                    className={BTN_LEGER}
+                    disabled={enCours}
+                    aria-expanded={corrige}
+                    onClick={() => setCorrige((v) => !v)}
+                  >
+                    ✏️ Corriger le statut
+                  </button>
+                )}
+
+                {corrige && estCorrigeable(rdv) && (
+                  <div className="flex w-full flex-wrap items-center gap-2 rounded-[12px] bg-bg p-2.5">
+                    <span className="text-[12px] font-semibold text-muted">Corriger en :</span>
+                    {rdv.statut !== "present" && (
+                      <button
+                        type="button"
+                        className={BTN_LEGER}
+                        disabled={enCours}
+                        onClick={() => agir(() => qualifierRdv(rdv.id, "present", true))}
+                      >
+                        Présent
+                      </button>
+                    )}
+                    {rdv.statut !== "honore" && horaireDepasse && (
+                      <button
+                        type="button"
+                        className={BTN_LEGER}
+                        disabled={enCours}
+                        onClick={() => agir(() => qualifierRdv(rdv.id, "honore", true))}
+                      >
+                        Honoré
+                      </button>
+                    )}
+                    {rdv.statut !== "absent" && horaireDepasse && (
+                      <button
+                        type="button"
+                        className={BTN_LEGER}
+                        disabled={enCours}
+                        onClick={() => agir(() => marquerAbsentRdv(rdv.id, { correction: true }))}
+                      >
+                        Non honoré
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             ) : (
               <p className="text-[11.5px] leading-relaxed text-muted">

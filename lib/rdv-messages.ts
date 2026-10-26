@@ -5,7 +5,7 @@ import type { Canal } from "@/lib/messagerie/types";
 
 /*
  * Messages sortants liés à un rendez-vous : confirmation, déplacement,
- * annulation.
+ * annulation, absence (no-show).
  *
  * SERVEUR UNIQUEMENT. `lib/messagerie` lit des secrets et appelle
  * `enregistrer_message`, qui n'est accordée qu'à la service_role.
@@ -21,7 +21,7 @@ import type { Canal } from "@/lib/messagerie/types";
  * contourner les plafonds vendus.
  */
 
-export type GenreMessageRdv = "confirmation" | "deplacement" | "annulation";
+export type GenreMessageRdv = "confirmation" | "deplacement" | "annulation" | "absence";
 
 export interface EnvoiRdv {
   /** Canal téléphonique réellement emprunté, `null` si aucun numéro connu. */
@@ -171,16 +171,22 @@ export async function envoyerMessageRdv(
           ` Réservation gratuite, consultation réglée sur place.`
         : genre === "deplacement"
           ? `Docteur 224 : votre rendez-vous${pour} avec ${praticien} est déplacé au ${moment}, ${lieu}.`
-          : `Docteur 224 : votre rendez-vous${pour} avec ${praticien} du ${moment} est annulé.` +
-            `${rdv.motif_annulation ? ` Motif : ${rdv.motif_annulation}.` : ""}` +
-            ` Rappelez-nous pour en reprendre un.`;
+          : genre === "absence"
+            ? `Docteur 224 : nous avons constaté votre absence${pour} au rendez-vous avec ${praticien} du ${moment}.` +
+              ` Si vous avez encore besoin d'une consultation, vous pouvez reprendre un rendez-vous.` +
+              ` Merci de penser à annuler à l'avance en cas d'empêchement.`
+            : `Docteur 224 : votre rendez-vous${pour} avec ${praticien} du ${moment} est annulé.` +
+              `${rdv.motif_annulation ? ` Motif : ${rdv.motif_annulation}.` : ""}` +
+              ` Rappelez-nous pour en reprendre un.`;
 
     const sujet =
       genre === "confirmation"
         ? `Votre rendez-vous du ${moment}`
         : genre === "deplacement"
           ? `Votre rendez-vous est déplacé au ${moment}`
-          : `Votre rendez-vous du ${moment} est annulé`;
+          : genre === "absence"
+            ? `Absence constatée — rendez-vous du ${moment}`
+            : `Votre rendez-vous du ${moment} est annulé`;
 
     resultat.telephone = cible.telephone;
     resultat.email = cible.email;

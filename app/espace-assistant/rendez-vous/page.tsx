@@ -6,10 +6,21 @@ import AssistantShell from "@/components/assistant/AssistantShell";
 import { capitaliser, depuisISO, formatDateLongue, versISO } from "@/lib/dates";
 import {
   majStatutRdv,
+  marquerAbsentRdv,
+  qualifierRdv,
   reprogrammerRdv,
   useAgenda,
   useContextePro,
+  type CreneauAgenda,
 } from "@/lib/pro";
+import {
+  classeStatut,
+  estCorrigeable,
+  estMarquablePresent,
+  libelleStatut,
+  rdvPasse,
+  statutAffiche,
+} from "@/lib/statuts-rdv";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 
 /*
@@ -24,6 +35,8 @@ export default function RendezVousAssistant() {
   const [dateISO, setDateISO] = useState(() => versISO(new Date()));
   const [erreur, setErreur] = useState("");
   const [enReprogrammation, setEnReprogrammation] = useState<string | null>(null);
+  const [corrige, setCorrige] = useState<string | null>(null);
+  const [occupe, setOccupe] = useState(false);
 
   const creneaux = creneauxJour(dateISO);
   const rdvJour = creneaux.filter((c) => c.statut === "reserve");
@@ -58,6 +71,35 @@ export default function RendezVousAssistant() {
     setErreur(resultat.erreur ?? "");
     if (!resultat.erreur) {
       setEnReprogrammation(null);
+      recharger();
+    }
+  }
+
+  /*
+   * Présence : présent / honoré / non honoré, et la correction d'une erreur.
+   * Même permission que confirmer/annuler — c'est le secrétariat qui tient
+   * l'agenda. La RLS et la fonction `qualifier_rdv` restent seules juges ; ce
+   * garde-fou ne fait qu'éviter d'afficher une action qui serait refusée.
+   */
+  async function presence(
+    heure: string,
+    action: (id: string) => Promise<{ erreur?: string }>
+  ) {
+    if (occupe) return;
+    if (!permissions.confirmerAnnuler) {
+      setErreur(
+        "⛔ Action refusée : la permission « Confirmer / annuler les rendez-vous » ne vous a pas été accordée par le médecin."
+      );
+      return;
+    }
+    const id = rdvJour.find((c) => c.heure === heure)?.rdvId;
+    if (!id) return;
+    setOccupe(true);
+    const res = await action(id);
+    setOccupe(false);
+    setErreur(res.erreur ?? "");
+    if (!res.erreur) {
+      setCorrige(null);
       recharger();
     }
   }
@@ -140,8 +182,17 @@ export default function RendezVousAssistant() {
                     <b>{creneau.patient}</b>
                     <small>
                       {creneau.motif}
-                      
+
                     </small>
+                    <span
+                      className={`mt-1 inline-block w-fit rounded-full px-2 py-0.5 text-[11px] font-bold ${classeStatut(
+                        statutAffiche({ date: dateISO, heure: creneau.heure, statut: creneau.statutRdv ?? "" })
+                      )}`}
+                    >
+                      {libelleStatut(
+                        statutAffiche({ date: dateISO, heure: creneau.heure, statut: creneau.statutRdv ?? "" })
+                      )}
+                    </span>
                   </div>
                   <div className="acts">
                     <button
@@ -162,6 +213,19 @@ export default function RendezVousAssistant() {
                     >
                       Annuler
                     </button>
+                    <ActionsPresence
+                      dateISO={dateISO}
+                      creneau={creneau}
+                      variante="mobile"
+                      occupe={occupe}
+                      corrige={corrige === creneau.heure}
+                      onToggleCorrige={() =>
+                        setCorrige(corrige === creneau.heure ? null : creneau.heure)
+                      }
+                      onPresent={(c) => presence(creneau.heure, (id) => qualifierRdv(id, "present", c))}
+                      onHonore={(c) => presence(creneau.heure, (id) => qualifierRdv(id, "honore", c))}
+                      onAbsent={(c) => presence(creneau.heure, (id) => marquerAbsentRdv(id, { correction: c }))}
+                    />
                   </div>
                 </div>
                 {enReprogrammation === creneau.heure && (
@@ -276,10 +340,19 @@ export default function RendezVousAssistant() {
                   <b className="block text-[13.5px]">{creneau.patient}</b>
                   <small className="text-xs text-muted">
                     {creneau.motif}
-                    
+
                   </small>
                 </span>
-                <span className="flex gap-2">
+                <span
+                  className={`flex-none rounded-full px-2.5 py-1 text-[11.5px] font-bold ${classeStatut(
+                    statutAffiche({ date: dateISO, heure: creneau.heure, statut: creneau.statutRdv ?? "" })
+                  )}`}
+                >
+                  {libelleStatut(
+                    statutAffiche({ date: dateISO, heure: creneau.heure, statut: creneau.statutRdv ?? "" })
+                  )}
+                </span>
+                <span className="flex flex-wrap justify-end gap-2">
                   <button
                     type="button"
                     disabled={!reel}
@@ -310,6 +383,19 @@ export default function RendezVousAssistant() {
                   >
                     Annuler
                   </button>
+                  <ActionsPresence
+                    dateISO={dateISO}
+                    creneau={creneau}
+                    variante="web"
+                    occupe={occupe}
+                    corrige={corrige === creneau.heure}
+                    onToggleCorrige={() =>
+                      setCorrige(corrige === creneau.heure ? null : creneau.heure)
+                    }
+                    onPresent={(c) => presence(creneau.heure, (id) => qualifierRdv(id, "present", c))}
+                    onHonore={(c) => presence(creneau.heure, (id) => qualifierRdv(id, "honore", c))}
+                    onAbsent={(c) => presence(creneau.heure, (id) => marquerAbsentRdv(id, { correction: c }))}
+                  />
                 </span>
               </div>
               {enReprogrammation === creneau.heure && (
@@ -343,5 +429,97 @@ export default function RendezVousAssistant() {
       </div>
       </div>
     </AssistantShell>
+  );
+}
+
+/**
+ * Les actions de présence d'un rendez-vous, partagées par les deux versions.
+ * On ne propose que ce qui a un sens — « honoré » / « non honoré » sur un
+ * rendez-vous passé, « présent » tant que rien n'est tranché. La correction
+ * est le seul chemin des retours arrière (voir migration 0075).
+ */
+function ActionsPresence({
+  dateISO,
+  creneau,
+  variante,
+  occupe,
+  corrige,
+  onToggleCorrige,
+  onPresent,
+  onHonore,
+  onAbsent,
+}: {
+  dateISO: string;
+  creneau: CreneauAgenda;
+  variante: "mobile" | "web";
+  occupe: boolean;
+  corrige: boolean;
+  onToggleCorrige: () => void;
+  onPresent: (correction?: boolean) => void;
+  onHonore: (correction?: boolean) => void;
+  onAbsent: (correction?: boolean) => void;
+}) {
+  const rdv = { date: dateISO, heure: creneau.heure, statut: creneau.statutRdv ?? "" };
+  const etat = statutAffiche(rdv);
+  const passe = rdvPasse(rdv.date, rdv.heure);
+  const cls =
+    variante === "mobile"
+      ? "btnm gh"
+      : "rounded-[9px] border-[1.5px] border-line bg-white px-3 py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg disabled:opacity-50";
+
+  if (corrige && estCorrigeable(rdv)) {
+    return (
+      <>
+        {rdv.statut !== "present" && (
+          <button type="button" className={cls} disabled={occupe} onClick={() => onPresent(true)}>
+            → Présent
+          </button>
+        )}
+        {rdv.statut !== "honore" && passe && (
+          <button type="button" className={cls} disabled={occupe} onClick={() => onHonore(true)}>
+            → Honoré
+          </button>
+        )}
+        {rdv.statut !== "absent" && passe && (
+          <button type="button" className={cls} disabled={occupe} onClick={() => onAbsent(true)}>
+            → Non honoré
+          </button>
+        )}
+        <button type="button" className={cls} disabled={occupe} onClick={onToggleCorrige}>
+          Annuler
+        </button>
+      </>
+    );
+  }
+
+  return (
+    <>
+      {estMarquablePresent(rdv) && (
+        <button type="button" className={cls} disabled={occupe} onClick={() => onPresent()}>
+          Présent
+        </button>
+      )}
+      {(etat === "present" || etat === "a_qualifier") && (
+        <button type="button" className={cls} disabled={occupe} onClick={() => onHonore()}>
+          Honoré
+        </button>
+      )}
+      {etat === "a_qualifier" && (
+        <button type="button" className={cls} disabled={occupe} onClick={() => onAbsent()}>
+          Non honoré
+        </button>
+      )}
+      {estCorrigeable(rdv) && (
+        <button
+          type="button"
+          className={cls}
+          disabled={occupe}
+          aria-expanded={corrige}
+          onClick={onToggleCorrige}
+        >
+          Corriger
+        </button>
+      )}
+    </>
   );
 }

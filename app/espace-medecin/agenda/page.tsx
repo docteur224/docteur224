@@ -60,6 +60,7 @@ const bloc = (jours: number) => Math.ceil(jours / 45) * 45;
 const TEINTE_STATUT: Record<string, string> = {
   confirme: "bg-green-soft text-green",
   en_attente: "bg-amber-soft text-amber",
+  present: "bg-teal-soft text-teal",
   honore: "bg-teal-soft text-blue",
   absent: "bg-red-soft text-red",
   annule: "bg-bg text-muted",
@@ -68,8 +69,9 @@ const TEINTE_STATUT: Record<string, string> = {
 const LIBELLE_STATUT: Record<string, string> = {
   confirme: "Confirmé",
   en_attente: "À confirmer",
+  present: "Présent",
   honore: "Honoré",
-  absent: "Absent",
+  absent: "Non honoré",
   annule: "Annulé",
 };
 
@@ -345,9 +347,11 @@ export default function AgendaMedecin() {
                   className={`badge ${
                     creneau.statutRdv === "en_attente"
                       ? "wait"
-                      : creneau.statutRdv === "honore"
-                        ? ""
-                        : "ok"
+                      : creneau.statutRdv === "absent"
+                        ? "no"
+                        : creneau.statutRdv === "honore"
+                          ? ""
+                          : "ok"
                   }`}
                   style={{ marginLeft: "auto" }}
                 >

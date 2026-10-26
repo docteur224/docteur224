@@ -7,7 +7,7 @@
  * « En attente de confirmation » là — et dont aucune ne connaissait la
  * valeur `absent` ajoutée par la migration 0063.
  *
- * Six états affichables, dont un seul n'existe pas en base :
+ * Sept états affichables, dont un seul n'existe pas en base :
  *
  *   à qualifier — un rendez-vous dont l'heure est passée et que personne n'a
  *   tranché. Ce n'est pas un statut stocké, et il ne doit pas l'être : il se
@@ -18,8 +18,8 @@
  * Pur TypeScript : ni React, ni Supabase. Utilisable des deux côtés.
  */
 
-/** Les cinq valeurs de l'enum `statut_rdv` en base. */
-export type StatutRdv = "en_attente" | "confirme" | "annule" | "honore" | "absent";
+/** Les six valeurs de l'enum `statut_rdv` en base. */
+export type StatutRdv = "en_attente" | "confirme" | "present" | "annule" | "honore" | "absent";
 
 /** Ce que l'écran montre — les cinq précédents, plus l'état déduit. */
 export type StatutAffiche = StatutRdv | "a_qualifier";
@@ -37,8 +37,9 @@ interface Apparence {
  */
 export const APPARENCE_STATUT: Record<StatutAffiche, Apparence> = {
   honore: { libelle: "Honoré", classe: "bg-green-soft text-green" },
-  absent: { libelle: "Absent", classe: "bg-red-soft text-red" },
+  absent: { libelle: "Non honoré", classe: "bg-red-soft text-red" },
   annule: { libelle: "Annulé", classe: "bg-bg text-muted" },
+  present: { libelle: "Présent", classe: "bg-teal-soft text-teal" },
   confirme: { libelle: "Confirmé", classe: "bg-teal-soft text-blue" },
   en_attente: { libelle: "En attente", classe: "bg-amber-soft text-amber" },
   a_qualifier: { libelle: "À qualifier", classe: "bg-orange-soft text-orange" },
@@ -75,7 +76,9 @@ export function statutAffiche(
   maintenant = new Date()
 ): StatutAffiche {
   const s = rdv.statut as StatutRdv;
-  if (s === "annule" || s === "honore" || s === "absent") return s;
+  // « Présent » est un fait d'accueil, au même titre qu'annulé, honoré ou
+  // absent : la date ne le transforme pas en « à qualifier ».
+  if (s === "annule" || s === "honore" || s === "absent" || s === "present") return s;
   return rdvPasse(rdv.date, rdv.heure, maintenant) ? "a_qualifier" : s;
 }
 
@@ -90,3 +93,31 @@ export const estAQualifier = (
   rdv: { date: string; heure: string; statut: string },
   maintenant = new Date()
 ): boolean => statutAffiche(rdv, maintenant) === "a_qualifier";
+
+/*
+ * Les transitions de présence, écrites une seule fois et partagées avec la
+ * base (fonction `qualifier_rdv`, migration 0075). L'interface s'en sert pour
+ * décider quelles actions montrer ; la base, elle, reste seule juge — ces
+ * aides ne font que choisir ce qu'on propose, jamais ce qu'on autorise.
+ *
+ *   en attente / confirmé → présent → honoré / absent
+ *                         → honoré / absent
+ *   (annulé est un fait à part, hors de ce cycle)
+ */
+
+/** Peut-on marquer ce patient « présent » ? Tant que rien n'est tranché. */
+export const estMarquablePresent = (
+  rdv: { date: string; heure: string; statut: string },
+  maintenant = new Date()
+): boolean => {
+  const e = statutAffiche(rdv, maintenant);
+  return e === "en_attente" || e === "confirme" || e === "a_qualifier";
+};
+
+/** Depuis « présent », le seul pas qui reste normal est « honoré ». */
+export const estHonorableDepuisPresent = (rdv: { statut: string }): boolean =>
+  rdv.statut === "present";
+
+/** Un statut de présence déjà posé peut être repris pour corriger une erreur. */
+export const estCorrigeable = (rdv: { statut: string }): boolean =>
+  rdv.statut === "present" || rdv.statut === "honore" || rdv.statut === "absent";

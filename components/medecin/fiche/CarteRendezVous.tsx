@@ -3,9 +3,11 @@
 import { useMemo, useState } from "react";
 import Icone from "@/components/site/Icone";
 import { formatDateCourte } from "@/lib/dates";
-import { confirmerRdvMedecin, qualifierRdv, type RdvDossier } from "@/lib/pro";
+import { confirmerRdvMedecin, marquerAbsentRdv, qualifierRdv, type RdvDossier } from "@/lib/pro";
 import {
   classeStatut,
+  estCorrigeable,
+  estMarquablePresent,
   libelleStatut,
   rdvPasse,
   statutAffiche,
@@ -70,16 +72,21 @@ export default function CarteRendezVous({
 
   async function agirSurRdv(
     rdv: RdvDossier,
-    cible: "honore" | "absent" | "confirme",
-    succes: string
+    action: { cible: "present" | "honore" | "absent" | "confirme"; correction?: boolean; succes: string }
   ) {
     if (rdvEnCours) return;
     const precedent = statutsLocaux[rdv.id];
     setRdvEnCours(rdv.id);
-    setStatutsLocaux((s) => ({ ...s, [rdv.id]: cible }));
+    setStatutsLocaux((s) => ({ ...s, [rdv.id]: action.cible }));
 
+    // « Absent » et « confirmé » passent par le serveur (ils préviennent le
+    // patient) ; « présent » et « honoré » par la RPC directe.
     const res =
-      cible === "confirme" ? await confirmerRdvMedecin(rdv.id) : await qualifierRdv(rdv.id, cible);
+      action.cible === "confirme"
+        ? await confirmerRdvMedecin(rdv.id)
+        : action.cible === "absent"
+          ? await marquerAbsentRdv(rdv.id, { correction: action.correction })
+          : await qualifierRdv(rdv.id, action.cible, action.correction);
 
     setRdvEnCours(null);
     if (res.erreur) {
@@ -94,10 +101,13 @@ export default function CarteRendezVous({
       signalerEchec(res.erreur);
       return;
     }
+    // Pour les gestes qui préviennent le patient, on le dit quand l'avis n'a
+    // pas pu partir — le statut, lui, est bien posé.
+    const previentLePatient = action.cible === "confirme" || action.cible === "absent";
     annoncer(
-      cible === "confirme" && "previenu" in res && !res.previenu
-        ? "Rendez-vous confirmé — le patient n’a pas pu être prévenu par message"
-        : succes
+      previentLePatient && "previenu" in res && !res.previenu
+        ? `${action.succes} — le patient n’a pas pu être prévenu par message`
+        : action.succes
     );
   }
 
@@ -152,10 +162,17 @@ export default function CarteRendezVous({
               key={r.id}
               rdv={r}
               occupe={rdvEnCours === r.id}
-              onHonore={() => agirSurRdv(r, "honore", "Rendez-vous marqué comme honoré")}
-              onAbsent={() => agirSurRdv(r, "absent", "Patient marqué absent")}
+              onPresent={(correction) =>
+                agirSurRdv(r, { cible: "present", correction, succes: "Patient marqué présent" })
+              }
+              onHonore={(correction) =>
+                agirSurRdv(r, { cible: "honore", correction, succes: "Rendez-vous marqué comme honoré" })
+              }
+              onAbsent={(correction) =>
+                agirSurRdv(r, { cible: "absent", correction, succes: "Patient marqué comme non honoré" })
+              }
               onConfirmer={() =>
-                agirSurRdv(r, "confirme", "Rendez-vous confirmé — patient prévenu")
+                agirSurRdv(r, { cible: "confirme", succes: "Rendez-vous confirmé — patient prévenu" })
               }
             />
           ))}
@@ -195,24 +212,29 @@ export default function CarteRendezVous({
 }
 
 /**
- * Une ligne de rendez-vous. Les deux boutons de qualification ne paraissent
- * que là où ils ont un sens : sur un rendez-vous passé et non tranché. Le
- * reste du temps, seul le badge parle.
+ * Une ligne de rendez-vous. Les actions ne paraissent que là où elles ont un
+ * sens — on ne propose « honoré » que sur un rendez-vous passé, « présent »
+ * que tant que rien n'est tranché. Un statut de présence déjà posé se reprend
+ * via « Corriger » : ce menu, et lui seul, autorise les retours en arrière.
  */
 function LigneRdv({
   rdv,
   occupe,
+  onPresent,
   onHonore,
   onAbsent,
   onConfirmer,
 }: {
   rdv: RdvDossier;
   occupe: boolean;
-  onHonore: () => void;
-  onAbsent: () => void;
+  onPresent: (correction?: boolean) => void;
+  onHonore: (correction?: boolean) => void;
+  onAbsent: (correction?: boolean) => void;
   onConfirmer: () => void;
 }) {
+  const [corrige, setCorrige] = useState(false);
   const etat: StatutAffiche = statutAffiche(rdv);
+  const passe = rdvPasse(rdv.date, rdv.heure);
   const petit =
     "inline-flex min-h-11 items-center gap-1 rounded-lg border border-line bg-white px-2.5 text-[12px] font-bold text-ink transition-colors hover:border-muted disabled:opacity-45";
 
@@ -225,21 +247,50 @@ function LigneRdv({
         {rdv.motif && <div className="truncate text-[12.5px] text-muted">{rdv.motif}</div>}
       </div>
       <div className="flex flex-wrap items-center gap-2">
-        {etat === "a_qualifier" && (
-          <>
-            <button type="button" onClick={onHonore} disabled={occupe} className={petit}>
-              <Icone nom="coche" taille={13} />
-              Honoré
-            </button>
-            <button type="button" onClick={onAbsent} disabled={occupe} className={petit}>
-              <Icone nom="croix" taille={13} />
-              Absent
-            </button>
-          </>
-        )}
-        {etat === "en_attente" && (
+        {/* En attente et à venir : on peut encore confirmer. */}
+        {etat === "en_attente" && !passe && (
           <button type="button" onClick={onConfirmer} disabled={occupe} className={petit}>
             Confirmer
+          </button>
+        )}
+        {/* Patient attendu : il arrive → présent. */}
+        {estMarquablePresent(rdv) && (
+          <button type="button" onClick={() => onPresent()} disabled={occupe} className={petit}>
+            <Icone nom="coche" taille={13} />
+            Patient présent
+          </button>
+        )}
+        {/* Passé et non tranché : honoré ou non honoré, en un clic. */}
+        {etat === "a_qualifier" && (
+          <button type="button" onClick={() => onHonore()} disabled={occupe} className={petit}>
+            <Icone nom="coche" taille={13} />
+            Honoré
+          </button>
+        )}
+        {etat === "a_qualifier" && passe && (
+          <button type="button" onClick={() => onAbsent()} disabled={occupe} className={petit}>
+            <Icone nom="croix" taille={13} />
+            Non honoré
+          </button>
+        )}
+        {/* Présent : le pas suivant est la consultation faite. */}
+        {etat === "present" && (
+          <button type="button" onClick={() => onHonore()} disabled={occupe} className={petit}>
+            <Icone nom="coche" taille={13} />
+            Marquer comme honoré
+          </button>
+        )}
+        {/* Reprise d'une erreur de saisie — le seul chemin des retours arrière. */}
+        {estCorrigeable(rdv) && (
+          <button
+            type="button"
+            onClick={() => setCorrige((v) => !v)}
+            disabled={occupe}
+            aria-expanded={corrige}
+            className={petit}
+          >
+            <Icone nom="crayon" taille={13} />
+            Corriger
           </button>
         )}
         <span
@@ -249,6 +300,51 @@ function LigneRdv({
         >
           {libelleStatut(etat)}
         </span>
+
+        {corrige && estCorrigeable(rdv) && (
+          <div className="flex w-full flex-wrap items-center gap-2 pt-1">
+            <span className="text-[12px] text-muted">Corriger en :</span>
+            {rdv.statut !== "present" && (
+              <button
+                type="button"
+                onClick={() => {
+                  setCorrige(false);
+                  onPresent(true);
+                }}
+                disabled={occupe}
+                className={petit}
+              >
+                Présent
+              </button>
+            )}
+            {rdv.statut !== "honore" && passe && (
+              <button
+                type="button"
+                onClick={() => {
+                  setCorrige(false);
+                  onHonore(true);
+                }}
+                disabled={occupe}
+                className={petit}
+              >
+                Honoré
+              </button>
+            )}
+            {rdv.statut !== "absent" && passe && (
+              <button
+                type="button"
+                onClick={() => {
+                  setCorrige(false);
+                  onAbsent(true);
+                }}
+                disabled={occupe}
+                className={petit}
+              >
+                Non honoré
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

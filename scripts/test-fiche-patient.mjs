@@ -128,6 +128,23 @@ async function main() {
     statut: "annule",
   });
 
+  // Deux rendez-vous de plus pour la présence, sans perturber `rdvPasse`
+  // (lui sert aux documents) : un passé et un à venir.
+  const rdvPresencePasse = await poserRdv({
+    medecinId: medecin.id,
+    patientId: patient.id,
+    date: jour(-2),
+    heure: "08:00",
+    statut: "en_attente",
+  });
+  const rdvPresenceFutur = await poserRdv({
+    medecinId: medecin.id,
+    patientId: patient.id,
+    date: jour(21),
+    heure: "15:00",
+    statut: "confirme",
+  });
+
   /* ================= 1. Documents : pas de suppression ================= */
   console.log("\n── Documents : une pièce remise ne se supprime pas ──");
 
@@ -358,11 +375,24 @@ async function main() {
   });
   test("un rendez-vous passé se marque honoré", !errHonore, errHonore?.message);
 
-  const { error: errAbsent } = await medecin.client.rpc("qualifier_rdv", {
+  // Depuis un état déjà tranché, on ne repart pas sans se corriger : la
+  // transition « honoré → absent » directe est désormais refusée.
+  const { error: errSansCorrection } = await medecin.client.rpc("qualifier_rdv", {
     p_rdv_id: rdvPasse,
     p_statut: "absent",
   });
-  test("et se reprend en « absent » si on s’est trompé", !errAbsent, errAbsent?.message);
+  test(
+    "honoré → absent est refusé hors correction",
+    !!errSansCorrection,
+    errSansCorrection?.message ?? "acceptée à tort"
+  );
+
+  const { error: errAbsent } = await medecin.client.rpc("qualifier_rdv", {
+    p_rdv_id: rdvPasse,
+    p_statut: "absent",
+    p_correction: true,
+  });
+  test("et se reprend en « absent » si on s’est trompé (correction)", !errAbsent, errAbsent?.message);
 
   const { data: rdvLu } = await service
     .from("rendez_vous")
@@ -370,6 +400,77 @@ async function main() {
     .eq("id", rdvPasse)
     .single();
   test("le statut est bien « absent » en base", rdvLu?.statut === "absent", rdvLu?.statut);
+
+  // ---- Présence : le maillon ajouté par 0075 ----
+  const { error: errPresentFutur } = await medecin.client.rpc("qualifier_rdv", {
+    p_rdv_id: rdvPresenceFutur,
+    p_statut: "present",
+  });
+  test("un patient se marque présent, même avant l’heure", !errPresentFutur, errPresentFutur?.message);
+
+  const { error: errHonoreFutur } = await medecin.client.rpc("qualifier_rdv", {
+    p_rdv_id: rdvPresenceFutur,
+    p_statut: "honore",
+  });
+  test(
+    "honoré sur un rendez-vous à venir reste refusé, même présent",
+    !!errHonoreFutur,
+    errHonoreFutur?.message ?? "acceptée à tort"
+  );
+
+  const { error: errPresentPasse } = await medecin.client.rpc("qualifier_rdv", {
+    p_rdv_id: rdvPresencePasse,
+    p_statut: "present",
+  });
+  test("un rendez-vous passé se marque présent", !errPresentPasse, errPresentPasse?.message);
+
+  const { error: errPresentHonore } = await medecin.client.rpc("qualifier_rdv", {
+    p_rdv_id: rdvPresencePasse,
+    p_statut: "honore",
+  });
+  test("présent → honoré est une suite normale (sans correction)", !errPresentHonore, errPresentHonore?.message);
+
+  const { error: errHonorePresent } = await medecin.client.rpc("qualifier_rdv", {
+    p_rdv_id: rdvPresencePasse,
+    p_statut: "present",
+  });
+  test(
+    "honoré → présent est refusé hors correction",
+    !!errHonorePresent,
+    errHonorePresent?.message ?? "acceptée à tort"
+  );
+
+  const { error: errCorrPresent } = await medecin.client.rpc("qualifier_rdv", {
+    p_rdv_id: rdvPresencePasse,
+    p_statut: "present",
+    p_correction: true,
+  });
+  test("honoré → présent est permis en correction", !errCorrPresent, errCorrPresent?.message);
+
+  // Pas de double notification : repasser « absent » un rendez-vous déjà
+  // absent n'écrit rien et ne prévient pas une seconde fois.
+  const { count: avantAbsent } = await service
+    .from("notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("destinataire_id", patient.id)
+    .eq("source_id", rdvPasse)
+    .eq("type", "rdv_absent");
+  await medecin.client.rpc("qualifier_rdv", {
+    p_rdv_id: rdvPasse,
+    p_statut: "absent",
+    p_correction: true,
+  });
+  const { count: apresAbsent } = await service
+    .from("notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("destinataire_id", patient.id)
+    .eq("source_id", rdvPasse)
+    .eq("type", "rdv_absent");
+  test(
+    "remarquer « absent » ne re-notifie pas",
+    avantAbsent === apresAbsent,
+    `${avantAbsent} → ${apresAbsent}`
+  );
 
   /* ================= 5. Informations médicales ================= */
   console.log("\n── Informations médicales ──");

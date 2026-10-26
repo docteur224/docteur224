@@ -27,15 +27,17 @@ import { annulerRendezVous, useRendezVous, type DetailRendezVous } from "@/lib/p
 const LIBELLES_STATUT: Record<DetailRendezVous["statut"], string> = {
   en_attente: "En attente",
   confirme: "Confirmé",
+  present: "Présent",
   annule: "Annulé",
   honore: "Honoré",
-  absent: "Absent",
+  absent: "Non honoré",
 };
 
 /** Classes de la pastille de statut, version web. */
 const TONS_STATUT: Record<DetailRendezVous["statut"], string> = {
   en_attente: "bg-amber-soft text-amber",
   confirme: "bg-green-soft text-green",
+  present: "bg-teal-soft text-teal",
   annule: "bg-red-soft text-red",
   honore: "bg-teal-soft text-blue",
   absent: "bg-red-soft text-red",
@@ -45,6 +47,7 @@ const TONS_STATUT: Record<DetailRendezVous["statut"], string> = {
 const BADGES_MOBILE: Record<DetailRendezVous["statut"], string> = {
   en_attente: "wait",
   confirme: "ok",
+  present: "ok",
   annule: "no",
   honore: "ok",
   absent: "no",

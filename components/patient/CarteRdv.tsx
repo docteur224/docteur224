@@ -17,9 +17,10 @@ import type { RendezVousPatient } from "@/lib/patient";
 const LIBELLES_STATUT: Record<RendezVousPatient["statut"], string> = {
   en_attente: "En attente",
   confirme: "Confirmé",
+  present: "Présent",
   annule: "Annulé",
   honore: "Honoré",
-  absent: "Absent",
+  absent: "Non honoré",
 };
 
 export default function CarteRdv({

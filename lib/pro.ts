@@ -304,7 +304,7 @@ export interface CreneauAgenda {
   rdvId?: string;
   patient?: string;
   motif?: string;
-  statutRdv?: "en_attente" | "confirme" | "annule" | "honore" | "absent";
+  statutRdv?: "en_attente" | "confirme" | "present" | "annule" | "honore" | "absent";
   /** « domicile » quand le patient a demandé une visite chez lui. */
   lieu?: "cabinet" | "domicile";
   adresseDomicile?: string;
@@ -322,7 +322,7 @@ export interface RdvAgenda {
   date: string;
   heure: string;
   motif: string;
-  statut: "en_attente" | "confirme" | "annule" | "honore" | "absent";
+  statut: "en_attente" | "confirme" | "present" | "annule" | "honore" | "absent";
   lieu: "cabinet" | "domicile";
   adresseDomicile: string;
   beneficiaire: string;
@@ -345,7 +345,7 @@ interface LigneRdvPro {
   date: string;
   heure: string;
   motif: string | null;
-  statut: "en_attente" | "confirme" | "annule" | "honore" | "absent";
+  statut: "en_attente" | "confirme" | "present" | "annule" | "honore" | "absent";
   patient_id: string | null;
   proche_id: string | null;
   patient_sans_compte_id: string | null;
@@ -570,7 +570,7 @@ export async function basculerCreneau(
 
 export async function majStatutRdv(
   rdvId: string,
-  statut: "confirme" | "annule" | "honore" | "en_attente" | "absent"
+  statut: "confirme" | "annule" | "honore" | "en_attente" | "absent" | "present"
 ): Promise<{ erreur?: string }> {
   const { error } = await creerClientNavigateur().from("rendez_vous").update({ statut }).eq("id", rdvId);
   return error ? { erreur: error.message } : {};
@@ -1012,22 +1012,55 @@ const colonneBeneficiaire = (type: PatientCabinet["type"]) =>
 /* ===== Qualification d'un rendez-vous passé ===== */
 
 /**
- * « Honoré » ou « absent » — le geste que le praticien fait après coup.
+ * « Présent » (à l'accueil) ou « honoré » (consultation faite) — les gestes
+ * de présence qui n'ont pas à prévenir le patient.
  *
  * Passe par la fonction `qualifier_rdv` et non par un UPDATE direct : c'est
- * elle qui refuse un rendez-vous à venir (on ne déclare pas honoré ce qui
- * n'a pas eu lieu) ou déjà annulé, et c'est elle qui journalise. Un UPDATE
- * depuis le navigateur n'aurait su faire ni l'un ni l'autre.
+ * elle qui refuse un rendez-vous à venir pour « honoré » (on ne déclare pas
+ * honoré ce qui n'a pas eu lieu) ou déjà annulé, qui contrôle les transitions
+ * et qui journalise. `correction = true` lève la garde des transitions pour
+ * revenir sur une erreur de saisie (voir migration 0075).
+ *
+ * « Absent » n'est PAS ici : il doit prévenir le patient, et l'envoi ne peut
+ * pas partir du navigateur — il passe par `marquerAbsentRdv`.
  */
 export async function qualifierRdv(
   rdvId: string,
-  statut: "honore" | "absent"
+  statut: "present" | "honore",
+  correction = false
 ): Promise<{ erreur?: string }> {
   const { error } = await creerClientNavigateur().rpc("qualifier_rdv", {
     p_rdv_id: rdvId,
     p_statut: statut,
+    p_correction: correction,
   });
   return error ? { erreur: error.message } : {};
+}
+
+/**
+ * No-show : le patient avait rendez-vous et ne s'est pas présenté.
+ *
+ * Passe par la route serveur `/api/medecin/rdv/[id]/absent` — et non par la
+ * RPC directe — parce qu'elle doit AUSSI prévenir le patient (SMS / e-mail),
+ * ce que le navigateur ne peut pas faire. La route écrit le statut via
+ * `qualifier_rdv`, puis tente l'envoi : son échec ne remet jamais en cause le
+ * statut. `correction` sert à repasser en « absent » un rendez-vous déjà
+ * tranché par erreur — c'est un nouveau constat, le patient est re-prévenu.
+ */
+export async function marquerAbsentRdv(
+  rdvId: string,
+  options: { correction?: boolean } = {}
+): Promise<{ erreur?: string; previenu?: boolean }> {
+  const reponse = await fetch(`/api/medecin/rdv/${rdvId}/absent`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ correction: options.correction === true }),
+  });
+  const corps = await reponse.json().catch(() => null);
+  if (!reponse.ok) {
+    return { erreur: corps?.erreur ?? "Le marquage a échoué." };
+  }
+  return { previenu: !!corps?.previenu };
 }
 
 /**
