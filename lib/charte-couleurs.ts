@@ -222,7 +222,7 @@ const RECETTES = (() => {
 export function construireCharte(
   principaleSaisie: string,
   accentSaisie: string,
-): Record<NomToken | "sur-principale" | "sur-accent", string> {
+): Record<NomToken | "sur-principale" | "sur-accent" | "blue-lisible", string> {
   // Une saisie illisible retombe sur la charte Docteur 224 : mieux vaut les
   // couleurs d'origine qu'une page à moitié peinte.
   const principale = normaliserHex(principaleSaisie) ?? CHARTE_DEFAUT.principale;
@@ -255,7 +255,21 @@ export function construireCharte(
   palette["sur-principale"] = surFond(principale, palette["ink"]);
   palette["sur-accent"] = surFond(accent, palette["ink"]);
 
-  return palette as Record<NomToken | "sur-principale" | "sur-accent", string>;
+  // Variante CLAIRE de la couleur principale, pour le texte d'emphase en mode
+  // SOMBRE : le bleu profond (--blue) y devient illisible, mais sa teinte est
+  // l'identité choisie. On garde la teinte, on monte seulement la clarté — la
+  // valeur enregistrée, elle, ne bouge pas. Consommée par le remap .text-blue
+  // en mode sombre (globals.css) ; inutilisée en clair.
+  palette["blue-lisible"] = oklchVersHex({
+    L: 0.74,
+    C: Math.min(0.11, Math.max(0.05, ancres.principale.C)),
+    H: ancres.principale.H,
+  });
+
+  return palette as Record<
+    NomToken | "sur-principale" | "sur-accent" | "blue-lisible",
+    string
+  >;
 }
 
 /**

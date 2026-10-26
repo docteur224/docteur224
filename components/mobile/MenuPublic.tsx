@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import BasculeMode from "@/components/site/BasculeMode";
 import Logo from "@/components/site/Logo";
 import { seDeconnecter } from "@/lib/auth";
 import { useProfilConnecte } from "@/lib/patient";
@@ -110,6 +111,9 @@ export default function MenuPublic() {
                 </Link>
               );
             })}
+
+            {/* Bascule clair/sombre — juste après « Conseils santé ». */}
+            <BasculeMode variante="menu" />
 
             {/* Classe dédiée : `.tiroir-liens a` l'emporterait sur `.btn`
                 (spécificité) et le bouton perdrait sa couleur. */}

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
+import ModeLocal from "@/components/site/ModeLocal";
 import RevelationAuScroll from "@/components/site/RevelationAuScroll";
 import TransitionPage from "@/components/site/TransitionPage";
 
@@ -23,6 +24,9 @@ export default function RootLayout({
   return (
     <html lang="fr" className={`${jakarta.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
+        {/* Pose le mode clair/sombre avant la première peinture (anti-flash),
+            pour tout le site. Indépendant de la charte. */}
+        <ModeLocal />
         {/* Enveloppes d'animation uniquement : transition de page et
             apparition au défilement (voir les deux composants). */}
         <TransitionPage>{children}</TransitionPage>

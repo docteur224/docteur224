@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
+import BasculeMode from "@/components/site/BasculeMode";
 import ClocheNotifications from "@/components/site/ClocheNotifications";
 import { seDeconnecter } from "@/lib/auth";
 
@@ -95,6 +96,9 @@ export default function BarreLaterale({
         {/* La cloche vit ici sur web : la barre latérale est le seul en-tête
             permanent des espaces. */}
         <div className="ml-auto flex flex-none items-center gap-2">
+          {/* Bascule clair/sombre : la barre latérale est le seul en-tête
+              permanent des espaces connectés (comme la cloche). */}
+          <BasculeMode />
           <ClocheNotifications />
           <button
             type="button"

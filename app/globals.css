@@ -7,6 +7,7 @@
  * (maquettes-web-docteur224.html et maquettes-docteur224.html).
  */
 :root {
+  color-scheme: light;
   --blue: #15506b;
   --blue-deep: #0e3b50;
   --teal: #2e9cca;
@@ -45,6 +46,11 @@
   --amber-ink: #8a5a1b;
   --amber-hover: #e08e45;
   --red-line: #f3c9c2;
+  /* Bleu d'emphase lisible en mode SOMBRE (consommé par le remap .text-blue).
+     Défini ici, à faible spécificité, pour qu'une charte — qui s'injecte en
+     « html:root{…} » — puisse le remplacer par une variante de SA teinte.
+     Inutilisé en clair. */
+  --blue-lisible: #74bde3;
 
   /* Pastilles d'avatar. Volontairement HORS charte personnalisable : leur rôle
      est de distinguer les personnes d'un coup d'œil. Teintes de la couleur
@@ -105,6 +111,76 @@ body {
   background: var(--bg);
   color: var(--ink);
   font-family: var(--font-jakarta), system-ui, sans-serif;
+}
+
+/* =====================================================================
+   MODE SOMBRE — bascule GLOBALE, indépendante de la personnalisation
+   ---------------------------------------------------------------------
+   Deux systèmes distincts qui coexistent sans se mélanger :
+
+   • La CHARTE (couleurs choisies par le compte, espaces connectés seulement,
+     lib/charte-couleurs) injecte « html:root{...} » — spécificité (0,1,1).
+   • Le MODE SOMBRE, ci-dessous, redéfinit les seuls tokens de SURFACE avec
+     une spécificité (0,2,0) : il l'emporte donc sur les surfaces de la charte,
+     mais ne touche NI --blue NI --teal — les accents choisis par l'utilisateur
+     (ex. « Océan ») traversent le mode sombre intacts. La valeur enregistrée
+     en base n'est jamais modifiée : revenir au clair restitue exactement la
+     charte. Changer de mode ne change pas la palette, et inversement.
+
+   Résolution (section 12) : préférence explicite (attribut data-theme posée
+   par le script anti-flash ModeLocal), sinon préférence système, sinon clair.
+   Le @media sert de repli sans JavaScript ; le script, lui, pose toujours
+   l'attribut, ce qui active aussi le filet de sécurité plus bas.
+   ===================================================================== */
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0d1922;
+  --card: #15242f;
+  --ink: #e8eef2;
+  --ink-soft: #b9c6cf;
+  --muted: #93a3ad;
+  --muted-soft: #6b7c87;
+  --line: #273642;
+  --teal-soft: #123240;
+  --teal-line: #255265;
+  --blue-line: #2a4759;
+  --green-soft: #112a1d;
+  --green-line: #235639;
+  --amber-soft: #2b2110;
+  --amber-line: #4d3a1e;
+  --amber-ink: #e3ad60;
+  --red-soft: #2c1512;
+  --red-line: #5b2c26;
+  --orange-soft: #2c1a10;
+  --shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
+  /* --blue-lisible n'est volontairement PAS redéfini ici : son défaut est posé
+     sur :root de base, et une charte le remplace par une variante de sa propre
+     teinte (spécificité html:root > :root). Le redéfinir au mode sombre
+     écraserait ce choix. */
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0d1922;
+    --card: #15242f;
+    --ink: #e8eef2;
+    --ink-soft: #b9c6cf;
+    --muted: #93a3ad;
+    --muted-soft: #6b7c87;
+    --line: #273642;
+    --teal-soft: #123240;
+    --teal-line: #255265;
+    --blue-line: #2a4759;
+    --green-soft: #112a1d;
+    --green-line: #235639;
+    --amber-soft: #2b2110;
+    --amber-line: #4d3a1e;
+    --amber-ink: #e3ad60;
+    --red-soft: #2c1512;
+    --red-line: #5b2c26;
+    --orange-soft: #2c1a10;
+    --shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
+  }
 }
 
 /* =====================================================================
@@ -572,3 +648,28 @@ body {
   }
 }
 }
+
+/* =====================================================================
+   FILET DE SÉCURITÉ DU MODE SOMBRE
+   ---------------------------------------------------------------------
+   Les surfaces écrites en dur dans les écrans — « bg-white » (plus de 600
+   fois) et les textes de couleur profonde — deviennent lisibles en sombre
+   sans éditer 160 fichiers. Règles HORS couche : en Tailwind v4 les
+   utilitaires vivent dans une couche, donc une règle non-couchée l'emporte
+   sur « .bg-white » quelle que soit la spécificité. Rattachées à l'attribut
+   data-theme (toujours posé par le script ModeLocal), jamais au @media, pour
+   ne pas prendre le pas sur un choix explicite de mode clair.
+
+   « text-white » n'est PAS remappé : le blanc sur un aplat coloré (bouton
+   teal, badge) doit rester blanc. On ne remappe que ce qui serait illisible.
+   ===================================================================== */
+[data-theme="dark"] .bg-white { background-color: var(--card); }
+[data-theme="dark"] .text-blue { color: var(--blue-lisible); }
+[data-theme="dark"] .text-red { color: #f08d82; }
+[data-theme="dark"] .text-green { color: #5cc088; }
+[data-theme="dark"] .text-amber { color: #e4ad63; }
+[data-theme="dark"] .ui-skeleton { background: #1d2d38; }
+/* Logo sur surface sombre : silhouette blanche (le mot « Docteur » est bleu
+   nuit). Les logos déjà clairs sur fond coloré (hero, pied de page) en sont
+   exclus par .logo-sur-fonce. */
+[data-theme="dark"] img.logo-img:not(.logo-sur-fonce) { filter: brightness(0) invert(1); }

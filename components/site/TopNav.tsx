@@ -1,4 +1,5 @@
 import Link from "next/link";
+import BasculeMode from "@/components/site/BasculeMode";
 import BoutonsCompteWeb from "@/components/site/BoutonsCompteWeb";
 import ClocheNotifications from "@/components/site/ClocheNotifications";
 import Logo from "@/components/site/Logo";
@@ -67,6 +68,8 @@ export default function TopNav({
       <div className="ml-auto flex items-center gap-[14px]">
         {/* Ne s'affiche que pour un compte connecté (voir le composant). */}
         <ClocheNotifications />
+        {/* Bascule clair/sombre — globale au site, discrète, à droite. */}
+        <BasculeMode />
         <span className="hidden rounded-lg border border-line px-[10px] py-[6px] text-[12.5px] font-bold text-muted sm:inline">
           FR ⌄
         </span>

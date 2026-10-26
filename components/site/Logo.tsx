@@ -43,7 +43,11 @@ export default function Logo({
       height={hauteur}
       width={Math.round(hauteur * ratio)}
       priority={priority}
-      className={surFonce ? "brightness-0 invert" : undefined}
+      // `logo-img` sert de cible au mode sombre : un logo posé sur une surface
+      // sombre doit s'inverser en blanc (le mot « Docteur » est bleu nuit).
+      // `logo-sur-fonce` l'en exclut — il est déjà blanc sur un fond coloré,
+      // l'inverser une seconde fois le renverrait au bleu nuit.
+      className={surFonce ? "logo-img logo-sur-fonce brightness-0 invert" : "logo-img"}
       style={{ height: hauteur, width: "auto" }}
     />
   );

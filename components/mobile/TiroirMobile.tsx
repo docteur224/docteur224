@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { LIBELLE_ROLE, RACCOURCIS_PATIENT, menuDuRole } from "@/components/mobile/menus-roles";
+import BasculeMode from "@/components/site/BasculeMode";
 import { seDeconnecter } from "@/lib/auth";
 import { useDroitsAdmin } from "@/lib/admin";
 import { aPermission, PERMISSION_PAR_ROUTE } from "@/lib/permissions-admin";
@@ -149,6 +150,8 @@ export default function TiroirMobile({
             Langue
             <b>Français</b>
           </div>
+          {/* Bascule clair/sombre — juste avant « Déconnexion ». */}
+          <BasculeMode variante="menu" />
           <button
             type="button"
             className="tiroir-quitter"
