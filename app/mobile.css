@@ -531,11 +531,13 @@
      rond détaché à droite (le hub du rôle). Les deux planent au-dessus du
      contenu ; le fond de page respire entre eux. `pointer-events` n'est
      rendu qu'aux deux îlots, pas à la gouttière qui les sépare. */
-  .tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: flex; justify-content: center; align-items: flex-end; gap: 10px; padding: 0 12px calc(12px + env(safe-area-inset-bottom)); pointer-events: none; transform: translateZ(0); will-change: transform; }
+  .tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: flex; justify-content: center; align-items: flex-end; gap: 8px; padding: 0 12px calc(12px + env(safe-area-inset-bottom)); pointer-events: none; transform: translateZ(0); will-change: transform; }
   .tabbar > * { pointer-events: auto; }
-  .tb-bloc { display: flex; flex: 0 1 auto; min-width: 0; background: var(--card); border-radius: 26px; box-shadow: 0 8px 28px rgba(16, 59, 80, 0.16); padding: 7px 6px; }
-  .tb-bloc a, .tb-rond { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; color: var(--muted); text-align: center; }
-  .tb-bloc a { flex: 1 1 0; min-width: 56px; }
+  .tb-bloc { display: flex; flex: 0 1 auto; min-width: 0; background: var(--card); border-radius: 26px; box-shadow: 0 8px 28px rgba(16, 59, 80, 0.16); padding: 7px 5px; }
+  /* Quatre onglets dans le bloc (+ le bouton rond) : libellé sur une ligne,
+     largeur resserrée pour tenir sans scroll horizontal jusqu'au 320px. */
+  .tb-bloc a, .tb-rond { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; color: var(--muted); text-align: center; white-space: nowrap; }
+  .tb-bloc a { flex: 1 1 0; min-width: 50px; }
   .tb-rond { flex: none; }
   /* L'icône (ou le cercle) porte la pastille de sélection : le libellé seul
      en couleur se repérait mal d'un coup d'œil. */

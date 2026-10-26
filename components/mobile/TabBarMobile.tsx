@@ -10,10 +10,10 @@ import Icone, { type NomIcone } from "@/components/site/Icone";
 /**
  * Barre d'onglets basse mobile.
  *
- * Trois destinations dans un bloc blanc flottant, la quatrième dans un bouton
- * rond détaché à sa droite (le hub « Profil » / « Compte » / « Plus » du
- * rôle). Rendue uniquement sous md ; au-delà, chaque espace garde sa barre
- * latérale.
+ * Quatre destinations dans un bloc blanc flottant, la cinquième dans un
+ * bouton rond détaché à sa droite (le hub du rôle : « Mon dossier » /
+ * « Profil » / « Compte » / « Plus »). Rendue uniquement sous md ; au-delà,
+ * chaque espace garde sa barre latérale.
  *
  * Les icônes sont au trait (`components/site/Icone`, donc `currentColor`) et
  * non des emoji : un emoji ne prend pas la couleur du texte et resterait
@@ -46,6 +46,10 @@ const ONGLETS: Record<string, Onglet[]> = {
     { href: "/mes-rendez-vous", icone: "calendrier", label: "Mes RDV", prefixes: ["/mes-rendez-vous"] },
     { href: "/patient/messages", icone: "message", label: "Messages", prefixes: ["/patient/messages"] },
     { href: "/resultats", icone: "loupe", label: "Recherche", prefixes: ["/resultats", "/medecin", "/patient"], pastille: false },
+    // Hub personnel : la page documents EST le dossier médical du patient
+    // (ordonnances, résultats, pièces remises). Préfixe plus long que le
+    // « /patient » de Recherche, donc c'est bien lui qui s'allume ici.
+    { href: "/patient/documents", icone: "document", label: "Mon dossier", prefixes: ["/patient/documents"] },
   ],
   medecin: [
     { href: "/espace-medecin", icone: "graphique", label: "Tableau", prefixes: ["/espace-medecin"] },
@@ -56,6 +60,9 @@ const ONGLETS: Record<string, Onglet[]> = {
       prefixes: ["/espace-medecin/agenda", "/espace-medecin/nouveau-rdv"],
     },
     { href: "/espace-medecin/messages", icone: "message", label: "Messages", prefixes: ["/espace-medecin/messages"] },
+    // Sorti du hub « Profil » (où il était seulement en surbrillance) vers un
+    // onglet dédié : la patientèle du médecin est un accès de premier plan.
+    { href: "/espace-medecin/patients", icone: "groupe", label: "Patients", prefixes: ["/espace-medecin/patients"] },
     {
       href: "/espace-medecin/compte",
       icone: "utilisateur",
@@ -63,7 +70,6 @@ const ONGLETS: Record<string, Onglet[]> = {
       prefixes: [
         "/espace-medecin/compte",
         "/espace-medecin/profil",
-        "/espace-medecin/patients",
         "/espace-medecin/correspondance",
         "/espace-medecin/disponibilites",
         "/espace-medecin/statistiques",
@@ -90,11 +96,14 @@ const ONGLETS: Record<string, Onglet[]> = {
       prefixes: ["/espace-assistant/rendez-vous", "/espace-assistant/nouveau-rdv"],
     },
     { href: "/espace-assistant/messages", icone: "message", label: "Messages", prefixes: ["/espace-assistant/messages"] },
+    // Sorti du hub « Compte » vers un onglet dédié. La page patients de
+    // l'assistant applique déjà ses propres droits (vue administrative).
+    { href: "/espace-assistant/patients", icone: "groupe", label: "Patients", prefixes: ["/espace-assistant/patients"] },
     {
       href: "/espace-assistant/compte",
       icone: "utilisateur",
       label: "Compte",
-      prefixes: ["/espace-assistant/compte", "/espace-assistant/creneaux", "/espace-assistant/patients"],
+      prefixes: ["/espace-assistant/compte", "/espace-assistant/creneaux"],
     },
   ],
   etablissement: [
@@ -104,6 +113,17 @@ const ONGLETS: Record<string, Onglet[]> = {
       icone: "groupe",
       label: "Médecins",
       prefixes: ["/espace-etablissement/medecins"],
+    },
+    // « RDV » = la vue agrégée des rendez-vous, pas un listing individuel :
+    // le cloisonnement interdit à l'établissement de voir la patientèle. La
+    // page Statistiques porte déjà « RDV ce mois », « RDV par mois » et la
+    // charge par médecin. Simple navigation → pas de pastille.
+    {
+      href: "/espace-etablissement/statistiques",
+      icone: "calendrier",
+      label: "RDV",
+      prefixes: ["/espace-etablissement/statistiques"],
+      pastille: false,
     },
     {
       href: "/espace-etablissement/informations",
@@ -117,7 +137,6 @@ const ONGLETS: Record<string, Onglet[]> = {
       label: "Compte",
       prefixes: [
         "/espace-etablissement/compte",
-        "/espace-etablissement/statistiques",
         "/espace-etablissement/abonnement",
         // Manquait : sur « Mon compte » aucun onglet ne s'allumait, et la
         // barre laissait croire qu'on avait quitté l'espace.
@@ -129,6 +148,12 @@ const ONGLETS: Record<string, Onglet[]> = {
     { href: "/espace-admin", icone: "maison", label: "Accueil", prefixes: ["/espace-admin"] },
     { href: "/espace-admin/validations", icone: "coche", label: "Valid.", prefixes: ["/espace-admin/validations"] },
     { href: "/espace-admin/utilisateurs", icone: "groupe", label: "Users", prefixes: ["/espace-admin/utilisateurs"] },
+    // « Activité » = le journal d'audit (actions récentes : validations,
+    // modération, finances…). Sorti du hub « Plus ». Comme « Valid. » et
+    // « Users », l'onglet n'est pas filtré par permission — parité avec
+    // l'existant ; le compte principal porte toutes les permissions, et le
+    // tiroir, lui, masque bien l'entrée à qui n'a pas le droit `audit`.
+    { href: "/espace-admin/audit", icone: "historique", label: "Activité", prefixes: ["/espace-admin/audit"], pastille: false },
     {
       href: "/espace-admin/plus",
       icone: "points",
@@ -143,7 +168,6 @@ const ONGLETS: Record<string, Onglet[]> = {
         "/espace-admin/abonnements",
         "/espace-admin/parametres",
         "/espace-admin/equipe",
-        "/espace-admin/audit",
       ],
     },
   ],
@@ -199,7 +223,7 @@ export default function TabBarMobile({
 
   if (!affichee) return null;
 
-  const trois = onglets.slice(0, 3);
+  const bloc = onglets.slice(0, 4);
   const dernier = onglets[onglets.length - 1];
 
   const glyphe = (o: Onglet) => (
@@ -212,7 +236,7 @@ export default function TabBarMobile({
   return (
     <nav className="tabbar md:hidden" aria-label="Navigation principale">
       <div className="tb-bloc">
-        {trois.map((o) => (
+        {bloc.map((o) => (
           <Link key={o.href} href={o.href} className={actif === o.href ? "on" : undefined}>
             <span className="i">{glyphe(o)}</span>
             {o.label}
