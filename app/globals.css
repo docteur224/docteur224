@@ -51,6 +51,11 @@
      « html:root{…} » — puisse le remplacer par une variante de SA teinte.
      Inutilisé en clair. */
   --blue-lisible: #74bde3;
+  /* « Encre bleue » = le bleu profond quand il sert de TEXTE/icône (chips,
+     boutons mobiles, onglets…). En clair c'est --blue ; en sombre il bascule
+     sur --blue-lisible, sinon ce texte serait illisible sur fond sombre. Les
+     FONDS et BORDURES bleus, eux, gardent --blue (voir mobile.css). */
+  --blue-encre: var(--blue);
 
   /* Pastilles d'avatar. Volontairement HORS charte personnalisable : leur rôle
      est de distinguer les personnes d'un coup d'œil. Teintes de la couleur
@@ -153,6 +158,8 @@ body {
   --red-line: #5b2c26;
   --orange-soft: #2c1a10;
   --shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
+  /* Le texte bleu bascule sur la variante claire (suit la charte en sombre). */
+  --blue-encre: var(--blue-lisible);
   /* --blue-lisible n'est volontairement PAS redéfini ici : son défaut est posé
      sur :root de base, et une charte le remplace par une variante de sa propre
      teinte (spécificité html:root > :root). Le redéfinir au mode sombre
@@ -180,6 +187,7 @@ body {
     --red-line: #5b2c26;
     --orange-soft: #2c1a10;
     --shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
+    --blue-encre: var(--blue-lisible);
   }
 }
 
