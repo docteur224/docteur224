@@ -73,7 +73,7 @@ function Messagerie() {
         <div className="mb-5 hidden md:block">
           <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Messages</h2>
         </div>
-        <div className="pad md:p-0">
+        <div className="pad pad-haut md:p-0">
           <div className="flex items-start gap-[9px] rounded-xl border border-red-line bg-red-soft px-[14px] py-3 text-[12.5px] font-semibold leading-relaxed text-red">
             <span aria-hidden>⛔</span>
             <div>
@@ -159,7 +159,7 @@ function Messagerie() {
         <small className="text-[13px] text-muted">Conversations de votre médecin</small>
       </div>
 
-      <div className="pad grid items-start gap-5 md:p-0 lg:grid-cols-[300px_1fr]">
+      <div className="pad pad-haut grid items-start gap-5 md:p-0 lg:grid-cols-[300px_1fr]">
         <div className={choisi ? "hidden lg:block" : ""}>{liste}</div>
         <div className={choisi ? "" : "hidden lg:block"}>
           {choisi && (

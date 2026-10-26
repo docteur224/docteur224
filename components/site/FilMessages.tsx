@@ -11,8 +11,11 @@ import { envoyerMessagePatient, marquerLus, urlPieceJointe, useConversation, typ
  *  - les messages reçus sont marqués lus à l'ouverture du fil, et à chaque
  *    relève (toutes les 15 s) qui en apporte de nouveaux ;
  *  - sous le dernier message envoyé : « Lu à 14:32 » ou « Envoyé » ;
- *  - Entrée envoie, Maj+Entrée va à la ligne ; pièce jointe PDF ou image,
- *    8 Mo au plus, ouverte par un lien temporaire au clic.
+ *  - au clavier (souris/trackpad) Entrée envoie, Maj+Entrée va à la ligne ;
+ *    sur un écran tactile, Entrée va à la ligne (le clavier mobile n'a pas de
+ *    Maj) et l'on envoie avec le bouton ;
+ *  - pièce jointe PDF ou image, 8 Mo au plus, ouverte par un lien temporaire
+ *    au clic.
  */
 
 const MOIS = ["janvier", "février", "mars", "avril", "mai", "juin", "juillet", "août", "septembre", "octobre", "novembre", "décembre"];
@@ -136,11 +139,26 @@ export default function FilMessages({
 
   async function ouvrirPiece(m: Message) {
     if (!m.piecePath) return;
-    // Onglet ouvert AVANT l'attente : sinon le navigateur le bloque.
-    const onglet = window.open("", "_blank", "noopener");
+    // Onglet ouvert AVANT l'attente, dans le geste du clic : sinon le
+    // navigateur le bloque. SANS l'option « noopener » — avec, `window.open`
+    // renvoie `null` (le lien d'ouverture est coupé) et l'on perdait la main
+    // sur l'onglet, d'où « Pièce jointe introuvable » même quand l'URL était
+    // valide : c'est pour ça que les pièces jointes ne s'ouvraient pas. On
+    // coupe `opener` à la main pour garder la protection contre le tabnabbing.
+    const onglet = window.open("", "_blank");
+    if (onglet) {
+      try {
+        onglet.opener = null;
+      } catch {
+        /* certains navigateurs interdisent l'écriture : sans gravité */
+      }
+    }
     const res = await urlPieceJointe(m.piecePath);
-    if (res.url && onglet) onglet.location.href = res.url;
-    else {
+    if (res.url) {
+      if (onglet) onglet.location.href = res.url;
+      // Onglet bloqué (bloqueur de pop-up) : on tente l'ouverture directe.
+      else window.open(res.url, "_blank", "noopener");
+    } else {
       onglet?.close();
       onErreur?.(res.erreur ?? "Pièce jointe introuvable.");
     }
@@ -265,7 +283,12 @@ export default function FilMessages({
             maxLength={4000}
             onChange={(e) => setTexte(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
+              // Sur écran tactile, Entrée doit aller à la ligne (pas de touche
+              // Maj au clavier mobile) : on n'envoie qu'au clavier physique.
+              const tactile =
+                typeof window !== "undefined" &&
+                window.matchMedia?.("(pointer: coarse)").matches === true;
+              if (e.key === "Enter" && !e.shiftKey && !tactile) {
                 e.preventDefault();
                 envoyer();
               }

@@ -253,7 +253,7 @@ export default function MesDocuments() {
       {/* ===== Version mobile ===== */}
       <div className="md:hidden">
         <EnTeteMobile retour="/patient/compte" titre="Mes documents" />
-        <div className="pad">
+        <div className="pad pad-haut">
           <div className="mb-3">
             <EnvoyerDocument apres={recharger} />
           </div>

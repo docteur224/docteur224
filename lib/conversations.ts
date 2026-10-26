@@ -9,8 +9,9 @@ import { creerClientNavigateur } from "@/lib/supabase/client";
  *
  * Une conversation = un patient (titulaire du compte) et un médecin. Un
  * message peut citer un proche (« pour mon fils »). Lectures sous la RLS :
- * chacun ne voit que ses conversations ; écrire exige une relation de soins
- * (un rendez-vous), règle posée en base.
+ * chacun ne voit que ses conversations ; écrire relie un patient et un médecin
+ * validé de l'annuaire — plus besoin d'un rendez-vous préalable (migration
+ * 0076, qui a relâché `ins_messages` posée en 0066).
  */
 
 export const BUCKET_MESSAGES = "messages";
@@ -56,7 +57,7 @@ const versMessage = (l: LigneMessage): Message => ({
 /** Traduit les refus de la base en phrases utilisables à l'écran. */
 function messageErreur(message: string): string {
   if (message.includes("row-level security") || message.includes("ins_messages")) {
-    return "Envoi refusé : la messagerie est réservée aux patients et médecins ayant déjà eu un rendez-vous ensemble.";
+    return "Envoi refusé : la messagerie relie un patient et un médecin de l’annuaire. Vérifiez le destinataire, ou reconnectez-vous.";
   }
   if (message.includes("messages_non_vide")) return "Écrivez un message ou joignez un fichier.";
   if (message.includes("messages_longueur")) return "Message trop long (4 000 caractères au maximum).";

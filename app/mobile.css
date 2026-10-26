@@ -190,6 +190,10 @@
   .appbar .sub { font-size: 11.5px; color: var(--muted); font-weight: 600; }
 
   .pad { padding: 0 18px 26px; }
+  /* Variante avec un peu d'air sous la barre haute figée : les écrans dont le
+     contenu démarre juste sous la .topbar (Messages, Mes documents…) la
+     portent pour ne pas sembler collés au menu. */
+  .pad-haut { padding-top: 16px; }
   .section-t { font-size: 13px; font-weight: 800; margin: 20px 2px 11px; letter-spacing: -0.1px; }
   .muted { color: var(--muted); }
 

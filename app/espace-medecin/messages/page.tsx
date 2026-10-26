@@ -138,7 +138,7 @@ function Messagerie() {
         </small>
       </div>
 
-      <div className="pad grid items-start gap-5 md:p-0 lg:grid-cols-[300px_1fr]">
+      <div className="pad pad-haut grid items-start gap-5 md:p-0 lg:grid-cols-[300px_1fr]">
         <div className={choisi ? "hidden lg:block" : ""}>{liste}</div>
         <div className={choisi ? "" : "hidden lg:block"}>
           {choisi && (

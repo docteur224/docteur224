@@ -7,17 +7,18 @@ import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import FilMessages from "@/components/site/FilMessages";
 import Icone from "@/components/site/Icone";
 import { useConversationsPatient, type Conversation } from "@/lib/conversations";
-import { useMesMedecins } from "@/lib/documents";
+import { useMesMedecins, useTousMedecins } from "@/lib/documents";
 import { useProches, useProfilConnecte } from "@/lib/patient";
 import { OBJETS, labelObjet, type ObjetConversation } from "@/lib/messagerie-objets";
 
 /*
  * Messages — les conversations du patient avec ses médecins.
  *
- * On n'écrit qu'aux médecins chez qui l'on a déjà eu un rendez-vous (pour
- * soi ou pour un proche) : la liste « Écrire à » vient de
- * `medecins_du_patient`, et la base refuse tout autre envoi. Un message peut
- * porter sur un proche : le médecin le voit dans la fiche de ce proche.
+ * On peut écrire à n'importe quel médecin validé de l'annuaire (migration
+ * 0076) : la liste « Écrire à » réunit les médecins déjà consultés
+ * (`medecins_du_patient`, en premier) et tout le reste de l'annuaire
+ * (`useTousMedecins`). Un message peut porter sur un proche : le médecin le
+ * voit dans la fiche de ce proche.
  *
  * « Nouvelle conversation » ouvre un tiroir : recherche du médecin (tri par
  * défaut = déjà consultés en premier), sélection d'un objet, puis le fil
@@ -53,6 +54,7 @@ function Messagerie() {
   const [revision, setRevision] = useState(0);
   const { conversations, chargement } = useConversationsPatient(revision);
   const { medecins } = useMesMedecins();
+  const { medecins: annuaire } = useTousMedecins();
   const { proches } = useProches();
   const [choisi, setChoisi] = useState<string | null>(() => parametres.get("medecin"));
   const [pour, setPour] = useState<string>("");
@@ -60,24 +62,34 @@ function Messagerie() {
   const [nouvelleConv, setNouvelleConv] = useState(false);
   const [recherche, setRecherche] = useState("");
 
-  // Médecins consultés sans conversation encore ouverte : on peut leur écrire.
-  const sansFil = medecins.filter((m) => !conversations.some((c) => c.medecinId === m.id));
+  // Médecins joignables en « nouvelle conversation » : tout l'annuaire, les
+  // déjà consultés d'abord (ordre de medecins_du_patient, par date de RDV
+  // décroissante), puis les autres par ordre alphabétique. On retire ceux qui
+  // ont déjà un fil ouvert — ils figurent dans la liste des conversations, à
+  // un tap. La messagerie n'exige plus un RDV préalable (migration 0076).
+  const joignables = useMemo(() => {
+    const idsConsultes = new Set(medecins.map((m) => m.id));
+    const avecFil = new Set(conversations.map((c) => c.medecinId));
+    const autres = annuaire
+      .filter((m) => !idsConsultes.has(m.id))
+      .sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
+    return [...medecins, ...autres].filter((m) => !avecFil.has(m.id));
+  }, [medecins, annuaire, conversations]);
 
-  // Recherche dans la liste « Écrire à » : déjà consultés en premier (ordre
-  // fourni par medecins_du_patient, qui trie par date de RDV desc).
+  // Recherche dans la liste « Écrire à » : déjà consultés en premier.
   const resultatsRecherche = useMemo(() => {
     const q = recherche.trim().toLowerCase();
-    if (!q) return sansFil;
-    return sansFil.filter(
+    if (!q) return joignables;
+    return joignables.filter(
       (m) => m.nom.toLowerCase().includes(q) || (m.specialite ?? "").toLowerCase().includes(q),
     );
-  }, [sansFil, recherche]);
+  }, [joignables, recherche]);
 
   const courant: { id: string; nom: string; specialite: string | null } | null = choisi
     ? (() => {
         const c = conversations.find((x) => x.medecinId === choisi);
         if (c) return { id: c.medecinId, nom: c.medecin, specialite: c.specialite };
-        const m = medecins.find((x) => x.id === choisi);
+        const m = medecins.find((x) => x.id === choisi) ?? annuaire.find((x) => x.id === choisi);
         return m ? { id: m.id, nom: m.nom, specialite: m.specialite || null } : null;
       })()
     : null;
@@ -114,7 +126,7 @@ function Messagerie() {
   const liste = (
     <div className="grid content-start gap-3">
       {/* Bouton « Nouvelle conversation » */}
-      {sansFil.length > 0 && (
+      {joignables.length > 0 && (
         <button
           type="button"
           onClick={ouvrirNouvelle}
@@ -131,7 +143,7 @@ function Messagerie() {
             <div key={i} className="h-[62px] animate-pulse rounded-xl bg-white" />
           ))}
         </div>
-      ) : conversations.length === 0 && sansFil.length === 0 ? (
+      ) : conversations.length === 0 && joignables.length === 0 ? (
         <div className="rounded-2xl border border-line bg-white p-6 text-center">
           <span className="mx-auto mb-2 grid h-11 w-11 place-items-center rounded-2xl bg-teal-soft text-blue">
             <Icone nom="message" taille={20} />
@@ -280,7 +292,7 @@ function Messagerie() {
         {!conversations.some((c) => c.medecinId === choisi) && !objet && (
           <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
             <label htmlFor="objet-nouveau" className="mb-1 block text-[12px] font-bold text-amber-700">
-              Choisissez un objet avant d'écrire
+              Choisissez un objet avant d’écrire
             </label>
             <select
               id="objet-nouveau"
@@ -342,7 +354,7 @@ function Messagerie() {
         <small className="text-[13px] text-muted">Vos échanges avec les médecins que vous avez consultés</small>
       </div>
 
-      <div className="pad grid items-start gap-5 md:p-0 lg:grid-cols-[300px_1fr]">
+      <div className="pad pad-haut grid items-start gap-5 md:p-0 lg:grid-cols-[300px_1fr]">
         <div className={choisi || nouvelleConv ? "hidden lg:block" : ""}>{liste}</div>
         <div className={choisi || nouvelleConv ? "" : "hidden lg:block"}>
           {(choisi || nouvelleConv) && (

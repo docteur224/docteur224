@@ -388,6 +388,53 @@ export function useMesMedecins(): { medecins: { id: string; nom: string; special
 }
 
 /**
+ * Tout l'annuaire des médecins validés — pour écrire à un médecin encore
+ * jamais consulté (la messagerie n'exige plus un RDV préalable). La lecture
+ * s'appuie sur la même source publique que la recherche : `sel_medecins_public`
+ * et `sel_utilisateurs_medecins_publics` l'autorisent pour tout le monde.
+ */
+export function useTousMedecins(): {
+  medecins: { id: string; nom: string; specialite: string }[];
+  chargement: boolean;
+} {
+  const [medecins, setMedecins] = useState<
+    { id: string; nom: string; specialite: string }[] | null
+  >(null);
+  useEffect(() => {
+    let actif = true;
+    creerClientNavigateur()
+      .from("medecins")
+      .select("id, civilite, utilisateurs ( nom, prenom ), specialites ( nom )")
+      .eq("statut", "valide")
+      .then(({ data }) => {
+        if (!actif) return;
+        const liste = (
+          (data ?? []) as unknown as {
+            id: string;
+            civilite: string | null;
+            utilisateurs: { nom: string | null; prenom: string | null } | null;
+            specialites: { nom: string } | null;
+          }[]
+        ).map((m) => {
+          const civilite = m.civilite === "Pr" ? "Pr" : "Dr";
+          const prenom = m.utilisateurs?.prenom ?? "";
+          const nom = m.utilisateurs?.nom ?? "";
+          return {
+            id: m.id,
+            nom: `${civilite} ${prenom} ${nom}`.replace(/\s+/g, " ").trim(),
+            specialite: m.specialites?.nom ?? "",
+          };
+        });
+        setMedecins(liste);
+      });
+    return () => {
+      actif = false;
+    };
+  }, []);
+  return { medecins: medecins ?? [], chargement: medecins === null };
+}
+
+/**
  * URL temporaire d'un fichier du bucket privé. Volontairement demandée au
  * clic et non au chargement de la liste : signer dix URL dont aucune ne sera
  * ouverte serait autant d'accès accordés pour rien.
