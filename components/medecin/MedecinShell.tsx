@@ -29,6 +29,7 @@ const LIENS = [
   { href: "/espace-medecin/agenda", icone: "📅", label: "Mon agenda" },
   { href: "/espace-medecin/patients", icone: "👥", label: "Mes patients" },
   { href: "/espace-medecin/correspondance", icone: "📨", label: "Correspondance" },
+  { href: "/espace-medecin/messages", icone: "💬", label: "Messages" },
   { href: "/espace-medecin/disponibilites", icone: "🕐", label: "Mes disponibilités" },
   { href: "/espace-medecin/avis", icone: "⭐", label: "Avis et notes" },
   { href: "/espace-medecin/statistiques", icone: "📈", label: "Statistiques" },

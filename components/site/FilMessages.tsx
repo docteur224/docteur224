@@ -38,12 +38,17 @@ export default function FilMessages({
   prochesNoms = {},
   idChamp,
   hauteur = "min(60vh, 520px)",
+  objet,
   onActivite,
   onErreur,
 }: {
   patientId: string;
   medecinId: string;
-  /** Utilisateur connecté : ses messages s'alignent à droite. */
+  /**
+   * Utilisateur connecté : ses messages s'alignent à droite. Côté cabinet
+   * (médecin ou assistant), tout message dont l'expéditeur n'est pas le
+   * patient s'aligne à droite — l'assistant écrit au nom du médecin.
+   */
   moiId: string;
   /** « Dr Diallo » ou « Alpha Condé » : à qui l'on écrit. */
   interlocuteur: string;
@@ -53,6 +58,8 @@ export default function FilMessages({
   /** Identifiant unique du champ de saisie (deux fils peuvent coexister). */
   idChamp: string;
   hauteur?: string;
+  /** Objet de la conversation, transmis au premier message uniquement. */
+  objet?: string | null;
   /** Après un envoi ou une lecture : pour recompter les non-lus ailleurs. */
   onActivite?: () => void;
   onErreur?: (message: string) => void;
@@ -82,7 +89,11 @@ export default function FilMessages({
 
   // Ce qui arrive est lu dès qu'on l'affiche ; le fil est aussitôt relu,
   // sans quoi ces messages compteraient encore comme non lus ici.
-  const nonLusRecus = messages.filter((m) => !m.lu && m.expediteurId !== moiId).length;
+  // Côté cabinet (moiId = medecinId), tout ce qui n'est pas du patient est
+  // « de moi » : les messages du médecin ET de l'assistante sont côté droit.
+  const coteCabinet = moiId === medecinId;
+  const estDeMoi = (m: Message) => (coteCabinet ? m.expediteurId !== patientId : m.expediteurId === moiId);
+  const nonLusRecus = messages.filter((m) => !m.lu && !estDeMoi(m)).length;
   useEffect(() => {
     if (!nonLusRecus) return;
     let actif = true;
@@ -106,7 +117,10 @@ export default function FilMessages({
     if (enCours || (!texte.trim() && !fichier)) return;
     setEnCours(true);
     setErreur(null);
-    const res = await envoyerMessagePatient({ patientId, medecinId, contenu: texte, fichier, procheId });
+    const res = await envoyerMessagePatient({
+      patientId, medecinId, contenu: texte, fichier, procheId,
+      objet: messages.length === 0 ? objet : undefined,
+    });
     setEnCours(false);
     if (res.erreur) {
       setErreur(res.erreur);
@@ -132,7 +146,7 @@ export default function FilMessages({
     }
   }
 
-  const dernierDeMoi = [...messages].reverse().find((m) => m.expediteurId === moiId);
+  const dernierDeMoi = [...messages].reverse().find((m) => estDeMoi(m));
 
   return (
     <div className="flex min-w-0 flex-col overflow-hidden rounded-xl border border-line bg-bg">
@@ -156,7 +170,7 @@ export default function FilMessages({
           </div>
         ) : (
           messages.map((m, i) => {
-            const mien = m.expediteurId === moiId;
+            const mien = estDeMoi(m);
             const jour = jourIso(m.creeLe);
             const nouveauJour = i === 0 || jourIso(messages[i - 1].creeLe) !== jour;
             return (

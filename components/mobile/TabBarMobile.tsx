@@ -43,9 +43,9 @@ type Onglet = {
 const ONGLETS: Record<string, Onglet[]> = {
   public: [
     { href: "/", icone: "maison", label: "Accueil", prefixes: ["/"] },
-    { href: "/resultats", icone: "loupe", label: "Recherche", prefixes: ["/resultats", "/medecin"], pastille: false },
     { href: "/mes-rendez-vous", icone: "calendrier", label: "Mes RDV", prefixes: ["/mes-rendez-vous"] },
-    { href: "/patient/compte", icone: "utilisateur", label: "Profil", prefixes: ["/patient"] },
+    { href: "/patient/messages", icone: "message", label: "Messages", prefixes: ["/patient/messages"] },
+    { href: "/resultats", icone: "loupe", label: "Recherche", prefixes: ["/resultats", "/medecin", "/patient"], pastille: false },
   ],
   medecin: [
     { href: "/espace-medecin", icone: "graphique", label: "Tableau", prefixes: ["/espace-medecin"] },
@@ -55,7 +55,7 @@ const ONGLETS: Record<string, Onglet[]> = {
       label: "Agenda",
       prefixes: ["/espace-medecin/agenda", "/espace-medecin/nouveau-rdv"],
     },
-    { href: "/espace-medecin/patients", icone: "groupe", label: "Patients", prefixes: ["/espace-medecin/patients"] },
+    { href: "/espace-medecin/messages", icone: "message", label: "Messages", prefixes: ["/espace-medecin/messages"] },
     {
       href: "/espace-medecin/compte",
       icone: "utilisateur",
@@ -63,6 +63,8 @@ const ONGLETS: Record<string, Onglet[]> = {
       prefixes: [
         "/espace-medecin/compte",
         "/espace-medecin/profil",
+        "/espace-medecin/patients",
+        "/espace-medecin/correspondance",
         "/espace-medecin/disponibilites",
         "/espace-medecin/statistiques",
         "/espace-medecin/equipe",

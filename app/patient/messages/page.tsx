@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import PatientShell from "@/components/patient/PatientShell";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
@@ -9,6 +9,7 @@ import Icone from "@/components/site/Icone";
 import { useConversationsPatient, type Conversation } from "@/lib/conversations";
 import { useMesMedecins } from "@/lib/documents";
 import { useProches, useProfilConnecte } from "@/lib/patient";
+import { OBJETS, labelObjet, type ObjetConversation } from "@/lib/messagerie-objets";
 
 /*
  * Messages — les conversations du patient avec ses médecins.
@@ -17,6 +18,10 @@ import { useProches, useProfilConnecte } from "@/lib/patient";
  * soi ou pour un proche) : la liste « Écrire à » vient de
  * `medecins_du_patient`, et la base refuse tout autre envoi. Un message peut
  * porter sur un proche : le médecin le voit dans la fiche de ce proche.
+ *
+ * « Nouvelle conversation » ouvre un tiroir : recherche du médecin (tri par
+ * défaut = déjà consultés en premier), sélection d'un objet, puis le fil
+ * s'ouvre avec l'objet prêt à être envoyé au premier message.
  *
  * Web : liste à gauche, fil à droite. Mobile : la liste, puis le fil en
  * plein écran avec un retour. `?medecin=<id>` ouvre directement un fil
@@ -51,9 +56,23 @@ function Messagerie() {
   const { proches } = useProches();
   const [choisi, setChoisi] = useState<string | null>(() => parametres.get("medecin"));
   const [pour, setPour] = useState<string>("");
+  const [objet, setObjet] = useState<ObjetConversation | "">("");
+  const [nouvelleConv, setNouvelleConv] = useState(false);
+  const [recherche, setRecherche] = useState("");
 
   // Médecins consultés sans conversation encore ouverte : on peut leur écrire.
   const sansFil = medecins.filter((m) => !conversations.some((c) => c.medecinId === m.id));
+
+  // Recherche dans la liste « Écrire à » : déjà consultés en premier (ordre
+  // fourni par medecins_du_patient, qui trie par date de RDV desc).
+  const resultatsRecherche = useMemo(() => {
+    const q = recherche.trim().toLowerCase();
+    if (!q) return sansFil;
+    return sansFil.filter(
+      (m) => m.nom.toLowerCase().includes(q) || (m.specialite ?? "").toLowerCase().includes(q),
+    );
+  }, [sansFil, recherche]);
+
   const courant: { id: string; nom: string; specialite: string | null } | null = choisi
     ? (() => {
         const c = conversations.find((x) => x.medecinId === choisi);
@@ -64,18 +83,48 @@ function Messagerie() {
     : null;
   const nomsProches = Object.fromEntries(proches.map((p) => [p.id, `${p.prenom} ${p.nom}`]));
 
+  // L'objet de la conversation existante, ou celui choisi pour une nouvelle.
+  const objetConv = (() => {
+    if (objet) return objet;
+    const c = conversations.find((x) => x.medecinId === choisi);
+    return c?.objet ?? null;
+  })();
+
   function ouvrir(id: string) {
     setChoisi(id);
+    setNouvelleConv(false);
     setPour("");
+    // Conserver l'objet seulement si c'est une nouvelle conversation
+    if (conversations.some((c) => c.medecinId === id)) setObjet("");
     window.history.replaceState(null, "", `/patient/messages?medecin=${id}`);
   }
   function fermer() {
     setChoisi(null);
+    setNouvelleConv(false);
+    setObjet("");
     window.history.replaceState(null, "", "/patient/messages");
+  }
+  function ouvrirNouvelle() {
+    setNouvelleConv(true);
+    setChoisi(null);
+    setRecherche("");
+    setObjet("");
   }
 
   const liste = (
     <div className="grid content-start gap-3">
+      {/* Bouton « Nouvelle conversation » */}
+      {sansFil.length > 0 && (
+        <button
+          type="button"
+          onClick={ouvrirNouvelle}
+          className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-teal px-4 py-2.5 text-[13px] font-bold text-white transition-colors hover:bg-blue"
+        >
+          <Icone nom="plus" taille={15} epaisseur={2.6} />
+          Nouvelle conversation
+        </button>
+      )}
+
       {chargement ? (
         <div className="grid gap-2" aria-hidden>
           {[0, 1, 2].map((i) => (
@@ -103,35 +152,93 @@ function Messagerie() {
               ))}
             </ul>
           )}
-          {sansFil.length > 0 && (
-            <div>
-              <div className="mb-1.5 text-[11.5px] font-bold uppercase tracking-[0.04em] text-muted">Écrire à</div>
-              <ul className="grid gap-1.5">
-                {sansFil.map((m) => (
-                  <li key={m.id}>
-                    <button
-                      type="button"
-                      onClick={() => ouvrir(m.id)}
-                      aria-current={m.id === choisi ? "true" : undefined}
-                      className={`flex min-h-11 w-full items-center gap-2.5 rounded-xl border px-3 py-2 text-left transition-colors ${
-                        m.id === choisi ? "border-teal bg-teal-soft" : "border-line bg-white hover:bg-bg"
-                      }`}
-                    >
-                      <span className="grid h-8 w-8 flex-none place-items-center rounded-full bg-bg text-teal">
-                        <Icone nom="plus" taille={14} epaisseur={2.6} />
-                      </span>
-                      <span className="min-w-0">
-                        <b className="block truncate text-[13px]">{m.nom}</b>
-                        {m.specialite && <span className="block truncate text-[11.5px] text-muted">{m.specialite}</span>}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
         </>
       )}
+    </div>
+  );
+
+  // Panneau « Nouvelle conversation » : recherche médecin + choix objet
+  const panneauNouveau = nouvelleConv && (
+    <div className="grid gap-4">
+      <div className="flex items-center justify-between">
+        <b className="text-[15px] font-extrabold">Nouvelle conversation</b>
+        <button
+          type="button"
+          onClick={fermer}
+          className="grid h-8 w-8 place-items-center rounded-lg text-muted hover:bg-bg"
+          aria-label="Fermer"
+        >
+          <Icone nom="croix" taille={16} />
+        </button>
+      </div>
+
+      {/* Recherche médecin */}
+      <div>
+        <label htmlFor="recherche-medecin" className="mb-1.5 block text-[12px] font-bold text-muted">
+          Choisir un médecin
+        </label>
+        <div className="relative">
+          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted">
+            <Icone nom="loupe" taille={15} />
+          </span>
+          <input
+            id="recherche-medecin"
+            type="search"
+            placeholder="Rechercher par nom ou spécialité…"
+            value={recherche}
+            onChange={(e) => setRecherche(e.target.value)}
+            className="min-h-11 w-full rounded-xl border border-line bg-bg pl-9 pr-3 text-[13px] outline-none focus:border-teal"
+          />
+        </div>
+      </div>
+
+      {resultatsRecherche.length === 0 ? (
+        <p className="text-[12.5px] text-muted">Aucun médecin trouvé.</p>
+      ) : (
+        <ul className="grid gap-1.5 overflow-y-auto" style={{ maxHeight: "min(40vh, 300px)" }}>
+          {resultatsRecherche.map((m) => (
+            <li key={m.id}>
+              <button
+                type="button"
+                onClick={() => {
+                  setChoisi(m.id);
+                  setNouvelleConv(false);
+                  window.history.replaceState(null, "", `/patient/messages?medecin=${m.id}`);
+                }}
+                className="flex min-h-11 w-full items-center gap-2.5 rounded-xl border border-line bg-white px-3 py-2 text-left transition-colors hover:border-teal hover:bg-teal-soft"
+              >
+                <span className="grid h-8 w-8 flex-none place-items-center rounded-full bg-teal-soft text-teal">
+                  <Icone nom="utilisateur" taille={14} />
+                </span>
+                <span className="min-w-0">
+                  <b className="block truncate text-[13px]">{m.nom}</b>
+                  {m.specialite && <span className="block truncate text-[11.5px] text-muted">{m.specialite}</span>}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {/* Choix de l'objet */}
+      <div>
+        <label htmlFor="objet-conversation" className="mb-1.5 block text-[12px] font-bold text-muted">
+          Objet de votre message
+        </label>
+        <select
+          id="objet-conversation"
+          value={objet}
+          onChange={(e) => setObjet(e.target.value as ObjetConversation | "")}
+          className="min-h-11 w-full rounded-xl border border-line bg-white px-3 text-[13px] font-semibold outline-none focus:border-teal"
+        >
+          <option value="">Sélectionner un objet…</option>
+          {OBJETS.map((o) => (
+            <option key={o.slug} value={o.slug}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      </div>
     </div>
   );
 
@@ -141,7 +248,14 @@ function Messagerie() {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="min-w-0">
             <b className="block truncate text-[15px] font-extrabold">{courant.nom}</b>
-            {courant.specialite && <span className="text-[12px] text-muted">{courant.specialite}</span>}
+            <span className="flex flex-wrap items-center gap-2">
+              {courant.specialite && <span className="text-[12px] text-muted">{courant.specialite}</span>}
+              {objetConv && (
+                <span className="inline-block rounded bg-teal/10 px-1.5 py-0.5 text-[10.5px] font-bold text-teal">
+                  {labelObjet(objetConv)}
+                </span>
+              )}
+            </span>
           </div>
           {proches.length > 0 && (
             <label className="flex items-center gap-2 text-[12px] font-semibold text-muted">
@@ -161,6 +275,29 @@ function Messagerie() {
             </label>
           )}
         </div>
+
+        {/* Sélection d'objet pour une NOUVELLE conversation (sans messages encore) */}
+        {!conversations.some((c) => c.medecinId === choisi) && !objet && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5">
+            <label htmlFor="objet-nouveau" className="mb-1 block text-[12px] font-bold text-amber-700">
+              Choisissez un objet avant d'écrire
+            </label>
+            <select
+              id="objet-nouveau"
+              value={objet}
+              onChange={(e) => setObjet(e.target.value as ObjetConversation | "")}
+              className="min-h-9 w-full rounded-lg border border-amber-200 bg-white px-2.5 text-[12.5px] font-semibold outline-none focus:border-teal"
+            >
+              <option value="">Sélectionner un objet…</option>
+              {OBJETS.map((o) => (
+                <option key={o.slug} value={o.slug}>
+                  {o.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <FilMessages
           key={courant.id}
           patientId={profil.id}
@@ -171,7 +308,13 @@ function Messagerie() {
           prochesNoms={nomsProches}
           idChamp="message-patient"
           hauteur="min(calc(62vh / var(--zoom-page, 1)), 560px)"
-          onActivite={() => setRevision((r) => r + 1)}
+          objet={objet || undefined}
+          onActivite={() => {
+            setRevision((r) => r + 1);
+            // L'objet a été porté par le premier message : on le vide du state
+            // local pour ne pas le renvoyer sur les suivants.
+            if (objet) setObjet("");
+          }}
         />
         <p className="text-[11.5px] text-muted">
           Pour une urgence, appelez le 442 (SAMU) : votre médecin ne lit pas ses messages en continu.
@@ -181,18 +324,17 @@ function Messagerie() {
       <p className="text-[13px] text-muted">Conversation introuvable : choisissez un médecin dans la liste.</p>
     ) : null;
 
-  /*
-   * Un seul arbre pour toutes les largeurs : le fil n'est monté qu'une fois
-   * (un champ de saisie, une relève toutes les 15 s, un marquage « lu »).
-   * Sous md, la liste OU le fil ; au-delà, les deux côte à côte.
-   */
   return (
     <>
       <div className="md:hidden">
-        {choisi ? (
-          <EnTeteMobile titre="Messages" sousTitre={courant?.nom} retour="/patient/messages" />
+        {choisi || nouvelleConv ? (
+          <EnTeteMobile
+            titre="Messages"
+            sousTitre={courant?.nom ?? (nouvelleConv ? "Nouveau" : undefined)}
+            retour="/patient/messages"
+          />
         ) : (
-          <EnTeteMobile retour="/patient/compte" titre="Messages" />
+          <EnTeteMobile retour="/" titre="Messages" />
         )}
       </div>
       <div className="mb-5 hidden md:block">
@@ -201,9 +343,9 @@ function Messagerie() {
       </div>
 
       <div className="pad grid items-start gap-5 md:p-0 lg:grid-cols-[300px_1fr]">
-        <div className={choisi ? "hidden lg:block" : ""}>{liste}</div>
-        <div className={choisi ? "" : "hidden lg:block"}>
-          {choisi && (
+        <div className={choisi || nouvelleConv ? "hidden lg:block" : ""}>{liste}</div>
+        <div className={choisi || nouvelleConv ? "" : "hidden lg:block"}>
+          {(choisi || nouvelleConv) && (
             <button
               type="button"
               onClick={fermer}
@@ -213,7 +355,7 @@ function Messagerie() {
             </button>
           )}
           <div className="rounded-2xl border border-line bg-white p-3 md:p-4">
-            {fil ?? (
+            {panneauNouveau || fil || (
               <div className="grid min-h-[280px] place-items-center text-center text-[13px] text-muted">
                 Choisissez une conversation, ou un médecin à qui écrire.
               </div>
@@ -226,6 +368,7 @@ function Messagerie() {
 }
 
 function LigneConversation({ c, actif, onClick }: { c: Conversation; actif: boolean; onClick: () => void }) {
+  const lbl = labelObjet(c.objet);
   return (
     <button
       type="button"
@@ -243,6 +386,11 @@ function LigneConversation({ c, actif, onClick }: { c: Conversation; actif: bool
           <b className="truncate text-[13px]">{c.medecin}</b>
           <span className="flex-none text-[11px] text-muted">{quand(c.dernierLe)}</span>
         </span>
+        {lbl && (
+          <span className="mb-0.5 inline-block rounded bg-teal/10 px-1.5 py-0.5 text-[10.5px] font-bold text-teal">
+            {lbl}
+          </span>
+        )}
         <span className={`block truncate text-[12px] ${c.nonLus ? "font-bold text-ink" : "text-muted"}`}>
           {c.dernierDeMoi ? "Vous : " : ""}
           {c.dernierMessage}

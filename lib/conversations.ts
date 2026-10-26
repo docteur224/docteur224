@@ -115,12 +115,17 @@ export async function marquerLus(patientId: string, medecinId: string): Promise<
   const supabase = creerClientNavigateur();
   const { data: auth } = await supabase.auth.getUser();
   if (!auth.user) return;
+  // Côté soignant (médecin ou assistant), on marque les messages du patient ;
+  // côté patient, ceux du médecin (ou de l'assistant). La cible est toujours
+  // l'autre partie — jamais soi-même, et jamais le médecin quand c'est
+  // l'assistant qui lit (le patient ne les a pas encore vus).
+  const cible = auth.user.id === patientId ? medecinId : patientId;
   await supabase
     .from("messages")
     .update({ lu: true })
     .eq("patient_id", patientId)
     .eq("medecin_id", medecinId)
-    .neq("expediteur_id", auth.user.id)
+    .eq("expediteur_id", cible)
     .eq("lu", false);
   // La notification porte l'interlocuteur en source (migration 0066).
   const interlocuteur = auth.user.id === patientId ? medecinId : patientId;
@@ -142,6 +147,7 @@ export async function envoyerMessagePatient(d: {
   contenu: string;
   fichier?: File | null;
   procheId?: string | null;
+  objet?: string | null;
 }): Promise<{ erreur?: string }> {
   const texte = d.contenu.trim();
   if (!texte && !d.fichier) return { erreur: "Écrivez un message ou joignez un fichier." };
@@ -170,6 +176,7 @@ export async function envoyerMessagePatient(d: {
     piece_path: piecePath,
     piece_nom: d.fichier?.name ?? null,
     proche_id: d.procheId ?? null,
+    objet: d.objet ?? null,
   });
   if (error) {
     // Message refusé : le fichier déposé n'est rattaché à rien, on le retire.
@@ -195,6 +202,7 @@ export interface Conversation {
   dernierLe: string;
   dernierDeMoi: boolean;
   nonLus: number;
+  objet: string | null;
 }
 
 export function useConversationsPatient(revision: number) {
@@ -216,6 +224,7 @@ export function useConversationsPatient(revision: number) {
               dernier_le: string;
               dernier_de_moi: boolean;
               non_lus: number;
+              objet: string | null;
             }[]
           ).map((c) => ({
             medecinId: c.medecin_id,
@@ -225,6 +234,7 @@ export function useConversationsPatient(revision: number) {
             dernierLe: c.dernier_le,
             dernierDeMoi: c.dernier_de_moi,
             nonLus: Number(c.non_lus),
+            objet: c.objet,
           })),
         });
       });
@@ -236,6 +246,54 @@ export function useConversationsPatient(revision: number) {
 }
 
 /* ===================== Côté médecin ===================== */
+
+export interface ConversationMedecin {
+  patientId: string;
+  patient: string;
+  dernierMessage: string;
+  dernierLe: string;
+  dernierDeMoi: boolean;
+  nonLus: number;
+  objet: string | null;
+}
+
+export function useConversationsMedecin(revision: number) {
+  const [resultat, setResultat] = useState<{ revision: number; liste: ConversationMedecin[] } | null>(null);
+  useEffect(() => {
+    let actif = true;
+    creerClientNavigateur()
+      .rpc("conversations_medecin")
+      .then(({ data }) => {
+        if (!actif) return;
+        setResultat({
+          revision,
+          liste: (
+            (data ?? []) as {
+              patient_id: string;
+              patient: string;
+              dernier_message: string;
+              dernier_le: string;
+              dernier_de_moi: boolean;
+              non_lus: number;
+              objet: string | null;
+            }[]
+          ).map((c) => ({
+            patientId: c.patient_id,
+            patient: c.patient,
+            dernierMessage: c.dernier_message,
+            dernierLe: c.dernier_le,
+            dernierDeMoi: c.dernier_de_moi,
+            nonLus: Number(c.non_lus),
+            objet: c.objet,
+          })),
+        });
+      });
+    return () => {
+      actif = false;
+    };
+  }, [revision]);
+  return { conversations: resultat?.liste ?? [], chargement: resultat === null };
+}
 
 /** Messages non lus d'un patient (pastille de l'onglet Relation patient). */
 export function useNonLus(patientId: string | null, medecinId: string | null, revision: number): number | null {
