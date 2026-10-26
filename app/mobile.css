@@ -526,15 +526,27 @@
   /* ===== barre d'onglets basse ===== */
   /* `translateZ(0)` force sa propre couche de composition : sans cela, Chrome
      Android cessait de repeindre les derniers onglets pendant le défilement. */
-  .tabbar { position: fixed; bottom: 0; left: 0; right: 0; z-index: 30; display: flex; background: #fff; border-top: 1px solid var(--line); padding: 6px 6px 10px; padding-bottom: calc(10px + env(safe-area-inset-bottom)); transform: translateZ(0); will-change: transform; }
-  .tabbar a, .tabbar button { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 10px; font-weight: 700; color: var(--muted); background: none; border: none; cursor: pointer; font-family: inherit; }
-  /* L'icône porte la pastille de sélection : le libellé seul en couleur se
-     repérait mal d'un coup d'œil. */
-  .tabbar a .i, .tabbar button .i { font-size: 18px; line-height: 1; display: grid; place-items: center; height: 30px; width: 56px; border-radius: 999px; transition: background 0.15s; }
-  .tabbar a.on, .tabbar button.on { color: var(--blue); }
-  .tabbar a.on .i, .tabbar button.on .i { background: var(--teal-soft); }
-  /* dégage l'espace pour la tabbar fixe */
-  .with-tabbar { padding-bottom: calc(82px + env(safe-area-inset-bottom)); }
+  /* Tabbar flottante : un bloc blanc arrondi (3 destinations) et un bouton
+     rond détaché à droite (le hub du rôle). Les deux planent au-dessus du
+     contenu ; le fond de page respire entre eux. `pointer-events` n'est
+     rendu qu'aux deux îlots, pas à la gouttière qui les sépare. */
+  .tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: flex; justify-content: center; align-items: flex-end; gap: 10px; padding: 0 12px calc(12px + env(safe-area-inset-bottom)); pointer-events: none; transform: translateZ(0); will-change: transform; }
+  .tabbar > * { pointer-events: auto; }
+  .tb-bloc { display: flex; flex: 0 1 auto; min-width: 0; background: #fff; border-radius: 26px; box-shadow: 0 8px 28px rgba(16, 59, 80, 0.16); padding: 7px 6px; }
+  .tb-bloc a, .tb-rond { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; color: var(--muted); text-align: center; }
+  .tb-bloc a { flex: 1 1 0; min-width: 56px; }
+  .tb-rond { flex: none; }
+  /* L'icône (ou le cercle) porte la pastille de sélection : le libellé seul
+     en couleur se repérait mal d'un coup d'œil. */
+  .tabbar .i { display: grid; place-items: center; height: 30px; width: 52px; border-radius: 999px; transition: background 0.15s; }
+  .tb-rond .cercle { display: grid; place-items: center; height: 48px; width: 48px; border-radius: 999px; background: #fff; box-shadow: 0 8px 28px rgba(16, 59, 80, 0.16); transition: background 0.15s; }
+  .tb-bloc a.on, .tb-rond.on { color: var(--blue); }
+  .tb-bloc a.on .i, .tb-rond.on .cercle { background: var(--teal-soft); }
+  /* La pastille se colle au coin du pictogramme, quel que soit le conteneur. */
+  .tabbar .g { position: relative; display: grid; place-items: center; }
+  .tabbar .tb-point { position: absolute; top: -4px; right: -5px; width: 9px; height: 9px; border-radius: 999px; background: var(--red); border: 2px solid #fff; }
+  /* dégage l'espace pour la tabbar flottante */
+  .with-tabbar { padding-bottom: calc(96px + env(safe-area-inset-bottom)); }
   /* …sauf pour un visiteur, qui n'a pas de tabbar (voir TabBarMobile). */
   .sans-tabbar .with-tabbar { padding-bottom: 26px; }
 
