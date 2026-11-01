@@ -3,6 +3,8 @@ import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import ModeLocal from "@/components/site/ModeLocal";
 import PliageLocal from "@/components/site/PliageLocal";
+import CharteLocalePublique from "@/components/site/CharteLocalePublique";
+import SuivreChartePublique from "@/components/site/SuivreChartePublique";
 import RevelationAuScroll from "@/components/site/RevelationAuScroll";
 import TransitionPage from "@/components/site/TransitionPage";
 
@@ -31,6 +33,11 @@ export default function RootLayout({
         {/* Pose l'état plié/déplié de la barre latérale avant la première
             peinture (anti-saut de largeur), pour les cinq espaces connectés. */}
         <PliageLocal />
+        {/* Charte de campagne du SITE PUBLIC (ex. Octobre Rose), posée avant
+            la première peinture et cantonnée aux pages publiques. N'a aucun
+            lien avec la charte d'espace : routes mutuellement exclusives. */}
+        <CharteLocalePublique />
+        <SuivreChartePublique />
         {/* Enveloppes d'animation uniquement : transition de page et
             apparition au défilement (voir les deux composants). */}
         <TransitionPage>{children}</TransitionPage>

@@ -5,11 +5,12 @@ import Link from "next/link";
 import ChangerMotDePasse from "@/components/patient/ChangerMotDePasse";
 import ChangerPin from "@/components/patient/ChangerPin";
 import CouleursEspace from "@/components/compte/CouleursEspace";
+import CharteSitePublic from "@/components/compte/CharteSitePublic";
 import ExporterMesDonnees from "@/components/patient/ExporterMesDonnees";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { useProfilConnecte } from "@/lib/patient";
 import { useDroitsAdmin } from "@/lib/admin";
-import { PERMISSIONS } from "@/lib/permissions-admin";
+import { aPermission, PERMISSIONS } from "@/lib/permissions-admin";
 import {
   basculerSuspension,
   droitsDuCompte,
@@ -146,6 +147,11 @@ export default function MonCompte({
           <Identite profil={profil} chargement={chargement} suspendu={suspendu} />
 
           <CouleursEspace />
+
+          {/* Habillage de campagne du SITE PUBLIC : réservé à l'administration
+              habilitée aux Paramètres. Distinct de la charte d'espace ci-dessus
+              — ce sont les pages publiques, pour tout le monde, qu'il touche. */}
+          {role === "admin" && aPermission(droits, "parametres") && <CharteSitePublic />}
 
           <section className={CARTE}>
             <h3 className={TITRE_CARTE}>Sécurité</h3>
