@@ -52,10 +52,24 @@ export default function Footer() {
           <a className="mb-2 block cursor-pointer text-[13px] opacity-80">Centre d&apos;assistance</a>
           <a className="mb-2 block cursor-pointer text-[13px] opacity-80">WhatsApp · Messenger</a>
           <a className="mb-2 block cursor-pointer text-[13px] opacity-80">Nous contacter</a>
+          <Link href="/conditions-utilisation" className="mb-2 block text-[13px] opacity-80">
+            Conditions d&apos;utilisation
+          </Link>
+          <Link href="/protection-donnees" className="mb-2 block text-[13px] opacity-80">
+            Protection des données
+          </Link>
         </div>
       </div>
-      <div className="mx-auto mt-7 max-w-[1020px] border-t border-white/15 pt-[18px] text-xs opacity-70">
-        © 2026 Docteur 224 · Conakry, Guinée · Tous droits réservés.
+      <div className="mx-auto mt-7 flex max-w-[1020px] flex-wrap items-center gap-x-2 gap-y-1 border-t border-white/15 pt-[18px] text-xs opacity-70">
+        <span>© 2026 Docteur 224 · Conakry, Guinée · Tous droits réservés.</span>
+        <span aria-hidden>·</span>
+        <Link href="/conditions-utilisation" className="underline underline-offset-2">
+          Conditions d&apos;utilisation
+        </Link>
+        <span aria-hidden>·</span>
+        <Link href="/protection-donnees" className="underline underline-offset-2">
+          Protection des données
+        </Link>
       </div>
     </footer>
   );

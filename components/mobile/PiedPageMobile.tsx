@@ -14,6 +14,8 @@ const LIENS = [
   { href: "/faq", label: "FAQ" },
   { href: "/inscription/professionnel", label: "Pour les médecins" },
   { href: "/connexion", label: "Se connecter" },
+  { href: "/conditions-utilisation", label: "Conditions d’utilisation" },
+  { href: "/protection-donnees", label: "Protection des données" },
 ];
 
 export default function PiedPageMobile() {
