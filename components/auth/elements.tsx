@@ -1,7 +1,9 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { lireNumeroTest, type NumeroTest } from "@/lib/auth-telephone";
 import type { CanalCode } from "@/lib/pin";
+import { formaterTelephoneGN } from "@/lib/telephone";
 
 /*
  * Pièces communes des parcours téléphone (inscription, connexion, PIN
@@ -165,12 +167,46 @@ export function ChoixCanal({ canal, onChange }: { canal: CanalCode; onChange: (c
   );
 }
 
-/** Le code affiché à l'écran quand aucun agrégateur n'est branché (OTP_CODE_VISIBLE). */
-export function CodeDemonstration({ code }: { code: string }) {
+/**
+ * Le code affiché à l'écran : numéro de test coché dans l'admin, ou aucun
+ * agrégateur branché en local (OTP_CODE_VISIBLE).
+ */
+export function CodeDemonstration({ code, test = false }: { code: string; test?: boolean }) {
   return (
     <p className="mb-3 rounded-[11px] border border-dashed border-amber-line bg-amber-soft px-[13px] py-[10px] text-[12px] text-amber-ink">
-      Aucun fournisseur SMS/WhatsApp n’est branché — code de démonstration :{" "}
+      {test
+        ? "🧪 Numéro de test — aucun message n’est envoyé. Code :"
+        : "Aucun fournisseur SMS/WhatsApp n’est branché — code de démonstration :"}{" "}
       <strong className="tracking-[0.15em]">{code}</strong>
     </p>
+  );
+}
+
+/**
+ * « Compte de test » annoncé à l'étape du numéro, tant que l'option est cochée
+ * dans /espace-admin/messagerie. Rien n'est rendu sinon.
+ */
+export function EncartNumeroTest({ onUtiliser }: { onUtiliser: (chiffres: string) => void }) {
+  const [test, setTest] = useState<NumeroTest | null>(null);
+  useEffect(() => {
+    let actif = true;
+    lireNumeroTest().then((t) => actif && setTest(t));
+    return () => {
+      actif = false;
+    };
+  }, []);
+  if (!test?.actif || !test.numero) return null;
+  const chiffres = test.numero.replace(/^\+224/, "");
+  return (
+    <div className="mb-4 rounded-[11px] border border-dashed border-amber-line bg-amber-soft px-[13px] py-[11px] text-[12px] leading-relaxed text-amber-ink">
+      <strong>🧪 Compte de test</strong> — aucun SMS n’est envoyé.
+      <br />
+      Numéro : <strong>+224 {formaterTelephoneGN(chiffres)}</strong> · Code reçu :{" "}
+      <strong className="tracking-[0.12em]">{test.code}</strong>
+      <br />
+      <button type="button" onClick={() => onUtiliser(chiffres)} className="mt-1 font-bold underline">
+        Utiliser ce numéro
+      </button>
+    </div>
   );
 }

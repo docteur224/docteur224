@@ -30,7 +30,7 @@ async function appeler<T>(url: string, corps: unknown, methode = "POST"): Promis
 }
 
 export function envoyerCode(telephone: string, canal: CanalCode, objet: ObjetCode) {
-  return appeler<{ renvoiDans?: number; codeDemonstration?: string }>("/api/telephone/code", {
+  return appeler<{ renvoiDans?: number; codeDemonstration?: string; codeTest?: string }>("/api/telephone/code", {
     telephone,
     canal,
     objet,
@@ -63,6 +63,24 @@ export function reinitialiserPin(telephone: string, jeton: string, pin: string) 
 
 export function modifierPin(actuel: string, nouveau: string) {
   return appeler<{ ok?: boolean }>("/api/telephone/pin", { actuel, nouveau }, "PUT");
+}
+
+export interface NumeroTest {
+  actif: boolean;
+  numero?: string;
+  code?: string;
+}
+
+/*
+ * Lu une fois par chargement de page : la page rend le parcours deux fois
+ * (mobile et web), une seule requête suffit aux deux.
+ */
+let numeroTest: Promise<NumeroTest> | null = null;
+export function lireNumeroTest(): Promise<NumeroTest> {
+  numeroTest ??= fetch("/api/telephone/test", { cache: "no-store" })
+    .then((r) => (r.ok ? r.json() : { actif: false }))
+    .catch(() => ({ actif: false }));
+  return numeroTest;
 }
 
 export async function lireEtatPin(): Promise<{ telephone: string | null; pinModifieLe: string | null }> {

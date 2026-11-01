@@ -126,6 +126,21 @@ export async function titulairePlateforme(admin: SupabaseClient): Promise<string
   return data?.id ?? null;
 }
 
+export interface TelephoneTest {
+  actif: boolean;
+  numero: string;
+  code: string;
+}
+
+/**
+ * Le numéro de test (migration 0078) : il reçoit toujours le même code, sans
+ * qu'aucun message ne parte. Absent ou illisible, il est considéré inactif.
+ */
+export async function lireTelephoneTest(admin: SupabaseClient): Promise<TelephoneTest> {
+  const { data } = await admin.from("telephone_test").select("actif, numero, code").eq("id", 1).maybeSingle();
+  return data ?? { actif: false, numero: "", code: "" };
+}
+
 /**
  * Ouvre la session du compte dans les cookies de la réponse en cours.
  * Les refus de Supabase (compte banni : fermé ou suspendu par

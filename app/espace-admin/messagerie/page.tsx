@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import AdminShell from "@/components/admin/AdminShell";
+import NumeroTestTelephone from "@/components/admin/NumeroTestTelephone";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { FOURNISSEURS_PAR_CANAL } from "@/lib/messagerie/catalogue";
 import { alerteCout, mesurerSms } from "@/lib/messagerie/cout";
@@ -396,6 +397,8 @@ export default function MessagerieAdmin() {
         </div>
         {resultatTest && <p className="mt-3 text-[12.5px] font-semibold text-blue">{resultatTest}</p>}
       </div>
+
+      <NumeroTestTelephone />
     </>
   );
 

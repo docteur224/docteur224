@@ -11,6 +11,7 @@ import {
   CHAMP_WEB,
   ChoixCanal,
   CodeDemonstration,
+  EncartNumeroTest,
   Erreur,
   Etiquette,
   LienTexte,
@@ -64,7 +65,7 @@ export function useInscriptionTelephone() {
   const [telephone, setTelephone] = useState("");
   const [canal, setCanal] = useState<CanalCode>("whatsapp");
   const [code, setCode] = useState("");
-  const [codeDemonstration, setCodeDemonstration] = useState<string | null>(null);
+  const [codeDemonstration, setCodeDemonstration] = useState<{ code: string; test: boolean } | null>(null);
   const [jeton, setJeton] = useState("");
   const [pin, setPin] = useState("");
   const [confirmation, setConfirmation] = useState("");
@@ -111,7 +112,13 @@ export function useInscriptionTelephone() {
       return;
     }
     setCode("");
-    setCodeDemonstration(res.codeDemonstration ?? null);
+    setCodeDemonstration(
+      res.codeTest
+        ? { code: res.codeTest, test: true }
+        : res.codeDemonstration
+          ? { code: res.codeDemonstration, test: false }
+          : null
+    );
     if (etape !== "code") aller("code");
   }
 
@@ -238,6 +245,7 @@ export default function InscriptionTelephone({
             texte="Il servira d’identifiant à votre compte. Nous le vérifions d’abord avec un code temporaire."
           />
           {erreur}
+          <EncartNumeroTest onUtiliser={p.setTelephone} />
           <Etiquette mobile={mobile}>Téléphone *</Etiquette>
           <ChampTelephoneGN valeur={p.telephone} onChange={p.setTelephone} mobile={mobile} />
           <BoutonPrincipal mobile={mobile} onClick={p.continuerNumero}>
@@ -279,7 +287,9 @@ export default function InscriptionTelephone({
             }
           />
           {erreur}
-          {p.codeDemonstration && <CodeDemonstration code={p.codeDemonstration} />}
+          {p.codeDemonstration && (
+            <CodeDemonstration code={p.codeDemonstration.code} test={p.codeDemonstration.test} />
+          )}
           <ChiffresCode
             longueur={LONGUEUR_CODE}
             valeur={p.code}

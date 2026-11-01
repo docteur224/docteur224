@@ -11,6 +11,7 @@ import {
 import {
   adresseIp,
   empreinteCode,
+  lireTelephoneTest,
   tirerCode,
   titulairePlateforme,
 } from "@/lib/auth-telephone-serveur";
@@ -71,7 +72,11 @@ export async function POST(requete: Request) {
   const config = await lireConfigMessagerie(admin);
   const reel = config.mode === "reel" && configComplete(canal, config);
   const demonstration = process.env.OTP_CODE_VISIBLE === "1";
-  if (!reel && !demonstration) {
+  // Numéro de test coché dans /espace-admin/messagerie : code fixe, rien
+  // n'est envoyé, même une fois l'agrégateur branché.
+  const test = await lireTelephoneTest(admin);
+  const numeroTest = test.actif && test.numero === telephone;
+  if (!reel && !demonstration && !numeroTest) {
     return NextResponse.json(
       {
         erreur:
@@ -95,41 +100,44 @@ export async function POST(requete: Request) {
   }
 
   // Plafonds : avant tout envoi, pour que celui qui martèle le bouton
-  // n'obtienne rien de plus — ni SMS, ni indice.
-  const depuis = new Date(Date.now() - FENETRE_MINUTES * 60_000).toISOString();
-  const { data: recents } = await admin
-    .from("codes_telephone")
-    .select("cree_le")
-    .eq("telephone", telephone)
-    .eq("objet", objet)
-    .gt("cree_le", depuis)
-    .order("cree_le", { ascending: false });
-  const dernier = recents?.[0]?.cree_le ? new Date(recents[0].cree_le).getTime() : 0;
-  const attente = Math.ceil((dernier + DELAI_RENVOI_SECONDES * 1000 - Date.now()) / 1000);
-  if (attente > 0) {
-    return NextResponse.json(
-      { erreur: `Patientez ${attente} s avant de redemander un code.`, renvoiDans: attente },
-      { status: 429 }
-    );
-  }
-  if ((recents?.length ?? 0) >= CODES_PAR_NUMERO) {
-    return NextResponse.json(
-      { erreur: "Trop de codes demandés pour ce numéro. Réessayez dans un quart d’heure." },
-      { status: 429 }
-    );
-  }
+  // n'obtienne rien de plus — ni SMS, ni indice. Le numéro de test n'en a
+  // pas besoin : il ne coûte rien, et on le rejoue à volonté.
   const ip = adresseIp(requete);
-  if (ip) {
-    const { count } = await admin
+  if (!numeroTest) {
+    const depuis = new Date(Date.now() - FENETRE_MINUTES * 60_000).toISOString();
+    const { data: recents } = await admin
       .from("codes_telephone")
-      .select("id", { count: "exact", head: true })
-      .eq("ip", ip)
-      .gt("cree_le", new Date(Date.now() - 3_600_000).toISOString());
-    if ((count ?? 0) >= CODES_PAR_IP) {
+      .select("cree_le")
+      .eq("telephone", telephone)
+      .eq("objet", objet)
+      .gt("cree_le", depuis)
+      .order("cree_le", { ascending: false });
+    const dernier = recents?.[0]?.cree_le ? new Date(recents[0].cree_le).getTime() : 0;
+    const attente = Math.ceil((dernier + DELAI_RENVOI_SECONDES * 1000 - Date.now()) / 1000);
+    if (attente > 0) {
       return NextResponse.json(
-        { erreur: "Trop de codes demandés depuis cette connexion. Réessayez plus tard." },
+        { erreur: `Patientez ${attente} s avant de redemander un code.`, renvoiDans: attente },
         { status: 429 }
       );
+    }
+    if ((recents?.length ?? 0) >= CODES_PAR_NUMERO) {
+      return NextResponse.json(
+        { erreur: "Trop de codes demandés pour ce numéro. Réessayez dans un quart d’heure." },
+        { status: 429 }
+      );
+    }
+    if (ip) {
+      const { count } = await admin
+        .from("codes_telephone")
+        .select("id", { count: "exact", head: true })
+        .eq("ip", ip)
+        .gt("cree_le", new Date(Date.now() - 3_600_000).toISOString());
+      if ((count ?? 0) >= CODES_PAR_IP) {
+        return NextResponse.json(
+          { erreur: "Trop de codes demandés depuis cette connexion. Réessayez plus tard." },
+          { status: 429 }
+        );
+      }
     }
   }
 
@@ -145,6 +153,23 @@ export async function POST(requete: Request) {
     if (!profil || profil.statut === "supprime" || profil.suspendu_par_admin) {
       return NextResponse.json({ ok: true, renvoiDans: DELAI_RENVOI_SECONDES });
     }
+  }
+
+  if (numeroTest) {
+    const id = crypto.randomUUID();
+    const { error } = await admin.from("codes_telephone").insert({
+      id,
+      telephone,
+      objet,
+      canal,
+      code_hash: empreinteCode(id, test.code),
+      expire_le: new Date(Date.now() + VALIDITE_CODE_MINUTES * 60_000).toISOString(),
+      // Sans IP : les essais sur le numéro de test ne doivent pas entamer le
+      // plafond de la connexion qui sert aussi aux vrais numéros.
+      ip: null,
+    });
+    if (error) return NextResponse.json({ erreur: "Envoi impossible pour le moment." }, { status: 500 });
+    return NextResponse.json({ ok: true, renvoiDans: 0, codeTest: test.code });
   }
 
   const titulaire = await titulairePlateforme(admin);

@@ -9,6 +9,7 @@ import {
   BoutonRetour,
   ChoixCanal,
   CodeDemonstration,
+  EncartNumeroTest,
   Erreur,
   Etiquette,
   LienTexte,
@@ -52,7 +53,7 @@ export function useConnexionTelephone(destination: (cible: string) => string) {
   const [pin, setPin] = useState("");
   const [canal, setCanal] = useState<CanalCode>("whatsapp");
   const [code, setCode] = useState("");
-  const [codeDemonstration, setCodeDemonstration] = useState<string | null>(null);
+  const [codeDemonstration, setCodeDemonstration] = useState<{ code: string; test: boolean } | null>(null);
   const [jeton, setJeton] = useState("");
   const [nouveau, setNouveau] = useState("");
   const [confirmation, setConfirmation] = useState("");
@@ -106,7 +107,13 @@ export function useConnexionTelephone(destination: (cible: string) => string) {
       return;
     }
     setCode("");
-    setCodeDemonstration(res.codeDemonstration ?? null);
+    setCodeDemonstration(
+      res.codeTest
+        ? { code: res.codeTest, test: true }
+        : res.codeDemonstration
+          ? { code: res.codeDemonstration, test: false }
+          : null
+    );
     if (etape !== "code") aller("code");
   }
 
@@ -183,6 +190,7 @@ export default function ConnexionTelephone({
       {p.etape === "numero" && (
         <>
           {erreur}
+          <EncartNumeroTest onUtiliser={p.setTelephone} />
           <Etiquette mobile={mobile}>Numéro de téléphone</Etiquette>
           <ChampTelephoneGN valeur={p.telephone} onChange={p.setTelephone} mobile={mobile} />
           <Note>🔐 Connexion avec votre numéro et votre code PIN. Aucun SMS n’est envoyé.</Note>
@@ -243,7 +251,9 @@ export default function ConnexionTelephone({
             }
           />
           {erreur}
-          {p.codeDemonstration && <CodeDemonstration code={p.codeDemonstration} />}
+          {p.codeDemonstration && (
+            <CodeDemonstration code={p.codeDemonstration.code} test={p.codeDemonstration.test} />
+          )}
           <ChiffresCode
             longueur={LONGUEUR_CODE}
             valeur={p.code}
