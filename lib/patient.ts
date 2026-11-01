@@ -70,7 +70,8 @@ async function chargerProfil(): Promise<ProfilConnecte | null> {
     role: u.role,
     nom: u.nom ?? "",
     prenom: u.prenom ?? "",
-    email: u.email,
+    // Facultatif depuis la connexion par téléphone (migration 0077).
+    email: u.email ?? "",
     telephone: u.telephone ?? "",
     statut: u.statut ?? "actif",
     suspenduParAdmin: Boolean(u.suspendu_par_admin),

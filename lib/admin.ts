@@ -2123,13 +2123,16 @@ export function useUtilisateurs(): { utilisateurs: UtilisateurAdmin[]; recharger
   const { donnees, recharger } = useRequete<UtilisateurAdmin[]>([], async () => {
     const { data } = await creerClientNavigateur()
       .from("utilisateurs")
-      .select("id, nom, prenom, email, role, statut, cree_le")
+      .select("id, nom, prenom, email, telephone, role, statut, cree_le")
       .order("cree_le", { ascending: false })
       .limit(200);
     return (data ?? []).map((u) => ({
       id: u.id,
-      nom: `${u.prenom ?? ""} ${u.nom ?? ""}`.trim() || u.email,
-      email: u.email,
+      nom: `${u.prenom ?? ""} ${u.nom ?? ""}`.trim() || u.email || u.telephone || "",
+      // Un patient inscrit par téléphone peut ne pas avoir d'e-mail
+      // (migration 0077) : son numéro tient lieu d'identifiant affiché, et la
+      // recherche de l'écran, qui porte sur ce champ, le trouve aussi.
+      email: u.email || u.telephone || "",
       role: u.role,
       statut: u.statut,
       creeLe: new Date(u.cree_le).toLocaleDateString("fr-FR"),

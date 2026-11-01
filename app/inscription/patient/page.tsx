@@ -9,6 +9,8 @@ import Footer from "@/components/site/Footer";
 import TopNav from "@/components/site/TopNav";
 import CoteAuth from "@/components/site/CoteAuth";
 import FauxCaptcha from "@/components/site/FauxCaptcha";
+import InscriptionTelephone, { useInscriptionTelephone } from "@/components/auth/InscriptionTelephone";
+import SelecteurIdentifiant, { useModeIdentifiant } from "@/components/auth/SelecteurIdentifiant";
 import { inscrirePatient } from "@/lib/auth";
 
 /*
@@ -27,6 +29,10 @@ export default function InscriptionPatient() {
   const [confirmation, setConfirmation] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);
   const [enCours, setEnCours] = useState(false);
+  // Onglet Téléphone : numéro vérifié par code, puis code PIN
+  // (components/auth/InscriptionTelephone).
+  const [mode, setMode] = useModeIdentifiant();
+  const telephonePin = useInscriptionTelephone();
 
   async function creerCompte() {
     if (enCours) return;
@@ -77,6 +83,11 @@ export default function InscriptionPatient() {
           <p className="muted" style={{ fontSize: 12, margin: "0 0 14px" }}>
             Gratuit · 2 minutes · sans engagement.
           </p>
+          <SelecteurIdentifiant mode={mode} onChange={setMode} mobile />
+          {mode === "telephone" ? (
+            <InscriptionTelephone p={telephonePin} mobile />
+          ) : (
+            <>
           {messageErreur}
           <div className="fgrid2">
             <div>
@@ -118,6 +129,8 @@ export default function InscriptionPatient() {
           <button type="button" className="btn block w-full" onClick={creerCompte} disabled={enCours}>
             {enCours ? "Création…" : "Créer mon compte"}
           </button>
+            </>
+          )}
           <div className="promo">
             <h4>La santé à portée de clics</h4>
             <p>Réservez chez votre médecin sans téléphoner.</p>
@@ -152,6 +165,11 @@ export default function InscriptionPatient() {
             <p className="mb-6 mt-1.5 text-[13.5px] text-muted">
               Gratuit · 2 minutes · sans engagement.
             </p>
+            <SelecteurIdentifiant mode={mode} onChange={setMode} />
+            {mode === "telephone" ? (
+              <InscriptionTelephone p={telephonePin} />
+            ) : (
+              <>
             {messageErreur}
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -206,6 +224,8 @@ export default function InscriptionPatient() {
             >
               {enCours ? "Création…" : "Créer mon compte"}
             </button>
+              </>
+            )}
             <div className="mt-[18px] text-center text-[13px] text-muted">
               Déjà inscrit ?{" "}
               <Link href="/connexion" className="font-bold text-teal">

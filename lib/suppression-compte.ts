@@ -105,6 +105,9 @@ export async function supprimerCompte(
   if (eAuth) return { erreur: eAuth.message };
 
   await admin.from("notifications").delete().eq("destinataire_id", id);
+  // Même raison que l'e-mail : le numéro vérifié et son PIN partent avec le
+  // compte, sinon le numéro ne pourrait plus ouvrir de compte.
+  await admin.from("identifiants_telephone").delete().eq("utilisateur_id", id);
   if (role === "patient") {
     await admin
       .from("patients")

@@ -7,6 +7,8 @@ import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import Footer from "@/components/site/Footer";
 import Logo from "@/components/site/Logo";
 import TopNav from "@/components/site/TopNav";
+import ConnexionTelephone, { useConnexionTelephone } from "@/components/auth/ConnexionTelephone";
+import SelecteurIdentifiant, { useModeIdentifiant } from "@/components/auth/SelecteurIdentifiant";
 import { refuserSession, seConnecter } from "@/lib/auth";
 
 /*
@@ -43,6 +45,9 @@ export default function Connexion() {
   const [erreur, setErreur] = useState<string | null>(null);
   const [renvoiAdmin, setRenvoiAdmin] = useState(false);
   const [enCours, setEnCours] = useState(false);
+  // Onglet Téléphone : numéro + code PIN (components/auth/ConnexionTelephone).
+  const [mode, setMode] = useModeIdentifiant();
+  const telephone = useConnexionTelephone((cible) => cibleRetour() ?? cible);
 
   async function connecter() {
     if (enCours) return;
@@ -109,6 +114,11 @@ export default function Connexion() {
         <Logo variante="compact" hauteur={72} lien={null} className="mx-auto mb-5 block w-fit" />
         <h2 style={{ marginBottom: 4 }}>Connexion</h2>
         <div className="sub">Accédez à votre espace Docteur 224.</div>
+        <SelecteurIdentifiant mode={mode} onChange={setMode} mobile />
+        {mode === "telephone" ? (
+          <ConnexionTelephone p={telephone} mobile />
+        ) : (
+          <>
         {messageErreur}
         <input
           className="inp"
@@ -136,6 +146,8 @@ export default function Connexion() {
             Mot de passe oublié ?
           </Link>
         </div>
+          </>
+        )}
         <div className="linkline">
           Pas encore de compte ? <Link href="/inscription">S&apos;inscrire</Link>
         </div>
@@ -151,6 +163,11 @@ export default function Connexion() {
               Patients et professionnels : le même formulaire. Vous arrivez directement dans votre
               espace.
             </p>
+            <SelecteurIdentifiant mode={mode} onChange={setMode} />
+            {mode === "telephone" ? (
+              <ConnexionTelephone p={telephone} />
+            ) : (
+              <>
             {messageErreur}
             <label className="mb-1.5 mt-0.5 block text-[12.5px] font-bold text-ink">E-mail</label>
             <input
@@ -182,6 +199,8 @@ export default function Connexion() {
             >
               {enCours ? "Connexion…" : "S'identifier"}
             </button>
+              </>
+            )}
             <div className="mt-[18px] text-center text-[13px] text-muted">
               Pas encore de compte ?{" "}
               <Link href="/inscription" className="font-bold text-teal">

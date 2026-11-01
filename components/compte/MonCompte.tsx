@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import ChangerMotDePasse from "@/components/patient/ChangerMotDePasse";
+import ChangerPin from "@/components/patient/ChangerPin";
 import CouleursEspace from "@/components/compte/CouleursEspace";
 import ExporterMesDonnees from "@/components/patient/ExporterMesDonnees";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
@@ -148,7 +149,12 @@ export default function MonCompte({
 
           <section className={CARTE}>
             <h3 className={TITRE_CARTE}>Sécurité</h3>
-            <ChangerMotDePasse />
+            {/* Seul un patient peut avoir ouvert son compte par téléphone. */}
+            {role === "patient" ? (
+              <ChangerPin repli={<ChangerMotDePasse />} />
+            ) : (
+              <ChangerMotDePasse />
+            )}
             <div className={LIGNE}>
               <div>
                 <b className="block text-[13.5px] font-bold">
@@ -213,7 +219,10 @@ function Identite({
         <div className="min-w-0 flex-1">
           <b className="block text-[15px] font-extrabold">{chargement ? "…" : nom}</b>
           <small className="text-xs text-muted">
-            {profil ? `${NOM_ROLE[profil.role] ?? profil.role} · ${profil.email}` : ""}
+            {/* Un compte ouvert par téléphone peut ne pas avoir d'e-mail. */}
+            {profil
+              ? `${NOM_ROLE[profil.role] ?? profil.role} · ${profil.email || profil.telephone}`
+              : ""}
           </small>
         </div>
         <span
