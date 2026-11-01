@@ -25,6 +25,8 @@ test("estRoutePublique — les espaces connectés ne le sont pas", () => {
     "/patient", "/patient/", "/patient/mon-compte",
     "/espace-admin", "/espace-admin/mon-compte", "/espace-admin/connexion",
     "/espace-medecin/agenda", "/espace-assistant", "/espace-etablissement/abonnement",
+    // Page du patient restée à la racine : connectée, donc jamais publique.
+    "/mes-rendez-vous", "/mes-rendez-vous/", "/mes-rendez-vous/abc123",
   ]) {
     assert.equal(estRoutePublique(p), false, p);
   }

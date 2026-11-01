@@ -45,6 +45,9 @@ export const PREFIXES_ESPACE = [
   "/espace-assistant",
   "/espace-etablissement",
   "/patient",
+  // Page connectée du patient restée à la racine (et non sous /patient) :
+  // elle porte la charte du titulaire, jamais celle de la campagne publique.
+  "/mes-rendez-vous",
 ] as const;
 
 /** Une page publique est tout ce qui n'est pas un espace connecté. */
