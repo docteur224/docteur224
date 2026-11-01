@@ -116,6 +116,43 @@ export async function verifierMedecin(): Promise<
   return { acces: { admin, medecinId: auth.user.id } };
 }
 
+export interface AccesPatient {
+  admin: SupabaseClient;
+  patientId: string;
+}
+
+/**
+ * Garde des routes réservées au patient titulaire (ex. synchronisation de son
+ * agenda Google). Même cheminement que `verifierMedecin` : la session dit QUI
+ * appelle, le rôle est relu EN BASE (jamais déduit de ce qui est posté), puis
+ * on rend le client service_role pour agir.
+ */
+export async function verifierPatient(): Promise<
+  { acces: AccesPatient } | { refus: NextResponse }
+> {
+  const session = await creerClientServeur();
+  const { data: auth } = await session.auth.getUser();
+  if (!auth.user) {
+    return {
+      refus: NextResponse.json({ erreur: "Session expirée — reconnectez-vous." }, { status: 401 }),
+    };
+  }
+
+  const admin = clientServiceRole();
+  const { data: appelant } = await admin
+    .from("utilisateurs")
+    .select("role, statut")
+    .eq("id", auth.user.id)
+    .maybeSingle();
+
+  if (appelant?.role !== "patient" || appelant.statut !== "actif") {
+    return {
+      refus: NextResponse.json({ erreur: "Réservé aux comptes patients." }, { status: 403 }),
+    };
+  }
+  return { acces: { admin, patientId: auth.user.id } };
+}
+
 /**
  * Trace une décision au nom de l'appelant.
  *

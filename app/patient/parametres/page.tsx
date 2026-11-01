@@ -3,6 +3,7 @@
 import Link from "next/link";
 import PatientShell from "@/components/patient/PatientShell";
 import Interrupteur from "@/components/patient/Interrupteur";
+import AgendaGoogle from "@/components/patient/AgendaGoogle";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { useParametresPatient } from "@/lib/patient";
 
@@ -61,6 +62,7 @@ export default function Parametres() {
               />
             </div>
           </div>
+          <AgendaGoogle variante="mobile" />
           <div className="card2">
             <h4>Langue</h4>
             <div className="setrow">
@@ -134,6 +136,8 @@ export default function Parametres() {
           />
         </div>
       </div>
+
+      <AgendaGoogle variante="web" />
 
       <div className="mb-4 rounded-2xl border border-line bg-white p-5">
         <h3 className="mb-1 text-[15px] font-extrabold">Langue</h3>
