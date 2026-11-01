@@ -66,7 +66,7 @@ export default function PatientShell({ children }: { children: React.ReactNode }
   }
 
   return (
-    <div className="grid min-h-screen content-start bg-bg lg:grid-cols-[236px_1fr] lg:content-stretch">
+    <div className="cadre-espace grid min-h-screen content-start bg-bg lg:content-stretch">
       <BarreLaterale
         avatar={initiales}
         fondAvatar="var(--avatar-bleu)"

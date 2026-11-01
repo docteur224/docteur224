@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import ModeLocal from "@/components/site/ModeLocal";
+import PliageLocal from "@/components/site/PliageLocal";
 import RevelationAuScroll from "@/components/site/RevelationAuScroll";
 import TransitionPage from "@/components/site/TransitionPage";
 
@@ -27,6 +28,9 @@ export default function RootLayout({
         {/* Pose le mode clair/sombre avant la première peinture (anti-flash),
             pour tout le site. Indépendant de la charte. */}
         <ModeLocal />
+        {/* Pose l'état plié/déplié de la barre latérale avant la première
+            peinture (anti-saut de largeur), pour les cinq espaces connectés. */}
+        <PliageLocal />
         {/* Enveloppes d'animation uniquement : transition de page et
             apparition au défilement (voir les deux composants). */}
         <TransitionPage>{children}</TransitionPage>

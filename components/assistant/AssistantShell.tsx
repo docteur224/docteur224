@@ -46,7 +46,7 @@ export default function AssistantShell({ children }: { children: React.ReactNode
   const nomMedecin = medecin ? `${medecin.civilite} ${medecin.prenom.charAt(0)}. ${medecin.nom}` : "";
 
   return (
-    <div className="grid min-h-screen content-start bg-bg lg:grid-cols-[236px_1fr] lg:content-stretch">
+    <div className="cadre-espace grid min-h-screen content-start bg-bg lg:content-stretch">
       <BarreLaterale
         avatar={initialesAssistant}
         fondAvatar="var(--avatar-bleu)"

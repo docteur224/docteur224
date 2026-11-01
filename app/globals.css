@@ -681,3 +681,28 @@ body {
    nuit). Les logos déjà clairs sur fond coloré (hero, pied de page) en sont
    exclus par .logo-sur-fonce. */
 [data-theme="dark"] img.logo-img:not(.logo-sur-fonce) { filter: brightness(0) invert(1); }
+
+/* =====================================================================
+   PLIAGE DE LA BARRE LATÉRALE
+   ---------------------------------------------------------------------
+   Les cinq coquilles d'espace (patient, médecin, assistant, établissement,
+   administrateur) posent la classe .cadre-espace sur leur grille. La colonne
+   du menu suit la variable --l-menu, elle-même pilotée par l'attribut
+   data-sidebar de <html> (posé par le script PliageLocal avant peinture, puis
+   par le bouton de la barre). Rien ne change sous lg : en tablette/mobile la
+   barre devient un bandeau puis la barre d'onglets, le pliage ne s'y applique
+   pas. Règle hors couche, comme le filet du mode sombre.
+   ===================================================================== */
+:root { --l-menu: 236px; }
+html[data-sidebar="plie"] { --l-menu: 84px; }
+
+@media (min-width: 1024px) {
+  .cadre-espace {
+    grid-template-columns: var(--l-menu, 236px) minmax(0, 1fr);
+    transition: grid-template-columns 0.22s ease;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cadre-espace { transition: none; }
+}

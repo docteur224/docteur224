@@ -109,7 +109,7 @@ export default function AdminShell({
     );
 
   return (
-    <div className="grid min-h-screen content-start bg-bg lg:grid-cols-[236px_1fr] lg:content-stretch">
+    <div className="cadre-espace grid min-h-screen content-start bg-bg lg:content-stretch">
       <BarreLaterale
         avatar="🛡️"
         avatarEmoji

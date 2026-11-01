@@ -41,7 +41,7 @@ export default function EtablissementShell({ children }: { children: React.React
   const ETABLISSEMENT_CONNECTE = etablissement ?? ETABLISSEMENT_VIDE;
 
   return (
-    <div className="grid min-h-screen content-start bg-bg lg:grid-cols-[236px_1fr] lg:content-stretch">
+    <div className="cadre-espace grid min-h-screen content-start bg-bg lg:content-stretch">
       <BarreLaterale
         avatar="🏥"
         photo={etablissement?.photoUrl}
