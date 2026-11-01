@@ -32,6 +32,7 @@ export default function BarreLaterale({
   avatar,
   fondAvatar,
   avatarEmoji = false,
+  photo = null,
   nom,
   sousTitre,
   liens,
@@ -42,6 +43,8 @@ export default function BarreLaterale({
   fondAvatar: string;
   /** Emoji plutôt qu'initiales : taille de glyphe différente. */
   avatarEmoji?: boolean;
+  /** Photo du professionnel (Cloudinary) : remplace la pastille si elle existe. */
+  photo?: string | null;
   nom: ReactNode;
   sousTitre: ReactNode;
   liens: LienEspace[];
@@ -79,23 +82,35 @@ export default function BarreLaterale({
 
   return (
     <aside className="hidden border-b border-line bg-white px-4 py-3 md:block lg:border-b-0 lg:border-r lg:py-[22px]">
-      <div className="flex items-center gap-[11px] px-1.5 lg:mb-[14px] lg:border-b lg:border-line lg:pb-[18px]">
-        <span
-          aria-hidden
-          className={`grid h-[42px] w-[42px] flex-none place-items-center rounded-xl text-white ${
-            avatarEmoji ? "text-lg" : "text-[15px] font-extrabold"
-          }`}
-          style={{ background: fondAvatar }}
-        >
-          {avatar}
-        </span>
-        <div className="min-w-0">
-          <b className="block truncate text-[13.5px] font-extrabold lg:whitespace-normal">{nom}</b>
-          <small className="block truncate text-[11.5px] text-muted">{sousTitre}</small>
+      {/* Sur ordinateur, l'identité a sa ligne à elle et les commandes
+          (clair/sombre, cloche) passent dessous : dans 236 px, les quatre côte
+          à côte ne laissaient au nom qu'une trentaine de pixels — « Ma… Dia… ». */}
+      <div className="flex items-center gap-[11px] px-1.5 lg:mb-[14px] lg:flex-wrap lg:border-b lg:border-line lg:pb-[18px]">
+        {photo ? (
+          // Image Cloudinary déjà redimensionnée à l'envoi : next/image
+          // n'apporterait rien (même choix qu'AvatarMedecin).
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={photo} alt="" className="h-[42px] w-[42px] flex-none rounded-xl object-cover" />
+        ) : (
+          <span
+            aria-hidden
+            className={`grid h-[42px] w-[42px] flex-none place-items-center rounded-xl text-white ${
+              avatarEmoji ? "text-lg" : "text-[15px] font-extrabold"
+            }`}
+            style={{ background: fondAvatar }}
+          >
+            {avatar}
+          </span>
+        )}
+        <div className="min-w-0 lg:flex-1">
+          <b className="block truncate text-[13.5px] font-extrabold leading-tight lg:line-clamp-2 lg:whitespace-normal lg:break-words">
+            {nom}
+          </b>
+          <small className="mt-0.5 block truncate text-[11.5px] text-muted">{sousTitre}</small>
         </div>
         {/* La cloche vit ici sur web : la barre latérale est le seul en-tête
             permanent des espaces. */}
-        <div className="ml-auto flex flex-none items-center gap-2">
+        <div className="ml-auto flex flex-none items-center gap-2 lg:mt-3 lg:w-full lg:justify-end">
           {/* Bascule clair/sombre : la barre latérale est le seul en-tête
               permanent des espaces connectés (comme la cloche). */}
           <BasculeMode />

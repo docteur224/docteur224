@@ -200,7 +200,7 @@ export function useInscriptionTelephone() {
   return {
     etape, telephone, setTelephone, canal, setCanal, code, setCode, codeDemonstration,
     pin, setPin, confirmation, setConfirmation, nom, setNom, prenom, setPrenom, genre, setGenre,
-    dateNaissance, setDateNaissance, email, setEmail, setConditions, erreur, compteExistant,
+    dateNaissance, setDateNaissance, email, setEmail, conditions, setConditions, erreur, compteExistant,
     enCours, renvoiDans,
     continuerNumero, envoyer, verifier, validerPin, confirmerPin, creer,
     retour: () => aller(PRECEDENTE[etape] ?? "numero"),
@@ -407,9 +407,14 @@ export default function InscriptionTelephone({
             texte="J'accepte les conditions d'utilisation et la politique de confidentialité."
             onChange={p.setConditions}
           />
-          <BoutonPrincipal mobile={mobile} onClick={p.creer} enCours={p.enCours}>
+          <BoutonPrincipal mobile={mobile} onClick={p.creer} enCours={p.enCours} desactive={!p.conditions}>
             {p.enCours ? "Création…" : "Créer mon compte"}
           </BoutonPrincipal>
+          {!p.conditions && (
+            <p className="mt-2 text-center text-[11.5px] text-muted">
+              Acceptez les conditions d’utilisation pour créer votre compte.
+            </p>
+          )}
         </>
       )}
     </div>

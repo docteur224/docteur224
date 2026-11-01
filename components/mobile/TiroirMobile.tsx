@@ -9,6 +9,7 @@ import { seDeconnecter } from "@/lib/auth";
 import { useDroitsAdmin } from "@/lib/admin";
 import { aPermission, PERMISSION_PAR_ROUTE } from "@/lib/permissions-admin";
 import type { ProfilConnecte } from "@/lib/patient";
+import PastilleProfil from "@/components/mobile/PastilleProfil";
 
 /**
  * Tiroir de navigation mobile — le menu complet du rôle connecté, ouvert par
@@ -85,7 +86,7 @@ export default function TiroirMobile({
       >
         <div className="tiroir-tete">
           <span className="tb-avatar" aria-hidden>
-            {initiales}
+            <PastilleProfil photo={profil.photoUrl} initiales={initiales} />
           </span>
           <div className="tiroir-qui">
             <b>

@@ -23,6 +23,7 @@ export const MENUS: Record<RoleMenu, EntreeMenu[]> = {
   // components/patient/PatientShell.tsx
   patient: [
     { href: "/patient", icone: "📊", label: "Tableau de bord" },
+    { href: "/resultats", icone: "🩺", label: "Prendre rendez-vous" },
     { href: "/mes-rendez-vous", icone: "📅", label: "Mes rendez-vous" },
     { href: "/patient/documents", icone: "📄", label: "Mes documents" },
     { href: "/patient/messages", icone: "💬", label: "Messages" },

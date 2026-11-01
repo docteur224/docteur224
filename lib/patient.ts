@@ -35,6 +35,8 @@ export interface ProfilConnecte {
   villeId?: string | null;
   /** Quartier du patient — sert à pré-remplir l'adresse d'une visite à domicile. */
   quartier?: string;
+  /** Photo du médecin ou de l'établissement ; null pour les autres rôles. */
+  photoUrl?: string | null;
 }
 
 let cacheProfil: ProfilConnecte | null | undefined;
@@ -65,6 +67,22 @@ async function chargerProfil(): Promise<ProfilConnecte | null> {
     villeId = p?.ville_id ?? null;
     quartier = p?.quartier ?? undefined;
   }
+  // Photo de profil des professionnels : l'avatar de la barre haute et du
+  // tiroir mobile la montre à la place des initiales. Le médecin la lit sur sa
+  // fiche, le gestionnaire sur celle de son établissement.
+  let photoUrl: string | null = null;
+  if (u.role === "medecin") {
+    const { data: m } = await supabase.from("medecins").select("photo_url").eq("id", u.id).maybeSingle();
+    photoUrl = m?.photo_url ?? null;
+  } else if (u.role === "etablissement") {
+    const { data: e } = await supabase
+      .from("etablissements")
+      .select("photo_url")
+      .eq("gestionnaire_id", u.id)
+      .limit(1)
+      .maybeSingle();
+    photoUrl = e?.photo_url ?? null;
+  }
   return {
     id: u.id,
     role: u.role,
@@ -80,6 +98,7 @@ async function chargerProfil(): Promise<ProfilConnecte | null> {
     genre,
     villeId,
     quartier,
+    photoUrl,
   };
 }
 

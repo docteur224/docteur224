@@ -29,13 +29,16 @@ export default function InscriptionPatient() {
   const [confirmation, setConfirmation] = useState("");
   const [erreur, setErreur] = useState<string | null>(null);
   const [enCours, setEnCours] = useState(false);
+  // Les conditions doivent être acceptées : le bouton reste grisé sans elles,
+  // comme sur l'inscription professionnelle.
+  const [conditions, setConditions] = useState(false);
   // Onglet Téléphone : numéro vérifié par code, puis code PIN
   // (components/auth/InscriptionTelephone).
   const [mode, setMode] = useModeIdentifiant();
   const telephonePin = useInscriptionTelephone();
 
   async function creerCompte() {
-    if (enCours) return;
+    if (enCours || !conditions) return;
     setErreur(null);
     if (!nom || !prenom || !telephone || !email || !motDePasse) {
       setErreur("Remplissez tous les champs obligatoires.");
@@ -124,11 +127,24 @@ export default function InscriptionPatient() {
           <input className="inp" type="password" placeholder="••••••••" value={motDePasse} onChange={(e) => setMotDePasse(e.target.value)} />
           <div className="flabel">Confirmation *</div>
           <input className="inp" type="password" placeholder="••••••••" value={confirmation} onChange={(e) => setConfirmation(e.target.value)} />
-          <CaseCocher texte="J'accepte les conditions d'utilisation et la politique de confidentialité." />
+          <CaseCocher
+            texte="J'accepte les conditions d'utilisation et la politique de confidentialité."
+            onChange={setConditions}
+          />
           <FauxCaptcha />
-          <button type="button" className="btn block w-full" onClick={creerCompte} disabled={enCours}>
+          <button
+            type="button"
+            className="btn block w-full disabled:opacity-50"
+            onClick={creerCompte}
+            disabled={enCours || !conditions}
+          >
             {enCours ? "Création…" : "Créer mon compte"}
           </button>
+          {!conditions && (
+            <p className="muted" style={{ fontSize: 11, textAlign: "center", margin: "8px 0 0" }}>
+              Acceptez les conditions d’utilisation pour créer votre compte.
+            </p>
+          )}
             </>
           )}
           <div className="promo">
@@ -214,16 +230,24 @@ export default function InscriptionPatient() {
                 <input className={champ} type="password" placeholder="••••••••" value={confirmation} onChange={(e) => setConfirmation(e.target.value)} />
               </div>
             </div>
-            <CaseCocher texte="J'accepte les conditions d'utilisation et la politique de confidentialité." />
+            <CaseCocher
+              texte="J'accepte les conditions d'utilisation et la politique de confidentialité."
+              onChange={setConditions}
+            />
             <FauxCaptcha />
             <button
               type="button"
               onClick={creerCompte}
-              disabled={enCours}
-              className="flex w-full items-center justify-center gap-2 rounded-[11px] bg-teal px-6 py-[14px] text-[15px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:opacity-60"
+              disabled={enCours || !conditions}
+              className="flex w-full items-center justify-center gap-2 rounded-[11px] bg-teal px-6 py-[14px] text-[15px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {enCours ? "Création…" : "Créer mon compte"}
             </button>
+            {!conditions && (
+              <p className="mt-2 text-center text-[11.5px] text-muted">
+                Acceptez les conditions d’utilisation pour créer votre compte.
+              </p>
+            )}
               </>
             )}
             <div className="mt-[18px] text-center text-[13px] text-muted">

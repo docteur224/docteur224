@@ -43,8 +43,8 @@ export function BoutonPrincipal({
       disabled={enCours || desactive}
       className={
         mobile
-          ? "btn block w-full disabled:opacity-60"
-          : "ui-btn flex w-full items-center justify-center gap-2 rounded-[11px] bg-teal px-6 py-[14px] text-[15px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:opacity-60"
+          ? "btn block w-full disabled:cursor-not-allowed disabled:opacity-50"
+          : "ui-btn flex w-full items-center justify-center gap-2 rounded-[11px] bg-teal px-6 py-[14px] text-[15px] font-bold text-white transition-colors hover:bg-[#2790bc] disabled:cursor-not-allowed disabled:opacity-50"
       }
     >
       {children}

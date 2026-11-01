@@ -246,6 +246,8 @@ async function main() {
       const mdp = `[...document.querySelectorAll('input[type=password]')].filter(${VIS})`;
       await page.eval(`${mdp}[0].focus()`); await page.send("Input.insertText", { text: "motdepasse1" });
       await page.eval(`${mdp}[1].focus()`); await page.send("Input.insertText", { text: "autre-chose" });
+      check(`[${nom}] e-mail : « Créer mon compte » grisé sans les conditions`, await page.eval(`${bouton(/Créer mon compte/)}?.disabled === true`));
+      await page.cliquer(`[...document.querySelectorAll("label")].find(l => ${VIS}(l) && /J.accepte/.test(l.textContent))`);
       await page.cliquer(bouton(/Créer mon compte/));
       check(`[${nom}] e-mail : confirmation différente refusée`,
         /ne correspondent pas/.test(await page.eval(`${TEXTE}`)));
@@ -324,14 +326,15 @@ async function main() {
       await taperChiffres(page, "Confirmation du code PIN", pinInitial);
       await page.cliquer(bouton(/Continuer vers mon profil/));
       check(`[${nom}] profil (étape 4 sur 4)`, await page.waitFor(`/Votre profil/.test(${TEXTE}) && /Étape 4 sur 4/.test(${TEXTE})`));
+      check(`[${nom}] « Créer mon compte » grisé tant que les conditions ne sont pas acceptées`,
+        await page.eval(`${bouton(/Créer mon compte/)}?.disabled === true`));
+      await page.cliquer(`[...document.querySelectorAll('label')].find(l => ${VIS}(l) && /J'accepte/.test(l.textContent))`);
+      check(`[${nom}] conditions acceptées : bouton actif`, await page.eval(`${bouton(/Créer mon compte/)}?.disabled === false`));
       await page.cliquer(bouton(/Créer mon compte/));
       check(`[${nom}] profil vide refusé`, /champs obligatoires/.test(await page.eval(ALERTE)));
       await remplirVisible(page, 'input[placeholder="Nom"]', "Verif");
       await remplirVisible(page, 'input[placeholder="Prénom"]', `Tel${nom}`);
       await page.eval(`(() => { const e = [...document.querySelectorAll('input[type=date]')].find(${VIS}); const p = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set; p.call(e, '1991-03-08'); e.dispatchEvent(new Event('input', { bubbles: true })); })()`);
-      await page.cliquer(bouton(/Créer mon compte/));
-      check(`[${nom}] conditions non acceptées refusées`, /conditions/.test(await page.eval(ALERTE)), await page.eval(ALERTE));
-      await page.cliquer(`[...document.querySelectorAll('label')].find(l => ${VIS}(l) && /J'accepte/.test(l.textContent))`);
       await page.shot(`${nom}-inscription-profil`);
       if (tactile) check(`[${nom}] profil : pas de défilement horizontal`, (await debordement(page)) <= 0);
       await page.cliquer(bouton(/Créer mon compte/));

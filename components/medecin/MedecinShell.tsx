@@ -86,6 +86,7 @@ export default function MedecinShell({
     <div className="grid min-h-screen content-start bg-bg lg:grid-cols-[236px_1fr] lg:content-stretch">
       <BarreLaterale
         avatar={medecinConnecte.initiales}
+        photo={medecin?.photoUrl}
         fondAvatar={medecinConnecte.gradient}
         nom={`${medecinConnecte.civilite} ${medecinConnecte.prenom.charAt(0)}. ${medecinConnecte.nom}`}
         sousTitre={medecinConnecte.specialite}

@@ -11,6 +11,7 @@ import TiroirMobile from "@/components/mobile/TiroirMobile";
 import Logo from "@/components/site/Logo";
 import { useNotifications } from "@/lib/notifications";
 import { useProfilConnecte } from "@/lib/patient";
+import PastilleProfil from "@/components/mobile/PastilleProfil";
 
 /**
  * Barre haute mobile — remplace la .appbar de la maquette, qui n'existait que
@@ -215,7 +216,7 @@ function ActionsCompte() {
         aria-expanded={tiroirOuvert}
         onClick={() => setTiroirOuvert(true)}
       >
-        {initiales}
+        <PastilleProfil photo={profil.photoUrl} initiales={initiales} />
       </button>
       <TiroirMobile ouvert={tiroirOuvert} fermer={fermer} profil={profil} />
     </>

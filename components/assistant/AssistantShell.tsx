@@ -38,12 +38,17 @@ export default function AssistantShell({ children }: { children: React.ReactNode
     }
   }, [chargement, role, router]);
   const nomAssistant = utilisateur ? `${utilisateur.prenom} ${utilisateur.nom}`.trim() : "…";
+  // Les initiales de la maquette (« HD ») restaient affichées pour toutes les
+  // assistantes.
+  const initialesAssistant = utilisateur
+    ? `${utilisateur.prenom.charAt(0)}${utilisateur.nom.charAt(0)}`.toUpperCase() || "?"
+    : "…";
   const nomMedecin = medecin ? `${medecin.civilite} ${medecin.prenom.charAt(0)}. ${medecin.nom}` : "";
 
   return (
     <div className="grid min-h-screen content-start bg-bg lg:grid-cols-[236px_1fr] lg:content-stretch">
       <BarreLaterale
-        avatar="HD"
+        avatar={initialesAssistant}
         fondAvatar="var(--avatar-bleu)"
         nom={nomAssistant}
         sousTitre={`Assistant(e)${nomMedecin ? ` · ${nomMedecin}` : ""}`}

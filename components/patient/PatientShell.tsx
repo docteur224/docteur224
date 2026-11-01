@@ -16,6 +16,9 @@ import BarreLaterale from "@/components/site/BarreLaterale";
  */
 const LIENS = [
   { href: "/patient", icone: "📊", label: "Tableau de bord" },
+  // Même cible que « + Nouveau rendez-vous » du tableau de bord : on prend
+  // rendez-vous en cherchant le médecin.
+  { href: "/resultats", icone: "🩺", label: "Prendre rendez-vous" },
   { href: "/mes-rendez-vous", icone: "📅", label: "Mes rendez-vous" },
   { href: "/patient/documents", icone: "📄", label: "Mes documents" },
   { href: "/patient/messages", icone: "💬", label: "Messages" },
