@@ -1,5 +1,7 @@
 import { creerClientNavigateur } from "@/lib/supabase/client";
 import { oublierCharte } from "@/lib/charte-compte";
+import { oublierFavoris } from "@/lib/favoris";
+import { oublierCompteConnecte } from "@/lib/patient";
 
 /*
  * Authentification réelle (Supabase Auth + table `utilisateurs`).
@@ -73,19 +75,37 @@ export async function seConnecter(
   return { role, cible: ESPACE_PAR_ROLE[role] };
 }
 
-/** Referme une session ouverte par la mauvaise porte. */
-export async function refuserSession(): Promise<void> {
-  await creerClientNavigateur().auth.signOut();
-  oublierCharte();
-}
-
-export async function seDeconnecter(): Promise<void> {
-  await creerClientNavigateur().auth.signOut();
+/**
+ * Ce qu'une session laisse derrière elle dans la mémoire de l'onglet.
+ *
+ * Plusieurs modules gardent un cache au niveau du MODULE, pas du composant :
+ * il survit à une navigation côté client, donc à une déconnexion suivie d'un
+ * `router.push("/")`. Trois d'entre eux portaient des données nominatives —
+ * la charte du titulaire, ses favoris, son prochain rendez-vous — et les
+ * montraient encore à la personne suivante sur un poste partagé.
+ *
+ * Le cache des notifications, lui, se tient déjà par lui-même : il retient
+ * le compte auquel il appartient et se vide dès que l'identité change.
+ */
+function oublierLaSession(): void {
   // Les couleurs partent avec leur titulaire : sans cela, la page de
   // connexion puis le compte suivant — un assistant après le praticien, sur
   // le poste de l'accueil — garderaient la charte du précédent. Le choix
   // reste au compte et revient à la prochaine connexion.
   oublierCharte();
+  oublierFavoris();
+  oublierCompteConnecte();
+}
+
+/** Referme une session ouverte par la mauvaise porte. */
+export async function refuserSession(): Promise<void> {
+  await creerClientNavigateur().auth.signOut();
+  oublierLaSession();
+}
+
+export async function seDeconnecter(): Promise<void> {
+  await creerClientNavigateur().auth.signOut();
+  oublierLaSession();
 }
 
 export interface DonneesInscriptionPatient {

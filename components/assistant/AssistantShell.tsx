@@ -37,6 +37,19 @@ export default function AssistantShell({ children }: { children: React.ReactNode
       router.replace("/connexion");
     }
   }, [chargement, role, router]);
+
+  // Tant que la redirection n'a pas eu lieu, ne pas monter les écrans : un
+  // patient ou un établissement voyait sinon les rendez-vous et la patientèle
+  // du cabinet se dessiner le temps d'une navigation. Même règle que les
+  // quatre autres coquilles.
+  if (!chargement && role !== "medecin" && role !== "assistant") {
+    return (
+      <div className="grid min-h-screen place-items-center bg-bg text-[13.5px] text-muted">
+        Redirection…
+      </div>
+    );
+  }
+
   const nomAssistant = utilisateur ? `${utilisateur.prenom} ${utilisateur.nom}`.trim() : "…";
   // Les initiales de la maquette (« HD ») restaient affichées pour toutes les
   // assistantes.

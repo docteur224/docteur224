@@ -68,6 +68,22 @@ export default function MedecinShell({
       router.replace(`/inscription/professionnel/etapes/${parcours.etape}`);
     }
   }, [parcours.chargement, enParcours, parcours.etape, router]);
+  /*
+   * Tant que la redirection n'a pas eu lieu, ne pas monter les écrans.
+   * La garde ci-dessus demandait bien la redirection, mais les pages
+   * partaient quand même : un patient ou un établissement voyait l'agenda
+   * et la patientèle d'un cabinet se dessiner le temps d'une navigation —
+   * vides, la RLS ne rendant rien, mais affichés. Même règle que
+   * PatientShell et AdminShell.
+   */
+  if (!chargement && role !== "medecin" && role !== "assistant") {
+    return (
+      <div className="grid min-h-screen place-items-center bg-bg text-[13.5px] text-muted">
+        Redirection…
+      </div>
+    );
+  }
+
   // Tant que le rôle n'est pas lu, on montre le menu complet plutôt qu'un
   // menu qui s'amputerait sous les yeux du médecin.
   const liens = LIENS.filter((lien) => !lien.medecinSeul || chargement || role === "medecin");

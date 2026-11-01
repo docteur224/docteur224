@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
 import { ETABLISSEMENT_VIDE, useEtablissementConnecte } from "@/lib/etablissement";
+import { ESPACE_PAR_ROLE, type Role } from "@/lib/auth";
 import { useProfilConnecte } from "@/lib/patient";
 import CompteSuspendu from "@/components/compte/CompteSuspendu";
 import { useParcoursInscription } from "@/lib/inscription-pro";
@@ -28,7 +29,27 @@ const LIENS = [
 export default function EtablissementShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { etablissement } = useEtablissementConnecte();
-  const { profil } = useProfilConnecte();
+  const { profil, chargement } = useProfilConnecte();
+
+  /*
+   * Garde d'accès : l'espace établissement exige un compte établissement.
+   *
+   * Elle manquait — c'était la seule des cinq coquilles sans garde de rôle.
+   * Le proxy exige bien une session, mais pas un rôle : un patient, un
+   * praticien ou un(e) assistant(e) déjà identifié(e) ouvrait donc la
+   * console d'un établissement, menu et libellés compris, et pouvait y
+   * arriver par un simple `/connexion?retour=/espace-etablissement`. La
+   * base tenait (la RLS ne rendait aucune ligne, l'écran restait vide),
+   * mais un écran vide n'est pas un refus : il laisse croire à une panne,
+   * et il offre des boutons qui ne peuvent qu'échouer.
+   */
+  useEffect(() => {
+    if (chargement) return;
+    if (!profil) router.replace("/connexion");
+    else if (profil.role !== "etablissement") {
+      router.replace(ESPACE_PAR_ROLE[profil.role as Role] ?? "/connexion");
+    }
+  }, [chargement, profil, router]);
 
   // Parcours d'inscription inachevé → retour à l'étape courante du wizard.
   const parcours = useParcoursInscription();
@@ -38,6 +59,17 @@ export default function EtablissementShell({ children }: { children: React.React
       router.replace(`/inscription/professionnel/etapes/${parcours.etape}`);
     }
   }, [parcours.chargement, enParcours, parcours.etape, router]);
+
+  // Tant que la redirection n'a pas eu lieu, ne pas monter les écrans : ils
+  // interrogeraient les tables de l'établissement pour n'afficher que du vide.
+  if (!chargement && profil?.role !== "etablissement") {
+    return (
+      <div className="grid min-h-screen place-items-center bg-bg text-[13.5px] text-muted">
+        Redirection…
+      </div>
+    );
+  }
+
   const ETABLISSEMENT_CONNECTE = etablissement ?? ETABLISSEMENT_VIDE;
 
   return (

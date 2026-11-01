@@ -39,7 +39,7 @@ const MOTS = new Set(["select", "exists", "coalesce", "array", "in", "and", "or"
   // passer pour des appels de fonction.
   "using", "check", "values", "on", "for", "to", "with", "where", "having",
   "row", "returning", "distinct", "filter", "over", "partition"]);
-const fonctions = (sql) => {
+const fonctionsAppelees = (sql) => {
   const vues = new Set();
   for (const m of sql.matchAll(/\b([a-z_][a-z0-9_]*)\s*\(/g)) {
     if (!MOTS.has(m[1])) vues.add(m[1]);
@@ -59,7 +59,7 @@ for (const f of fichiers) {
     const [, nom, table, corps] = m;
     const cle = `${nom}|${table}`;
     if (!histoire.has(cle)) histoire.set(cle, []);
-    histoire.get(cle).push({ fichier: f, nom, table, fonctions: fonctions(corps) });
+    histoire.get(cle).push({ fichier: f, nom, table, fonctions: fonctionsAppelees(corps) });
   }
 }
 
@@ -101,6 +101,22 @@ const { rows: tables } = await client.query(
    from pg_class c join pg_namespace n on n.oid = c.relnamespace
    where n.nspname = 'public' and c.relkind = 'r'
    order by c.relname`);
+
+/*
+ * Les fonctions `security definer` et qui peut les appeler — relevé lu ici,
+ * tant que la connexion est ouverte, et examiné en fin de rapport.
+ */
+const { rows: fonctions } = await client.query(
+  `select p.proname, pg_get_function_identity_arguments(p.oid) as args, p.prosrc,
+          coalesce((select string_agg(distinct a.grantee, ',' order by a.grantee)
+                      from information_schema.routine_privileges a
+                     where a.specific_schema = 'public'
+                       and a.specific_name = p.proname || '_' || p.oid), '') as grants
+     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public' and p.prokind = 'f' and p.prosecdef
+      and p.prorettype::regtype::text <> 'trigger'
+    order by p.proname`);
+
 await client.end();
 
 const ouvertes = tables.filter((t) => !t.relrowsecurity);
@@ -119,7 +135,7 @@ for (const [cle, versions] of histoire) {
     absentes.push(cle.replace("|", " sur "));
     continue;
   }
-  const presentes = fonctions(vivante.expr);
+  const presentes = fonctionsAppelees(vivante.expr);
   const perdues = new Map(); // fonction -> première migration qui l'exigeait
   for (const v of versions) {
     for (const fn of v.fonctions) {
@@ -184,4 +200,61 @@ if (murees.length) {
 if (absentes.length) {
   console.log(`\nℹ️  ${absentes.length} policy(ies) des migrations n'existent plus en base ` +
     `(supprimées ou renommées) : ${absentes.slice(0, 12).join(", ")}${absentes.length > 12 ? "…" : ""}`);
+}
+
+/* =====================================================================
+ * Les fonctions `security definer` joignables depuis un navigateur
+ *
+ * Une policy mal écrite se voit ; une fonction trop ouverte, non. Une
+ * fonction `security definer` traverse la RLS : l'accorder à `anon`, c'est
+ * publier le pouvoir de son propriétaire. L'audit du 01/11/2026 a trouvé
+ * ainsi `creer_notification` (déposer une notification ET un vrai courriel,
+ * titre et corps au choix, sans même une session) et `email_destinataire`
+ * (l'adresse de n'importe quel compte) — un relais de hameçonnage complet,
+ * sans aucune policy en cause.
+ *
+ * Ce relevé liste celles qui n'ont AUCUNE garde d'identité dans leur corps
+ * et restent joignables par la clé publique. L'exemption nomme, une par
+ * une, celles dont c'est le métier d'être publiques.
+ * ===================================================================== */
+
+/** Publiques par construction — annuaire, prise de RDV, pharmacie, désinscription. */
+const PUBLIQUES_VOULUES = new Set([
+  "absence_couvre", "avis_publies_medecin", "avis_classement_medecins",
+  "avis_repartition", "avis_stats_globales", "avis_seuil_fiabilite",
+  "creneau_ouvert_medecin", "heures_indisponibles", "prochaines_dispos_medecins",
+  "nom_medecin", "soins_depuis_tarifs", "recalculer_note_medecin",
+  "grille_creneaux", "date_lisible", "moment_rdv", "normaliser_recherche",
+  "normaliser_libelle_tarif", "permissions_admin", "categorie_email",
+  // Jeton dans l'URL : le lien de désinscription d'un courriel déjà parti,
+  // et le code d'une ordonnance présentée au comptoir d'une pharmacie.
+  "desinscrire_email", "verifier_document",
+  // Appelées DANS des policies : elles sont évaluées sous l'identité de
+  // l'appelant, qui doit donc garder le droit de les exécuter.
+  "medecin_a_rdv_avec_patient", "medecin_suit_beneficiaire",
+]);
+
+const GARDES = /auth\.uid\(\)|est_admin|a_permission_admin|a_une_permission_admin|assistant_a_permission|compte_actif|role_courant|medecin_de_assistant/;
+
+const exposees = fonctions.filter(
+  (f) => /\banon\b|PUBLIC/.test(f.grants)
+       && !GARDES.test(f.prosrc ?? "")
+       && !PUBLIQUES_VOULUES.has(f.proname)
+);
+
+if (!exposees.length) {
+  console.log(
+    `\n✅ Aucune fonction « security definer » sans garde d'identité n'est ` +
+    `joignable\n   par la clé publique en dehors de celles voulues publiques ` +
+    `(${PUBLIQUES_VOULUES.size} nommées).`
+  );
+} else {
+  console.log(`\n🚨 ${exposees.length} fonction(s) « security definer » SANS garde d'identité,`);
+  console.log(`   joignables depuis un navigateur — elles traversent la RLS :`);
+  for (const f of exposees) {
+    console.log(`     ${f.proname}(${f.args})`);
+    console.log(`        accordée à : ${f.grants}`);
+  }
+  console.log(`\n   Soit elles vérifient qui appelle, soit elles reviennent au serveur :`);
+  console.log(`   revoke execute on function <nom>(<types>) from public, anon, authenticated;`);
 }

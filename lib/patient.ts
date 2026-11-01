@@ -646,6 +646,21 @@ export function oublierProchainRendezVous() {
   cacheProchain = undefined;
 }
 
+/**
+ * Tout ce que ce module garde en mémoire du compte connecté.
+ *
+ * Appelée à la déconnexion. `cacheProfil` se vidait déjà de lui-même
+ * (`onAuthStateChange`), mais `cacheProchain` non : le bandeau « prochain
+ * rendez-vous » de la barre haute mobile est monté sur presque tous les
+ * écrans, y compris publics. Après une déconnexion sans rechargement, il
+ * continuait d'afficher le rendez-vous du compte précédent — sur le poste
+ * de l'accueil d'un cabinet, à la personne suivante.
+ */
+export function oublierCompteConnecte() {
+  cacheProfil = undefined;
+  cacheProchain = undefined;
+}
+
 /* ----- Détail d'un rendez-vous (écran /mes-rendez-vous/[id]) ----- */
 
 /**

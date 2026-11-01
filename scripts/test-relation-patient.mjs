@@ -102,9 +102,17 @@ async function main() {
 
   const { data: m1, error: e1 } = await ins(patient, { expediteur_id: patientId, contenu: `Bonjour docteur (${MARQUE})` });
   check("patient → son médecin : envoi accepté", !e1 && !!m1, e1?.message);
-  const { error: eSans } = await patient
-    .from("messages").insert({ patient_id: patientId, medecin_id: etrangerId, expediteur_id: patientId, contenu: `x (${MARQUE})` });
-  check("patient → médecin jamais consulté : refusé", !!eSans, eSans?.message);
+  /*
+   * Depuis la migration 0076, écrire n'exige plus de rendez-vous préalable :
+   * un patient peut adresser n'importe quel médecin VALIDÉ de l'annuaire.
+   * Ce test attendait encore un refus et échouait depuis — il vérifie
+   * désormais la règle en vigueur, et celle qui n'a pas bougé juste après
+   * (un médecin n'ouvre pas la conversation).
+   */
+  const { data: mAnnuaire, error: eSans } = await patient
+    .from("messages").insert({ patient_id: patientId, medecin_id: etrangerId, expediteur_id: patientId, contenu: `x (${MARQUE})` })
+    .select("id").single();
+  check("patient → médecin de l'annuaire jamais consulté : accepté (0076)", !eSans && !!mAnnuaire, eSans?.message);
   const { error: eEtr } = await etranger
     .from("messages").insert({ patient_id: patientId, medecin_id: etrangerId, expediteur_id: etrangerId, contenu: `x (${MARQUE})` });
   check("médecin sans rendez-vous → patient : refusé", !!eEtr, eEtr?.message);
@@ -117,8 +125,17 @@ async function main() {
 
   const { data: vuTiers } = await tiers.from("messages").select("id").eq("patient_id", patientId);
   check("autre patient : ne lit rien", (vuTiers ?? []).length === 0);
-  const { data: vuEtr } = await etranger.from("messages").select("id").eq("patient_id", patientId);
-  check("autre médecin : ne lit rien", (vuEtr ?? []).length === 0);
+  /*
+   * L'« étranger » n'est plus un tiers : le patient vient de lui écrire
+   * (0076), il est donc partie à CETTE conversation-là. Ce qu'il ne doit
+   * pas voir, c'est celle du patient avec un autre praticien.
+   */
+  const { data: vuEtr } = await etranger
+    .from("messages").select("id").eq("patient_id", patientId).eq("medecin_id", medecinId);
+  check("autre médecin : ne lit pas la conversation d'un confrère", (vuEtr ?? []).length === 0);
+  const { data: sienne } = await etranger
+    .from("messages").select("id").eq("patient_id", patientId).eq("medecin_id", etrangerId);
+  check("…mais bien celle qu'on lui adresse", (sienne ?? []).length >= 1);
   const { data: vuMed } = await medecin.from("messages").select("id, lu").eq("id", m1?.id);
   check("le médecin lit le message, non lu", vuMed?.length === 1 && vuMed[0].lu === false);
 
