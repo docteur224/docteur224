@@ -30,7 +30,9 @@ interface EtatAgenda {
 const HORS_LIGNE: EtatAgenda = { configure: false, connecte: false, email: null };
 
 const MESSAGES: Record<string, { ok: boolean; texte: string }> = {
-  connecte: { ok: true, texte: "Google Agenda connecté. Vos prochains rendez-vous s'y ajouteront automatiquement." },
+  // « à venir », et non « prochains » : la connexion rattrape aussi les
+  // rendez-vous déjà pris (trigger de rattrapage, migration 0084).
+  connecte: { ok: true, texte: "Google Agenda connecté. Vos rendez-vous à venir y sont ajoutés automatiquement." },
   echec: { ok: false, texte: "La connexion a échoué. Réessayez dans un instant." },
   refuse: { ok: false, texte: "Connexion annulée : l'accès à l'agenda n'a pas été accordé." },
   refus: { ok: false, texte: "Session expirée — reconnectez-vous." },

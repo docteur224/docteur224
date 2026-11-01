@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { appelantLegitime } from "@/lib/drain-acces";
 import { drainerEmails } from "@/lib/emails/drain";
 import { drainerRappels } from "@/lib/rappels/drain";
+import { drainerAgendaGoogle } from "@/lib/agenda-google/drain";
 
 /*
  * Vidange de la file d'e-mails.
@@ -48,5 +49,9 @@ export async function POST(requete: Request) {
   // Les rappels SMS/WhatsApp (0066) partent au même rythme : le planificateur
   // qui appelle cette route chaque minute suffit, sans second travail pg_cron.
   const rappels = await drainerRappels();
-  return NextResponse.json({ ...resultat, rappels });
+  // La synchronisation Google Agenda (0084) suit le même rythme, et pour la
+  // même raison : un rendez-vous doit arriver dans l'agenda du patient dans
+  // la minute, pas au prochain travail planifié qu'on aurait ajouté.
+  const agenda = await drainerAgendaGoogle();
+  return NextResponse.json({ ...resultat, rappels, agenda });
 }
