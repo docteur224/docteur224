@@ -1,5 +1,5 @@
 import {
-  CLE_CHARTE_PUBLIQUE, ID_STYLE_PUBLIQUE, PREFIXES_ESPACE,
+  ATTRIBUT_CAMPAGNE, CLE_CHARTE_PUBLIQUE, ID_STYLE_PUBLIQUE, PREFIXES_ESPACE,
 } from "@/lib/charte-publique";
 
 /**
@@ -22,6 +22,9 @@ import {
  */
 export default function CharteLocalePublique() {
   const prefixes = JSON.stringify(PREFIXES_ESPACE);
+  // Le même hexadécimal vérifié qu'ailleurs : la troisième couleur sert à
+  // allumer le filet, pas à écrire dans la feuille de style (le CSS, lui, est
+  // déjà calculé et contrôlé juste au-dessus).
   const script = `(function(){try{
 var P=${prefixes},p=location.pathname;
 for(var i=0;i<P.length;i++){if(p===P[i]||p.indexOf(P[i]+"/")===0)return;}
@@ -33,6 +36,8 @@ if(o.debut&&n<Date.parse(o.debut))return;
 if(o.fin&&n>Date.parse(o.fin))return;
 var s=document.createElement("style");s.id=${JSON.stringify(ID_STYLE_PUBLIQUE)};
 s.textContent="html:root{"+o.css+"}";document.head.appendChild(s);
+var t=typeof o.secondaire==="string"&&/^#[0-9a-f]{6}$/.test(o.secondaire);
+document.documentElement.setAttribute(${JSON.stringify(ATTRIBUT_CAMPAGNE)},t?"3":"2");
 }catch(e){}})();`;
   return <script dangerouslySetInnerHTML={{ __html: script }} />;
 }

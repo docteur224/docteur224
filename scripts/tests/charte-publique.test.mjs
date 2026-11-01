@@ -8,7 +8,11 @@
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { estRoutePublique, estActive } from "../../lib/charte-publique.ts";
+import { estRoutePublique, estActive, analyser } from "../../lib/charte-publique.ts";
+import { construireCharte, contraste } from "../../lib/charte-couleurs.ts";
+import {
+  CHARTES_PUBLIQUES_PRETES, prochaineOccurrence,
+} from "../../lib/chartes-publiques-pretes.ts";
 
 test("estRoutePublique — les pages publiques sont publiques", () => {
   for (const p of ["/", "/a-propos", "/faq", "/resultats", "/conseils-sante", "/connexion", "/medecin/dr-barry", "/reservation"]) {
@@ -57,4 +61,98 @@ test("estActive — bornes nulles = sans limite de ce côté", () => {
 
 test("estActive — null (aucune campagne)", () => {
   assert.equal(estActive(null), false);
+});
+
+/* ------------------------------------------------------------------ */
+/* La troisième couleur                                                */
+/* ------------------------------------------------------------------ */
+
+test("analyser — la troisième couleur est reprise, normalisée", () => {
+  const c = analyser(JSON.stringify({
+    principale: "#0A5C3F", accent: "#CE1126", secondaire: "#FCD116",
+  }));
+  assert.equal(c.secondaire, "#fcd116");
+});
+
+test("analyser — absente ou mal formée, elle vaut null sans perdre la campagne", () => {
+  for (const brut of [
+    { principale: "#0a5c3f", accent: "#ce1126" },
+    { principale: "#0a5c3f", accent: "#ce1126", secondaire: "jaune" },
+    { principale: "#0a5c3f", accent: "#ce1126", secondaire: null },
+  ]) {
+    const c = analyser(JSON.stringify(brut));
+    assert.equal(c.secondaire, null, JSON.stringify(brut));
+    assert.equal(c.principale, "#0a5c3f");
+  }
+});
+
+test("construireCharte — la 3e couleur ne déborde pas sur le reste", () => {
+  // Elle ne sert qu'au filet : poser un jaune éclatant ne doit toucher ni les
+  // fonds, ni les textes, ni les bordures. C'est ce qui permet de l'accepter
+  // sans contrôle de lisibilité de texte.
+  const sans = construireCharte("#0a5c3f", "#ce1126");
+  const avec = construireCharte("#0a5c3f", "#ce1126", "#fcd116");
+  for (const [nom, valeur] of Object.entries(sans)) {
+    if (nom === "secondaire" || nom === "sur-secondaire") continue;
+    assert.equal(avec[nom], valeur, nom);
+  }
+  assert.equal(avec.secondaire, "#fcd116");
+  // Sans troisième couleur, le token existe quand même et vaut l'accent :
+  // le filet garde deux segments au lieu de disparaître.
+  assert.equal(sans.secondaire, "#ce1126");
+});
+
+/* ------------------------------------------------------------------ */
+/* Les habillages proposés se lisent vraiment                          */
+/* ------------------------------------------------------------------ */
+
+test("habillages prêts — chaque cause reste lisible là où on la lit", () => {
+  // Les trois mêmes mesures que l'écran d'administration. Une couleur
+  // retouchée à vue ne passera pas sans que ce test le dise.
+  const CAUSES = CHARTES_PUBLIQUES_PRETES.filter((c) => c.periode || c.secondaire);
+  assert.ok(CAUSES.length >= 9, "les causes du calendrier sont proposées");
+
+  for (const c of CAUSES) {
+    const p = construireCharte(c.principale, c.accent, c.secondaire);
+    assert.ok(
+      contraste(p.blue, p["sur-principale"]) >= 4.5,
+      `${c.nom} — titre sur le héros`,
+    );
+    assert.ok(
+      contraste(p.teal, p["sur-accent"]) >= 3,
+      `${c.nom} — texte des boutons`,
+    );
+    assert.ok(
+      contraste(p.teal, "#ffffff") >= 4.5,
+      `${c.nom} — lien d'accent sur blanc`,
+    );
+    if (c.secondaire) {
+      // La 3e couleur ne porte pas de texte : on lui demande seulement de se
+      // détacher du filet, qui est peint de la principale.
+      assert.ok(
+        contraste(c.secondaire, c.principale) >= 3,
+        `${c.nom} — 3e couleur sur le filet`,
+      );
+    }
+  }
+});
+
+test("prochaineOccurrence — cette année tant qu'elle n'est pas passée", () => {
+  const octobreRose = { debut: "10-01", jours: 31 };
+  assert.deepEqual(
+    prochaineOccurrence(octobreRose, new Date(2026, 7, 15)),
+    { debut: "2026-10-01", fin: "2026-10-31" },
+  );
+  // Le dernier jour compte encore : une campagne du jour reste proposable.
+  assert.deepEqual(
+    prochaineOccurrence(octobreRose, new Date(2026, 9, 31)),
+    { debut: "2026-10-01", fin: "2026-10-31" },
+  );
+});
+
+test("prochaineOccurrence — une fois passée, c'est l'an prochain", () => {
+  assert.deepEqual(
+    prochaineOccurrence({ debut: "10-01", jours: 3 }, new Date(2026, 10, 1)),
+    { debut: "2027-10-01", fin: "2027-10-03" },
+  );
 });

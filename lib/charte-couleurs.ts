@@ -222,7 +222,12 @@ const RECETTES = (() => {
 export function construireCharte(
   principaleSaisie: string,
   accentSaisie: string,
-): Record<NomToken | "sur-principale" | "sur-accent" | "blue-lisible", string> {
+  secondaireSaisie?: string | null,
+): Record<
+  NomToken | "sur-principale" | "sur-accent" | "blue-lisible"
+  | "secondaire" | "sur-secondaire",
+  string
+> {
   // Une saisie illisible retombe sur la charte Docteur 224 : mieux vaut les
   // couleurs d'origine qu'une page à moitié peinte.
   const principale = normaliserHex(principaleSaisie) ?? CHARTE_DEFAUT.principale;
@@ -266,8 +271,20 @@ export function construireCharte(
     H: ancres.principale.H,
   });
 
+  // TROISIÈME COULEUR, FACULTATIVE. Elle n'entre dans AUCUNE dérivation : ni
+  // fond, ni texte, ni bordure n'en dépendent. C'est voulu — une couleur de
+  // drapeau est souvent trop vive pour porter du texte (le jaune de la Guinée,
+  // l'or d'un Ramadan). Elle ne sert que de touche décorative, au filet de
+  // campagne, où elle est posée SUR LA PRINCIPALE : un aplat foncé la fait
+  // ressortir quelle que soit sa clarté, y compris du blanc. Absente, elle
+  // vaut l'accent, et le filet n'a que deux segments.
+  const secondaire = normaliserHex(secondaireSaisie ?? "") ?? accent;
+  palette["secondaire"] = secondaire;
+  palette["sur-secondaire"] = surFond(secondaire, palette["ink"]);
+
   return palette as Record<
-    NomToken | "sur-principale" | "sur-accent" | "blue-lisible",
+    NomToken | "sur-principale" | "sur-accent" | "blue-lisible"
+    | "secondaire" | "sur-secondaire",
     string
   >;
 }
@@ -291,8 +308,12 @@ export function surFond(fond: string, encre: string = PALETTE_DEFAUT.ink): strin
 }
 
 /** La palette sous forme de déclarations CSS, prêtes à être injectées. */
-export function charteVersCss(principale: string, accent: string): string {
-  const palette = construireCharte(principale, accent);
+export function charteVersCss(
+  principale: string,
+  accent: string,
+  secondaire?: string | null,
+): string {
+  const palette = construireCharte(principale, accent, secondaire);
   return Object.entries(palette)
     .map(([nom, valeur]) => `--${nom}:${valeur}`)
     .join(";");

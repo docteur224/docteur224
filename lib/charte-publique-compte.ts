@@ -33,17 +33,32 @@ const TABLE = "charte_publique";
  */
 export async function lireChartePublique(): Promise<ChartePublique | null> {
   const supabase = creerClientNavigateur();
-  const { data, error } = await supabase
-    .from(TABLE)
-    .select("principale, accent, debut, fin")
-    .eq("id", "site")
-    .maybeSingle();
+  const lire = (colonnes: string) =>
+    supabase.from(TABLE).select(colonnes).eq("id", "site").maybeSingle();
+
+  let { data, error } = await lire("principale, accent, secondaire, debut, fin");
+  // La colonne `secondaire` arrive en 0082. Si le code est servi avant que la
+  // migration ne soit appliquée, PostgREST refuse la colonne inconnue (42703)
+  // et la campagne en cours disparaîtrait des pages publiques pour un détail
+  // décoratif. On relit alors les deux couleurs : mieux vaut une campagne
+  // sans sa touche qu'un site qui se dépeint.
+  if (error?.code === "42703") {
+    ({ data, error } = await lire("principale, accent, debut, fin"));
+  }
   if (error) throw error;
 
-  const principale = normaliserHex(data?.principale ?? "");
-  const accent = normaliserHex(data?.accent ?? "");
+  const ligne = data as Record<string, string | null> | null;
+  const principale = normaliserHex(ligne?.principale ?? "");
+  const accent = normaliserHex(ligne?.accent ?? "");
   if (!principale || !accent) return null;
-  return { principale, accent, debut: data?.debut ?? null, fin: data?.fin ?? null };
+  return {
+    principale,
+    accent,
+    // Colonne facultative (0082) : une campagne à deux couleurs la laisse nulle.
+    secondaire: normaliserHex(ligne?.secondaire ?? ""),
+    debut: ligne?.debut ?? null,
+    fin: ligne?.fin ?? null,
+  };
 }
 
 /**
@@ -66,11 +81,14 @@ export async function ecrireChartePublique(charte: ChartePublique | null): Promi
   const principale = normaliserHex(charte.principale);
   const accent = normaliserHex(charte.accent);
   if (!principale || !accent) return false;
+  // Une troisième couleur illisible n'annule pas l'enregistrement : on la
+  // laisse tomber, la campagne vaut à deux couleurs.
+  const secondaire = normaliserHex(charte.secondaire ?? "");
 
   const { error } = await supabase.from(TABLE).upsert(
     {
       id: "site",
-      principale, accent,
+      principale, accent, secondaire,
       debut: charte.debut, fin: charte.fin,
       maj_le: new Date().toISOString(),
     },
@@ -81,7 +99,7 @@ export async function ecrireChartePublique(charte: ChartePublique | null): Promi
   // On met le cache à jour, PAS la page affichée : cet écran vit dans un
   // espace connecté, où la charte publique ne doit pas apparaître. Elle sera
   // posée par `SuivreChartePublique` dès qu'on passe sur une page publique.
-  enregistrerCharte({ principale, accent, debut: charte.debut, fin: charte.fin });
+  enregistrerCharte({ principale, accent, secondaire, debut: charte.debut, fin: charte.fin });
   return true;
 }
 

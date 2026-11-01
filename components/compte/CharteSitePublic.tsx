@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { construireCharte, contraste, normaliserHex } from "@/lib/charte-couleurs";
 import { verdictElement, verdictTexte, type Verdict } from "@/lib/lisibilite";
 import {
-  CHARTES_PUBLIQUES_PRETES, CHARTE_PUBLIQUE_DEFAUT,
+  CHARTES_PUBLIQUES_PRETES, CHARTE_PUBLIQUE_DEFAUT, prochaineOccurrence,
 } from "@/lib/chartes-publiques-pretes";
 import {
   ecrireChartePublique, lireChartePublique,
@@ -64,6 +64,8 @@ function calculerEtat(c: ChartePublique | null): Etat {
 export default function CharteSitePublic() {
   const [principale, setPrincipale] = useState(CHARTE_PUBLIQUE_DEFAUT.principale);
   const [accent, setAccent] = useState(CHARTE_PUBLIQUE_DEFAUT.accent);
+  // Facultative : la chaîne vide vaut « pas de troisième couleur ».
+  const [secondaire, setSecondaire] = useState("");
   const [jourDebut, setJourDebut] = useState("");
   const [jourFin, setJourFin] = useState("");
   const [enregistree, setEnregistree] = useState<ChartePublique | null>(null);
@@ -82,6 +84,7 @@ export default function CharteSitePublic() {
         if (c) {
           setPrincipale(c.principale);
           setAccent(c.accent);
+          setSecondaire(c.secondaire ?? "");
           setJourDebut(isoVersJour(c.debut));
           setJourFin(isoVersJour(c.fin));
         }
@@ -91,18 +94,33 @@ export default function CharteSitePublic() {
     return () => { actif = false; };
   }, []);
 
+  // Vide = aucune troisième couleur, ce qui est un choix valable. Seule une
+  // saisie commencée mais mal formée bloque.
+  const secondaireHex = normaliserHex(secondaire);
+  const secondaireVide = secondaire.trim() === "";
   const valideCouleurs =
-    normaliserHex(principale) !== null && normaliserHex(accent) !== null;
+    normaliserHex(principale) !== null &&
+    normaliserHex(accent) !== null &&
+    (secondaireVide || secondaireHex !== null);
 
   const { palette, controles, verdict } = useMemo(() => {
-    const p = construireCharte(principale, accent) as Record<string, string>;
+    const p = construireCharte(principale, accent, secondaireHex) as Record<string, string>;
     const c = [
       { libelle: "Titre sur le héros", v: verdictTexte(contraste(p.blue, p["sur-principale"])) },
       { libelle: "Texte des boutons", v: verdictElement(contraste(p.teal, p["sur-accent"])) },
       { libelle: "Liens d’accent (sur blanc)", v: verdictTexte(contraste(p.teal, "#ffffff")) },
     ];
+    // La troisième couleur ne porte aucun texte : on ne lui demande pas un
+    // contraste de lecture, seulement de se détacher du filet sur lequel elle
+    // est posée — la principale. C'est le seuil des éléments d'interface.
+    if (secondaireHex) {
+      c.push({
+        libelle: "3e couleur sur le filet de campagne",
+        v: verdictElement(contraste(secondaireHex, p.blue)),
+      });
+    }
     return { palette: p, controles: c, verdict: pireVerdict(c.map((x) => x.v)) };
-  }, [principale, accent]);
+  }, [principale, accent, secondaireHex]);
 
   const problemes = controles.filter((x) => x.v !== "lisible");
 
@@ -119,6 +137,7 @@ export default function CharteSitePublic() {
     const charte: ChartePublique = {
       principale: normaliserHex(principale)!,
       accent: normaliserHex(accent)!,
+      secondaire: secondaireHex,
       debut: jourVersDebut(jourDebut),
       fin: jourVersFin(jourFin),
     };
@@ -146,6 +165,7 @@ export default function CharteSitePublic() {
     setEtat(null);
     setPrincipale(CHARTE_PUBLIQUE_DEFAUT.principale);
     setAccent(CHARTE_PUBLIQUE_DEFAUT.accent);
+    setSecondaire("");
     setJourDebut("");
     setJourFin("");
     setMessage({ texte: "Le site public est revenu aux couleurs Docteur 224.", erreur: false });
@@ -171,9 +191,11 @@ export default function CharteSitePublic() {
       </div>
       <small className="mb-4 block text-xs text-muted">
         Habille <b>uniquement les pages publiques</b> (accueil, recherche, À propos,
-        FAQ…) le temps d’une cause — Octobre Rose, par exemple. Les espaces
-        connectés et les documents remis gardent leurs couleurs. Passé la date de
-        fin, le site revient aux couleurs de Docteur&nbsp;224.
+        FAQ…) le temps d’une cause — Octobre Rose, le 2 octobre, un Ramadan. Un
+        filet de campagne coiffe alors chaque page publique et y montre les
+        couleurs choisies. Les espaces connectés et les documents remis gardent
+        les leurs. Passé la date de fin, le site revient aux couleurs de
+        Docteur&nbsp;224.
       </small>
 
       {chargement ? (
@@ -185,12 +207,27 @@ export default function CharteSitePublic() {
             {CHARTES_PUBLIQUES_PRETES.map((c) => {
               const actif =
                 normaliserHex(principale) === c.principale &&
-                normaliserHex(accent) === c.accent;
+                normaliserHex(accent) === c.accent &&
+                (normaliserHex(secondaire) ?? null) === c.secondaire;
               return (
                 <button
                   key={c.nom}
                   type="button"
-                  onClick={() => { setPrincipale(c.principale); setAccent(c.accent); setMessage(null); }}
+                  onClick={() => {
+                    setPrincipale(c.principale);
+                    setAccent(c.accent);
+                    setSecondaire(c.secondaire ?? "");
+                    // Une cause à date fixe pose sa prochaine occurrence :
+                    // personne n'a à retrouver que la journée de la santé
+                    // tombe le 7 avril. Une cause mobile (Ramadan, Aïd) ne
+                    // touche pas aux dates déjà saisies.
+                    if (c.periode) {
+                      const { debut, fin } = prochaineOccurrence(c.periode);
+                      setJourDebut(debut);
+                      setJourFin(fin);
+                    }
+                    setMessage(null);
+                  }}
                   aria-pressed={actif}
                   className={`pointer-coarse:py-3 flex items-center gap-2 rounded-full border-[1.5px] px-[13px] py-2 text-[12.5px] font-bold transition-colors ${
                     actif ? "border-teal bg-teal-soft text-blue" : "border-line bg-white text-ink hover:bg-bg"
@@ -199,14 +236,21 @@ export default function CharteSitePublic() {
                   <span aria-hidden className="flex gap-1">
                     <i className="block h-[13px] w-[13px] rounded-full" style={{ background: c.principale }} />
                     <i className="block h-[13px] w-[13px] rounded-full" style={{ background: c.accent }} />
+                    {c.secondaire && (
+                      <i
+                        className="block h-[13px] w-[13px] rounded-full border border-line"
+                        style={{ background: c.secondaire }}
+                      />
+                    )}
                   </span>
+                  <span aria-hidden>{c.emoji}</span>
                   {c.nom}
                 </button>
               );
             })}
           </div>
 
-          {/* ---- les deux couleurs ---- */}
+          {/* ---- les couleurs : deux obligatoires, une facultative ---- */}
           <div className="mb-4 grid gap-4 sm:grid-cols-2">
             <Choix
               id="site-principale"
@@ -221,6 +265,14 @@ export default function CharteSitePublic() {
               aide="Ton plus clair — met en valeur les boutons et les liens."
               valeur={accent}
               sur={(v) => { setAccent(v); setMessage(null); }}
+            />
+            <Choix
+              id="site-secondaire"
+              libelle="Couleur secondaire (facultative)"
+              aide="Touche d’appoint — n’apparaît que dans le filet en haut des pages. Aucun texte ne s’y pose : une couleur vive (jaune, or, blanc) y est permise."
+              valeur={secondaire}
+              facultative
+              sur={(v) => { setSecondaire(v); setMessage(null); }}
             />
           </div>
 
@@ -243,6 +295,18 @@ export default function CharteSitePublic() {
             ) as React.CSSProperties}
             className="overflow-hidden rounded-[13px] border border-line"
           >
+            {/* Le filet de campagne, tel qu'il coiffe les pages publiques.
+                Reproduit ici les proportions de globals.css, pour que ce qu'on
+                voit soit ce qui sera servi. */}
+            <div
+              aria-hidden
+              className="h-[6px] w-full"
+              style={{
+                background: secondaireHex
+                  ? `linear-gradient(90deg, ${palette.blue} 0 55%, ${palette.teal} 55% 80%, ${secondaireHex} 80% 100%)`
+                  : `linear-gradient(90deg, ${palette.blue} 0 66%, ${palette.teal} 66% 100%)`,
+              }}
+            />
             {/* héros */}
             <div className="bg-blue px-[18px] py-5">
               <b className="block text-[16px] font-extrabold" style={{ color: palette["sur-principale"] }}>
@@ -284,7 +348,9 @@ export default function CharteSitePublic() {
             <Pastille verdict={verdict} />
             <small className="text-xs text-muted">
               {verdict === "lisible"
-                ? "Tout reste lisible sur les pages publiques."
+                ? secondaireHex
+                  ? "Tout reste lisible, et le filet montre les trois couleurs."
+                  : "Tout reste lisible sur les pages publiques."
                 : `${problemes.length} point${problemes.length > 1 ? "s" : ""} à regarder.`}
             </small>
           </div>
@@ -348,11 +414,17 @@ function Pastille({ verdict }: { verdict: Verdict }) {
 }
 
 function Choix({
-  id, libelle, aide, valeur, sur,
+  id, libelle, aide, valeur, sur, facultative = false,
 }: {
-  id: string; libelle: string; aide: string; valeur: string; sur: (v: string) => void;
+  id: string; libelle: string; aide: string; valeur: string;
+  sur: (v: string) => void;
+  /** Un champ facultatif accepte le vide : c'est « pas de couleur ». */
+  facultative?: boolean;
 }) {
   const normalisee = normaliserHex(valeur);
+  const vide = valeur.trim() === "";
+  const enDefaut = facultative && vide;
+  const enFaute = normalisee === null && !enDefaut;
   return (
     <div>
       <label htmlFor={id} className="mb-1.5 block text-[12.5px] font-bold text-ink">{libelle}</label>
@@ -370,14 +442,28 @@ function Choix({
           value={valeur}
           onChange={(e) => sur(e.target.value)}
           spellCheck={false}
-          aria-invalid={normalisee === null}
+          placeholder={facultative ? "aucune" : undefined}
+          aria-invalid={enFaute}
           className={`w-full rounded-[9px] border bg-white px-3 py-2 font-mono text-[13px] uppercase outline-none focus:border-teal ${
-            normalisee === null ? "border-red text-red" : "border-line"
+            enFaute ? "border-red text-red" : "border-line"
           }`}
         />
+        {facultative && !vide && (
+          // Retirer la couleur demande une action à part : un champ texte
+          // qu'on vide à la main se retrouve vite à moitié effacé, et ce
+          // demi-état serait lu comme une faute de saisie.
+          <button
+            type="button"
+            onClick={() => sur("")}
+            title="Retirer la troisième couleur"
+            className="pointer-coarse:py-3 flex-none rounded-[9px] border border-line bg-white px-3 py-2 text-[12.5px] font-bold text-muted transition-colors hover:bg-bg hover:text-ink"
+          >
+            Retirer
+          </button>
+        )}
       </div>
       <small className="mt-1 block text-[11.5px] leading-snug text-muted">
-        {normalisee === null ? "Couleur attendue au format #RRGGBB." : aide}
+        {enFaute ? "Couleur attendue au format #RRGGBB." : aide}
       </small>
     </div>
   );

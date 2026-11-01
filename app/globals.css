@@ -57,6 +57,12 @@
      FONDS et BORDURES bleus, eux, gardent --blue (voir mobile.css). */
   --blue-encre: var(--blue);
 
+  /* Troisieme couleur d'une campagne du site public (voir le filet, plus
+     bas). Par defaut elle vaut l'accent : hors campagne, et pour une campagne
+     a deux couleurs, rien ne l'utilise. La charte publique la remplace en
+     " html:root{...} " quand l'administration en a choisi une. */
+  --secondaire: var(--teal);
+
   /* Pastilles d'avatar. Volontairement HORS charte personnalisable : leur rôle
      est de distinguer les personnes d'un coup d'œil. Teintes de la couleur
      choisie par l'utilisateur, elles deviendraient toutes semblables et ne
@@ -705,4 +711,51 @@ html[data-sidebar="plie"] { --l-menu: 84px; }
 
 @media (prefers-reduced-motion: reduce) {
   .cadre-espace { transition: none; }
+}
+
+/* =====================================================================
+   FILET DE CAMPAGNE DU SITE PUBLIC
+   ---------------------------------------------------------------------
+   Habiller le site aux couleurs d'une cause ne suffit pas a la faire voir :
+   la principale et l'accent se fondent dans l'interface — ils EN SONT
+   l'interface. Le filet est le seul endroit ou les couleurs se lisent comme
+   un drapeau : un bandeau de 6 px en haut de chaque page publique, pose sur
+   la couleur principale, ou viennent se detacher l'accent puis la troisieme
+   couleur. Rien n'y est ecrit, donc aucune contrainte de contraste de texte :
+   c'est ce qui permet d'y montrer un jaune, un or ou un blanc — impossibles
+   partout ailleurs — sans rien rendre illisible.
+
+   Allume par l attribut data-campagne de <html> (2 ou 3 couleurs), pose par
+   le script d amorcage avant la premiere peinture puis entretenu par
+   appliquer(). Hors campagne l attribut est absent, et ces regles ne
+   produisent rien. Regles hors couche, comme le filet du mode sombre :
+   elles doivent passer devant les utilitaires, et ne visent aucune classe.
+   ===================================================================== */
+html[data-campagne] body::before {
+  content: "";
+  position: fixed;
+  inset: 0 0 auto 0;
+  height: 6px;
+  z-index: 60;
+  pointer-events: none;
+  background: var(--blue);
+}
+
+/* Le filet est fixe : on reserve sa hauteur pour ne rien recouvrir au repos.
+   La barre de navigation, elle, colle sous lui une fois la page deroulee. */
+html[data-campagne] body { padding-top: 6px; }
+
+/* Deux couleurs : la principale tient les deux tiers, l accent la fin. */
+html[data-campagne="2"] body::before {
+  background: linear-gradient(90deg, var(--blue) 0 66%, var(--teal) 66% 100%);
+}
+
+/* Trois couleurs : principale, accent, puis la touche secondaire. */
+html[data-campagne="3"] body::before {
+  background: linear-gradient(
+    90deg,
+    var(--blue) 0 55%,
+    var(--teal) 55% 80%,
+    var(--secondaire) 80% 100%
+  );
 }

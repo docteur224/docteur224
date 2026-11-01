@@ -23,6 +23,16 @@ import { charteVersCss, normaliserHex } from "./charte-couleurs.ts";
 export const CLE_CHARTE_PUBLIQUE = "docteur224.charte-publique";
 /** Identifiant de la balise de style posée sur les pages publiques. */
 export const ID_STYLE_PUBLIQUE = "charte-publique";
+/**
+ * Attribut posé sur <html> quand une campagne est en cours, et seulement
+ * alors. Il vaut "2" ou "3" selon le nombre de couleurs choisies. C'est lui
+ * qui allume le FILET DE CAMPAGNE (globals.css) : un bandeau de quelques
+ * pixels en haut des pages publiques, qui montre les couleurs de la cause
+ * là où aucun texte ne vient se poser dessus. Même mécanique que
+ * `data-theme` pour le mode sombre — un attribut, des règles en CSS, aucun
+ * rendu conditionnel côté serveur.
+ */
+export const ATTRIBUT_CAMPAGNE = "data-campagne";
 
 /**
  * Préfixes des espaces connectés. La charte publique ne s'y applique JAMAIS :
@@ -47,6 +57,8 @@ export function estRoutePublique(chemin: string): boolean {
 export type ChartePublique = {
   principale: string;
   accent: string;
+  /** Troisième couleur, FACULTATIVE : la touche du filet de campagne. */
+  secondaire: string | null;
   debut: string | null;
   fin: string | null;
 };
@@ -73,6 +85,9 @@ export function analyser(brut: string | null): ChartePublique | null {
     return {
       principale,
       accent,
+      // Une troisième couleur mal formée est simplement ignorée : la campagne
+      // reste valable à deux couleurs plutôt que de disparaître.
+      secondaire: normaliserHex(o?.secondaire ?? ""),
       debut: typeof o?.debut === "string" ? o.debut : null,
       fin: typeof o?.fin === "string" ? o.fin : null,
     };
@@ -85,12 +100,13 @@ export function enregistrerCharte(charte: ChartePublique): void {
   const principale = normaliserHex(charte.principale);
   const accent = normaliserHex(charte.accent);
   if (!principale || !accent) return;
+  const secondaire = normaliserHex(charte.secondaire ?? "");
   try {
     localStorage.setItem(
       CLE_CHARTE_PUBLIQUE,
       JSON.stringify({
-        principale, accent, debut: charte.debut, fin: charte.fin,
-        css: charteVersCss(principale, accent),
+        principale, accent, secondaire, debut: charte.debut, fin: charte.fin,
+        css: charteVersCss(principale, accent, secondaire),
       }),
     );
   } catch { /* stockage indisponible : la charte vaut pour la session */ }
@@ -103,6 +119,7 @@ export function effacerCache(): void {
 /** Retire la balise de charte publique de la page déjà affichée. */
 export function retirer(): void {
   document.getElementById(ID_STYLE_PUBLIQUE)?.remove();
+  document.documentElement.removeAttribute(ATTRIBUT_CAMPAGNE);
 }
 
 /**
@@ -113,10 +130,14 @@ export function appliquer(charte: ChartePublique | null): void {
   const existante = document.getElementById(ID_STYLE_PUBLIQUE);
   if (!estActive(charte)) {
     existante?.remove();
+    document.documentElement.removeAttribute(ATTRIBUT_CAMPAGNE);
     return;
   }
+  const secondaire = normaliserHex(charte!.secondaire ?? "");
   const style = existante ?? document.createElement("style");
   style.id = ID_STYLE_PUBLIQUE;
-  style.textContent = `html:root{${charteVersCss(charte!.principale, charte!.accent)}}`;
+  style.textContent =
+    `html:root{${charteVersCss(charte!.principale, charte!.accent, secondaire)}}`;
   if (!existante) document.head.appendChild(style);
+  document.documentElement.setAttribute(ATTRIBUT_CAMPAGNE, secondaire ? "3" : "2");
 }
