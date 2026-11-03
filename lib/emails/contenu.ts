@@ -262,6 +262,27 @@ function rediger(ligne: LigneFile, details: DetailsRdv | null): Message {
   }
 
   /*
+   * Avis de changement de mot de passe (route /api/admin/equipe/mot-de-passe).
+   *
+   * L'exact contraire du message précédent : aucun lien, aucun jeton, rien à
+   * cliquer. C'est un CONSTAT envoyé après coup, pas une demande d'action —
+   * le seul intérêt du message est que celui qui n'a pas fait ce changement
+   * l'apprenne. On ne lui propose donc pas un lien qu'un faussaire aurait
+   * tout intérêt à imiter : on lui dit de se connecter comme d'habitude.
+   */
+  if (ligne.type === "mot_de_passe_modifie") {
+    return {
+      titre: "Le mot de passe de votre compte a été modifié",
+      apercu: "Si ce n’est pas vous, reprenez la main immédiatement.",
+      paragraphes: [
+        "Le mot de passe de votre compte Docteur 224 vient d’être modifié. Vous n’avez rien à faire si vous êtes à l’origine de ce changement.",
+        "Dans le cas contraire, changez-le sans attendre depuis votre espace et prévenez-nous : quelqu’un disposait d’une session ouverte sur votre compte.",
+      ],
+      note: "Ce message ne contient aucun lien : connectez-vous comme vous le faites d’habitude. Nous ne vous demanderons jamais votre mot de passe par e-mail ni par téléphone.",
+    };
+  }
+
+  /*
    * Le résumé quotidien de l'administrateur. Son corps arrive de la base sous
    * forme de lignes « Intitulé : nombre » (migration 0059) : on les remonte en
    * encadré plutôt qu'en paragraphe, parce que ce sont des chiffres qu'on

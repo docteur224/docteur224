@@ -7,6 +7,7 @@ import Interrupteur from "@/components/patient/Interrupteur";
 import ChampMotDePasse from "@/components/site/ChampMotDePasse";
 import Dialogue from "@/components/site/Dialogue";
 import {
+  changerMotDePassePrincipal,
   creerCompteAdmin,
   majPermissionsAdmin,
   majStatutAdmin,
@@ -86,6 +87,7 @@ export default function EquipeAdmin() {
   const [creation, setCreation] = useState(false);
   const [actionsSur, setActionsSur] = useState<AdminEquipe | null>(null);
   const [permissionsSur, setPermissionsSur] = useState<AdminEquipe | null>(null);
+  const [motDePasseSur, setMotDePasseSur] = useState<AdminEquipe | null>(null);
   const [message, setMessage] = useState<Retour | null>(null);
 
   // La liste est rechargée à chaque succès : les droits, le statut et la
@@ -333,6 +335,10 @@ export default function EquipeAdmin() {
             setPermissionsSur(actionsSur);
             setActionsSur(null);
           }}
+          onMotDePasse={() => {
+            setMotDePasseSur(actionsSur);
+            setActionsSur(null);
+          }}
           onStatut={async () => {
             const res = await majStatutAdmin(actionsSur.id, !actionsSur.actif);
             const ok = terminer(
@@ -347,6 +353,20 @@ export default function EquipeAdmin() {
             const res = await supprimerCompteAdmin(actionsSur.id);
             const ok = terminer(res, `Le compte de ${actionsSur.nom} a été supprimé.`);
             if (ok) setActionsSur(null);
+          }}
+        />
+      )}
+
+      {motDePasseSur && (
+        <DialogueMotDePasse
+          admin={motDePasseSur}
+          onFermer={() => setMotDePasseSur(null)}
+          onChange={(res) => {
+            // Rien à recharger : la liste ne montre pas les mots de passe.
+            // Le bandeau suffit, et il se lit une fois le dialogue refermé.
+            const ok = terminer(res, "Votre mot de passe a été modifié.");
+            if (ok) setMotDePasseSur(null);
+            return ok;
           }}
         />
       )}
@@ -506,6 +526,7 @@ function DialogueActions({
   soi,
   onFermer,
   onPermissions,
+  onMotDePasse,
   onStatut,
   onSupprimer,
 }: {
@@ -513,16 +534,28 @@ function DialogueActions({
   soi: boolean;
   onFermer: () => void;
   onPermissions: () => void;
+  onMotDePasse: () => void;
   onStatut: () => Promise<void>;
   onSupprimer: () => Promise<void>;
 }) {
   const [confirme, setConfirme] = useState(false);
   const [enCours, setEnCours] = useState(false);
 
+  /*
+   * Le seul geste ouvert sur le compte principal : son titulaire, et lui
+   * seul, change son mot de passe. Pas les autres administrateurs — celui
+   * qui réécrirait ce mot de passe prendrait la main sur un compte que
+   * personne ne peut désactiver. La route le refuse également ; ici on se
+   * contente de ne pas proposer ce qui serait refusé.
+   */
+  const motDePasseOuvert = admin.principal && soi;
+
   // Le compte principal est le dernier recours de la plateforme, et personne
   // n'agit sur le sien : dans les deux cas on dit POURQUOI l'action manque.
   const empeche = admin.principal
-    ? "Le compte principal ne peut être ni modifié, ni désactivé, ni supprimé."
+    ? `Le compte principal ne peut être ni modifié, ni désactivé, ni supprimé.${
+        motDePasseOuvert ? " Vous pouvez en revanche changer son mot de passe." : ""
+      }`
     : soi
       ? "Vous ne pouvez pas agir sur votre propre compte administrateur."
       : null;
@@ -566,6 +599,17 @@ function DialogueActions({
           <span aria-hidden>✏️</span> Modifier le rôle et les permissions
         </button>
 
+        {motDePasseOuvert && (
+          <button
+            type="button"
+            className={`${action} text-teal`}
+            disabled={enCours}
+            onClick={onMotDePasse}
+          >
+            <span aria-hidden>🔑</span> Modifier le mot de passe
+          </button>
+        )}
+
         <button
           type="button"
           className={`${action} text-amber`}
@@ -597,6 +641,126 @@ function DialogueActions({
           </p>
         )}
       </>
+    </Dialogue>
+  );
+}
+
+/*
+ * Changement du mot de passe du compte principal.
+ *
+ * Trois champs et rien d'autre : l'ancien (sans lui, une session laissée
+ * ouverte suffirait à s'emparer du compte), le nouveau, et sa confirmation —
+ * un mot de passe saisi à l'aveugle et mal tapé fermerait la porte du seul
+ * compte que personne ne peut rouvrir. Aucun lien par courriel n'est envoyé ;
+ * un avis part en revanche APRÈS coup (route /api/admin/equipe/mot-de-passe).
+ */
+function DialogueMotDePasse({
+  admin,
+  onFermer,
+  onChange,
+}: {
+  admin: AdminEquipe;
+  onFermer: () => void;
+  onChange: (res: { erreur?: string }) => boolean;
+}) {
+  const [actuel, setActuel] = useState("");
+  const [nouveau, setNouveau] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [enCours, setEnCours] = useState(false);
+  const [erreur, setErreur] = useState<string | null>(null);
+
+  const concordent = nouveau !== "" && nouveau === confirmation;
+  const valide = actuel !== "" && nouveau.length >= 8 && concordent;
+
+  // Le même ordre de contrôle qu'à l'envoi, mais dit pendant la saisie.
+  const aide =
+    nouveau !== "" && nouveau.length < 8
+      ? "Huit caractères au minimum."
+      : confirmation !== "" && !concordent
+        ? "Les deux mots de passe ne correspondent pas."
+        : "";
+
+  async function soumettre(e: React.FormEvent) {
+    e.preventDefault();
+    if (!valide || enCours) return;
+    setErreur(null);
+    setEnCours(true);
+    const res = await changerMotDePassePrincipal(actuel, nouveau);
+    setEnCours(false);
+    // L'erreur reste DANS le dialogue : la lire derrière ferait perdre la
+    // saisie (même règle que la création de compte).
+    if (res.erreur) setErreur(res.erreur);
+    else onChange(res);
+  }
+
+  return (
+    <Dialogue
+      titre="Modifier le mot de passe"
+      sousTitre={`${admin.email} · compte principal`}
+      icone="🔑"
+      onFermer={onFermer}
+      pied={
+        <>
+          <button type="button" onClick={onFermer} className={BOUTON_SECONDAIRE}>
+            Annuler
+          </button>
+          <button
+            type="submit"
+            form="form-mdp-principal"
+            disabled={!valide || enCours}
+            className={BOUTON_PRINCIPAL}
+          >
+            {enCours ? "Enregistrement…" : "Enregistrer"}
+          </button>
+        </>
+      }
+    >
+      <form id="form-mdp-principal" onSubmit={soumettre} className="p-4">
+        <p className="mb-3 rounded-[11px] bg-teal-soft px-[13px] py-2.5 text-[12px] font-semibold leading-snug text-blue">
+          Le nouveau mot de passe s’applique immédiatement, sans lien par e-mail. Vous restez
+          connecté sur cet appareil ; les autres sessions ouvertes sur ce compte sont fermées.
+        </p>
+
+        <div className="mb-3">
+          <span className={ETIQUETTE}>Mot de passe actuel</span>
+          <ChampMotDePasse
+            valeur={actuel}
+            onChange={setActuel}
+            ariaLabel="Mot de passe actuel"
+            autoComplete="current-password"
+          />
+        </div>
+
+        <div className="mb-3">
+          <span className={ETIQUETTE}>Nouveau mot de passe</span>
+          <ChampMotDePasse
+            valeur={nouveau}
+            onChange={setNouveau}
+            ariaLabel="Nouveau mot de passe"
+          />
+        </div>
+
+        <div className="mb-1">
+          <span className={ETIQUETTE}>Confirmer le nouveau mot de passe</span>
+          <ChampMotDePasse
+            valeur={confirmation}
+            onChange={setConfirmation}
+            ariaLabel="Confirmer le nouveau mot de passe"
+          />
+          <span className={AIDE}>
+            {aide || "Huit caractères au minimum. Un e-mail vous préviendra du changement."}
+          </span>
+        </div>
+
+        {erreur && (
+          <p
+            role="alert"
+            className="mt-3 rounded-[11px] bg-red-50 px-[13px] py-2.5 text-[12.5px] font-semibold text-red-600"
+          >
+            ⚠️ {erreur}
+          </p>
+        )}
+      </form>
     </Dialogue>
   );
 }

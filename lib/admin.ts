@@ -1415,6 +1415,27 @@ export async function majStatutAdmin(id: string, actif: boolean): Promise<{ erre
   );
 }
 
+/**
+ * Change le mot de passe du compte administrateur principal — le sien, et
+ * seulement le sien (la route refuse tout autre appelant). L'ancien mot de
+ * passe est exigé et vérifié côté serveur ; aucun lien n'est envoyé par
+ * courriel, mais un avis part après coup.
+ */
+export async function changerMotDePassePrincipal(
+  actuel: string,
+  nouveau: string
+): Promise<{ erreur?: string }> {
+  return appelAdmin(
+    "/api/admin/equipe/mot-de-passe",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ actuel, nouveau }),
+    },
+    "Le changement de mot de passe a échoué."
+  );
+}
+
 export async function supprimerCompteAdmin(id: string): Promise<{ erreur?: string }> {
   return appelAdmin(`/api/admin/equipe/${id}`, { method: "DELETE" }, "La suppression a échoué.");
 }
