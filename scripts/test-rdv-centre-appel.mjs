@@ -16,6 +16,9 @@
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { readFileSync } from "node:fs";
+import { EMAIL_PRINCIPAL, exigerMotDePassePrincipal } from "./identifiants.mjs";
+
+const MDP_PRINCIPAL = exigerMotDePassePrincipal();
 
 const env = readFileSync(new URL("../.env.local", import.meta.url), "utf8");
 const lire = (cle) => env.match(new RegExp(`^${cle}=(.*)$`, "m"))?.[1].trim();
@@ -44,7 +47,7 @@ async function session(email, motDePasse) {
 const anonyme = createClient(URL_SB, ANON, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
-const admin = await session("admin@docteur224.com", "alpha2308");
+const admin = await session(EMAIL_PRINCIPAL, MDP_PRINCIPAL);
 const patient = await session("patient1@test.docteur224.com", "test1234");
 const medecinSession = await session("medecin1@test.docteur224.com", "test1234");
 
@@ -736,7 +739,7 @@ try {
 if (!serveurDebout) {
   console.log(`⏭️  Route de confirmation non testée : aucun serveur sur ${APP}.`);
 } else {
-  const appelAdmin = await sessionCookies("admin@docteur224.com", "alpha2308");
+  const appelAdmin = await sessionCookies(EMAIL_PRINCIPAL, MDP_PRINCIPAL);
   const appelPatient = await sessionCookies("patient1@test.docteur224.com", "test1234");
 
   const { data: dispoRoute } = await admin.rpc("prochaines_dispos_medecins", {

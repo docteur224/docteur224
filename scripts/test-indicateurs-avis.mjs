@@ -9,6 +9,9 @@
  */
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
+import { EMAIL_PRINCIPAL, exigerMotDePassePrincipal } from "./identifiants.mjs";
+
+const MDP_PRINCIPAL = exigerMotDePassePrincipal();
 
 const env = readFileSync(new URL("../.env.local", import.meta.url), "utf8");
 const lire = (cle) => env.match(new RegExp(`^${cle}=(.*)$`, "m"))?.[1].trim();
@@ -31,7 +34,7 @@ async function clientPour(email, mdp) {
 
 const service = createClient(URL_SB, SERVICE, { auth: { persistSession: false } });
 const anon = createClient(URL_SB, ANON, { auth: { persistSession: false } });
-const admin = await clientPour("admin@docteur224.com", "alpha2308");
+const admin = await clientPour(EMAIL_PRINCIPAL, MDP_PRINCIPAL);
 const patient = await clientPour("patient1@test.docteur224.com", "test1234");
 const medecin = await clientPour("medecin2@test.docteur224.com", "test1234");
 

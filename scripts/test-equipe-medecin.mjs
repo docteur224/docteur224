@@ -17,6 +17,9 @@
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { readFileSync } from "node:fs";
+import { EMAIL_PRINCIPAL, exigerMotDePassePrincipal } from "./identifiants.mjs";
+
+const MDP_PRINCIPAL = exigerMotDePassePrincipal();
 
 const env = readFileSync(new URL("../.env.local", import.meta.url), "utf8");
 const lire = (cle) => env.match(new RegExp(`^${cle}=(.*)$`, "m"))?.[1].trim();
@@ -59,7 +62,7 @@ let idAssistant = null;
 
 const medecin = await ouvrirSession("medecin1@test.docteur224.com", "test1234");
 const medecinId = (await medecin.client.auth.getUser()).data.user.id;
-const admin = await ouvrirSession("admin@docteur224.com", "alpha2308");
+const admin = await ouvrirSession(EMAIL_PRINCIPAL, MDP_PRINCIPAL);
 
 /*
  * Point de départ imposé, et non supposé.

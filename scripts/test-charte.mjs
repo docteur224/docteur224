@@ -19,6 +19,9 @@
  */
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
+import { EMAIL_PRINCIPAL, exigerMotDePassePrincipal } from "./identifiants.mjs";
+
+const MDP_PRINCIPAL = exigerMotDePassePrincipal();
 
 const env = readFileSync(new URL("../.env.local", import.meta.url), "utf8");
 const lire = (cle) => env.match(new RegExp(`^${cle}=(.*)$`, "m"))?.[1].trim();
@@ -42,7 +45,7 @@ const TABLE = "preferences_affichage";
 const patient = await clientPour("patient1@test.docteur224.com");
 const autre = await clientPour("patient2@test.docteur224.com");
 const medecin = await clientPour("medecin1@test.docteur224.com");
-const admin = await clientPour("admin@docteur224.com", "alpha2308");
+const admin = await clientPour(EMAIL_PRINCIPAL, MDP_PRINCIPAL);
 
 try {
   // ---------- écriture et relecture ----------

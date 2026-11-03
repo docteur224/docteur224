@@ -5,6 +5,9 @@
  */
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
+import { EMAIL_PRINCIPAL, exigerMotDePassePrincipal } from "./identifiants.mjs";
+
+const MDP_PRINCIPAL = exigerMotDePassePrincipal();
 
 const env = readFileSync(new URL("../.env.local", import.meta.url), "utf8");
 const lire = (cle) => env.match(new RegExp(`^${cle}=(.*)$`, "m"))?.[1].trim();
@@ -109,7 +112,7 @@ let medecinId = null;
 
 // ---------- 6. L'admin valide le médecin en attente + journal d'audit ----------
 {
-  const cAdm = await connecte("admin@docteur224.com", "alpha2308");
+  const cAdm = await connecte(EMAIL_PRINCIPAL, MDP_PRINCIPAL);
   const { data: enAttente } = await cAdm.from("medecins").select("id").eq("statut", "en_attente").limit(1);
   const cible = enAttente?.[0]?.id;
   const { error: e1 } = await cAdm.from("medecins").update({ statut: "valide" }).eq("id", cible);

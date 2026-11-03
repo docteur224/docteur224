@@ -11,15 +11,16 @@
  * fichier : quoi qu'il arrive, la clé service_role le restaure.
  *
  * Prérequis : `npx next build && npx next start -p 3987`.
- * Usage : MDP_PRINCIPAL=… node scripts/test-mot-de-passe-principal.mjs
+ * Usage : node scripts/test-mot-de-passe-principal.mjs
  *
- * Le mot de passe du compte principal n'est PAS écrit ici : il arrive par la
- * variable d'environnement `MDP_PRINCIPAL`, ou par la clé du même nom dans
- * `.env.local`. Un secret dans un fichier suivi par Git est un secret publié.
+ * Le mot de passe du compte principal n'est PAS écrit ici : il arrive de
+ * `scripts/identifiants.mjs` (variable `MDP_PRINCIPAL` ou `.env.local`). Un
+ * secret dans un fichier suivi par Git est un secret publié.
  */
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { readFileSync } from "node:fs";
+import { EMAIL_PRINCIPAL, exigerMotDePassePrincipal } from "./identifiants.mjs";
 
 const env = readFileSync(new URL("../.env.local", import.meta.url), "utf8");
 const lire = (cle) => env.match(new RegExp(`^${cle}=(.*)$`, "m"))?.[1].trim();
@@ -37,16 +38,7 @@ const test = (nom, ok, detail) => {
   console.log(`${ok ? "✅" : "❌"} ${nom}${detail ? ` — ${detail}` : ""}`);
 };
 
-const EMAIL_PRINCIPAL = process.env.EMAIL_PRINCIPAL ?? lire("EMAIL_PRINCIPAL") ?? "admin@docteur224.com";
-const MDP_ORIGINE = process.env.MDP_PRINCIPAL ?? lire("MDP_PRINCIPAL");
-if (!MDP_ORIGINE) {
-  console.error(
-    "Mot de passe du compte principal absent : passez MDP_PRINCIPAL=… en variable\n" +
-      "d'environnement, ou ajoutez la ligne MDP_PRINCIPAL=… dans .env.local (pas d'espaces\n" +
-      "autour du =). Rien n'a été touché."
-  );
-  process.exit(1);
-}
+const MDP_ORIGINE = exigerMotDePassePrincipal();
 const MDP_TEMPORAIRE = `Temporaire-${Date.now()}`;
 const CHEMIN = "/api/admin/equipe/mot-de-passe";
 

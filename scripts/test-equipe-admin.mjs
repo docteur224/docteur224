@@ -13,6 +13,9 @@
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { readFileSync } from "node:fs";
+import { EMAIL_PRINCIPAL, exigerMotDePassePrincipal } from "./identifiants.mjs";
+
+const MDP_PRINCIPAL = exigerMotDePassePrincipal();
 
 const env = readFileSync(new URL("../.env.local", import.meta.url), "utf8");
 const lire = (cle) => env.match(new RegExp(`^${cle}=(.*)$`, "m"))?.[1].trim();
@@ -60,7 +63,7 @@ const MDP_NOUVEAU = "equipe1234";
 const emailNouveau = `moderateur.test.${Date.now()}@docteur224.com`;
 let idNouveau = null;
 
-const principal = await ouvrirSession("admin@docteur224.com", "alpha2308");
+const principal = await ouvrirSession(EMAIL_PRINCIPAL, MDP_PRINCIPAL);
 
 // Combien d'administrateurs AVANT le scénario : la plateforme en compte
 // autant que l'exploitant en a ouverts, un chiffre écrit en dur ici serait

@@ -19,6 +19,9 @@ import { mkdirSync, writeFileSync, readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
 import path from "node:path";
 import os from "node:os";
+import { EMAIL_PRINCIPAL, exigerMotDePassePrincipal } from "./identifiants.mjs";
+
+const MDP_PRINCIPAL = exigerMotDePassePrincipal();
 
 const CHROME = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 const APP = process.env.APP_URL ?? "http://localhost:3987";
@@ -40,7 +43,7 @@ const ROLES = [
   { nom: "assistant", email: "assistant1@test.docteur224.com", mdp: "test1234", porte: "/connexion", espace: "/espace-assistant" },
   { nom: "établissement", email: "etab.hopital-donka@test.docteur224.com", mdp: "test1234", porte: "/connexion", espace: "/espace-etablissement" },
   // Même porte et même convention de mot de passe que `revue-pages.mjs`.
-  { nom: "administrateur", email: "admin@docteur224.com", mdp: process.env.ADMIN_MDP ?? "alpha2308", porte: "/espace-admin/connexion", espace: "/espace-admin" },
+  { nom: "administrateur", email: EMAIL_PRINCIPAL, mdp: MDP_PRINCIPAL, porte: "/espace-admin/connexion", espace: "/espace-admin" },
 ];
 
 const ICI = path.join(os.tmpdir(), "docteur224-verif-charte-espaces");

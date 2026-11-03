@@ -16,6 +16,9 @@
 import { createClient } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { readFileSync } from "node:fs";
+import { EMAIL_PRINCIPAL, exigerMotDePassePrincipal } from "./identifiants.mjs";
+
+const MDP_PRINCIPAL = exigerMotDePassePrincipal();
 
 const env = readFileSync(new URL("../.env.local", import.meta.url), "utf8");
 const lire = (cle) => env.match(new RegExp(`^${cle}=(.*)$`, "m"))?.[1].trim();
@@ -58,7 +61,7 @@ const COMPTES = {
   medecin: { email: "medecin1@test.docteur224.com", mdp: "test1234" },
   assistant: { email: "assistant1@test.docteur224.com", mdp: "test1234" },
   etablissement: { email: "etab.clinique-ambroise@test.docteur224.com", mdp: "test1234" },
-  admin: { email: "admin@docteur224.com", mdp: "alpha2308" },
+  admin: { email: EMAIL_PRINCIPAL, mdp: MDP_PRINCIPAL },
 };
 
 /* ---------- 1. Le mot de passe se change, quel que soit le rôle ---------- */

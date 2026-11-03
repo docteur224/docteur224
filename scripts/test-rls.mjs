@@ -5,6 +5,9 @@
  */
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
+import { EMAIL_PRINCIPAL, exigerMotDePassePrincipal } from "./identifiants.mjs";
+
+const MDP_PRINCIPAL = exigerMotDePassePrincipal();
 
 const env = readFileSync(new URL("../.env.local", import.meta.url), "utf8");
 const lire = (cle) => env.match(new RegExp(`^${cle}=(.*)$`, "m"))?.[1].trim();
@@ -29,7 +32,7 @@ const patient = await clientPour("patient1@test.docteur224.com");
 const patient2 = await clientPour("patient2@test.docteur224.com");
 const medecin = await clientPour("medecin1@test.docteur224.com");
 const assistant1 = await clientPour("assistant1@test.docteur224.com"); // agenda + créer RDV seulement
-const admin = await clientPour("admin@docteur224.com", "alpha2308");
+const admin = await clientPour(EMAIL_PRINCIPAL, MDP_PRINCIPAL);
 
 // 1. Un patient ne peut PAS lire documents_validation
 {

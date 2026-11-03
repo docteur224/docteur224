@@ -5,6 +5,9 @@
  */
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "node:fs";
+import { EMAIL_PRINCIPAL, exigerMotDePassePrincipal } from "./identifiants.mjs";
+
+const MDP_PRINCIPAL = exigerMotDePassePrincipal();
 
 const env = readFileSync(new URL("../.env.local", import.meta.url), "utf8");
 const lire = (cle) => env.match(new RegExp(`^${cle}=(.*)$`, "m"))?.[1].trim();
@@ -78,7 +81,7 @@ await inserer("tarifs_plateforme", [
 // ---------- Admin ----------
 // Le compte est créé, son identifiant ne sert à rien ensuite : rien dans ce
 // jeu d'essai n'est rattaché à l'administrateur.
-await creerCompte("admin@docteur224.com", "alpha2308", {
+await creerCompte(EMAIL_PRINCIPAL, MDP_PRINCIPAL, {
   role: "admin", nom: "Administrateur", prenom: "Docteur224", telephone: "+224620000001",
   // Le catalogue fermé de la migration 0043 : « support » n'en fait plus
   // partie, et la base refuse désormais une clé qu'elle ne connaît pas.
@@ -288,7 +291,7 @@ await inserer("avis", [
 
 console.log("✅ Seed terminé.");
 console.log("Comptes créés (mot de passe test1234 sauf admin) :");
-console.log("  admin@docteur224.com / alpha2308");
+console.log(`  ${EMAIL_PRINCIPAL} / le mot de passe de MDP_PRINCIPAL`);
 for (let i = 1; i <= 8; i++) console.log(`  medecin${i}@test.docteur224.com`);
 for (let i = 1; i <= 5; i++) console.log(`  patient${i}@test.docteur224.com`);
 console.log("  assistant1@test.docteur224.com, assistant2@test.docteur224.com");

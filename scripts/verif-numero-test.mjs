@@ -18,6 +18,9 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { createClient } from "@supabase/supabase-js";
+import { EMAIL_PRINCIPAL, exigerMotDePassePrincipal } from "./identifiants.mjs";
+
+const MDP_PRINCIPAL = exigerMotDePassePrincipal();
 
 const CHROME = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
 const APP = process.env.APP_URL ?? "http://localhost:3997";
@@ -183,7 +186,7 @@ async function main() {
     await a.taille(1280, 900, false);
     await a.goto(`${APP}/espace-admin/connexion`);
     await remplirVisible(a, 'input[type="email"]', "admin@docteur224.com");
-    await remplirVisible(a, 'input[type="password"]', "alpha2308");
+    await remplirVisible(a, 'input[type="password"]', MDP_PRINCIPAL);
     await a.cliquer(bouton(/Accéder à la console/));
     check("admin connecté", await a.waitFor(`location.pathname.startsWith('/espace-admin') && !location.pathname.includes('connexion')`, 25000));
     a = await ongletDans(cdp, ctxAdmin);
