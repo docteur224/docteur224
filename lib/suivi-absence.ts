@@ -41,8 +41,13 @@ export const APPARENCE_NIVEAU: Record<
     icone: "horloge",
   },
   a_risque: {
-    libelle: "À risque",
-    court: "À risque",
+    // Une tournure factuelle plutôt qu'un verdict : on décrit ce qui s'est
+    // passé (des absences qui se répètent), on ne qualifie pas la personne.
+    // « court » est la forme brève, pour les endroits où le libellé suit déjà
+    // un décompte (« 3 absences · Répétées ») et où « Absences répétées »
+    // ferait écho.
+    libelle: "Absences répétées",
+    court: "Répétées",
     classe: "bg-orange-soft text-orange",
     icone: "alerte",
   },

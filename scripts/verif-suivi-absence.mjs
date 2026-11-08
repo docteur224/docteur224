@@ -430,8 +430,8 @@ async function main() {
       )
     );
     check(
-      "[menu] les indicateurs annoncent au moins un patient à risque",
-      await page.eval(`/risque/i.test(document.querySelector('main')?.textContent ?? '')`)
+      "[menu] le niveau haut « Absences répétées » est affiché",
+      await page.eval(`/absences répétées/i.test(document.querySelector('main')?.textContent ?? '')`)
     );
     check("[1280] pas de défilement horizontal", !(await page.eval(DEBORDE)));
     await page.shot("menu-1280");

@@ -66,7 +66,7 @@ export default function PastilleAbsence({
       <span>{signal.absences}</span>
       {!compact && (
         <span className="truncate font-bold">
-          {signal.absences > 1 ? "absences" : "absence"} · {apparence.libelle}
+          {signal.absences > 1 ? "absences" : "absence"} · {apparence.court}
         </span>
       )}
     </Link>

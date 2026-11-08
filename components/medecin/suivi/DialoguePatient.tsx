@@ -66,7 +66,7 @@ export default function DialoguePatient({
           ? "Rappel de ponctualité"
           : vue === "clemence"
             ? "Remettre le compteur à zéro"
-            : `${apparence.libelle} · ${ligne.absences} absence${ligne.absences > 1 ? "s" : ""} sur ${ligne.termines} rendez-vous`
+            : `${apparence.court} · ${ligne.absences} absence${ligne.absences > 1 ? "s" : ""} sur ${ligne.termines} rendez-vous`
       }
       icone={<Icone nom={apparence.icone} taille={18} />}
       onFermer={vue === "detail" ? onFermer : () => setVue("detail")}

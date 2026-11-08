@@ -43,7 +43,7 @@ import type { NiveauAbsence } from "@/lib/suivi-absence";
 const NIVEAUX_FILTRE: { cle: "tous" | NiveauAbsence; libelle: string }[] = [
   { cle: "tous", libelle: "Tous" },
   { cle: "a_surveiller", libelle: "À surveiller" },
-  { cle: "a_risque", libelle: "À risque" },
+  { cle: "a_risque", libelle: "Absences répétées" },
 ];
 
 const PERIODES: { mois: number | null; libelle: string }[] = [

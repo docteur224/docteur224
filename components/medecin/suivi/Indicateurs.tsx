@@ -84,7 +84,7 @@ export default function Indicateurs({
         valeur={`${parNiveau.a_surveiller}`}
         libelle="À surveiller"
         teinte="text-amber"
-        pied={`${parNiveau.a_risque} à risque`}
+        pied={`${parNiveau.a_risque} aux absences répétées`}
       />
       {perte !== null ? (
         <Tuile
