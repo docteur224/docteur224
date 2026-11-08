@@ -13,8 +13,9 @@ import BarreLaterale from "@/components/site/BarreLaterale";
 /**
  * Coquille de l'espace médecin — reproduit la structure .dash / .side / .snav
  * de la maquette web. Menu conforme à la spec C.4 : Tableau de bord · Mon
- * agenda · Mes patients · Mes disponibilités · Avis et notes · Statistiques ·
- * Mes assistant(e)s · Mon abonnement · Mon profil · Déconnexion.
+ * agenda · Mes patients · Suivi d'absence · Mes disponibilités · Avis et
+ * notes · Statistiques · Mes assistant(e)s · Mon abonnement · Mon profil ·
+ * Déconnexion.
  *
  * L'espace est partagé avec les assistant(e)s, qui y travaillent sous les
  * permissions accordées par leur médecin. Trois écrans ne leur reviennent
@@ -28,6 +29,9 @@ const LIENS = [
   { href: "/espace-medecin", icone: "📊", label: "Tableau de bord" },
   { href: "/espace-medecin/agenda", icone: "📅", label: "Mon agenda" },
   { href: "/espace-medecin/patients", icone: "👥", label: "Mes patients" },
+  // Ouvert aux assistant(e)s : c'est l'accueil qui décroche le téléphone, et
+  // un signal que le secrétariat ne voit pas arrive toujours trop tard.
+  { href: "/espace-medecin/suivi-absence", icone: "📉", label: "Suivi d’absence" },
   { href: "/espace-medecin/correspondance", icone: "📨", label: "Correspondance" },
   { href: "/espace-medecin/messages", icone: "💬", label: "Messages" },
   { href: "/espace-medecin/disponibilites", icone: "🕐", label: "Mes disponibilités" },

@@ -24,6 +24,12 @@ const ENTREES = [
   },
   { href: "/espace-medecin/statistiques", icone: "📈", titre: "Statistiques", sous: "Performances et avis" },
   {
+    href: "/espace-medecin/suivi-absence",
+    icone: "📉",
+    titre: "Suivi d’absence",
+    sous: "Rendez-vous non honorés et rappels",
+  },
+  {
     href: "/espace-medecin/equipe",
     icone: "🧑‍💼",
     titre: "Mes assistant(e)s",

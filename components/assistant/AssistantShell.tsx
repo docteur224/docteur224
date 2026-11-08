@@ -21,6 +21,8 @@ const LIENS = [
   { href: "/espace-assistant/rendez-vous", icone: "📅", label: "Rendez-vous" },
   { href: "/espace-assistant/creneaux", icone: "🕐", label: "Créneaux & dispos" },
   { href: "/espace-assistant/patients", icone: "👥", label: "Patients" },
+  // Le même écran que côté médecin, avec les seuils en lecture seule.
+  { href: "/espace-assistant/suivi-absence", icone: "📉", label: "Suivi d’absence" },
   { href: "/espace-assistant/messages", icone: "💬", label: "Messagerie" },
   { href: "/espace-assistant/compte", icone: "👤", label: "Mes permissions" },
   { href: "/espace-assistant/mon-compte", icone: "🔐", label: "Mon compte" },

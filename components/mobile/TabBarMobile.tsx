@@ -73,6 +73,7 @@ const ONGLETS: Record<string, Onglet[]> = {
         "/espace-medecin/correspondance",
         "/espace-medecin/disponibilites",
         "/espace-medecin/statistiques",
+        "/espace-medecin/suivi-absence",
         "/espace-medecin/equipe",
         "/espace-medecin/abonnement",
         /*
@@ -103,7 +104,11 @@ const ONGLETS: Record<string, Onglet[]> = {
       href: "/espace-assistant/compte",
       icone: "utilisateur",
       label: "Compte",
-      prefixes: ["/espace-assistant/compte", "/espace-assistant/creneaux"],
+      prefixes: [
+        "/espace-assistant/compte",
+        "/espace-assistant/creneaux",
+        "/espace-assistant/suivi-absence",
+      ],
     },
   ],
   etablissement: [

@@ -234,7 +234,11 @@ const PUBLIQUES_VOULUES = new Set([
   "medecin_a_rdv_avec_patient", "medecin_suit_beneficiaire",
 ]);
 
-const GARDES = /auth\.uid\(\)|est_admin|a_permission_admin|a_une_permission_admin|assistant_a_permission|compte_actif|role_courant|medecin_de_assistant/;
+// `suivi_absence_medecin()` résout l'appelant (médecin lui-même, ou celui de
+// l'assistant) et renvoie null pour tout autre : les fonctions du suivi
+// d'absence qui l'appellent et sortent sur null sont gardées par elle, comme
+// d'autres le sont par `medecin_de_assistant`.
+const GARDES = /auth\.uid\(\)|est_admin|a_permission_admin|a_une_permission_admin|assistant_a_permission|compte_actif|role_courant|medecin_de_assistant|suivi_absence_medecin/;
 
 const exposees = fonctions.filter(
   (f) => /\banon\b|PUBLIC/.test(f.grants)

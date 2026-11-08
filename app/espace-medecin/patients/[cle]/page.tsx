@@ -20,6 +20,7 @@ import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import Icone from "@/components/site/Icone";
 import Toast, { useToast } from "@/components/site/Toast";
 import { lirePatientCle, useContextePro, useDossierPatient } from "@/lib/pro";
+import { useSignauxAbsence } from "@/lib/suivi-absence-donnees";
 import PaletteCommandes, { type ActionPalette } from "@/components/medecin/PaletteCommandes";
 import { numeroComposable } from "@/lib/rdv-utils";
 
@@ -77,6 +78,9 @@ function FichePatient({ cle }: { cle: string }) {
     chargementRdvs,
     recharger: rechargerDossier,
   } = useDossierPatient(cle, medecinId ?? undefined);
+  /* Les patients signalés du praticien : un seul appel, et l'absence
+     d'entrée pour cette clé vaut « aucun signal ». */
+  const { signaux } = useSignauxAbsence(medecinId ?? undefined);
   const { avis, annoncer, signalerEchec } = useToast();
   const recherche = useSearchParams();
 
@@ -287,6 +291,7 @@ function FichePatient({ cle }: { cle: string }) {
                     chargement={chargement}
                     cle={cle}
                     modifiable={role === "medecin"}
+                    signal={signaux.get(cle)}
                     onEnregistre={(m) => {
                       rechargerDossier();
                       annoncer(m);

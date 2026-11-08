@@ -7,16 +7,33 @@ import { formatNote } from "@/lib/format";
 import { majStatutRdv, useAgenda, useContextePro } from "@/lib/pro";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import InvitationsEtablissement from "@/components/medecin/InvitationsEtablissement";
+import PastilleAbsence from "@/components/medecin/PastilleAbsence";
+import { useRdvMensuels, useSignauxAbsence } from "@/lib/suivi-absence-donnees";
+import { formatPourcent, tauxNoShowMois } from "@/lib/suivi-absence";
 
 /*
  * Tableau de bord médecin — reproduit l'écran « medecin » de la maquette web :
  * salutation, 4 cartes de statistiques, demandes à confirmer, agenda du jour.
  * Les demandes sont les vrais rendez-vous « en_attente » ; confirmer/refuser
  * écrit le nouveau statut dans la table `rendez_vous`.
+ *
+ * Deux ajouts du suivi d'absence (migration 0085) :
+ *
+ *   • le « Taux de présence » n'est plus écrit en dur (96 %, hérité de la
+ *     maquette) : il vient du mois en cours, et c'est l'autre face du taux de
+ *     no-show du menu Suivi d'absence — présence = 100 % − no-show, un seul
+ *     calcul pour les deux écrans ;
+ *
+ *   • une demande à confirmer dont le demandeur a déjà manqué des rendez-vous
+ *     porte une pastille. Elle INFORME : les boutons confirmer et refuser
+ *     restent exactement ce qu'ils étaient, et rien n'est préféré à la place
+ *     du praticien.
  */
 export default function TableauDeBordMedecin() {
   const { medecin, utilisateur } = useContextePro();
   const { creneauxJour, rdvs, recharger } = useAgenda(medecin?.id);
+  const { signaux } = useSignauxAbsence(medecin?.id);
+  const { mois } = useRdvMensuels(medecin?.id, 2);
 
   const medecinConnecte = medecin ?? {
     civilite: "Dr",
@@ -33,7 +50,18 @@ export default function TableauDeBordMedecin() {
       heure: r.heure,
       patient: r.beneficiaire,
       detail: r.motif || "Consultation",
+      /* La clé de dossier est déjà portée par le rendez-vous d'agenda : le
+         signal n'a donc rien à aller chercher patient par patient. */
+      cle: r.cle,
     }));
+
+  /*
+   * Le taux de présence du mois en cours. « — » tant qu'aucun rendez-vous
+   * n'est terminé ce mois-ci : annoncer « 100 % » le 1er du mois serait un
+   * compliment que personne n'a mérité, et « 0 % » une alarme fausse.
+   */
+  const noShowDuMois = tauxNoShowMois(mois[mois.length - 1]);
+  const presence = noShowDuMois === null ? "—" : formatPourcent(1 - noShowDuMois);
 
   async function traiterDemande(id: string, decision: "confirme" | "annule") {
     await majStatutRdv(id, decision);
@@ -64,10 +92,10 @@ export default function TableauDeBordMedecin() {
             <b>{demandes.length}</b>
             <small>À confirmer</small>
           </div>
-          <div className="sc b3">
-            <b>96%</b>
+          <Link href="/espace-medecin/suivi-absence" className="sc b3">
+            <b>{presence}</b>
             <small>Taux de présence</small>
-          </div>
+          </Link>
         </div>
         <div className="pad" style={{ paddingTop: 18 }}>
           {/* Une invitation de rattachement attend une réponse : elle passe
@@ -83,6 +111,12 @@ export default function TableauDeBordMedecin() {
               <div className="who">
                 <b>{demande.patient}</b>
                 <small>{demande.detail}</small>
+                <PastilleAbsence
+                  signal={signaux.get(demande.cle)}
+                  cle={demande.cle}
+                  nom={demande.patient}
+                  compact
+                />
               </div>
               <div className="mini">
                 <button
@@ -182,13 +216,20 @@ export default function TableauDeBordMedecin() {
           </b>
           <small className="text-xs font-semibold text-muted">À confirmer</small>
         </div>
-        <div className="rounded-2xl border border-line bg-white p-[18px]">
+        {/* Cliquable : la question qui suit « combien de présence ? » est
+            « qui manque, et pourquoi ? », et elle se traite dans le menu. */}
+        <Link
+          href="/espace-medecin/suivi-absence"
+          className="rounded-2xl border border-line bg-white p-[18px] transition-colors hover:border-teal"
+        >
           <span className="text-lg" aria-hidden>
             ✅
           </span>
-          <b className="mt-2 block text-[26px] font-extrabold tracking-[-0.6px] text-green">96%</b>
+          <b className="mt-2 block text-[26px] font-extrabold tracking-[-0.6px] text-green">
+            {presence}
+          </b>
           <small className="text-xs font-semibold text-muted">Taux de présence</small>
-        </div>
+        </Link>
         <div className="rounded-2xl border border-line bg-white p-[18px]">
           <span className="text-lg" aria-hidden>
             ⭐
@@ -200,7 +241,7 @@ export default function TableauDeBordMedecin() {
         </div>
       </div>
 
-      {/* Demandes à confirmer (données de démonstration) */}
+      {/* Demandes à confirmer — vrais rendez-vous « en_attente » */}
       <div className="mb-[18px] overflow-hidden rounded-2xl border border-line bg-white">
         <div className="flex items-center justify-between border-b border-line px-5 py-4 text-sm font-extrabold">
           Demandes à confirmer
@@ -214,8 +255,15 @@ export default function TableauDeBordMedecin() {
             className="grid grid-cols-[62px_1fr_auto] items-center gap-4 border-b border-line px-5 py-[14px] last:border-b-0"
           >
             <div className="text-sm font-extrabold text-blue">{demande.heure}</div>
-            <div>
-              <b className="block text-[13.5px] font-extrabold">{demande.patient}</b>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <b className="text-[13.5px] font-extrabold">{demande.patient}</b>
+                <PastilleAbsence
+                  signal={signaux.get(demande.cle)}
+                  cle={demande.cle}
+                  nom={demande.patient}
+                />
+              </div>
               <small className="text-xs text-muted">{demande.detail}</small>
             </div>
             <div className="flex gap-2">
