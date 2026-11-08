@@ -77,25 +77,30 @@ export default function DialoguePatient({
         ) : undefined
       }
     >
-      {vue === "detail" && <VueDetail ligne={ligne} />}
-      {vue === "avertir" && (
-        <VueAvertir
-          ligne={ligne}
-          parametres={parametres}
-          nomProfessionnel={nomProfessionnel}
-          onFait={onFait}
-          onErreur={onErreur}
-          onRetour={() => setVue("detail")}
-        />
-      )}
-      {vue === "clemence" && (
-        <VueClemence
-          ligne={ligne}
-          onFait={onFait}
-          onErreur={onErreur}
-          onRetour={() => setVue("detail")}
-        />
-      )}
+      {/* Le corps du Dialogue partagé n'a pas de marge interne (seuls
+          l'en-tête et le pied en ont) : chaque écran pose la sienne, comme
+          DialoguePaiement. Sans elle, le contenu touche les bords. */}
+      <div className="p-4">
+        {vue === "detail" && <VueDetail ligne={ligne} />}
+        {vue === "avertir" && (
+          <VueAvertir
+            ligne={ligne}
+            parametres={parametres}
+            nomProfessionnel={nomProfessionnel}
+            onFait={onFait}
+            onErreur={onErreur}
+            onRetour={() => setVue("detail")}
+          />
+        )}
+        {vue === "clemence" && (
+          <VueClemence
+            ligne={ligne}
+            onFait={onFait}
+            onErreur={onErreur}
+            onRetour={() => setVue("detail")}
+          />
+        )}
+      </div>
     </Dialogue>
   );
 }
@@ -172,12 +177,12 @@ function PiedDetail({
         onClick={onAvertir}
         disabled={!joignable}
         title={joignable ? undefined : "Aucun numéro ni adresse connus pour ce patient"}
-        className={`${BTN_PRIMAIRE} flex-1`}
+        className={`${BTN_PRIMAIRE} flex-1 whitespace-nowrap`}
       >
         <Icone nom="envoyer" taille={15} />
-        Avertir avec tact
+        Avertir
       </button>
-      <button type="button" onClick={onClemence} className={`${BTN_NEUTRE} flex-1`}>
+      <button type="button" onClick={onClemence} className={`${BTN_NEUTRE} flex-1 whitespace-nowrap`}>
         <Icone nom="historique" taille={15} />
         Remettre à zéro
       </button>

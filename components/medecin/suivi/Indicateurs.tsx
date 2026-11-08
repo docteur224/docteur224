@@ -73,14 +73,14 @@ export default function Indicateurs({
         }
       />
       <Tuile
-        icone="🕳️"
+        icone="📅"
         valeur={`${creneauxPerdus}`}
         libelle="Créneaux perdus"
         teinte="text-blue"
         pied={resume ? `Sur ${resume.periodeMois} mois` : undefined}
       />
       <Tuile
-        icone="👁️"
+        icone="🔎"
         valeur={`${parNiveau.a_surveiller}`}
         libelle="À surveiller"
         teinte="text-amber"

@@ -96,6 +96,9 @@ export default function DialogueParametres({
         </div>
       }
     >
+      {/* Le corps du Dialogue partagé n'a pas de marge interne : on pose la
+          nôtre, comme les autres écrans qui l'utilisent. */}
+      <div className="p-4">
       {!modifiable && (
         <p className="mb-4 rounded-xl bg-amber-soft px-3 py-2.5 text-[12px] leading-relaxed text-amber">
           Ces seuils relèvent du compte du médecin. Vous les voyez pour savoir ce que signifient
@@ -217,6 +220,7 @@ export default function DialogueParametres({
         <code>[Prénom]</code> et <code>[professionnel]</code> sont remplacés à l’envoi. Le
         message est relu et modifiable patient par patient avant de partir.
       </p>
+      </div>
     </Dialogue>
   );
 }

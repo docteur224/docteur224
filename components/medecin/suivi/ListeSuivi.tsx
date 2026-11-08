@@ -50,7 +50,14 @@ export function trier(lignes: LigneSuivi[], tri: Tri): LigneSuivi[] {
   });
 }
 
-/** « Averti le 04/11 » ou « Surveillé » — l'état du suivi, en clair. */
+/**
+ * L'état du suivi, en clair.
+ *
+ * « Surveillé » n'est posé que sur un patient RÉELLEMENT signalé : dire
+ * « Surveillé » d'un patient assidu (une absence sous le seuil) serait se
+ * contredire avec le signal « Assidu » affiché à côté. Un patient correct
+ * sur lequel aucun geste n'a été posé n'a rien à suivre : « — ».
+ */
 export function libelleSuivi(l: LigneSuivi): string {
   if (l.avertiLe) {
     const quand = formatDateCourte(l.avertiLe.slice(0, 10));
@@ -58,7 +65,7 @@ export function libelleSuivi(l: LigneSuivi): string {
       ? `Averti le ${quand} (${l.nbAvertissements} fois)`
       : `Averti le ${quand}`;
   }
-  return "Surveillé";
+  return l.niveau === "correct" ? "—" : "Surveillé";
 }
 
 export default function ListeSuivi({
