@@ -6,6 +6,7 @@ import {
   versTelephoneInternational,
 } from "@/lib/telephone";
 import { normaliserTypeEtablissement } from "@/lib/types-etablissement";
+import { adresseIp } from "@/lib/auth-telephone-serveur";
 
 /*
  * Inscription (patient ou professionnel) côté serveur.
@@ -60,6 +61,32 @@ export async function POST(request: Request) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     { auth: { autoRefreshToken: false, persistSession: false } }
   );
+
+  /*
+   * Plafond anti-abus AVANT toute création. Cette route forge un compte Auth
+   * à chaque appel valide, sans session : sans frein, elle sert à inonder la
+   * base. Deux fenêtres, posées en base (`reserver_inscription`, migration
+   * 0086) : 5 créations/heure par IP, 3/jour par numéro. La réponse 429 ne
+   * dit rien du compte visé — un refus de débit, pas un indice.
+   */
+  const telNormalise = versTelephoneInternational(String(telephone ?? "")) || null;
+  const { data: plafond, error: ePlafond } = await admin.rpc("reserver_inscription", {
+    p_ip: adresseIp(request),
+    p_telephone: telNormalise,
+  });
+  // Un hoquet du frein ne doit pas fermer l'inscription : on journalise et on
+  // laisse passer (le reste du parcours — e-mail unique, RLS — tient toujours).
+  if (ePlafond) {
+    console.error("[inscription] plafond indisponible :", ePlafond.message);
+  } else {
+    const frein = (plafond as { o_trop_ip: boolean; o_trop_tel: boolean }[] | null)?.[0];
+    if (frein?.o_trop_ip || frein?.o_trop_tel) {
+      return NextResponse.json(
+        { erreur: "Trop de comptes créés récemment. Réessayez plus tard." },
+        { status: 429 }
+      );
+    }
+  }
 
   const { data, error } = await admin.auth.admin.createUser({
     email,
