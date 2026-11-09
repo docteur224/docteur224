@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { optionsCookieSession } from "@/lib/supabase/cookies";
 
 /*
  * Proxy Next 16 (ex-middleware) : rafraîchit la session Supabase à chaque
@@ -97,6 +98,10 @@ export async function proxy(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      // Drapeaux du cookie (secure, sameSite, httpOnly) — mêmes que les deux
+      // autres fabriques. Ils arrivent fusionnés dans le `options` reçu par
+      // `setAll`, qui les repose sur la réponse. Voir lib/supabase/cookies.ts.
+      cookieOptions: optionsCookieSession(),
       cookies: {
         getAll() {
           return request.cookies.getAll();
