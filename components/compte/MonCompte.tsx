@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import ChangerMotDePasse from "@/components/patient/ChangerMotDePasse";
 import ChangerPin from "@/components/patient/ChangerPin";
+import DeuxFacteurs from "@/components/compte/DeuxFacteurs";
 import CouleursEspace from "@/components/compte/CouleursEspace";
 import CharteSitePublic from "@/components/compte/CharteSitePublic";
 import ExporterMesDonnees from "@/components/patient/ExporterMesDonnees";
@@ -161,15 +162,22 @@ export default function MonCompte({
             ) : (
               <ChangerMotDePasse />
             )}
-            <div className={LIGNE}>
-              <div>
-                <b className="block text-[13.5px] font-bold">
-                  Authentification à deux facteurs (2FA)
-                </b>
-                <small className="text-xs text-muted">Sécuriser la connexion par code SMS</small>
+            {/* 2FA (code d'application) : réservée aux administrateurs pour
+                l'instant. Les autres rôles verront le bloc le jour où il leur
+                sera ouvert. */}
+            {role === "admin" ? (
+              <DeuxFacteurs />
+            ) : (
+              <div className={LIGNE}>
+                <div>
+                  <b className="block text-[13.5px] font-bold">
+                    Authentification à deux facteurs (2FA)
+                  </b>
+                  <small className="text-xs text-muted">Bientôt disponible pour votre espace</small>
+                </div>
+                <span className="text-[11.5px] font-bold text-muted">Bientôt disponible</span>
               </div>
-              <span className="text-[11.5px] font-bold text-muted">Bientôt disponible</span>
-            </div>
+            )}
           </section>
 
           <Abonnement acces={acces} dossier={dossier} role={role} />

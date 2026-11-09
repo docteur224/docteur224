@@ -1,0 +1,90 @@
+import { creerClientNavigateur } from "@/lib/supabase/client";
+
+/*
+ * Deuxième facteur (TOTP) — appels du SDK Supabase depuis le navigateur.
+ *
+ * Supabase Auth GARDE le facteur : on ne stocke aucun secret de notre côté.
+ * Ce module ne fait que transporter, et rendre `{ erreur }` au lieu de lever,
+ * comme `lib/auth.ts`.
+ *
+ * LOT 2FA, pièce 1 — ENRÔLEMENT UNIQUEMENT. Rien ici n'impose la 2FA ni ne
+ * l'exige à la connexion : un administrateur peut l'activer ou la retirer,
+ * c'est tout. L'exigence (niveau AAL2 côté serveur) viendra dans une pièce
+ * suivante, derrière un interrupteur.
+ */
+
+export interface FacteurTotp {
+  id: string;
+  nom: string;
+  creeLe: string;
+}
+
+/** Les facteurs TOTP VÉRIFIÉS (ceux qui protègent réellement la connexion). */
+export async function listerFacteursTotp(): Promise<FacteurTotp[]> {
+  const { data, error } = await creerClientNavigateur().auth.mfa.listFactors();
+  if (error || !data) return [];
+  return (data.totp ?? []).map((f) => ({
+    id: f.id,
+    nom: f.friendly_name || "Application d’authentification",
+    creeLe: f.created_at,
+  }));
+}
+
+export interface EnrolementTotp {
+  factorId: string;
+  /** L'URI otpauth:// à encoder dans le QR, et dont on tire le secret manuel. */
+  uri: string;
+  /** Le secret en clair, pour la saisie à la main si le QR ne peut pas être scanné. */
+  secret: string;
+}
+
+/**
+ * Ouvre un enrôlement : rend le secret et l'URI à présenter.
+ *
+ * Un enrôlement laissé en plan (QR affiché puis abandonné) crée un facteur
+ * NON VÉRIFIÉ qui traîne ; on nettoie donc ces brouillons avant d'en ouvrir un
+ * neuf, pour qu'un second clic sur « Activer » ne bute pas sur un doublon.
+ */
+export async function commencerEnrolementTotp(): Promise<{ enrolement?: EnrolementTotp; erreur?: string }> {
+  const supabase = creerClientNavigateur();
+
+  const { data: liste } = await supabase.auth.mfa.listFactors();
+  for (const f of liste?.all ?? []) {
+    if (f.factor_type === "totp" && f.status !== "verified") {
+      await supabase.auth.mfa.unenroll({ factorId: f.id });
+    }
+  }
+
+  const { data, error } = await supabase.auth.mfa.enroll({
+    factorType: "totp",
+    friendlyName: "Application d’authentification",
+  });
+  if (error || !data) return { erreur: error?.message ?? "Impossible d’ouvrir l’enrôlement." };
+  return { enrolement: { factorId: data.id, uri: data.totp.uri, secret: data.totp.secret } };
+}
+
+/**
+ * Confirme l'enrôlement par un premier code. La réussite VÉRIFIE le facteur et
+ * monte la session au niveau AAL2.
+ */
+export async function confirmerEnrolementTotp(factorId: string, code: string): Promise<{ erreur?: string }> {
+  const supabase = creerClientNavigateur();
+  const { data: defi, error: eDefi } = await supabase.auth.mfa.challenge({ factorId });
+  if (eDefi || !defi) return { erreur: eDefi?.message ?? "Vérification impossible. Réessayez." };
+  const { error } = await supabase.auth.mfa.verify({ factorId, challengeId: defi.id, code });
+  if (error) {
+    return {
+      erreur: /invalid|incorrect|expired/i.test(error.message)
+        ? "Code incorrect. Vérifiez l’heure de votre téléphone et réessayez."
+        : error.message,
+    };
+  }
+  return {};
+}
+
+/** Retire un facteur (désactive la 2FA pour ce compte). */
+export async function retirerFacteurTotp(factorId: string): Promise<{ erreur?: string }> {
+  const { error } = await creerClientNavigateur().auth.mfa.unenroll({ factorId });
+  if (error) return { erreur: error.message };
+  return {};
+}
