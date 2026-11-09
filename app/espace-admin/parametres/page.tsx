@@ -259,6 +259,17 @@ export default function ParametresAdmin() {
             onEnregistrer={enregistrerMaintenance}
           />
         )}
+        <div className="setrow">
+          <div>
+            <b>2FA administrateurs</b>
+            <small>Code d’application exigé à la connexion</small>
+          </div>
+          <Interrupteur
+            actif={reglages.mfaAdminObligatoire}
+            onChange={(v) => basculer("mfaAdminObligatoire", v)}
+            label="2FA administrateurs obligatoire"
+          />
+        </div>
         <p className="muted" style={{ fontSize: 11, marginTop: 8 }}>
           Chaque bascule de réglage est tracée dans le journal d&apos;audit.
         </p>
@@ -309,6 +320,19 @@ export default function ParametresAdmin() {
             onEnregistrer={enregistrerMaintenance}
           />
         )}
+        <div className="flex items-center justify-between gap-[14px] border-b border-line py-[15px]">
+          <div>
+            <b className="block text-[13.5px] font-bold">2FA administrateurs obligatoire</b>
+            <small className="text-xs text-muted">
+              Exige un code d’application à la connexion des administrateurs
+            </small>
+          </div>
+          <Interrupteur
+            actif={reglages.mfaAdminObligatoire}
+            onChange={(v) => basculer("mfaAdminObligatoire", v)}
+            label="2FA administrateurs obligatoire"
+          />
+        </div>
         <div className="flex items-center justify-between gap-[14px] py-[15px]">
           <div>
             <b className="block text-[13.5px] font-bold">Langue par défaut</b>

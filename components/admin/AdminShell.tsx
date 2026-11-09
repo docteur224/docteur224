@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
 import { ESPACE_PAR_ROLE, type Role } from "@/lib/auth";
 import { useProfilConnecte } from "@/lib/patient";
@@ -14,6 +14,7 @@ import {
 } from "@/lib/permissions-admin";
 import CompteSuspendu from "@/components/compte/CompteSuspendu";
 import BarreLaterale from "@/components/site/BarreLaterale";
+import { etatMfaAdmin } from "@/lib/mfa";
 
 /**
  * Coquille de l'espace administrateur — reproduit la structure .dash / .side /
@@ -61,6 +62,7 @@ export default function AdminShell({
   permission?: Permission;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { profil, chargement } = useProfilConnecte();
   const { droits, chargement: chargementDroits } = useDroitsAdmin();
 
@@ -72,11 +74,31 @@ export default function AdminShell({
     if (chargement) return;
     // Sans session : la porte dédiée, pas /connexion — cet écran-là ne propose
     // aucun onglet « Admin » et ne dit donc rien à un administrateur égaré.
-    if (!profil) router.replace("/espace-admin/connexion");
-    else if (profil.role !== "admin") {
-      router.replace(ESPACE_PAR_ROLE[profil.role as Role] ?? "/espace-admin/connexion");
+    if (!profil) {
+      router.replace("/espace-admin/connexion");
+      return;
     }
-  }, [chargement, profil, router]);
+    if (profil.role !== "admin") {
+      router.replace(ESPACE_PAR_ROLE[profil.role as Role] ?? "/espace-admin/connexion");
+      return;
+    }
+    // Deuxième facteur — miroir de la garde serveur `verifierAdmin` : on guide
+    // l'administrateur vers le code (session restée au mot de passe) ou vers
+    // l'enrôlement (interrupteur « 2FA obligatoire » et aucun facteur). La
+    // page « Mon compte » reste atteignable, sinon on ne pourrait pas s'y
+    // enrôler.
+    let actif = true;
+    etatMfaAdmin().then((e) => {
+      if (!actif) return;
+      if (e.doitVerifier) router.replace("/espace-admin/connexion");
+      else if (e.doitEnroler && pathname !== "/espace-admin/mon-compte") {
+        router.replace("/espace-admin/mon-compte");
+      }
+    });
+    return () => {
+      actif = false;
+    };
+  }, [chargement, profil, router, pathname]);
 
   // Tant que la redirection n'a pas eu lieu, ne pas monter les écrans : ils
   // interrogeraient les tables d'administration pour n'afficher que du vide.

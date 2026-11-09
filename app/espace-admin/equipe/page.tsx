@@ -11,6 +11,7 @@ import {
   creerCompteAdmin,
   majPermissionsAdmin,
   majStatutAdmin,
+  reinitialiser2faAdmin,
   supprimerCompteAdmin,
   useDroitsAdmin,
   useEquipeAdmin,
@@ -354,6 +355,20 @@ export default function EquipeAdmin() {
             const ok = terminer(res, `Le compte de ${actionsSur.nom} a été supprimé.`);
             if (ok) setActionsSur(null);
           }}
+          // Réinitialiser la 2FA d'un membre : réservé au compte principal (la
+          // route le revérifie). Absent sinon : l'action ne s'affiche pas.
+          onReset2fa={
+            admins.find((a) => a.id === droits?.id)?.principal
+              ? async () => {
+                  const res = await reinitialiser2faAdmin(actionsSur.id);
+                  const ok = terminer(
+                    res,
+                    `La vérification en deux étapes de ${actionsSur.nom} a été réinitialisée.`
+                  );
+                  if (ok) setActionsSur(null);
+                }
+              : undefined
+          }
         />
       )}
 
@@ -529,6 +544,7 @@ function DialogueActions({
   onMotDePasse,
   onStatut,
   onSupprimer,
+  onReset2fa,
 }: {
   admin: AdminEquipe;
   soi: boolean;
@@ -537,6 +553,8 @@ function DialogueActions({
   onMotDePasse: () => void;
   onStatut: () => Promise<void>;
   onSupprimer: () => Promise<void>;
+  /** Présent seulement si l'appelant est le compte principal. */
+  onReset2fa?: () => Promise<void>;
 }) {
   const [confirme, setConfirme] = useState(false);
   const [enCours, setEnCours] = useState(false);
@@ -607,6 +625,17 @@ function DialogueActions({
             onClick={onMotDePasse}
           >
             <span aria-hidden>🔑</span> Modifier le mot de passe
+          </button>
+        )}
+
+        {onReset2fa && (
+          <button
+            type="button"
+            className={`${action} text-blue`}
+            disabled={!!empeche || enCours}
+            onClick={() => lancer(onReset2fa)}
+          >
+            <span aria-hidden>🔐</span> Réinitialiser la vérification en deux étapes
           </button>
         )}
 
