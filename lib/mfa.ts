@@ -63,12 +63,15 @@ export async function commencerEnrolementTotp(): Promise<{ enrolement?: Enroleme
   return { enrolement: { factorId: data.id, uri: data.totp.uri, secret: data.totp.secret } };
 }
 
-/**
- * Confirme l'enrôlement par un premier code. La réussite VÉRIFIE le facteur et
- * monte la session au niveau AAL2.
- */
-export async function confirmerEnrolementTotp(factorId: string, code: string): Promise<{ erreur?: string }> {
-  const supabase = creerClientNavigateur();
+type ClientNavigateur = ReturnType<typeof creerClientNavigateur>;
+
+/** Défi + vérification d'un facteur par un code à 6 chiffres. Partagé par
+ *  l'enrôlement (confirmation) et la connexion (franchissement). */
+async function defierEtVerifier(
+  supabase: ClientNavigateur,
+  factorId: string,
+  code: string
+): Promise<{ erreur?: string }> {
   const { data: defi, error: eDefi } = await supabase.auth.mfa.challenge({ factorId });
   if (eDefi || !defi) return { erreur: eDefi?.message ?? "Vérification impossible. Réessayez." };
   const { error } = await supabase.auth.mfa.verify({ factorId, challengeId: defi.id, code });
@@ -82,9 +85,46 @@ export async function confirmerEnrolementTotp(factorId: string, code: string): P
   return {};
 }
 
+/**
+ * Confirme l'enrôlement par un premier code. La réussite VÉRIFIE le facteur et
+ * monte la session au niveau AAL2.
+ */
+export async function confirmerEnrolementTotp(factorId: string, code: string): Promise<{ erreur?: string }> {
+  return defierEtVerifier(creerClientNavigateur(), factorId, code);
+}
+
 /** Retire un facteur (désactive la 2FA pour ce compte). */
 export async function retirerFacteurTotp(factorId: string): Promise<{ erreur?: string }> {
   const { error } = await creerClientNavigateur().auth.mfa.unenroll({ factorId });
   if (error) return { erreur: error.message };
   return {};
+}
+
+/**
+ * La session en cours RÉCLAME-t-elle un second facteur ? Vrai quand le compte
+ * a un facteur vérifié (le niveau atteignable est AAL2) mais que la session
+ * n'en est encore qu'au mot de passe (AAL1). C'est ce qui, à la connexion,
+ * retient un administrateur sur l'écran du code au lieu de le laisser entrer.
+ */
+export async function aBesoinDeSecondFacteur(): Promise<boolean> {
+  const { data } = await creerClientNavigateur().auth.mfa.getAuthenticatorAssuranceLevel();
+  return data?.nextLevel === "aal2" && data.currentLevel !== "aal2";
+}
+
+/** Franchit le second facteur à la connexion : monte la session en AAL2. */
+export async function verifierSecondFacteur(code: string): Promise<{ erreur?: string }> {
+  const supabase = creerClientNavigateur();
+  const { data, error } = await supabase.auth.mfa.listFactors();
+  const facteur = data?.totp?.[0];
+  if (error || !facteur) return { erreur: "Aucun second facteur n’est configuré sur ce compte." };
+  return defierEtVerifier(supabase, facteur.id, code);
+}
+
+/**
+ * Abandonne une connexion restée au premier facteur : on referme la session
+ * AAL1 plutôt que de la laisser traîner (un administrateur qui renonce au code
+ * ne doit pas garder une session à moitié ouverte).
+ */
+export async function annulerSecondFacteur(): Promise<void> {
+  await creerClientNavigateur().auth.signOut();
 }

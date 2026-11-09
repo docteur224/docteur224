@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Logo from "@/components/site/Logo";
 import { seConnecter } from "@/lib/auth";
+import { aBesoinDeSecondFacteur, annulerSecondFacteur, verifierSecondFacteur } from "@/lib/mfa";
 
 /*
  * Porte d'entrée de la console d'administration.
@@ -34,6 +35,13 @@ export default function ConnexionAdmin() {
   // Œil du mot de passe : un mot de passe d'administrateur est long, le relire
   // avant de valider évite un échec qui ressemble à un refus de compte.
   const [mdpVisible, setMdpVisible] = useState(false);
+  // Deuxième facteur : affiché seulement si le compte en a un de vérifié. Tant
+  // qu'il n'est pas franchi, on ne navigue pas vers la console.
+  const [etape2fa, setEtape2fa] = useState(false);
+  const [code2fa, setCode2fa] = useState("");
+
+  // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- rechargement voulu après connexion (session fraîche dans les cookies, caches de module remis à zéro)
+  const entrer = () => window.location.assign("/espace-admin");
 
   async function connecter() {
     if (enCours) return;
@@ -60,12 +68,37 @@ export default function ConnexionAdmin() {
       setEspacePropose(res.cible ?? null);
       return;
     }
-    // Navigation complète : la session vient d'être posée dans les cookies,
-    // une navigation client peut devancer sa lecture par le serveur (le proxy
-    // renverrait vers la connexion). Le rechargement garantit la lecture et
-    // repart de zéro pour les caches de module.
-    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- rechargement voulu après connexion (voir ci-dessus)
-    window.location.assign("/espace-admin");
+    // Le mot de passe est bon. Si ce compte a un deuxième facteur, la session
+    // n'est encore qu'au premier niveau : on demande le code AVANT d'entrer.
+    if (await aBesoinDeSecondFacteur()) {
+      setEnCours(false);
+      setCode2fa("");
+      setEtape2fa(true);
+      return;
+    }
+    entrer();
+  }
+
+  async function valider2fa() {
+    if (enCours || code2fa.length !== 6) return;
+    setErreur(null);
+    setEnCours(true);
+    const { erreur: err } = await verifierSecondFacteur(code2fa);
+    if (err) {
+      setEnCours(false);
+      setErreur(err);
+      return;
+    }
+    entrer();
+  }
+
+  async function annuler2fa() {
+    // On referme la session restée au premier facteur et on revient au départ.
+    await annulerSecondFacteur();
+    setEtape2fa(false);
+    setCode2fa("");
+    setMotDePasse("");
+    setErreur(null);
   }
 
   const champ =
@@ -105,7 +138,9 @@ export default function ConnexionAdmin() {
                 <h1 className="text-[19px] font-extrabold leading-tight tracking-[-0.3px]">
                   Console d’administration
                 </h1>
-                <small className="text-[12.5px] text-muted">Accès réservé aux administrateurs</small>
+                <small className="text-[12.5px] text-muted">
+                  {etape2fa ? "Vérification en deux étapes" : "Accès réservé aux administrateurs"}
+                </small>
               </div>
             </div>
 
@@ -129,6 +164,46 @@ export default function ConnexionAdmin() {
               </div>
             )}
 
+            {etape2fa ? (
+              <div>
+                <p className="mb-4 text-[12.5px] leading-relaxed text-muted">
+                  Ce compte est protégé par un deuxième facteur. Saisissez le code à
+                  6&nbsp;chiffres affiché par votre application d’authentification.
+                </p>
+                <label htmlFor="admin-2fa" className={etiquette}>
+                  Code de vérification
+                </label>
+                <input
+                  id="admin-2fa"
+                  className={`${champ} text-center text-[18px] font-bold tracking-[0.4em]`}
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  autoFocus
+                  maxLength={6}
+                  placeholder="______"
+                  value={code2fa}
+                  onChange={(e) => setCode2fa(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                  onKeyDown={(e) => e.key === "Enter" && valider2fa()}
+                />
+                <button
+                  type="button"
+                  onClick={valider2fa}
+                  disabled={enCours || code2fa.length !== 6}
+                  className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-teal px-6 py-[14px] text-[15px] font-bold text-white shadow-[0_10px_22px_-12px_var(--teal)] transition-colors hover:bg-teal-hover disabled:cursor-not-allowed disabled:opacity-60 disabled:shadow-none"
+                >
+                  {enCours ? "Vérification…" : "Vérifier et accéder"}
+                </button>
+                <button
+                  type="button"
+                  onClick={annuler2fa}
+                  disabled={enCours}
+                  className="mt-3 block w-full text-center text-[12.5px] font-bold text-muted hover:text-teal disabled:opacity-50"
+                >
+                  Revenir à la connexion
+                </button>
+              </div>
+            ) : (
+            <>
             <div className="mb-4">
               <label htmlFor="admin-email" className={etiquette}>
                 E-mail
@@ -196,14 +271,18 @@ export default function ConnexionAdmin() {
               <span aria-hidden>🔒</span> Connexion sécurisée — les accès à la console sont
               journalisés.
             </p>
+            </>
+            )}
           </div>
 
-          <div className="border-t border-line px-6 py-4 text-center text-[13px] text-muted sm:px-8">
-            Vous n’êtes pas administrateur ?{" "}
-            <Link href="/connexion" className="font-bold text-teal hover:underline">
-              Connexion habituelle
-            </Link>
-          </div>
+          {!etape2fa && (
+            <div className="border-t border-line px-6 py-4 text-center text-[13px] text-muted sm:px-8">
+              Vous n’êtes pas administrateur ?{" "}
+              <Link href="/connexion" className="font-bold text-teal hover:underline">
+                Connexion habituelle
+              </Link>
+            </div>
+          )}
         </div>
       </div>
     </div>
