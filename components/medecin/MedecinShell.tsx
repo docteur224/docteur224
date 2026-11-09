@@ -112,7 +112,7 @@ export default function MedecinShell({
         sousTitre={medecinConnecte.specialite}
         liens={liens}
       />
-      <main className="with-tabbar min-w-0 overflow-x-clip md:px-[30px] md:py-[26px]">
+      <main className="ui-contenu-page with-tabbar min-w-0 overflow-x-clip md:px-[30px] md:py-[26px]">
         {enParcours ? (
           <p className="py-16 text-center text-[13px] text-muted">Redirection…</p>
         ) : profil?.statut === "suspendu" ? (

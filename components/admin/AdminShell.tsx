@@ -140,7 +140,7 @@ export default function AdminShell({
         sousTitre="Docteur 224"
         liens={liens}
       />
-      <main className="with-tabbar min-w-0 overflow-x-clip md:px-[30px] md:py-[26px]">{contenu}</main>
+      <main className="ui-contenu-page with-tabbar min-w-0 overflow-x-clip md:px-[30px] md:py-[26px]">{contenu}</main>
       <TabBarMobile role="admin" />
     </div>
   );

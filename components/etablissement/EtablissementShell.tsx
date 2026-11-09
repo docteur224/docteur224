@@ -83,7 +83,7 @@ export default function EtablissementShell({ children }: { children: React.React
         sousTitre="Établissement"
         liens={LIENS}
       />
-      <main className="with-tabbar min-w-0 overflow-x-clip md:px-[30px] md:py-[26px]">
+      <main className="ui-contenu-page with-tabbar min-w-0 overflow-x-clip md:px-[30px] md:py-[26px]">
         {enParcours ? (
           <p className="py-16 text-center text-[13px] text-muted">Redirection…</p>
         ) : profil?.statut === "suspendu" ? (

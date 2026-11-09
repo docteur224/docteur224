@@ -464,9 +464,27 @@ body {
   to   { transform: translateX(100%); }
 }
 
-/* ---- Transition de page (components/site/TransitionPage) ------------- */
-.ui-page {
+/* ---- Transition de page (components/site/TransitionPage) -------------
+   L'animation est CIBLÉE sur le contenu principal, jamais sur l'enveloppe
+   entière : la barre latérale des espaces et les barres de navigation
+   (sticky/fixed) restent stables, elles ne glissent plus avec la page.
+
+   • Espaces connectés : le <main> des coquilles porte la classe
+     `ui-contenu-page` → lui seul fait le fondu + remontée. La barre latérale
+     et la TabBar, qui en sont frères, ne bougent pas.
+   • Pages publiques : pas de contenu marqué → fondu doux de l'ensemble, SANS
+     glissement, pour ne pas entraîner la top-nav sticky ni les barres fixes
+     (l'opacité ne crée pas de bloc conteneur, contrairement à translate).
+
+   `:has()` n'est utilisé que pour le cas public ; s'il n'est pas reconnu
+   (très vieux navigateur), la page s'affiche simplement sans transition —
+   fallback propre. L'animation du contenu d'espace, elle, ne dépend pas de
+   `:has()` et reste large. */
+.ui-page .ui-contenu-page {
   animation: ui-page-in var(--dur-base) var(--ease-out);
+}
+.ui-page:not(:has(.ui-contenu-page)) {
+  animation: ui-fade-in var(--dur-base) var(--ease-out);
 }
 
 /* ---- Apparition au scroll (components/site/RevelationAuScroll) -------
@@ -627,6 +645,8 @@ body {
    final est strictement le même. */
 @media (prefers-reduced-motion: reduce) {
   .ui-page,
+  .ui-page .ui-contenu-page,
+  .ui-page:not(:has(.ui-contenu-page)),
   .ui-modal-in,
   .ui-modal-in.ui-modal-sm,
   .ui-dropdown-in,

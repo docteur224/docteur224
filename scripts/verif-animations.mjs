@@ -243,7 +243,12 @@ async function main() {
     await page.goto(`${APP}/`);
     await page.eval(SONDES);
     const perfAccueil = await page.eval("JSON.stringify((({domContentLoadedEventEnd:d, loadEventEnd:l, responseEnd:r}) => ({dcl: Math.round(d), load: Math.round(l), ttfb: Math.round(r)}))(performance.getEntriesByType('navigation')[0]))");
-    check("[web accueil] enveloppe .ui-page animée", (await styleDe(page, ".ui-page", "animation-name")) === "ui-page-in");
+    // L'animation de page est désormais CIBLÉE sur le contenu principal
+    // (classe `ui-contenu-page` des coquilles d'espace), pour laisser la
+    // barre latérale et les barres fixes stables. Les pages PUBLIQUES n'ont
+    // pas de contenu marqué : l'enveloppe `.ui-page` fait alors un simple
+    // fondu (sans glissement, pour ne pas entraîner la top-nav sticky).
+    check("[web accueil] enveloppe .ui-page en fondu (page publique)", (await styleDe(page, ".ui-page", "animation-name")) === "ui-fade-in");
     check("[web accueil] <html> porte ui-reveal-pret", await page.eval("document.documentElement.classList.contains('ui-reveal-pret')"));
     const totalReveal = await page.eval("[...document.querySelectorAll('[data-reveal]')].filter(e => e.offsetParent !== null).length");
     const visiblesAvant = await page.eval("[...document.querySelectorAll('[data-reveal].ui-in')].filter(e => e.offsetParent !== null).length");
