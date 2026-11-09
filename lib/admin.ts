@@ -1445,6 +1445,22 @@ export async function supprimerCompteAdmin(id: string): Promise<{ erreur?: strin
   return appelAdmin(`/api/admin/equipe/${id}`, { method: "DELETE" }, "La suppression a échoué.");
 }
 
+/**
+ * Réinitialise la 2FA d'un administrateur (son téléphone est perdu). Réservé au
+ * compte principal : la route refuse tout autre appelant.
+ */
+export async function reinitialiser2faAdmin(utilisateurId: string): Promise<{ erreur?: string }> {
+  return appelAdmin(
+    "/api/admin/2fa",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ utilisateurId }),
+    },
+    "La réinitialisation de la 2FA a échoué."
+  );
+}
+
 /* ===== Configuration des abonnements (tarifs_plateforme) ===== */
 
 /** Message rendu à l'écran quand la RLS refuse l'écriture sans lever d'erreur. */
