@@ -30,6 +30,48 @@ export function clientServiceRole(): SupabaseClient {
   );
 }
 
+/*
+ * Deuxième facteur (2FA) — ce que lisent les gardes pour exiger un niveau AAL2.
+ *
+ * Le jeton a DÉJÀ été validé par getUser() juste avant qu'on lise son `aal` :
+ * décoder la charge utile sans revérifier la signature est donc sûr ici.
+ */
+function aalDuJeton(token: string | null | undefined): "aal1" | "aal2" {
+  if (!token) return "aal1";
+  try {
+    const charge = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString("utf8"));
+    return charge?.aal === "aal2" ? "aal2" : "aal1";
+  } catch {
+    return "aal1";
+  }
+}
+
+/** Le compte a-t-il un facteur 2FA VÉRIFIÉ ? (API admin, clé de service.) */
+async function aUnFacteurVerifie(admin: SupabaseClient, utilisateurId: string): Promise<boolean> {
+  try {
+    const { data } = await admin.auth.admin.mfa.listFactors({ userId: utilisateurId });
+    return (data?.factors ?? []).some((f) => f.status === "verified");
+  } catch {
+    // Fail-open : une lecture qui échoue ne doit pas verrouiller un
+    // administrateur hors de la console. L'autre règle (interrupteur) tranche.
+    return false;
+  }
+}
+
+/** L'interrupteur « 2FA obligatoire » (migration 0087). Fail-open : absent → non. */
+async function mfaAdminObligatoire(admin: SupabaseClient): Promise<boolean> {
+  try {
+    const { data } = await admin
+      .from("parametres_plateforme")
+      .select("valeur")
+      .eq("cle", "mfa_admin_obligatoire")
+      .maybeSingle();
+    return data?.valeur === true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Rend l'accès, ou la réponse d'erreur à renvoyer telle quelle.
  * Un compte administrateur suspendu n'est plus administrateur — même règle
@@ -62,6 +104,34 @@ export async function verifierAdmin(
     return { refus: NextResponse.json({ erreur: "Réservé aux administrateurs." }, { status: 403 }) };
   }
   const principal = Boolean(appelant.admin_principal);
+
+  /*
+   * Deuxième facteur. Une action d'administration exige une session AAL2 :
+   *   - dès que le compte a un facteur vérifié (indépendant de l'interrupteur) ;
+   *   - et, si l'interrupteur « 2FA obligatoire » est posé, même pour un compte
+   *     qui n'en a pas encore — il doit alors s'enrôler.
+   * Un compte sans facteur, interrupteur éteint, passe comme avant : déployer
+   * cette garde ne change donc rien tant que personne ne s'est enrôlé.
+   */
+  if (aalDuJeton((await session.auth.getSession()).data.session?.access_token) !== "aal2") {
+    if (await aUnFacteurVerifie(admin, auth.user.id)) {
+      return {
+        refus: NextResponse.json(
+          { erreur: "Terminez la vérification en deux étapes pour agir dans la console.", mfa: "requise" },
+          { status: 403 }
+        ),
+      };
+    }
+    if (await mfaAdminObligatoire(admin)) {
+      return {
+        refus: NextResponse.json(
+          { erreur: "Activez la vérification en deux étapes (2FA) pour accéder à la console.", mfa: "enrolement" },
+          { status: 403 }
+        ),
+      };
+    }
+  }
+
   if (permission && !principal && !(appelant.sous_roles_admin ?? []).includes(permission)) {
     return {
       refus: NextResponse.json(

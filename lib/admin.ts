@@ -846,24 +846,27 @@ export interface ReglagesPlateforme {
   inscriptionsOuvertes: boolean;
   paiementEnLigne: boolean;
   modeMaintenance: boolean;
+  mfaAdminObligatoire: boolean;
   /** Message affiché aux patients sur la page de maintenance, vide = texte par défaut. */
   maintenanceMessage: string;
   /** Échéance ISO du compte à rebours, vide = pas de compte à rebours. */
   maintenanceJusqua: string;
 }
 
-type CleBool = "inscriptionsOuvertes" | "paiementEnLigne" | "modeMaintenance";
+type CleBool = "inscriptionsOuvertes" | "paiementEnLigne" | "modeMaintenance" | "mfaAdminObligatoire";
 
 const CLES_REGLAGES: Record<CleBool, string> = {
   inscriptionsOuvertes: "inscriptions_ouvertes",
   paiementEnLigne: "paiement_en_ligne",
   modeMaintenance: "mode_maintenance",
+  mfaAdminObligatoire: "mfa_admin_obligatoire",
 };
 
 const LIBELLES_REGLAGES: Record<CleBool, string> = {
   inscriptionsOuvertes: "Inscriptions médecins ouvertes",
   paiementEnLigne: "Paiement en ligne",
   modeMaintenance: "Mode maintenance",
+  mfaAdminObligatoire: "2FA administrateurs obligatoire",
 };
 
 export function useReglagesPlateforme(): {
@@ -877,6 +880,7 @@ export function useReglagesPlateforme(): {
       inscriptionsOuvertes: true,
       paiementEnLigne: true,
       modeMaintenance: false,
+      mfaAdminObligatoire: false,
       maintenanceMessage: "",
       maintenanceJusqua: "",
     },
@@ -893,6 +897,7 @@ export function useReglagesPlateforme(): {
         inscriptionsOuvertes: map.get("inscriptions_ouvertes")?.valeur ?? true,
         paiementEnLigne: map.get("paiement_en_ligne")?.valeur ?? true,
         modeMaintenance: maintenance?.valeur ?? false,
+        mfaAdminObligatoire: map.get("mfa_admin_obligatoire")?.valeur ?? false,
         maintenanceMessage: maintenance?.message ?? "",
         maintenanceJusqua: maintenance?.jusqua ?? "",
       };

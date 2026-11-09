@@ -128,3 +128,32 @@ export async function verifierSecondFacteur(code: string): Promise<{ erreur?: st
 export async function annulerSecondFacteur(): Promise<void> {
   await creerClientNavigateur().auth.signOut();
 }
+
+export interface EtatMfaAdmin {
+  /** Enrôlé, mais la session n'est encore qu'au mot de passe : il faut le code. */
+  doitVerifier: boolean;
+  /** Pas de facteur, et l'interrupteur « 2FA obligatoire » l'exige : il faut s'enrôler. */
+  doitEnroler: boolean;
+}
+
+/**
+ * Ce que la coquille admin doit faire faire à l'administrateur côté écran —
+ * MIROIR de la garde serveur `verifierAdmin`, pour guider plutôt que laisser
+ * une console sans droits. La sécurité reste côté serveur.
+ */
+export async function etatMfaAdmin(): Promise<EtatMfaAdmin> {
+  const supabase = creerClientNavigateur();
+  const { data } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  const aFacteur = data?.nextLevel === "aal2"; // un facteur vérifié existe
+  const aal2 = data?.currentLevel === "aal2";
+
+  if (aFacteur) return { doitVerifier: !aal2, doitEnroler: false };
+
+  // Pas de facteur : on n'exige l'enrôlement que si l'interrupteur est posé.
+  const { data: flag } = await supabase
+    .from("parametres_plateforme")
+    .select("valeur")
+    .eq("cle", "mfa_admin_obligatoire")
+    .maybeSingle();
+  return { doitVerifier: false, doitEnroler: flag?.valeur === true };
+}
