@@ -5,6 +5,7 @@ import Link from "next/link";
 import PatientShell from "@/components/patient/PatientShell";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import Pagination, { usePagination } from "@/components/site/Pagination";
+import { Squelette } from "@/components/ui/Squelette";
 import { ilYA, iconeNotification, useNotifications } from "@/lib/notifications";
 
 /*
@@ -14,12 +15,12 @@ import { ilYA, iconeNotification, useNotifications } from "@/lib/notifications";
  * marquer une notification lue depuis cet écran éteint la pastille partout.
  */
 export default function NotificationsPatient() {
-  const { notifications, nonLues, marquerLue, toutMarquerLu } = useNotifications();
+  const { notifications, nonLues, chargement, marquerLue, toutMarquerLu } = useNotifications();
   const [seulementNonLues, setSeulementNonLues] = useState(false);
 
   const visibles = seulementNonLues ? notifications.filter((n) => !n.lu) : notifications;
   const p = usePagination(visibles, 15);
-  const vide = visibles.length === 0;
+  const vide = !chargement && visibles.length === 0;
 
   /* Une notification porte souvent un lien : on la marque lue au clic, sans
      attendre le réseau (le hook le fait de façon optimiste). */
@@ -106,12 +107,19 @@ export default function NotificationsPatient() {
             </button>
           </div>
           <div className="card2">
+            {chargement && (
+              <>
+                <Squelette className="mt-2 h-[48px] rounded-xl" />
+                <Squelette className="mt-2 h-[48px] rounded-xl" />
+                <Squelette className="mt-2 h-[48px] rounded-xl" />
+              </>
+            )}
             {vide && (
               <p className="muted" style={{ fontSize: 13 }}>
                 {seulementNonLues ? "Tout est lu." : "Aucune notification pour l’instant."}
               </p>
             )}
-            {ligne(true)}
+            {!chargement && ligne(true)}
             <Pagination
               page={p.page}
               pages={p.pages}
@@ -166,7 +174,13 @@ export default function NotificationsPatient() {
         </div>
 
         <div className="overflow-hidden rounded-2xl border border-line bg-white">
-          {vide ? (
+          {chargement ? (
+            <div className="grid gap-px">
+              {Array.from({ length: 5 }, (_, i) => (
+                <Squelette key={i} className="h-[62px] rounded-none" />
+              ))}
+            </div>
+          ) : vide ? (
             <p className="px-4 py-8 text-center text-[13px] text-muted">
               {seulementNonLues ? "Tout est lu." : "Aucune notification pour l’instant."}
             </p>

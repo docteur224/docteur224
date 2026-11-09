@@ -4,6 +4,7 @@ import { useState } from "react";
 import PatientShell from "@/components/patient/PatientShell";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import Pagination, { usePagination } from "@/components/site/Pagination";
+import { Squelette } from "@/components/ui/Squelette";
 import { calculerAge, formatDateCourte } from "@/lib/dates";
 import {
   ajouterProche,
@@ -33,7 +34,7 @@ const initialesProche = (p: { prenom: string; nom: string }) =>
   `${p.prenom.charAt(0)}${p.nom.charAt(0)}`.toUpperCase();
 
 export default function MesProches() {
-  const { proches, recharger } = useProches();
+  const { proches, recharger, chargement } = useProches();
   const p = usePagination(proches, 10);
   const [formulaire, setFormulaire] = useState(FORMULAIRE_VIDE);
   const [enEdition, setEnEdition] = useState<Proche | null>(null);
@@ -140,11 +141,16 @@ export default function MesProches() {
                 </span>
               </div>
             ))}
-            {proches.length === 0 && (
+            {chargement ? (
+              <>
+                <Squelette className="mt-2 h-[52px] rounded-xl" />
+                <Squelette className="mt-2 h-[52px] rounded-xl" />
+              </>
+            ) : proches.length === 0 ? (
               <p className="muted" style={{ fontSize: 13 }}>
                 Aucun proche enregistré pour le moment.
               </p>
-            )}
+            ) : null}
             <Pagination page={p.page} pages={p.pages} total={p.total} premier={p.premier} dernier={p.dernier} onPage={p.setPage} libelle="proches" />
 
             {message && zoneMessage === "liste" && (
@@ -314,9 +320,14 @@ export default function MesProches() {
             </div>
           </div>
         ))}
-        {proches.length === 0 && (
+        {chargement ? (
+          <>
+            <Squelette className="mb-3 h-[52px] rounded-xl" />
+            <Squelette className="h-[52px] rounded-xl" />
+          </>
+        ) : proches.length === 0 ? (
           <p className="text-[13px] text-muted">Aucun proche enregistré pour le moment.</p>
-        )}
+        ) : null}
         <Pagination
           page={p.page}
           pages={p.pages}

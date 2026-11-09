@@ -4,6 +4,7 @@ import Link from "next/link";
 import PatientShell from "@/components/patient/PatientShell";
 import CarteRdv from "@/components/patient/CarteRdv";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
+import { Squelette } from "@/components/ui/Squelette";
 import { versISO } from "@/lib/dates";
 import { useMesRendezVous, useProfilConnecte } from "@/lib/patient";
 
@@ -13,8 +14,8 @@ import { useMesRendezVous, useProfilConnecte } from "@/lib/patient";
  * Les chiffres sont calculés à partir des rendez-vous réels (Supabase).
  */
 export default function TableauDeBordPatient() {
-  const { profil } = useProfilConnecte();
-  const { rdvs } = useMesRendezVous();
+  const { profil, chargement: chargementProfil } = useProfilConnecte();
+  const { rdvs, chargement: chargementRdvs } = useMesRendezVous();
   const patient = { prenom: profil?.prenom ?? "" };
 
   const aujourdhui = versISO(new Date());
@@ -31,21 +32,29 @@ export default function TableauDeBordPatient() {
       <div className="md:hidden">
         <EnTeteMobile variante="marque" recherche />
         <div className="greet">
-          <b>Bonjour, {patient.prenom} 👋</b>
+          <b>
+            Bonjour,{" "}
+            {chargementProfil ? (
+              <Squelette style={{ display: "inline-block", width: 90, height: 14, verticalAlign: "middle" }} />
+            ) : (
+              patient.prenom
+            )}{" "}
+            👋
+          </b>
           <br />
           <small>Voici un aperçu de vos rendez-vous</small>
         </div>
         <div className="statcards">
           <div className="sc b1">
-            <b>{aVenir.length}</b>
+            <b>{chargementRdvs ? <Squelette className="mx-auto h-[18px] w-8" /> : aVenir.length}</b>
             <small>RDV à venir</small>
           </div>
           <div className="sc b3">
-            <b>{passes.length}</b>
+            <b>{chargementRdvs ? <Squelette className="mx-auto h-[18px] w-8" /> : passes.length}</b>
             <small>RDV passés</small>
           </div>
           <div className="sc b2">
-            <b>{medecinsConsultes}</b>
+            <b>{chargementRdvs ? <Squelette className="mx-auto h-[18px] w-8" /> : medecinsConsultes}</b>
             <small>Médecins consultés</small>
           </div>
         </div>
@@ -53,7 +62,9 @@ export default function TableauDeBordPatient() {
           <div className="section-t" style={{ marginTop: 0 }}>
             Votre prochain rendez-vous
           </div>
-          {prochain ? (
+          {chargementRdvs ? (
+            <Squelette className="h-[92px] rounded-2xl" />
+          ) : prochain ? (
             <CarteRdv rdv={prochain} />
           ) : (
             <p className="muted" style={{ fontSize: 13, lineHeight: 1.5 }}>
@@ -127,7 +138,13 @@ export default function TableauDeBordPatient() {
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">
-            Bonjour, {patient.prenom} 👋
+            Bonjour,{" "}
+            {chargementProfil ? (
+              <Squelette style={{ display: "inline-block", width: 120, height: 18, verticalAlign: "middle" }} />
+            ) : (
+              patient.prenom
+            )}{" "}
+            👋
           </h2>
           <small className="text-[13px] text-muted">Voici un aperçu de vos rendez-vous</small>
         </div>
@@ -145,7 +162,7 @@ export default function TableauDeBordPatient() {
             📅
           </span>
           <b className="mt-2 block text-[26px] font-extrabold tracking-[-0.6px] text-blue">
-            {aVenir.length}
+            {chargementRdvs ? <Squelette className="h-[26px] w-10" /> : aVenir.length}
           </b>
           <small className="text-xs font-semibold text-muted">RDV à venir</small>
         </div>
@@ -154,7 +171,7 @@ export default function TableauDeBordPatient() {
             ✅
           </span>
           <b className="mt-2 block text-[26px] font-extrabold tracking-[-0.6px] text-green">
-            {passes.length}
+            {chargementRdvs ? <Squelette className="h-[26px] w-10" /> : passes.length}
           </b>
           <small className="text-xs font-semibold text-muted">RDV passés</small>
         </div>
@@ -163,7 +180,7 @@ export default function TableauDeBordPatient() {
             👨‍⚕️
           </span>
           <b className="mt-2 block text-[26px] font-extrabold tracking-[-0.6px] text-teal">
-            {medecinsConsultes}
+            {chargementRdvs ? <Squelette className="h-[26px] w-10" /> : medecinsConsultes}
           </b>
           <small className="text-xs font-semibold text-muted">Médecins consultés</small>
         </div>
@@ -171,7 +188,9 @@ export default function TableauDeBordPatient() {
 
       <div className="mb-4 rounded-2xl border border-line bg-white p-5">
         <h3 className="mb-[14px] text-[15px] font-extrabold">Votre prochain rendez-vous</h3>
-        {prochain ? (
+        {chargementRdvs ? (
+          <Squelette className="h-[108px] rounded-2xl" />
+        ) : prochain ? (
           <div className="[&>div]:mb-0">
             <CarteRdv rdv={prochain} />
           </div>

@@ -411,8 +411,9 @@ const versProche = (l: LigneProche): Proche => ({
   gradient: gradientProche(l.id),
 });
 
-export function useProches(): { proches: Proche[]; recharger: () => void } {
+export function useProches(): { proches: Proche[]; chargement: boolean; recharger: () => void } {
   const [proches, setProches] = useState<Proche[]>([]);
+  const [chargement, setChargement] = useState(true);
   const [version, setVersion] = useState(0);
   useEffect(() => {
     let actif = true;
@@ -421,13 +422,16 @@ export function useProches(): { proches: Proche[]; recharger: () => void } {
       .select("id, nom, prenom, lien, date_naissance, genre")
       .order("cree_le")
       .then(({ data }) => {
-        if (actif) setProches(((data ?? []) as LigneProche[]).map(versProche));
+        if (actif) {
+          setProches(((data ?? []) as LigneProche[]).map(versProche));
+          setChargement(false);
+        }
       });
     return () => {
       actif = false;
     };
   }, [version]);
-  return { proches, recharger: () => setVersion((v) => v + 1) };
+  return { proches, chargement, recharger: () => setVersion((v) => v + 1) };
 }
 
 /** Traduit les erreurs Postgres en message compréhensible par le patient. */

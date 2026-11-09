@@ -5,6 +5,7 @@ import AdminShell from "@/components/admin/AdminShell";
 import { majStatutUtilisateur, supprimerCompteUtilisateur, useUtilisateurs } from "@/lib/admin";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import Pagination, { usePagination } from "@/components/site/Pagination";
+import { Squelette } from "@/components/ui/Squelette";
 
 /*
  * Utilisateurs — reproduit l'écran « admin-users » de la maquette web :
@@ -59,7 +60,7 @@ const LIBELLE_ROLE: Record<string, string> = {
 };
 
 export default function UtilisateursAdmin() {
-  const { utilisateurs, recharger } = useUtilisateurs();
+  const { utilisateurs, recharger, chargement } = useUtilisateurs();
   const [categorie, setCategorie] = useState<(typeof CATEGORIES)[number]>("Tous");
   const [recherche, setRecherche] = useState("");
   const [aSupprimer, setASupprimer] = useState<string | null>(null);
@@ -164,13 +165,19 @@ export default function UtilisateursAdmin() {
             ))}
           </div>
           <div className="card2">
-            <h4>{utilisateurs.length} comptes</h4>
+            <h4>{chargement ? "…" : utilisateurs.length} comptes</h4>
             {bandeau}
-            {comptes.length === 0 && (
+            {chargement ? (
+              <>
+                <Squelette className="mt-2 h-[52px] rounded-xl" />
+                <Squelette className="mt-2 h-[52px] rounded-xl" />
+                <Squelette className="mt-2 h-[52px] rounded-xl" />
+              </>
+            ) : comptes.length === 0 ? (
               <p className="muted" style={{ fontSize: 12.5 }}>
                 Aucun compte ne correspond à la recherche.
               </p>
-            )}
+            ) : null}
             {pagi.tranche.map((compte) => (
               <div key={compte.id} style={{ borderBottom: "1px solid var(--line)" }}>
                 <div className="asstrowm" style={{ borderBottom: "none" }}>
@@ -278,11 +285,18 @@ export default function UtilisateursAdmin() {
       <div className="rounded-2xl border border-line bg-white p-5">
         <h3 className="mb-1 text-[15px] font-extrabold">Comptes</h3>
         {bandeau}
-        {comptes.length === 0 && (
+        {chargement ? (
+          <>
+            <Squelette className="mt-2 h-[56px] rounded-xl" />
+            <Squelette className="mt-2 h-[56px] rounded-xl" />
+            <Squelette className="mt-2 h-[56px] rounded-xl" />
+            <Squelette className="mt-2 h-[56px] rounded-xl" />
+          </>
+        ) : comptes.length === 0 ? (
           <p className="py-3 text-[12.5px] text-muted">
             Aucun compte ne correspond à la recherche.
           </p>
-        )}
+        ) : null}
         {pagi.tranche.map((compte) => (
           <div
             key={compte.id}

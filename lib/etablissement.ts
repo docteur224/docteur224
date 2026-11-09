@@ -209,9 +209,14 @@ export interface MedecinRattache {
 
 export function useMedecinsRattaches(etabId: string | undefined): {
   rattaches: MedecinRattache[];
+  chargement: boolean;
   recharger: () => void;
 } {
   const [rattaches, setRattaches] = useState<MedecinRattache[]>([]);
+  /* Vrai tant que la liste n'est pas revenue (y compris pendant que l'on
+     attend encore l'identifiant de l'établissement) : l'écran montre alors un
+     squelette plutôt qu'un « 0 médecin » transitoire. */
+  const [chargement, setChargement] = useState(true);
   const [version, setVersion] = useState(0);
   useEffect(() => {
     if (!etabId) return;
@@ -222,6 +227,7 @@ export function useMedecinsRattaches(etabId: string | undefined): {
       .eq("etablissement_id", etabId)
       .then(({ data }) => {
         if (!actif) return;
+        setChargement(false);
         type L = {
           id: string;
           civilite: string;
@@ -243,7 +249,7 @@ export function useMedecinsRattaches(etabId: string | undefined): {
       actif = false;
     };
   }, [etabId, version]);
-  return { rattaches, recharger: () => setVersion((v) => v + 1) };
+  return { rattaches, chargement, recharger: () => setVersion((v) => v + 1) };
 }
 
 /**

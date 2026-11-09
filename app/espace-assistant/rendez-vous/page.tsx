@@ -22,6 +22,7 @@ import {
   statutAffiche,
 } from "@/lib/statuts-rdv";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
+import { Squelette } from "@/components/ui/Squelette";
 
 /*
  * Rendez-vous (assistant(e)) — reproduit l'écran « asst-agenda » de la
@@ -30,8 +31,9 @@ import EnTeteMobile from "@/components/mobile/EnTeteMobile";
  * réellement l'écriture si une permission est retirée par le médecin.
  */
 export default function RendezVousAssistant() {
-  const { medecin, permissions } = useContextePro();
-  const { creneauxJour, recharger } = useAgenda(medecin?.id);
+  const { medecin, permissions, chargement: chargementContexte } = useContextePro();
+  const { creneauxJour, recharger, chargement: chargementAgenda } = useAgenda(medecin?.id);
+  const chargement = chargementContexte || chargementAgenda;
   const [dateISO, setDateISO] = useState(() => versISO(new Date()));
   const [erreur, setErreur] = useState("");
   const [enReprogrammation, setEnReprogrammation] = useState<string | null>(null);
@@ -253,7 +255,14 @@ export default function RendezVousAssistant() {
               </div>
             );
           })}
-          {rdvJour.length === 0 && (
+          {chargement && (
+            <>
+              <Squelette className="mt-2 h-[56px] rounded-xl" />
+              <Squelette className="mt-2 h-[56px] rounded-xl" />
+              <Squelette className="mt-2 h-[56px] rounded-xl" />
+            </>
+          )}
+          {!chargement && rdvJour.length === 0 && (
             <p className="muted" style={{ fontSize: 13 }}>
               Aucun rendez-vous ce jour.
             </p>
@@ -423,7 +432,14 @@ export default function RendezVousAssistant() {
             </div>
           );
         })}
-        {rdvJour.length === 0 && (
+        {chargement && (
+          <div className="grid gap-2">
+            <Squelette className="h-[64px] rounded-xl" />
+            <Squelette className="h-[64px] rounded-xl" />
+            <Squelette className="h-[64px] rounded-xl" />
+          </div>
+        )}
+        {!chargement && rdvJour.length === 0 && (
           <p className="text-[13px] text-muted">Aucun rendez-vous ce jour.</p>
         )}
       </div>

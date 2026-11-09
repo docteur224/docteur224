@@ -6,6 +6,7 @@ import AssistantShell from "@/components/assistant/AssistantShell";
 import { versISO } from "@/lib/dates";
 import { majStatutRdv, useAgenda, useContextePro } from "@/lib/pro";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
+import { Squelette } from "@/components/ui/Squelette";
 
 /*
  * Tableau de bord assistant(e) — reproduit l'écran « asst-dash » de la
@@ -13,9 +14,11 @@ import EnTeteMobile from "@/components/mobile/EnTeteMobile";
  * confirmer (vrais RDV en_attente, gérés selon la permission), raccourcis.
  */
 export default function TableauDeBordAssistant() {
-  const { medecin, permissions, utilisateur } = useContextePro();
-  const { creneauxJour, rdvs, recharger } = useAgenda(medecin?.id);
+  const { medecin, permissions, utilisateur, chargement: chargementContexte } = useContextePro();
+  const { creneauxJour, rdvs, recharger, chargement: chargementAgenda } = useAgenda(medecin?.id);
   const [erreur, setErreur] = useState("");
+
+  const chargement = chargementContexte || chargementAgenda;
 
   const prenomAssistant = utilisateur?.prenom ?? "";
   const nomMedecin = medecin
@@ -51,7 +54,15 @@ export default function TableauDeBordAssistant() {
       <div className="md:hidden">
         <EnTeteMobile variante="marque" />
         <div className="appbar">
-          <h3 style={{ paddingLeft: 4 }}>Bonjour {prenomAssistant} 👋</h3>
+          <h3 style={{ paddingLeft: 4 }}>
+            Bonjour{" "}
+            {chargementContexte ? (
+              <Squelette style={{ display: "inline-block", width: 90, height: 14, verticalAlign: "middle" }} />
+            ) : (
+              prenomAssistant
+            )}{" "}
+            👋
+          </h3>
         </div>
         <div className="pad">
           <div className="abannerm">
@@ -63,11 +74,11 @@ export default function TableauDeBordAssistant() {
           </div>
           <div className="statcards inpad">
             <div className="sc b1">
-              <b>{rdvJour.length}</b>
+              <b>{chargement ? <Squelette className="mx-auto h-[18px] w-8" /> : rdvJour.length}</b>
               <small>RDV aujourd&apos;hui</small>
             </div>
             <div className="sc b2">
-              <b>{demandes.length}</b>
+              <b>{chargement ? <Squelette className="mx-auto h-[18px] w-8" /> : demandes.length}</b>
               <small>À confirmer</small>
             </div>
             <div className="sc b3">
@@ -109,11 +120,16 @@ export default function TableauDeBordAssistant() {
                 </div>
               </div>
             ))}
-            {demandes.length === 0 && (
+            {chargement ? (
+              <>
+                <Squelette className="mt-2 h-[52px] rounded-xl" />
+                <Squelette className="mt-2 h-[52px] rounded-xl" />
+              </>
+            ) : demandes.length === 0 ? (
               <p className="muted" style={{ fontSize: 13 }}>
                 Toutes les demandes ont été traitées. 👍
               </p>
-            )}
+            ) : null}
           </div>
           <div className="card2">
             <h4>Prochains rendez-vous</h4>
@@ -131,11 +147,16 @@ export default function TableauDeBordAssistant() {
                 </div>
               </div>
             ))}
-            {rdvJour.length === 0 && (
+            {chargement ? (
+              <>
+                <Squelette className="mt-2 h-[52px] rounded-xl" />
+                <Squelette className="mt-2 h-[52px] rounded-xl" />
+              </>
+            ) : rdvJour.length === 0 ? (
               <p className="muted" style={{ fontSize: 13 }}>
                 Aucun rendez-vous aujourd&apos;hui.
               </p>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
@@ -143,7 +164,15 @@ export default function TableauDeBordAssistant() {
       {/* ===== Version web (inchangée) ===== */}
       <div className="hidden md:block">
       <div className="mb-5">
-        <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Bonjour {prenomAssistant} 👋</h2>
+        <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">
+          Bonjour{" "}
+          {chargementContexte ? (
+            <Squelette style={{ display: "inline-block", width: 110, height: 18, verticalAlign: "middle" }} />
+          ) : (
+            prenomAssistant
+          )}{" "}
+          👋
+        </h2>
         <small className="text-[13px] text-muted">
           Espace assistant(e) · vous assistez {nomMedecin}
         </small>
@@ -164,7 +193,7 @@ export default function TableauDeBordAssistant() {
             📅
           </span>
           <b className="mt-2 block text-[26px] font-extrabold tracking-[-0.6px] text-blue">
-            {rdvJour.length}
+            {chargement ? <Squelette className="h-[26px] w-10" /> : rdvJour.length}
           </b>
           <small className="text-xs font-semibold text-muted">RDV aujourd’hui</small>
         </div>
@@ -173,7 +202,7 @@ export default function TableauDeBordAssistant() {
             ⏳
           </span>
           <b className="mt-2 block text-[26px] font-extrabold tracking-[-0.6px] text-amber">
-            {demandes.length}
+            {chargement ? <Squelette className="h-[26px] w-10" /> : demandes.length}
           </b>
           <small className="text-xs font-semibold text-muted">À confirmer</small>
         </div>
@@ -235,9 +264,14 @@ export default function TableauDeBordAssistant() {
             </span>
           </div>
         ))}
-        {demandes.length === 0 && (
+        {chargement ? (
+          <>
+            <Squelette className="mb-[10px] h-[58px] rounded-xl" />
+            <Squelette className="h-[58px] rounded-xl" />
+          </>
+        ) : demandes.length === 0 ? (
           <p className="text-[13px] text-muted">Toutes les demandes ont été traitées. 👍</p>
-        )}
+        ) : null}
       </div>
 
       <div className="rounded-2xl border border-line bg-white p-5">

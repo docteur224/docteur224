@@ -62,8 +62,11 @@ const RELEVE_MS = 30_000;
 interface Etat {
   liste: Notification[];
   horsListe: number;
+  /** Vrai dès que la première lecture est revenue : permet aux écrans de
+      montrer un squelette tant que c'est faux, plutôt qu'une liste vide. */
+  charge: boolean;
 }
-const VIDE: Etat = { liste: [], horsListe: 0 };
+const VIDE: Etat = { liste: [], horsListe: 0, charge: false };
 
 let cache: Etat | undefined;
 /** Compte auquel appartient le cache : un autre compte le vide. */
@@ -100,7 +103,7 @@ async function charger(): Promise<void> {
   // Réponse d'une lecture dépassée, ou échec réseau : on garde l'affichage.
   if (ce !== tour || error || erreurCompte) return;
   const liste = ((data ?? []) as LigneNotification[]).map(versNotification);
-  diffuser({ liste, horsListe: Math.max(0, (count ?? 0) - liste.filter((n) => !n.lu).length) });
+  diffuser({ liste, horsListe: Math.max(0, (count ?? 0) - liste.filter((n) => !n.lu).length), charge: true });
 }
 
 /** Relève, retour sur l'onglet, changement de compte : tant qu'une cloche est montée. */
@@ -133,6 +136,7 @@ export function rafraichirNotifications(): void {
 export function useNotifications(): {
   notifications: Notification[];
   nonLues: number;
+  chargement: boolean;
   marquerLue: (id: string) => Promise<void>;
   toutMarquerLu: () => Promise<void>;
   recharger: () => void;
@@ -167,13 +171,14 @@ export function useNotifications(): {
   }, []);
 
   const toutMarquerLu = useCallback(async () => {
-    diffuser({ liste: (cache ?? VIDE).liste.map((n) => ({ ...n, lu: true })), horsListe: 0 });
+    diffuser({ liste: (cache ?? VIDE).liste.map((n) => ({ ...n, lu: true })), horsListe: 0, charge: true });
     await creerClientNavigateur().rpc("marquer_notifications_lues");
   }, []);
 
   return {
     notifications: etat.liste,
     nonLues: etat.liste.filter((n) => !n.lu).length + etat.horsListe,
+    chargement: !etat.charge,
     marquerLue,
     toutMarquerLu,
     recharger: () => {

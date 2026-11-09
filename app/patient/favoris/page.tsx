@@ -6,6 +6,7 @@ import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import AvatarMedecin from "@/components/site/AvatarMedecin";
 import Etoiles from "@/components/site/Etoiles";
 import Pagination, { usePagination } from "@/components/site/Pagination";
+import { Squelette } from "@/components/ui/Squelette";
 import { useFavori, useMesFavoris, type MedecinFavori } from "@/lib/favoris";
 import { formatGNF } from "@/lib/format";
 
@@ -70,9 +71,11 @@ export default function MesFavoris() {
           <div className="card2">
             <h4>Médecins mis de côté</h4>
             {chargement && (
-              <p className="muted" style={{ fontSize: 13 }}>
-                Chargement…
-              </p>
+              <>
+                <Squelette className="mt-2 h-[52px] rounded-xl" />
+                <Squelette className="mt-2 h-[52px] rounded-xl" />
+                <Squelette className="mt-2 h-[52px] rounded-xl" />
+              </>
             )}
             {vide && (
               <p className="muted" style={{ fontSize: 13 }}>
@@ -120,7 +123,13 @@ export default function MesFavoris() {
           </small>
         </div>
 
-        {chargement && <p className="text-[13px] text-muted">Chargement…</p>}
+        {chargement && (
+          <div className="grid gap-3 lg:grid-cols-2">
+            {Array.from({ length: 4 }, (_, i) => (
+              <Squelette key={i} className="h-[92px] rounded-2xl" />
+            ))}
+          </div>
+        )}
 
         {vide && (
           <div className="rounded-2xl border border-line bg-white p-8 text-center">

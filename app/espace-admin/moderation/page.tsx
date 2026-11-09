@@ -4,6 +4,7 @@ import { useState } from "react";
 import AdminShell from "@/components/admin/AdminShell";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import Pagination, { usePagination } from "@/components/site/Pagination";
+import { Squelette } from "@/components/ui/Squelette";
 import IndicateursAvis from "@/components/admin/IndicateursAvis";
 import {
   modererAvis,
@@ -25,8 +26,8 @@ import {
 type Vue = "file" | "indicateurs";
 
 export default function ModerationAdmin() {
-  const { signalements, recharger: rechargerSignalements } = useSignalements();
-  const { avis, recharger: rechargerAvis } = useAvisAModerer();
+  const { signalements, chargement: chSignalements, recharger: rechargerSignalements } = useSignalements();
+  const { avis, chargement: chAvis, recharger: rechargerAvis } = useAvisAModerer();
   const [vue, setVue] = useState<Vue>("file");
 
   const boutonPrimaire =
@@ -86,12 +87,17 @@ export default function ModerationAdmin() {
                 </div>
               </div>
               <div className="card2">
-                <h4>Signalements · {signalements.length}</h4>
-                {signalements.length === 0 && (
+                <h4>Signalements · {chSignalements ? "…" : signalements.length}</h4>
+                {chSignalements ? (
+                  <>
+                    <Squelette className="mt-2 h-[48px] rounded-xl" />
+                    <Squelette className="mt-2 h-[48px] rounded-xl" />
+                  </>
+                ) : signalements.length === 0 ? (
                   <p className="muted" style={{ fontSize: 12.5 }}>
                     ✅ Tous les signalements ont été traités.
                   </p>
-                )}
+                ) : null}
                 {pagiSignalements.tranche.map((signalement) => (
                   <div key={signalement.id} className="asstrowm">
                     <span
@@ -141,12 +147,14 @@ export default function ModerationAdmin() {
                 />
               </div>
               <div className="card2">
-                <h4>Avis à modérer · {avis.length}</h4>
-                {avis.length === 0 && (
+                <h4>Avis à modérer · {chAvis ? "…" : avis.length}</h4>
+                {chAvis ? (
+                  <Squelette className="mt-2 h-[72px] rounded-xl" />
+                ) : avis.length === 0 ? (
                   <p className="muted" style={{ fontSize: 12.5 }}>
                     ✅ Tous les avis ont été modérés.
                   </p>
-                )}
+                ) : null}
                 {pagiAvis.tranche.map((a) => (
                   <div key={a.id} className="reviewmod">
                     <div style={{ display: "flex", justifyContent: "space-between", gap: 8 }}>
@@ -221,13 +229,18 @@ export default function ModerationAdmin() {
 
             <div className="mb-4 rounded-2xl border border-line bg-white p-5">
               <h3 className="mb-1 text-[15px] font-extrabold">
-                Signalements · {signalements.length}
+                Signalements · {chSignalements ? "…" : signalements.length}
               </h3>
-              {signalements.length === 0 && (
+              {chSignalements ? (
+                <>
+                  <Squelette className="mt-2 h-[52px] rounded-xl" />
+                  <Squelette className="mt-2 h-[52px] rounded-xl" />
+                </>
+              ) : signalements.length === 0 ? (
                 <p className="py-3 text-[12.5px] text-muted">
                   ✅ Tous les signalements ont été traités.
                 </p>
-              )}
+              ) : null}
               {pagiSignalements.tranche.map((signalement) => (
                 <div
                   key={signalement.id}
@@ -283,10 +296,12 @@ export default function ModerationAdmin() {
             </div>
 
             <div className="rounded-2xl border border-line bg-white p-5">
-              <h3 className="mb-1 text-[15px] font-extrabold">Avis à modérer · {avis.length}</h3>
-              {avis.length === 0 && (
+              <h3 className="mb-1 text-[15px] font-extrabold">Avis à modérer · {chAvis ? "…" : avis.length}</h3>
+              {chAvis ? (
+                <Squelette className="mt-2 h-[84px] rounded-xl" />
+              ) : avis.length === 0 ? (
                 <p className="py-3 text-[12.5px] text-muted">✅ Tous les avis ont été modérés.</p>
-              )}
+              ) : null}
               {pagiAvis.tranche.map((a) => (
                 <div key={a.id} className="mt-[10px] rounded-xl border border-line p-[13px]">
                   <div className="flex flex-wrap items-center justify-between gap-[10px]">

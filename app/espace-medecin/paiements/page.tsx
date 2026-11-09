@@ -4,6 +4,7 @@ import { useState } from "react";
 import MedecinShell from "@/components/medecin/MedecinShell";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import Pagination, { usePagination } from "@/components/site/Pagination";
+import { Squelette } from "@/components/ui/Squelette";
 import { formatGNF } from "@/lib/format";
 import {
   LIBELLES_STATUT,
@@ -129,11 +130,11 @@ export default function MesPaiements() {
         <div className="pad">
           <div className="statcards inpad two">
             <div className="sc b1">
-              <b>{formatGNF(totalPaye)}</b>
+              <b>{chargement ? <Squelette className="mx-auto h-[18px] w-20" /> : formatGNF(totalPaye)}</b>
               <small>Total réglé</small>
             </div>
             <div className="sc b2">
-              <b>{formatGNF(totalEnAttente)}</b>
+              <b>{chargement ? <Squelette className="mx-auto h-[18px] w-20" /> : formatGNF(totalEnAttente)}</b>
               <small>En attente</small>
             </div>
           </div>
@@ -143,6 +144,13 @@ export default function MesPaiements() {
             {boutonsFiltre}
             {message && (
               <p style={{ color: "var(--red)", fontSize: 12.5, fontWeight: 700 }}>{message}</p>
+            )}
+            {chargement && (
+              <>
+                <Squelette className="mt-2 h-[52px] rounded-xl" />
+                <Squelette className="mt-2 h-[52px] rounded-xl" />
+                <Squelette className="mt-2 h-[52px] rounded-xl" />
+              </>
             )}
             {!chargement && liste.length === 0 && (
               <p className="muted" style={{ fontSize: 12.5 }}>
@@ -203,7 +211,7 @@ export default function MesPaiements() {
           {TOTAUX.map((t) => (
             <div key={t.label} className="rounded-2xl border border-line bg-white p-[18px]">
               <b className={`block text-[22px] font-extrabold tracking-[-0.6px] ${t.couleur}`}>
-                {t.valeur}
+                {chargement ? <Squelette className="h-[22px] w-28" /> : t.valeur}
               </b>
               <small className="text-xs font-semibold text-muted">{t.label}</small>
             </div>
@@ -218,7 +226,14 @@ export default function MesPaiements() {
               {message}
             </p>
           )}
-          {chargement && <p className="py-3 text-[12.5px] text-muted">Chargement…</p>}
+          {chargement && (
+            <div className="grid gap-2 py-2">
+              <Squelette className="h-[44px] rounded-xl" />
+              <Squelette className="h-[44px] rounded-xl" />
+              <Squelette className="h-[44px] rounded-xl" />
+              <Squelette className="h-[44px] rounded-xl" />
+            </div>
+          )}
           {!chargement && liste.length === 0 && (
             <p className="py-3 text-[12.5px] text-muted">
               Aucun paiement pour ce filtre. Vos règlements apparaîtront ici dès votre premier

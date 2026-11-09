@@ -10,6 +10,7 @@ import InvitationsEtablissement from "@/components/medecin/InvitationsEtablissem
 import PastilleAbsence from "@/components/medecin/PastilleAbsence";
 import { useRdvMensuels, useSignauxAbsence } from "@/lib/suivi-absence-donnees";
 import { formatPourcent, tauxNoShowMois } from "@/lib/suivi-absence";
+import { Squelette } from "@/components/ui/Squelette";
 
 /*
  * Tableau de bord médecin — reproduit l'écran « medecin » de la maquette web :
@@ -30,10 +31,16 @@ import { formatPourcent, tauxNoShowMois } from "@/lib/suivi-absence";
  *     du praticien.
  */
 export default function TableauDeBordMedecin() {
-  const { medecin, utilisateur } = useContextePro();
-  const { creneauxJour, rdvs, recharger } = useAgenda(medecin?.id);
+  const { medecin, utilisateur, chargement: chargementContexte } = useContextePro();
+  const { creneauxJour, rdvs, recharger, chargement: chargementAgenda } = useAgenda(medecin?.id);
   const { signaux } = useSignauxAbsence(medecin?.id);
   const { mois } = useRdvMensuels(medecin?.id, 2);
+
+  /* Un seul drapeau pour tout ce qui dépend de l'agenda : tant que le contexte
+     (identité du médecin) ou l'agenda du jour n'est pas là, on montre des
+     squelettes plutôt que des « 0 » et des messages « aucun rendez-vous » qui
+     clignoteraient avant de se démentir. */
+  const chargement = chargementContexte || chargementAgenda;
 
   const medecinConnecte = medecin ?? {
     civilite: "Dr",
@@ -75,25 +82,31 @@ export default function TableauDeBordMedecin() {
         <EnTeteMobile variante="marque" />
         <div className="greet">
           <b>
-            Bonjour, {medecinConnecte.civilite} {medecinConnecte.nom} 👋
+            Bonjour,{" "}
+            {chargementContexte ? (
+              <Squelette style={{ display: "inline-block", width: 130, height: 14, verticalAlign: "middle" }} />
+            ) : (
+              `${medecinConnecte.civilite} ${medecinConnecte.nom}`
+            )}{" "}
+            👋
           </b>
           <br />
           <small>
-            {capitaliser(formatDateLongue(aujourdhui))} · {agendaJour.length} rendez-vous
-            aujourd&apos;hui
+            {capitaliser(formatDateLongue(aujourdhui))} ·{" "}
+            {chargement ? "…" : agendaJour.length} rendez-vous aujourd&apos;hui
           </small>
         </div>
         <div className="statcards">
           <div className="sc b1">
-            <b>{agendaJour.length}</b>
+            <b>{chargement ? <Squelette className="mx-auto h-[18px] w-8" /> : agendaJour.length}</b>
             <small>RDV aujourd&apos;hui</small>
           </div>
           <div className="sc b2">
-            <b>{demandes.length}</b>
+            <b>{chargement ? <Squelette className="mx-auto h-[18px] w-8" /> : demandes.length}</b>
             <small>À confirmer</small>
           </div>
           <Link href="/espace-medecin/suivi-absence" className="sc b3">
-            <b>{presence}</b>
+            <b>{chargement ? <Squelette className="mx-auto h-[18px] w-10" /> : presence}</b>
             <small>Taux de présence</small>
           </Link>
         </div>
@@ -138,11 +151,16 @@ export default function TableauDeBordMedecin() {
               </div>
             </div>
           ))}
-          {demandes.length === 0 && (
+          {chargement ? (
+            <>
+              <Squelette className="mt-2 h-[52px] rounded-xl" />
+              <Squelette className="mt-2 h-[52px] rounded-xl" />
+            </>
+          ) : demandes.length === 0 ? (
             <p className="muted" style={{ fontSize: 13 }}>
               Toutes les demandes ont été traitées. 👍
             </p>
-          )}
+          ) : null}
 
           <div className="section-t">Agenda du jour</div>
           {agendaJour.map((creneau) => (
@@ -157,11 +175,16 @@ export default function TableauDeBordMedecin() {
               </span>
             </div>
           ))}
-          {agendaJour.length === 0 && (
+          {chargement ? (
+            <>
+              <Squelette className="mt-2 h-[52px] rounded-xl" />
+              <Squelette className="mt-2 h-[52px] rounded-xl" />
+            </>
+          ) : agendaJour.length === 0 ? (
             <p className="muted" style={{ fontSize: 13 }}>
               Aucun rendez-vous aujourd&apos;hui.
             </p>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -170,11 +193,17 @@ export default function TableauDeBordMedecin() {
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">
-            Bonjour, {medecinConnecte.civilite} {medecinConnecte.nom} 👋
+            Bonjour,{" "}
+            {chargementContexte ? (
+              <Squelette style={{ display: "inline-block", width: 160, height: 18, verticalAlign: "middle" }} />
+            ) : (
+              `${medecinConnecte.civilite} ${medecinConnecte.nom}`
+            )}{" "}
+            👋
           </h2>
           <small className="text-[13px] text-muted">
-            {capitaliser(formatDateLongue(aujourdhui))} · {agendaJour.length} rendez-vous
-            aujourd’hui
+            {capitaliser(formatDateLongue(aujourdhui))} ·{" "}
+            {chargement ? "…" : agendaJour.length} rendez-vous aujourd’hui
           </small>
         </div>
         <div className="flex gap-2">
@@ -203,7 +232,7 @@ export default function TableauDeBordMedecin() {
             📅
           </span>
           <b className="mt-2 block text-[26px] font-extrabold tracking-[-0.6px] text-blue">
-            {agendaJour.length}
+            {chargement ? <Squelette className="h-[26px] w-10" /> : agendaJour.length}
           </b>
           <small className="text-xs font-semibold text-muted">RDV aujourd’hui</small>
         </div>
@@ -212,7 +241,7 @@ export default function TableauDeBordMedecin() {
             ⏳
           </span>
           <b className="mt-2 block text-[26px] font-extrabold tracking-[-0.6px] text-amber">
-            {demandes.length}
+            {chargement ? <Squelette className="h-[26px] w-10" /> : demandes.length}
           </b>
           <small className="text-xs font-semibold text-muted">À confirmer</small>
         </div>
@@ -226,7 +255,7 @@ export default function TableauDeBordMedecin() {
             ✅
           </span>
           <b className="mt-2 block text-[26px] font-extrabold tracking-[-0.6px] text-green">
-            {presence}
+            {chargement ? <Squelette className="h-[26px] w-12" /> : presence}
           </b>
           <small className="text-xs font-semibold text-muted">Taux de présence</small>
         </Link>
@@ -235,7 +264,7 @@ export default function TableauDeBordMedecin() {
             ⭐
           </span>
           <b className="mt-2 block text-[26px] font-extrabold tracking-[-0.6px] text-teal">
-            {formatNote(medecinConnecte.note)}
+            {chargementContexte ? <Squelette className="h-[26px] w-12" /> : formatNote(medecinConnecte.note)}
           </b>
           <small className="text-xs font-semibold text-muted">Note moyenne</small>
         </div>
@@ -246,7 +275,7 @@ export default function TableauDeBordMedecin() {
         <div className="flex items-center justify-between border-b border-line px-5 py-4 text-sm font-extrabold">
           Demandes à confirmer
           <span className="rounded-[20px] bg-amber-soft px-[10px] py-1 text-[11.5px] font-bold text-amber">
-            {demandes.length} en attente
+            {chargement ? "…" : demandes.length} en attente
           </span>
         </div>
         {demandes.map((demande) => (
@@ -286,11 +315,20 @@ export default function TableauDeBordMedecin() {
             </div>
           </div>
         ))}
-        {demandes.length === 0 && (
+        {chargement ? (
+          <>
+            <div className="border-b border-line px-5 py-[14px]">
+              <Squelette className="h-10 rounded-lg" />
+            </div>
+            <div className="px-5 py-[14px]">
+              <Squelette className="h-10 rounded-lg" />
+            </div>
+          </>
+        ) : demandes.length === 0 ? (
           <p className="px-5 py-[14px] text-[13px] text-muted">
             Toutes les demandes ont été traitées. 👍
           </p>
-        )}
+        ) : null}
       </div>
 
       {/* Agenda du jour */}
@@ -311,11 +349,20 @@ export default function TableauDeBordMedecin() {
             </span>
           </div>
         ))}
-        {agendaJour.length === 0 && (
+        {chargement ? (
+          <>
+            <div className="border-b border-line px-5 py-[14px]">
+              <Squelette className="h-10 rounded-lg" />
+            </div>
+            <div className="px-5 py-[14px]">
+              <Squelette className="h-10 rounded-lg" />
+            </div>
+          </>
+        ) : agendaJour.length === 0 ? (
           <p className="px-5 py-[14px] text-[13px] text-muted">
             Aucun rendez-vous aujourd’hui.
           </p>
-        )}
+        ) : null}
       </div>
       </div>
     </MedecinShell>

@@ -2,6 +2,7 @@
 
 import EtablissementShell from "@/components/etablissement/EtablissementShell";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
+import { Squelette } from "@/components/ui/Squelette";
 import {
   formatTaux,
   libelleMois,
@@ -36,8 +37,11 @@ import {
 
 export default function StatistiquesEtablissement() {
   const { etablissement, chargement: chargementFiche } = useEtablissementConnecte();
-  const { rattaches } = useMedecinsRattaches(etablissement?.id);
+  const { rattaches, chargement: chRattaches } = useMedecinsRattaches(etablissement?.id);
   const { stats, chargement, erreur } = useStatistiquesEtablissement(etablissement?.id);
+
+  const chargementStats = chargementFiche || chargement;
+  const chargementRattaches = chargementFiche || chRattaches;
 
   const rdvDe = (id: string) => stats?.parMedecin[id] ?? 0;
   const classement = [...rattaches].sort((a, b) => rdvDe(b.id) - rdvDe(a.id));
@@ -70,19 +74,19 @@ export default function StatistiquesEtablissement() {
         <div className="pad">
           <div className="statcards inpad two">
             <div className="sc b1">
-              <b>{stats?.rdvMois ?? "—"}</b>
+              <b>{chargementStats ? <Squelette className="mx-auto h-[18px] w-8" /> : stats?.rdvMois ?? "—"}</b>
               <small>RDV ce mois</small>
             </div>
             <div className="sc b2">
-              <b>{rattaches.length}</b>
+              <b>{chargementRattaches ? <Squelette className="mx-auto h-[18px] w-8" /> : rattaches.length}</b>
               <small>Médecins actifs</small>
             </div>
             <div className="sc b3">
-              <b>{formatTaux(stats?.tauxHonores)}</b>
+              <b>{chargementStats ? <Squelette className="mx-auto h-[18px] w-10" /> : formatTaux(stats?.tauxHonores)}</b>
               <small>Honorés</small>
             </div>
             <div className="sc b1">
-              <b>{formatTaux(stats?.tauxAnnulation)}</b>
+              <b>{chargementStats ? <Squelette className="mx-auto h-[18px] w-10" /> : formatTaux(stats?.tauxAnnulation)}</b>
               <small>Annulation</small>
             </div>
           </div>
@@ -119,11 +123,16 @@ export default function StatistiquesEtablissement() {
                 </span>
               </div>
             ))}
-            {classement.length === 0 && (
+            {chargementRattaches ? (
+              <>
+                <Squelette className="mt-2 h-[48px] rounded-xl" />
+                <Squelette className="mt-2 h-[48px] rounded-xl" />
+              </>
+            ) : classement.length === 0 ? (
               <p className="muted" style={{ fontSize: 13 }}>
                 Aucun médecin rattaché.
               </p>
-            )}
+            ) : null}
           </div>
           {messageEtat && (
             <p className="muted" style={{ fontSize: 11.5 }}>
@@ -150,7 +159,7 @@ export default function StatistiquesEtablissement() {
               📅
             </span>
             <b className="mt-2 block text-[26px] font-extrabold tracking-[-0.6px] text-blue">
-              {stats?.rdvMois ?? "—"}
+              {chargementStats ? <Squelette className="h-[26px] w-12" /> : stats?.rdvMois ?? "—"}
             </b>
             <small className="text-xs font-semibold text-muted">RDV ce mois</small>
           </div>
@@ -159,7 +168,7 @@ export default function StatistiquesEtablissement() {
               👨‍⚕️
             </span>
             <b className="mt-2 block text-[26px] font-extrabold tracking-[-0.6px] text-teal">
-              {rattaches.length}
+              {chargementRattaches ? <Squelette className="h-[26px] w-10" /> : rattaches.length}
             </b>
             <small className="text-xs font-semibold text-muted">Médecins actifs</small>
           </div>
@@ -168,7 +177,7 @@ export default function StatistiquesEtablissement() {
               ✅
             </span>
             <b className="mt-2 block text-[26px] font-extrabold tracking-[-0.6px] text-green">
-              {formatTaux(stats?.tauxHonores)}
+              {chargementStats ? <Squelette className="h-[26px] w-14" /> : formatTaux(stats?.tauxHonores)}
             </b>
             <small className="text-xs font-semibold text-muted">
               Taux d’honorés · rendez-vous passés
@@ -179,7 +188,7 @@ export default function StatistiquesEtablissement() {
               ✕
             </span>
             <b className="mt-2 block text-[26px] font-extrabold tracking-[-0.6px] text-amber">
-              {formatTaux(stats?.tauxAnnulation)}
+              {chargementStats ? <Squelette className="h-[26px] w-14" /> : formatTaux(stats?.tauxAnnulation)}
             </b>
             <small className="text-xs font-semibold text-muted">
               Taux d’annulation · depuis l’ouverture
@@ -240,11 +249,16 @@ export default function StatistiquesEtablissement() {
               </b>
             </div>
           ))}
-          {classement.length === 0 && (
+          {chargementRattaches ? (
+            <>
+              <Squelette className="mt-2 h-[52px] rounded-xl" />
+              <Squelette className="mt-2 h-[52px] rounded-xl" />
+            </>
+          ) : classement.length === 0 ? (
             <p className="py-2 text-[13px] text-muted">
               Aucun médecin rattaché : invitez un médecin pour voir apparaître son activité.
             </p>
-          )}
+          ) : null}
           {messageEtat && <p className="mt-3 text-[11.5px] text-muted">{messageEtat}</p>}
         </div>
       </div>

@@ -7,6 +7,7 @@ import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import Etoiles from "@/components/site/Etoiles";
 import EtoilesSaisie from "@/components/site/EtoilesSaisie";
 import Pagination, { usePagination } from "@/components/site/Pagination";
+import { Squelette } from "@/components/ui/Squelette";
 import { formatDateCourte } from "@/lib/dates";
 import { modifierMonAvis, supprimerMonAvis, useMesAvis, type MonAvis } from "@/lib/avis";
 
@@ -203,9 +204,10 @@ export default function MesAvis() {
         <EnTeteMobile retour="/patient/compte" titre="Mes avis" />
         <div className="pad">
           {chargement && (
-            <p className="muted" style={{ fontSize: 13 }}>
-              Chargement…
-            </p>
+            <>
+              <Squelette className="mb-3 h-[120px] rounded-2xl" />
+              <Squelette className="h-[120px] rounded-2xl" />
+            </>
           )}
           {vide && (
             <div className="card2">
@@ -253,7 +255,12 @@ export default function MesAvis() {
           </small>
         </div>
 
-        {chargement && <p className="text-[13px] text-muted">Chargement…</p>}
+        {chargement && (
+          <div className="grid gap-3">
+            <Squelette className="h-[120px] rounded-2xl" />
+            <Squelette className="h-[120px] rounded-2xl" />
+          </div>
+        )}
 
         {vide && (
           <div className="rounded-2xl border border-line bg-white p-8 text-center">

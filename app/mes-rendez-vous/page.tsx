@@ -7,6 +7,7 @@ import CarteRdv from "@/components/patient/CarteRdv";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import Pagination, { usePagination } from "@/components/site/Pagination";
 import { versISO } from "@/lib/dates";
+import { Squelette } from "@/components/ui/Squelette";
 import {
   annulerRendezVous,
   useMesRendezVous,
@@ -20,7 +21,7 @@ import {
  * ne voit que ses rendez-vous et ceux de ses proches).
  */
 export default function MesRendezVous() {
-  const { rdvs, recharger } = useMesRendezVous();
+  const { rdvs, recharger, chargement } = useMesRendezVous();
   const [onglet, setOnglet] = useState<"avenir" | "passes">("avenir");
 
   const aujourdhui = versISO(new Date());
@@ -52,14 +53,14 @@ export default function MesRendezVous() {
             className={`tabm${onglet === "avenir" ? " on" : ""}`}
             onClick={() => { setOnglet("avenir"); p.setPage(0); }}
           >
-            À venir ({aVenir.length})
+            À venir ({chargement ? "…" : aVenir.length})
           </button>
           <button
             type="button"
             className={`tabm${onglet === "passes" ? " on" : ""}`}
             onClick={() => { setOnglet("passes"); p.setPage(0); }}
           >
-            Passés ({passes.length})
+            Passés ({chargement ? "…" : passes.length})
           </button>
         </div>
       </div>
@@ -89,7 +90,7 @@ export default function MesRendezVous() {
             onglet === "avenir" ? "bg-blue text-white" : "text-muted"
           }`}
         >
-          À venir ({aVenir.length})
+          À venir ({chargement ? "…" : aVenir.length})
         </button>
         <button
           type="button"
@@ -98,26 +99,36 @@ export default function MesRendezVous() {
             onglet === "passes" ? "bg-blue text-white" : "text-muted"
           }`}
         >
-          Passés ({passes.length})
+          Passés ({chargement ? "…" : passes.length})
         </button>
       </div>
       </div>
 
       <div className="pad pt-4 md:pt-0">
-        {p.tranche.map((rdv) => (
-          <CarteRdv key={rdv.id} rdv={rdv} onAnnuler={onglet === "avenir" ? annuler : undefined} />
-        ))}
-        <Pagination
-          page={p.page}
-          pages={p.pages}
-          total={p.total}
-          premier={p.premier}
-          dernier={p.dernier}
-          onPage={p.setPage}
-          libelle="rendez-vous"
-        />
+        {chargement ? (
+          <>
+            <Squelette className="mb-3 h-[118px] rounded-2xl" />
+            <Squelette className="mb-3 h-[118px] rounded-2xl" />
+            <Squelette className="mb-3 h-[118px] rounded-2xl" />
+          </>
+        ) : (
+          <>
+            {p.tranche.map((rdv) => (
+              <CarteRdv key={rdv.id} rdv={rdv} onAnnuler={onglet === "avenir" ? annuler : undefined} />
+            ))}
+            <Pagination
+              page={p.page}
+              pages={p.pages}
+              total={p.total}
+              premier={p.premier}
+              dernier={p.dernier}
+              onPage={p.setPage}
+              libelle="rendez-vous"
+            />
+          </>
+        )}
 
-        {liste.length === 0 && (
+        {!chargement && liste.length === 0 && (
           <div className="rounded-2xl border border-line bg-white p-8 text-center">
             <div className="text-3xl" aria-hidden>
               📅

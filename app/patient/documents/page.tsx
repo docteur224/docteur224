@@ -7,6 +7,7 @@ import PartagerDocument from "@/components/patient/PartagerDocument";
 import TransmissionsEntreMedecins from "@/components/patient/TransmissionsEntreMedecins";
 import Pagination, { usePagination } from "@/components/site/Pagination";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
+import { Squelette } from "@/components/ui/Squelette";
 import { formatDateCourte } from "@/lib/dates";
 import {
   titreDocument,
@@ -266,12 +267,14 @@ export default function MesDocuments() {
           ) : (
             <>
               {chargement && (
-                <p className="muted" style={{ fontSize: 13 }}>
-                  Chargement…
-                </p>
+                <div className="grid gap-3">
+                  <Squelette className="h-[76px] rounded-2xl" />
+                  <Squelette className="h-[76px] rounded-2xl" />
+                  <Squelette className="h-[76px] rounded-2xl" />
+                </div>
               )}
               {vide && etatVide}
-              <div className="grid gap-3">{p.tranche.map(carte)}</div>
+              {!chargement && <div className="grid gap-3">{p.tranche.map(carte)}</div>}
               <Pagination
                 page={p.page}
                 pages={p.pages}
@@ -319,9 +322,15 @@ export default function MesDocuments() {
           <TransmissionsEntreMedecins />
         ) : (
           <>
-            {chargement && <p className="text-[13px] text-muted">Chargement…</p>}
+            {chargement && (
+              <div className="grid gap-3">
+                <Squelette className="h-[76px] rounded-2xl" />
+                <Squelette className="h-[76px] rounded-2xl" />
+                <Squelette className="h-[76px] rounded-2xl" />
+              </div>
+            )}
             {vide && etatVide}
-            <div className="grid gap-3">{p.tranche.map(carte)}</div>
+            {!chargement && <div className="grid gap-3">{p.tranche.map(carte)}</div>}
             <Pagination
               page={p.page}
               pages={p.pages}

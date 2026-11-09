@@ -18,6 +18,7 @@ import {
 } from "@/lib/admin";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import Pagination, { usePagination } from "@/components/site/Pagination";
+import { Squelette } from "@/components/ui/Squelette";
 
 /*
  * Validations — reproduit l'écran « admin-validation » de la maquette web :
@@ -365,8 +366,9 @@ function LigneDossier({
 }
 
 export default function ValidationsAdmin() {
-  const { dossiers: medecins, recharger: rechargerMedecins } = useMedecinsEnAttente();
-  const { dossiers: etablissements, recharger: rechargerEtabs } = useEtablissementsEnAttente();
+  const { dossiers: medecins, chargement: chMedecins, recharger: rechargerMedecins } = useMedecinsEnAttente();
+  const { dossiers: etablissements, chargement: chEtabs, recharger: rechargerEtabs } = useEtablissementsEnAttente();
+  const chargementFiles = chMedecins || chEtabs;
   const pagiMedecins = usePagination(medecins, 10);
   const pagiEtabs = usePagination(etablissements, 10);
   const [motif, setMotif] = useState(MOTIF_VIDE);
@@ -518,7 +520,13 @@ export default function ValidationsAdmin() {
             </div>
           </div>
           {messages}
-          {dossierEnCours ? (
+          {chargementFiles ? (
+            <div className="card2">
+              <Squelette className="h-5 w-2/3" />
+              <Squelette className="mt-3 h-[120px] rounded-xl" />
+              <Squelette className="mt-3 h-[90px] rounded-xl" />
+            </div>
+          ) : dossierEnCours ? (
             <div className="card2">
               <h4>Dossier en examen — {dossierEnCours.nom}</h4>
               <p className="muted" style={{ fontSize: 12 }}>
@@ -605,12 +613,17 @@ export default function ValidationsAdmin() {
             </div>
           )}
           <div className="card2">
-            <h4>Médecins en attente · {medecins.length}</h4>
-            {medecins.length === 0 && (
+            <h4>Médecins en attente · {chargementFiles ? "…" : medecins.length}</h4>
+            {chargementFiles ? (
+              <>
+                <Squelette className="mt-2 h-[44px] rounded-xl" />
+                <Squelette className="mt-2 h-[44px] rounded-xl" />
+              </>
+            ) : medecins.length === 0 ? (
               <p className="muted" style={{ fontSize: 12.5 }}>
                 Aucun médecin en attente.
               </p>
-            )}
+            ) : null}
             {pagiMedecins.tranche.map((dossier) => (
               <LigneDossierMobile key={dossier.id} dossier={dossier} approuver={approuver} demanderRejet={setRejetEnCours} examiner={examiner} actif={dossierEnCours?.id === dossier.id} />
             ))}
@@ -625,12 +638,14 @@ export default function ValidationsAdmin() {
             />
           </div>
           <div className="card2">
-            <h4>Établissements en attente · {etablissements.length}</h4>
-            {etablissements.length === 0 && (
+            <h4>Établissements en attente · {chargementFiles ? "…" : etablissements.length}</h4>
+            {chargementFiles ? (
+              <Squelette className="mt-2 h-[44px] rounded-xl" />
+            ) : etablissements.length === 0 ? (
               <p className="muted" style={{ fontSize: 12.5 }}>
                 Aucun établissement en attente.
               </p>
-            )}
+            ) : null}
             {pagiEtabs.tranche.map((dossier) => (
               <LigneDossierMobile key={dossier.id} dossier={dossier} approuver={approuver} demanderRejet={setRejetEnCours} examiner={examiner} actif={dossierEnCours?.id === dossier.id} />
             ))}
@@ -667,7 +682,13 @@ export default function ValidationsAdmin() {
 
       {messages}
 
-      {dossierEnCours ? (
+      {chargementFiles ? (
+        <div className="mb-4 rounded-2xl border border-line bg-white p-5">
+          <Squelette className="h-6 w-1/2" />
+          <Squelette className="mt-4 h-[140px] rounded-xl" />
+          <Squelette className="mt-3 h-[90px] rounded-xl" />
+        </div>
+      ) : dossierEnCours ? (
         <div className="mb-4 rounded-2xl border border-line bg-white p-5">
           <div className="mb-[14px] flex flex-wrap items-baseline justify-between gap-2">
             <h3 className="text-[15px] font-extrabold">
@@ -775,11 +796,16 @@ export default function ValidationsAdmin() {
 
       <div className="mb-4 rounded-2xl border border-line bg-white p-5">
         <h3 className="mb-1 text-[15px] font-extrabold">
-          Médecins en attente · {medecins.length}
+          Médecins en attente · {chargementFiles ? "…" : medecins.length}
         </h3>
-        {medecins.length === 0 && (
+        {chargementFiles ? (
+          <>
+            <Squelette className="mt-2 h-[48px] rounded-xl" />
+            <Squelette className="mt-2 h-[48px] rounded-xl" />
+          </>
+        ) : medecins.length === 0 ? (
           <p className="py-3 text-[12.5px] text-muted">Aucun médecin en attente.</p>
-        )}
+        ) : null}
         {pagiMedecins.tranche.map((dossier) => (
           <LigneDossier key={dossier.id} dossier={dossier} approuver={approuver} demanderRejet={setRejetEnCours} examiner={examiner} actif={dossierEnCours?.id === dossier.id} />
         ))}
@@ -796,11 +822,13 @@ export default function ValidationsAdmin() {
 
       <div className="rounded-2xl border border-line bg-white p-5">
         <h3 className="mb-1 text-[15px] font-extrabold">
-          Établissements en attente · {etablissements.length}
+          Établissements en attente · {chargementFiles ? "…" : etablissements.length}
         </h3>
-        {etablissements.length === 0 && (
+        {chargementFiles ? (
+          <Squelette className="mt-2 h-[48px] rounded-xl" />
+        ) : etablissements.length === 0 ? (
           <p className="py-3 text-[12.5px] text-muted">Aucun établissement en attente.</p>
-        )}
+        ) : null}
         {pagiEtabs.tranche.map((dossier) => (
           <LigneDossier key={dossier.id} dossier={dossier} approuver={approuver} demanderRejet={setRejetEnCours} examiner={examiner} actif={dossierEnCours?.id === dossier.id} />
         ))}

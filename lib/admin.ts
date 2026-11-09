@@ -27,17 +27,26 @@ import {
 function useRequete<T>(defaut: T, requete: () => Promise<T>, deps: unknown[] = []) {
   const [donnees, setDonnees] = useState<T>(defaut);
   const [version, setVersion] = useState(0);
+  /* `chargement` est vrai jusqu'au PREMIER résultat, puis définitivement faux :
+     un rechargement manuel (`recharger`) rafraîchit les données en place sans
+     refaire clignoter un squelette par-dessus un contenu déjà affiché. Les
+     écrans s'en servent pour montrer un squelette plutôt que les valeurs par
+     défaut (des « 0 ») tant que rien n'est revenu de la base. */
+  const [chargement, setChargement] = useState(true);
   useEffect(() => {
     let actif = true;
     requete().then((d) => {
-      if (actif) setDonnees(d);
+      if (actif) {
+        setDonnees(d);
+        setChargement(false);
+      }
     });
     return () => {
       actif = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [version, ...deps]);
-  return { donnees, recharger: () => setVersion((v) => v + 1) };
+  return { donnees, chargement, recharger: () => setVersion((v) => v + 1) };
 }
 
 /** Trace une action sensible dans journal_audit (fonction SECURITY DEFINER). */
@@ -123,8 +132,8 @@ export function ancienneteDossier(depotLe: string | null): string {
   return `en attente depuis ${jours} jours`;
 }
 
-export function useMedecinsEnAttente(): { dossiers: DossierValidation[]; recharger: () => void } {
-  const { donnees, recharger } = useRequete<DossierValidation[]>([], async () => {
+export function useMedecinsEnAttente(): { dossiers: DossierValidation[]; chargement: boolean; recharger: () => void } {
+  const { donnees, chargement, recharger } = useRequete<DossierValidation[]>([], async () => {
     const supabase = creerClientNavigateur();
     const { data } = await supabase
       .from("medecins")
@@ -164,7 +173,7 @@ export function useMedecinsEnAttente(): { dossiers: DossierValidation[]; recharg
       };
     });
   });
-  return { dossiers: donnees, recharger };
+  return { dossiers: donnees, chargement, recharger };
 }
 
 export interface EtablissementInscrit {
@@ -277,8 +286,8 @@ export function useEtablissementsInscrits(): {
   return { etablissements: donnees, recharger };
 }
 
-export function useEtablissementsEnAttente(): { dossiers: DossierValidation[]; recharger: () => void } {
-  const { donnees, recharger } = useRequete<DossierValidation[]>([], async () => {
+export function useEtablissementsEnAttente(): { dossiers: DossierValidation[]; chargement: boolean; recharger: () => void } {
+  const { donnees, chargement, recharger } = useRequete<DossierValidation[]>([], async () => {
     const supabase = creerClientNavigateur();
     const { data } = await supabase
       .from("etablissements")
@@ -315,7 +324,7 @@ export function useEtablissementsEnAttente(): { dossiers: DossierValidation[]; r
         .map((d) => ({ id: d.id, type: d.type, statut: d.statut, fichierPath: d.fichier_path })),
     }));
   });
-  return { dossiers: donnees, recharger };
+  return { dossiers: donnees, chargement, recharger };
 }
 
 /* ----- Détail d'un dossier soumis à validation ----- */
@@ -575,8 +584,8 @@ export interface Signalement {
   sanction: "Suspendre" | "Avertir";
 }
 
-export function useSignalements(): { signalements: Signalement[]; recharger: () => void } {
-  const { donnees, recharger } = useRequete<Signalement[]>([], async () => {
+export function useSignalements(): { signalements: Signalement[]; chargement: boolean; recharger: () => void } {
+  const { donnees, chargement, recharger } = useRequete<Signalement[]>([], async () => {
     const { data } = await creerClientNavigateur()
       .from("signalements")
       .select("id, motif, cible_type, cree_le, statut")
@@ -589,7 +598,7 @@ export function useSignalements(): { signalements: Signalement[]; recharger: () 
       sanction: "Avertir" as const,
     }));
   });
-  return { signalements: donnees, recharger };
+  return { signalements: donnees, chargement, recharger };
 }
 
 export async function traiterSignalement(
@@ -623,8 +632,8 @@ export interface AvisAModerer {
  * les avis **signalés**. On remonte les deux, avec une étiquette distincte
  * pour que l'admin sache pourquoi la ligne est là.
  */
-export function useAvisAModerer(): { avis: AvisAModerer[]; recharger: () => void } {
-  const { donnees, recharger } = useRequete<AvisAModerer[]>([], async () => {
+export function useAvisAModerer(): { avis: AvisAModerer[]; chargement: boolean; recharger: () => void } {
+  const { donnees, chargement, recharger } = useRequete<AvisAModerer[]>([], async () => {
     const supabase = creerClientNavigateur();
 
     // Avis visés par un signalement encore ouvert.
@@ -663,7 +672,7 @@ export function useAvisAModerer(): { avis: AvisAModerer[]; recharger: () => void
       };
     });
   });
-  return { avis: donnees, recharger };
+  return { avis: donnees, chargement, recharger };
 }
 
 export async function modererAvis(
@@ -2074,8 +2083,8 @@ export interface CompteursAdmin {
   rdvCeMois: number;
 }
 
-export function useCompteursAdmin(): CompteursAdmin {
-  const { donnees } = useRequete<CompteursAdmin>(
+export function useCompteursAdmin(): CompteursAdmin & { chargement: boolean } {
+  const { donnees, chargement } = useRequete<CompteursAdmin>(
     { medecinsEnAttente: 0, etablissementsEnAttente: 0, signalements: 0, avisAModerer: 0, utilisateurs: 0, medecinsValides: 0, rdvCeMois: 0 },
     async () => {
       const supabase = creerClientNavigateur();
@@ -2111,7 +2120,7 @@ export function useCompteursAdmin(): CompteursAdmin {
       };
     }
   );
-  return donnees;
+  return { ...donnees, chargement };
 }
 
 /** Nombre d'inscriptions par mois sur les 6 derniers mois (croissance). */
@@ -2120,8 +2129,8 @@ export interface MoisCroissance {
   total: number;
 }
 
-export function useCroissanceInscriptions(): MoisCroissance[] {
-  const { donnees } = useRequete<MoisCroissance[]>([], async () => {
+export function useCroissanceInscriptions(): { mois: MoisCroissance[]; chargement: boolean } {
+  const { donnees, chargement } = useRequete<MoisCroissance[]>([], async () => {
     const debut = new Date();
     debut.setMonth(debut.getMonth() - 5, 1);
     debut.setHours(0, 0, 0, 0);
@@ -2147,7 +2156,7 @@ export function useCroissanceInscriptions(): MoisCroissance[] {
     }
     return mois;
   });
-  return donnees;
+  return { mois: donnees, chargement };
 }
 
 /* ===== Utilisateurs (liste) ===== */
@@ -2161,8 +2170,8 @@ export interface UtilisateurAdmin {
   creeLe: string;
 }
 
-export function useUtilisateurs(): { utilisateurs: UtilisateurAdmin[]; recharger: () => void } {
-  const { donnees, recharger } = useRequete<UtilisateurAdmin[]>([], async () => {
+export function useUtilisateurs(): { utilisateurs: UtilisateurAdmin[]; chargement: boolean; recharger: () => void } {
+  const { donnees, chargement, recharger } = useRequete<UtilisateurAdmin[]>([], async () => {
     const { data } = await creerClientNavigateur()
       .from("utilisateurs")
       .select("id, nom, prenom, email, telephone, role, statut, cree_le")
@@ -2180,7 +2189,7 @@ export function useUtilisateurs(): { utilisateurs: UtilisateurAdmin[]; recharger
       creeLe: new Date(u.cree_le).toLocaleDateString("fr-FR"),
     }));
   });
-  return { utilisateurs: donnees, recharger };
+  return { utilisateurs: donnees, chargement, recharger };
 }
 
 /**

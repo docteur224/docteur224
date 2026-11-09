@@ -15,6 +15,7 @@ import {
 import { useAgenda, useContextePro, type CreneauAgenda, type RdvAgenda } from "@/lib/pro";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import Icone from "@/components/site/Icone";
+import { Squelette } from "@/components/ui/Squelette";
 
 /*
  * Mon agenda — la journée du praticien, heure par heure.
@@ -368,11 +369,18 @@ export default function AgendaMedecin() {
               </Link>
             )
           )}
-          {creneaux.length === 0 && (
+          {chargement ? (
+            <>
+              <Squelette className="mt-2 h-[58px] rounded-xl" />
+              <Squelette className="mt-2 h-[58px] rounded-xl" />
+              <Squelette className="mt-2 h-[58px] rounded-xl" />
+              <Squelette className="mt-2 h-[58px] rounded-xl" />
+            </>
+          ) : creneaux.length === 0 ? (
             <p className="muted" style={{ fontSize: 13 }}>
-              {chargement ? "Chargement de l’agenda…" : messageVide}
+              {messageVide}
             </p>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -469,12 +477,16 @@ export default function AgendaMedecin() {
         </div>
 
         <div className="overflow-hidden rounded-2xl border border-line bg-white">
-          {creneaux.map(ligneWeb)}
-          {creneaux.length === 0 && (
-            <p className="px-5 py-[14px] text-[13px] text-muted">
-              {chargement ? "Chargement de l’agenda…" : messageVide}
-            </p>
-          )}
+          {!chargement && creneaux.map(ligneWeb)}
+          {chargement ? (
+            <div className="grid gap-px">
+              {Array.from({ length: 6 }, (_, i) => (
+                <Squelette key={i} className="h-[56px] rounded-none" />
+              ))}
+            </div>
+          ) : creneaux.length === 0 ? (
+            <p className="px-5 py-[14px] text-[13px] text-muted">{messageVide}</p>
+          ) : null}
         </div>
       </div>
 

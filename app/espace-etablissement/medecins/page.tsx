@@ -17,6 +17,7 @@ import {
 } from "@/lib/etablissement";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import Pagination, { usePagination } from "@/components/site/Pagination";
+import { Squelette } from "@/components/ui/Squelette";
 import Dialogue from "@/components/site/Dialogue";
 import FicheMedecin from "@/components/etablissement/FicheMedecin";
 
@@ -56,8 +57,9 @@ type Confirmation =
   | { genre: "annuler"; id: string; nom: string };
 
 export default function MedecinsEtablissement() {
-  const { etablissement } = useEtablissementConnecte();
-  const { rattaches, recharger: rechargerRattaches } = useMedecinsRattaches(etablissement?.id);
+  const { etablissement, chargement: chargementFiche } = useEtablissementConnecte();
+  const { rattaches, recharger: rechargerRattaches, chargement: chRattaches } = useMedecinsRattaches(etablissement?.id);
+  const chargementRattaches = chargementFiche || chRattaches;
   const { invitations, recharger } = useInvitations(etablissement?.id);
   const pagi = usePagination(rattaches, 12);
   const pagiInvitations = usePagination(invitations, 10);
@@ -443,13 +445,18 @@ export default function MedecinsEtablissement() {
             />
           </div>
           <div className="card2">
-            <h4>{rattaches.length} médecins rattachés</h4>
+            <h4>{chargementRattaches ? "…" : rattaches.length} médecins rattachés</h4>
             {pagi.tranche.map(ligneRattache)}
-            {rattaches.length === 0 && (
+            {chargementRattaches ? (
+              <>
+                <Squelette className="mt-2 h-[52px] rounded-xl" />
+                <Squelette className="mt-2 h-[52px] rounded-xl" />
+              </>
+            ) : rattaches.length === 0 ? (
               <p className="muted" style={{ fontSize: 13 }}>
                 Aucun médecin rattaché pour l&apos;instant.
               </p>
-            )}
+            ) : null}
             <Pagination
               page={pagi.page}
               pages={pagi.pages}
@@ -502,14 +509,19 @@ export default function MedecinsEtablissement() {
 
         <div className="rounded-2xl border border-line bg-white p-5">
           <h3 className="mb-1 text-[15px] font-extrabold">
-            Médecins rattachés ({rattaches.length})
+            Médecins rattachés ({chargementRattaches ? "…" : rattaches.length})
           </h3>
           {pagi.tranche.map(ligneRattache)}
-          {rattaches.length === 0 && (
+          {chargementRattaches ? (
+            <>
+              <Squelette className="mt-2 h-[56px] rounded-xl" />
+              <Squelette className="mt-2 h-[56px] rounded-xl" />
+            </>
+          ) : rattaches.length === 0 ? (
             <p className="py-2 text-[13px] text-muted">
               Aucun médecin rattaché pour l’instant : invitez-en un ci-dessus.
             </p>
-          )}
+          ) : null}
           <Pagination
             page={pagi.page}
             pages={pagi.pages}

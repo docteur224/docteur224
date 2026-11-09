@@ -10,6 +10,7 @@ import {
 } from "@/lib/etablissement";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import { formatDateCourte } from "@/lib/dates";
+import { Squelette } from "@/components/ui/Squelette";
 
 /*
  * Tableau de bord établissement — reproduit l'écran « etab-dash » de la
@@ -42,8 +43,14 @@ const heureCourte = (heure: string) => heure.slice(0, 5);
 export default function TableauDeBordEtablissement() {
   const { etablissement, chargement } = useEtablissementConnecte();
   const etab = etablissement ?? ETABLISSEMENT_VIDE;
-  const { rattaches } = useMedecinsRattaches(etablissement?.id);
-  const { stats } = useStatistiquesEtablissement(etablissement?.id);
+  const { rattaches, chargement: chMedecins } = useMedecinsRattaches(etablissement?.id);
+  const { stats, chargement: chStats } = useStatistiquesEtablissement(etablissement?.id);
+
+  /* Tant que l'établissement n'est pas identifié, ses listes et compteurs ne
+     sont pas encore demandés : on considère qu'ils chargent aussi, pour éviter
+     un « 0 médecin » ou une liste vide avant la première requête. */
+  const chargementMedecins = chargement || chMedecins;
+  const chargementStats = chargement || chStats;
 
   // Le compte des médecins est déjà chargé localement : l'afficher sans
   // attendre la réponse des statistiques évite un « 0 » transitoire.
@@ -110,25 +117,27 @@ export default function TableauDeBordEtablissement() {
       <div className="md:hidden">
         <EnTeteMobile variante="marque" />
         <div className="appbar">
-          <h3 style={{ paddingLeft: 4 }}>{etab.nomCourt}</h3>
+          <h3 style={{ paddingLeft: 4 }}>
+            {chargement ? <Squelette style={{ display: "inline-block", width: 160, height: 16, verticalAlign: "middle" }} /> : etab.nomCourt}
+          </h3>
         </div>
         <div className="pad">
           {bandeauValidation}
           <div className="statcards inpad two">
             <div className="sc b1">
-              <b>{nbMedecins}</b>
+              <b>{chargementMedecins ? <Squelette className="mx-auto h-[18px] w-8" /> : nbMedecins}</b>
               <small>Médecins</small>
             </div>
             <div className="sc b2">
-              <b>{stats?.rdvAujourdhui ?? "—"}</b>
+              <b>{chargementStats ? <Squelette className="mx-auto h-[18px] w-8" /> : stats?.rdvAujourdhui ?? "—"}</b>
               <small>RDV aujourd&apos;hui</small>
             </div>
             <div className="sc b3">
-              <b>{stats?.assistants ?? "—"}</b>
+              <b>{chargementStats ? <Squelette className="mx-auto h-[18px] w-8" /> : stats?.assistants ?? "—"}</b>
               <small>Assistant(e)s</small>
             </div>
             <div className="sc b1">
-              <b>{stats?.rdvMois ?? "—"}</b>
+              <b>{chargementStats ? <Squelette className="mx-auto h-[18px] w-8" /> : stats?.rdvMois ?? "—"}</b>
               <small>RDV ce mois</small>
             </div>
           </div>
@@ -148,13 +157,22 @@ export default function TableauDeBordEtablissement() {
                 </Link>
               </div>
             ))}
-            {nbMedecins === 0 && (
+            {chargementMedecins ? (
+              <>
+                <Squelette className="mt-2 h-[48px] rounded-xl" />
+                <Squelette className="mt-2 h-[48px] rounded-xl" />
+              </>
+            ) : nbMedecins === 0 ? (
               <p className="muted" style={{ fontSize: 13 }}>
                 Aucun médecin rattaché pour l&apos;instant.
               </p>
-            )}
+            ) : null}
             <Link href="/espace-etablissement/medecins" className="btn ghost block">
-              {nbMedecins === 0 ? "Inviter un médecin" : "Voir tous les médecins"}
+              {chargementMedecins
+                ? "Voir les médecins"
+                : nbMedecins === 0
+                  ? "Inviter un médecin"
+                  : "Voir tous les médecins"}
             </Link>
           </div>
           <div className="card2">
@@ -177,11 +195,16 @@ export default function TableauDeBordEtablissement() {
                 </div>
               );
             })}
-            {prochains.length === 0 && (
+            {chargementStats ? (
+              <>
+                <Squelette className="mt-2 h-[52px] rounded-xl" />
+                <Squelette className="mt-2 h-[52px] rounded-xl" />
+              </>
+            ) : prochains.length === 0 ? (
               <p className="muted" style={{ fontSize: 13 }}>
                 Aucun rendez-vous à venir.
               </p>
-            )}
+            ) : null}
             <p className="muted" style={{ fontSize: 11.5, marginTop: 8 }}>
               Les noms des patients ne sont pas visibles depuis l&apos;espace établissement.
             </p>
@@ -196,7 +219,9 @@ export default function TableauDeBordEtablissement() {
       <div className="hidden md:block">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">{etab.nom}</h2>
+            <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">
+              {chargement ? <Squelette style={{ display: "inline-block", width: 220, height: 20, verticalAlign: "middle" }} /> : etab.nom}
+            </h2>
             <small className="text-[13px] text-muted">Vue d’ensemble de l’établissement</small>
           </div>
           <Link
@@ -215,7 +240,7 @@ export default function TableauDeBordEtablissement() {
               👨‍⚕️
             </span>
             <b className="mt-2 block text-[26px] font-extrabold tracking-[-0.6px] text-blue">
-              {nbMedecins}
+              {chargementMedecins ? <Squelette className="h-[26px] w-10" /> : nbMedecins}
             </b>
             <small className="text-xs font-semibold text-muted">Médecins actifs</small>
           </div>
@@ -224,7 +249,7 @@ export default function TableauDeBordEtablissement() {
               📅
             </span>
             <b className="mt-2 block text-[26px] font-extrabold tracking-[-0.6px] text-amber">
-              {stats?.rdvAujourdhui ?? "—"}
+              {chargementStats ? <Squelette className="h-[26px] w-10" /> : stats?.rdvAujourdhui ?? "—"}
             </b>
             <small className="text-xs font-semibold text-muted">RDV aujourd’hui</small>
           </div>
@@ -233,7 +258,7 @@ export default function TableauDeBordEtablissement() {
               🧑‍💼
             </span>
             <b className="mt-2 block text-[26px] font-extrabold tracking-[-0.6px] text-green">
-              {stats?.assistants ?? "—"}
+              {chargementStats ? <Squelette className="h-[26px] w-10" /> : stats?.assistants ?? "—"}
             </b>
             <small className="text-xs font-semibold text-muted">Assistant(e)s</small>
           </div>
@@ -242,7 +267,7 @@ export default function TableauDeBordEtablissement() {
               📈
             </span>
             <b className="mt-2 block text-[26px] font-extrabold tracking-[-0.6px] text-teal">
-              {stats?.rdvMois ?? "—"}
+              {chargementStats ? <Squelette className="h-[26px] w-10" /> : stats?.rdvMois ?? "—"}
             </b>
             <small className="text-xs font-semibold text-muted">RDV ce mois</small>
           </div>
@@ -271,16 +296,29 @@ export default function TableauDeBordEtablissement() {
               </span>
             </div>
           ))}
-          {nbMedecins === 0 && (
+          {chargementMedecins ? (
+            <>
+              <div className="border-b border-line py-[14px]">
+                <Squelette className="h-[42px] rounded-xl" />
+              </div>
+              <div className="py-[14px]">
+                <Squelette className="h-[42px] rounded-xl" />
+              </div>
+            </>
+          ) : nbMedecins === 0 ? (
             <p className="py-2 text-[13px] text-muted">
               Aucun médecin rattaché pour l’instant.
             </p>
-          )}
+          ) : null}
           <Link
             href="/espace-etablissement/medecins"
             className="pointer-coarse:py-[13px] mt-[14px] inline-block rounded-[9px] border-[1.5px] border-line bg-white px-[14px] py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg"
           >
-            {nbMedecins === 0 ? "Inviter un médecin →" : "Voir tous les médecins →"}
+            {chargementMedecins
+              ? "Voir les médecins →"
+              : nbMedecins === 0
+                ? "Inviter un médecin →"
+                : "Voir tous les médecins →"}
           </Link>
         </div>
 
@@ -313,9 +351,14 @@ export default function TableauDeBordEtablissement() {
               </div>
             );
           })}
-          {prochains.length === 0 && (
+          {chargementStats ? (
+            <>
+              <Squelette className="mb-[10px] h-[58px] rounded-xl" />
+              <Squelette className="h-[58px] rounded-xl" />
+            </>
+          ) : prochains.length === 0 ? (
             <p className="py-2 text-[13px] text-muted">Aucun rendez-vous à venir.</p>
-          )}
+          ) : null}
           <p className="mt-3 text-[11.5px] text-muted">
             Les noms des patients ne sont pas visibles depuis l’espace établissement : un
             rendez-vous appartient au médecin et à son patient.

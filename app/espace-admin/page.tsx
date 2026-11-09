@@ -10,6 +10,7 @@ import {
   useSignalements,
 } from "@/lib/admin";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
+import { Squelette } from "@/components/ui/Squelette";
 
 /*
  * Tableau de bord admin — reproduit l'écran « admin-dash » de la maquette
@@ -18,11 +19,12 @@ import EnTeteMobile from "@/components/mobile/EnTeteMobile";
  * inscriptions.
  */
 export default function TableauDeBordAdmin() {
-  const { dossiers: medecinsEnAttente } = useMedecinsEnAttente();
-  const { dossiers: etabsEnAttente } = useEtablissementsEnAttente();
-  const { signalements } = useSignalements();
+  const { dossiers: medecinsEnAttente, chargement: chMedecins } = useMedecinsEnAttente();
+  const { dossiers: etabsEnAttente, chargement: chEtabs } = useEtablissementsEnAttente();
+  const { signalements, chargement: chSignalements } = useSignalements();
   const compteurs = useCompteursAdmin();
-  const croissance = useCroissanceInscriptions();
+  const { mois: croissance, chargement: chCroissance } = useCroissanceInscriptions();
+  const chFiles = chMedecins || chEtabs || chSignalements;
   const maxCroissance = Math.max(1, ...croissance.map((m) => m.total));
   const BARRES = croissance.map((m) => ({ mois: m.mois, hauteur: Math.round((m.total / maxCroissance) * 100) }));
 
@@ -37,15 +39,15 @@ export default function TableauDeBordAdmin() {
         <div className="pad">
           <div className="statcards inpad two">
             <div className="sc b1">
-              <b>{compteurs.utilisateurs.toLocaleString("fr-FR")}</b>
+              <b>{compteurs.chargement ? <Squelette className="mx-auto h-[18px] w-12" /> : compteurs.utilisateurs.toLocaleString("fr-FR")}</b>
               <small>Utilisateurs</small>
             </div>
             <div className="sc b2">
-              <b>{compteurs.medecinsValides.toLocaleString("fr-FR")}</b>
+              <b>{compteurs.chargement ? <Squelette className="mx-auto h-[18px] w-10" /> : compteurs.medecinsValides.toLocaleString("fr-FR")}</b>
               <small>Médecins</small>
             </div>
             <div className="sc b3">
-              <b>{compteurs.rdvCeMois.toLocaleString("fr-FR")}</b>
+              <b>{compteurs.chargement ? <Squelette className="mx-auto h-[18px] w-10" /> : compteurs.rdvCeMois.toLocaleString("fr-FR")}</b>
               <small>RDV ce mois</small>
             </div>
           </div>
@@ -59,8 +61,14 @@ export default function TableauDeBordAdmin() {
             <div className="setrow">
               <div>
                 <b>
-                  {medecinsEnAttente.length} médecin{medecinsEnAttente.length > 1 ? "s" : ""} en
-                  attente
+                  {chFiles ? (
+                    <Squelette className="h-[13px] w-36" />
+                  ) : (
+                    <>
+                      {medecinsEnAttente.length} médecin{medecinsEnAttente.length > 1 ? "s" : ""} en
+                      attente
+                    </>
+                  )}
                 </b>
                 <small>Documents à vérifier</small>
               </div>
@@ -71,7 +79,13 @@ export default function TableauDeBordAdmin() {
             <div className="setrow">
               <div>
                 <b>
-                  {etabsEnAttente.length} établissement{etabsEnAttente.length > 1 ? "s" : ""}
+                  {chFiles ? (
+                    <Squelette className="h-[13px] w-28" />
+                  ) : (
+                    <>
+                      {etabsEnAttente.length} établissement{etabsEnAttente.length > 1 ? "s" : ""}
+                    </>
+                  )}
                 </b>
                 <small>À approuver</small>
               </div>
@@ -82,7 +96,13 @@ export default function TableauDeBordAdmin() {
             <div className="setrow">
               <div>
                 <b>
-                  {signalements.length} signalement{signalements.length > 1 ? "s" : ""}
+                  {chFiles ? (
+                    <Squelette className="h-[13px] w-28" />
+                  ) : (
+                    <>
+                      {signalements.length} signalement{signalements.length > 1 ? "s" : ""}
+                    </>
+                  )}
                 </b>
                 <small>À examiner</small>
               </div>
@@ -94,12 +114,18 @@ export default function TableauDeBordAdmin() {
           <div className="card2">
             <h4>Croissance des inscriptions</h4>
             <div className="bars">
-              {BARRES.map((barre) => (
-                <div key={barre.mois} className="b">
-                  <div className="bar" style={{ height: `${barre.hauteur}%` }} />
-                  <small>{barre.mois}</small>
-                </div>
-              ))}
+              {chCroissance
+                ? [40, 66, 52, 80, 60, 92].map((h, i) => (
+                    <div key={i} className="b">
+                      <Squelette style={{ height: `${h}%`, width: "100%", borderRadius: "6px 6px 0 0" }} />
+                    </div>
+                  ))
+                : BARRES.map((barre) => (
+                    <div key={barre.mois} className="b">
+                      <div className="bar" style={{ height: `${barre.hauteur}%` }} />
+                      <small>{barre.mois}</small>
+                    </div>
+                  ))}
             </div>
           </div>
         </div>
@@ -133,7 +159,7 @@ export default function TableauDeBordAdmin() {
             👥
           </span>
           <b className="mt-2 block text-[26px] font-extrabold tracking-[-0.6px] text-blue">
-            {compteurs.utilisateurs.toLocaleString("fr-FR")}
+            {compteurs.chargement ? <Squelette className="h-[26px] w-16" /> : compteurs.utilisateurs.toLocaleString("fr-FR")}
           </b>
           <small className="text-xs font-semibold text-muted">Utilisateurs</small>
         </div>
@@ -141,7 +167,7 @@ export default function TableauDeBordAdmin() {
           <span className="text-lg" aria-hidden>
             👨‍⚕️
           </span>
-          <b className="mt-2 block text-[26px] font-extrabold tracking-[-0.6px] text-amber">{compteurs.medecinsValides.toLocaleString("fr-FR")}</b>
+          <b className="mt-2 block text-[26px] font-extrabold tracking-[-0.6px] text-amber">{compteurs.chargement ? <Squelette className="h-[26px] w-12" /> : compteurs.medecinsValides.toLocaleString("fr-FR")}</b>
           <small className="text-xs font-semibold text-muted">Médecins</small>
         </div>
         <div className="rounded-2xl border border-line bg-white p-[18px]">
@@ -149,7 +175,7 @@ export default function TableauDeBordAdmin() {
             📅
           </span>
           <b className="mt-2 block text-[26px] font-extrabold tracking-[-0.6px] text-green">
-            {compteurs.rdvCeMois.toLocaleString("fr-FR")}
+            {compteurs.chargement ? <Squelette className="h-[26px] w-16" /> : compteurs.rdvCeMois.toLocaleString("fr-FR")}
           </b>
           <small className="text-xs font-semibold text-muted">RDV ce mois</small>
         </div>
@@ -160,8 +186,14 @@ export default function TableauDeBordAdmin() {
         <div className="flex items-center justify-between gap-[14px] border-b border-line py-[15px]">
           <div>
             <b className="block text-[13.5px] font-bold">
-              {medecinsEnAttente.length} médecin{medecinsEnAttente.length > 1 ? "s" : ""} en
-              attente de validation
+              {chFiles ? (
+                <Squelette className="h-[13px] w-56" />
+              ) : (
+                <>
+                  {medecinsEnAttente.length} médecin{medecinsEnAttente.length > 1 ? "s" : ""} en
+                  attente de validation
+                </>
+              )}
             </b>
             <small className="text-xs text-muted">
               Diplômes et cartes de l’ordre à vérifier
@@ -177,8 +209,14 @@ export default function TableauDeBordAdmin() {
         <div className="flex items-center justify-between gap-[14px] border-b border-line py-[15px]">
           <div>
             <b className="block text-[13.5px] font-bold">
-              {etabsEnAttente.length} établissement{etabsEnAttente.length > 1 ? "s" : ""} en
-              attente
+              {chFiles ? (
+                <Squelette className="h-[13px] w-56" />
+              ) : (
+                <>
+                  {etabsEnAttente.length} établissement{etabsEnAttente.length > 1 ? "s" : ""} en
+                  attente
+                </>
+              )}
             </b>
             <small className="text-xs text-muted">Demandes de rattachement à approuver</small>
           </div>
@@ -192,7 +230,13 @@ export default function TableauDeBordAdmin() {
         <div className="flex items-center justify-between gap-[14px] py-[15px]">
           <div>
             <b className="block text-[13.5px] font-bold">
-              {signalements.length} signalement{signalements.length > 1 ? "s" : ""}
+              {chFiles ? (
+                <Squelette className="h-[13px] w-40" />
+              ) : (
+                <>
+                  {signalements.length} signalement{signalements.length > 1 ? "s" : ""}
+                </>
+              )}
             </b>
             <small className="text-xs text-muted">Avis ou comptes à examiner</small>
           </div>
@@ -208,18 +252,24 @@ export default function TableauDeBordAdmin() {
       <div className="rounded-2xl border border-line bg-white p-5">
         <h3 className="mb-[14px] text-[15px] font-extrabold">Croissance des inscriptions</h3>
         <div className="flex h-[180px] items-end gap-[14px] px-1 pt-[10px]">
-          {BARRES.map((barre) => (
-            <div
-              key={barre.mois}
-              className="flex h-full flex-1 flex-col items-center justify-end gap-2"
-            >
-              <div
-                className="w-full max-w-[46px] rounded-t-lg bg-[linear-gradient(180deg,var(--teal),var(--blue))]"
-                style={{ height: `${barre.hauteur}%` }}
-              />
-              <small className="text-[11px] font-bold text-muted">{barre.mois}</small>
-            </div>
-          ))}
+          {chCroissance
+            ? [40, 66, 52, 80, 60, 92].map((h, i) => (
+                <div key={i} className="flex h-full flex-1 flex-col items-center justify-end gap-2">
+                  <Squelette className="w-full max-w-[46px] rounded-t-lg" style={{ height: `${h}%` }} />
+                </div>
+              ))
+            : BARRES.map((barre) => (
+                <div
+                  key={barre.mois}
+                  className="flex h-full flex-1 flex-col items-center justify-end gap-2"
+                >
+                  <div
+                    className="w-full max-w-[46px] rounded-t-lg bg-[linear-gradient(180deg,var(--teal),var(--blue))]"
+                    style={{ height: `${barre.hauteur}%` }}
+                  />
+                  <small className="text-[11px] font-bold text-muted">{barre.mois}</small>
+                </div>
+              ))}
         </div>
       </div>
       </div>
