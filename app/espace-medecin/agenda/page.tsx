@@ -284,25 +284,38 @@ export default function AgendaMedecin() {
               type="button"
               onClick={() => setDateISO(iso)}
               aria-current={choisi ? "date" : undefined}
-              title="Voir cette journée en détail"
-              className={`border-b border-l border-line px-2 py-2 text-center transition-colors hover:bg-bg ${
-                estAuj ? "bg-teal-soft" : "bg-white"
+              title={choisi ? "Jour affiché dans le reste de l'écran" : "Afficher cette journée"}
+              className={`border-b border-l border-line px-2 py-2 text-center transition-colors ${
+                choisi
+                  ? "bg-teal hover:bg-teal-hover"
+                  : estAuj
+                    ? "bg-teal-soft hover:bg-bg"
+                    : "bg-white hover:bg-bg"
               }`}
             >
               <span
                 className={`block text-[10px] font-bold uppercase tracking-wide ${
-                  estAuj ? "text-teal" : "text-muted"
+                  choisi ? "text-white/90" : estAuj ? "text-teal" : "text-muted"
                 }`}
               >
                 {JOURS_COURTS[jour.getDay()]}
               </span>
               <span
                 className={`block text-[15px] font-extrabold leading-tight ${
-                  estAuj ? "text-blue" : "text-ink"
+                  choisi ? "text-white" : estAuj ? "text-blue" : "text-ink"
                 }`}
               >
                 {jour.getDate()}
               </span>
+              {estAuj && (
+                <span
+                  className={`mt-0.5 block text-[8.5px] font-bold uppercase tracking-wide ${
+                    choisi ? "text-white/80" : "text-teal"
+                  }`}
+                >
+                  Auj.
+                </span>
+              )}
             </button>
           );
         })}
@@ -320,7 +333,11 @@ export default function AgendaMedecin() {
               </div>
               {semaine.map((iso, j) => {
                 const creneau = creneauxParJour[j][i];
-                const cellule = `min-h-[30px] border-l border-line p-[2px] ${bordure}`;
+                // La colonne du jour affiché est teintée sur toute sa hauteur,
+                // pour que la sélection du bandeau « suive » jusque dans la grille.
+                const choisi = iso === dateISO;
+                const fond = choisi ? " bg-teal-soft" : "";
+                const cellule = `min-h-[30px] border-l border-line p-[2px] ${bordure}${fond}`;
 
                 if (creneau.statut === "reserve" && creneau.rdv) {
                   const couleur =
@@ -351,10 +368,15 @@ export default function AgendaMedecin() {
 
                 if (creneau.statut === "ferme") {
                   // Congé, fermeture ou hors horaires : hachures, non cliquable.
+                  // Dans la colonne sélectionnée, la base des hachures prend la
+                  // teinte d'accent pour ne pas rompre le fil de la colonne.
+                  const hachures = choisi
+                    ? "bg-[repeating-linear-gradient(45deg,var(--teal-soft),var(--teal-soft)_5px,var(--line)_5px,var(--line)_6px)]"
+                    : "bg-[repeating-linear-gradient(45deg,var(--bg),var(--bg)_5px,var(--line)_5px,var(--line)_6px)]";
                   return (
                     <div
                       key={iso}
-                      className={`min-h-[30px] border-l border-line bg-[repeating-linear-gradient(45deg,var(--bg),var(--bg)_5px,var(--line)_5px,var(--line)_6px)] ${bordure}`}
+                      className={`min-h-[30px] border-l border-line ${hachures} ${bordure}`}
                     />
                   );
                 }
