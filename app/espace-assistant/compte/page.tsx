@@ -48,44 +48,25 @@ export default function CompteAssistant() {
               <small>Assistant(e){nomMedecin ? ` · ${nomMedecin}` : ""}</small>
             </div>
           </div>
+          {/* Mobile : « mon compte » seulement. La navigation (agenda,
+              créneaux, patients, messages, suivi) vit dans le tiroir latéral ;
+              la Déconnexion aussi (section Réglages). */}
+          <p className="sect-titre">Mon compte</p>
           <div className="menu">
-            <Link href="/espace-assistant/creneaux" className="mrow">
+            <Link href="/espace-assistant/mon-compte" className="mrow">
               <span className="mi" aria-hidden>
-                🕐
+                🔐
               </span>
               <span>
-                <b>Créneaux &amp; dispos</b>
-                <small>Ouvrir/fermer les créneaux</small>
-              </span>
-              <span className="ch" aria-hidden>
-                ›
-              </span>
-            </Link>
-            <Link href="/espace-assistant/patients" className="mrow">
-              <span className="mi" aria-hidden>
-                👥
-              </span>
-              <span>
-                <b>Patients</b>
-                <small>Coordonnées pour les RDV</small>
-              </span>
-              <span className="ch" aria-hidden>
-                ›
-              </span>
-            </Link>
-            <Link href="/" className="mrow">
-              <span className="mi" aria-hidden>
-                ↩️
-              </span>
-              <span>
-                <b>Déconnexion</b>
+                <b>Sécurité &amp; connexion</b>
+                <small>Mot de passe et sessions</small>
               </span>
               <span className="ch" aria-hidden>
                 ›
               </span>
             </Link>
           </div>
-          <div className="card2" style={{ marginTop: 12 }}>
+          <div className="card2" style={{ marginTop: 16 }}>
             <h4>Mes permissions</h4>
             <p className="muted" style={{ fontSize: 11, margin: "-4px 0 10px" }}>
               Définies par le médecin · lecture seule.

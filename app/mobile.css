@@ -165,6 +165,10 @@
   .tiroir-qui small { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: block; }
 
   .tiroir-liens { display: flex; flex-direction: column; gap: 2px; padding: 10px; }
+  /* Sections de navigation (médecin / assistant) : un titre discret par bloc. */
+  .tiroir-groupe { display: flex; flex-direction: column; gap: 2px; }
+  .tiroir-titre { margin: 10px 12px 3px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted-soft); }
+  .tiroir-groupe:first-child .tiroir-titre { margin-top: 2px; }
   .tiroir-liens a, .tiroir-quitter, .tiroir-info, .tiroir-mode { display: flex; align-items: center; gap: 12px; min-height: 46px; padding: 11px 12px; border-radius: 12px; font-size: 13.5px; font-weight: 600; color: var(--muted); background: none; border: 0; font-family: inherit; text-align: left; width: 100%; cursor: pointer; }
   .tiroir-liens a .i, .tiroir-quitter .i, .tiroir-info .i, .tiroir-mode .i { font-size: 16px; width: 20px; text-align: center; flex: none; }
   .tiroir-mode:hover { background: var(--bg); }
@@ -309,6 +313,8 @@
 
   /* ===== hub compte + sous-pages ===== */
   .menu { display: flex; flex-direction: column; background: var(--card); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
+  /* Titre de section de la Page Profil (mobile). */
+  .sect-titre { margin: 18px 4px 8px; font-size: 10.5px; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted-soft); }
   .mrow { display: flex; align-items: center; gap: 13px; padding: 15px 16px; border-bottom: 1px solid var(--line); width: 100%; text-align: left; background: none; }
   .mrow:last-child { border-bottom: none; }
   .mrow:active { background: var(--bg); }

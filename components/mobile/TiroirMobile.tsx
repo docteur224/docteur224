@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef } from "react";
-import { LIBELLE_ROLE, RACCOURCIS_PATIENT, menuDuRole } from "@/components/mobile/menus-roles";
+import { LIBELLE_ROLE, RACCOURCIS_PATIENT, menuDuRole, type EntreeMenu } from "@/components/mobile/menus-roles";
 import BasculeMode from "@/components/site/BasculeMode";
 import { seDeconnecter } from "@/lib/auth";
 import { useDroitsAdmin } from "@/lib/admin";
+import { useContextePro } from "@/lib/pro";
 import { aPermission, PERMISSION_PAR_ROUTE } from "@/lib/permissions-admin";
 import type { ProfilConnecte } from "@/lib/patient";
 import PastilleProfil from "@/components/mobile/PastilleProfil";
@@ -31,16 +32,39 @@ export default function TiroirMobile({
   const router = useRouter();
   const pathname = usePathname();
   const { panneau, glissement } = useGlissementFermeture(fermer, ouvert);
-  const { role, entrees: toutes } = menuDuRole(profil.role);
+  const { role, groupes } = menuDuRole(profil.role);
   const initiales = `${profil.prenom.charAt(0)}${profil.nom.charAt(0)}`.toUpperCase() || "?";
 
   // Miroir de la barre latérale web : un administrateur ne voit que les
   // sections que ses permissions lui ouvrent (migration 0043).
   const { droits, chargement: chargementDroits } = useDroitsAdmin(role === "admin");
-  const entrees = toutes.filter((e) => {
-    const requise = PERMISSION_PAR_ROUTE[e.href];
-    return !requise || chargementDroits || aPermission(droits, requise);
-  });
+  // Assistant(e) : le médecin décide quelles entrées sont visibles. Le
+  // contexte renvoie des valeurs neutres hors espace pro — inoffensif ici.
+  const ctxPro = useContextePro();
+
+  const entreeVisible = (e: EntreeMenu) => {
+    const requiseAdmin = PERMISSION_PAR_ROUTE[e.href];
+    const okAdmin = !requiseAdmin || chargementDroits || aPermission(droits, requiseAdmin);
+    const okAssistant = !e.permission || ctxPro.chargement || ctxPro.permissions[e.permission];
+    return okAdmin && okAssistant;
+  };
+
+  // Complément affiché sous le rôle, dans l'en-tête : l'établissement pour le
+  // médecin (quand il est renseigné), le médecin de rattachement pour
+  // l'assistant(e), le téléphone pour les autres rôles (comportement d'avant).
+  const complementEntete = (() => {
+    if (role === "medecin") {
+      const etab = ctxPro.medecin?.etablissementNom?.trim();
+      return etab ? ` · ${etab}` : "";
+    }
+    if (role === "assistant") {
+      const m = ctxPro.medecin;
+      return m ? ` · Rattaché à ${m.civilite} ${m.prenom.charAt(0)}. ${m.nom}` : "";
+    }
+    return profil.telephone ? ` · ${profil.telephone}` : "";
+  })();
+
+  const avecReglagesTitre = role === "medecin" || role === "assistant";
 
   // Fermeture au changement d'écran : sans cela, le tiroir resterait ouvert
   // par-dessus la page d'arrivée après un clic sur un lien.
@@ -94,7 +118,7 @@ export default function TiroirMobile({
             </b>
             <small>
               {LIBELLE_ROLE[role]}
-              {profil.telephone ? ` · ${profil.telephone}` : ""}
+              {complementEntete}
             </small>
           </div>
           <button
@@ -110,21 +134,30 @@ export default function TiroirMobile({
         </div>
 
         <nav className="tiroir-liens" aria-label={`Menu ${LIBELLE_ROLE[role]}`}>
-          {entrees.map((e) => {
-            const actif = pathname === e.href || pathname.startsWith(`${e.href}/`);
+          {groupes.map((groupe, idx) => {
+            const visibles = groupe.entrees.filter(entreeVisible);
+            if (visibles.length === 0) return null;
             return (
-              <Link
-                key={e.href}
-                href={e.href}
-                className={actif ? "on" : undefined}
-                aria-current={actif ? "page" : undefined}
-                tabIndex={ouvert ? 0 : -1}
-              >
-                <span className="i" aria-hidden>
-                  {e.icone}
-                </span>
-                {e.label}
-              </Link>
+              <div className="tiroir-groupe" key={groupe.titre ?? idx}>
+                {groupe.titre && <p className="tiroir-titre">{groupe.titre}</p>}
+                {visibles.map((e) => {
+                  const actif = pathname === e.href || pathname.startsWith(`${e.href}/`);
+                  return (
+                    <Link
+                      key={e.href}
+                      href={e.href}
+                      className={actif ? "on" : undefined}
+                      aria-current={actif ? "page" : undefined}
+                      tabIndex={ouvert ? 0 : -1}
+                    >
+                      <span className="i" aria-hidden>
+                        {e.icone}
+                      </span>
+                      {e.label}
+                    </Link>
+                  );
+                })}
+              </div>
             );
           })}
 
@@ -143,6 +176,7 @@ export default function TiroirMobile({
           )}
 
           <div className="tiroir-separateur" role="presentation" />
+          {avecReglagesTitre && <p className="tiroir-titre">Réglages</p>}
           {/* Sélecteur de langue : décoratif, comme le « FR ⌄ » du TopNav web. */}
           <div className="tiroir-info">
             <span className="i" aria-hidden>

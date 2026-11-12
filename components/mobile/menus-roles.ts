@@ -1,12 +1,34 @@
 /**
- * Menus du tiroir mobile — miroir exact des barres latérales web de chaque
- * espace (composants *Shell.tsx). C'est ce qui garantit la règle : rien
- * d'atteignable sur desktop ne doit être inatteignable sur mobile, où la
- * tabbar ne peut porter que 4 destinations.
+ * Menus du tiroir mobile — la NAVIGATION mobile de chaque espace (le tiroir
+ * ouvert par l'avatar de la barre haute).
  *
- * Toute entrée ajoutée à une sidebar doit l'être ici aussi.
+ * Règle de répartition (mobile uniquement) :
+ *   - Tiroir latéral  = navigation : aller vers un écran de travail / consulter.
+ *   - Page « Profil »  = gestion du compte et de la pratique (configurer,
+ *                        administratif) → voir app/espace-*\/compte/page.tsx.
+ *   - Barre du bas     = inchangée.
+ *
+ * Pour patient / établissement / admin, le tiroir reste le miroir plat de la
+ * barre latérale web. Pour médecin / assistant, il est découpé en sections
+ * (GROUPES_NAV) : seules les entrées de navigation y figurent, les entrées de
+ * compte/pratique ayant migré vers la Page Profil.
  */
-export type EntreeMenu = { href: string; icone: string; label: string };
+import type { PermissionsAssistante } from "@/lib/pro";
+
+export type EntreeMenu = {
+  href: string;
+  icone: string;
+  label: string;
+  /**
+   * Assistant(e) seulement : l'entrée n'est montrée que si le médecin a
+   * accordé cette permission. Les pages concernées se protègent déjà
+   * elles-mêmes ; on évite en plus de proposer un lien qui mène à un refus.
+   */
+  permission?: keyof PermissionsAssistante;
+};
+
+/** Un bloc de navigation, avec un titre de section optionnel. */
+export type GroupeMenu = { titre?: string; entrees: EntreeMenu[] };
 
 export type RoleMenu = "patient" | "medecin" | "assistant" | "etablissement" | "admin";
 
@@ -19,8 +41,51 @@ export const LIBELLE_ROLE: Record<RoleMenu, string> = {
   admin: "Administrateur",
 };
 
+/**
+ * Navigation en sections — médecin et assistant.
+ *
+ * NB : « Messages » (et non « Correspondance » / « Messagerie ») partout, et
+ * le même href que la barre du bas (/espace-*\/messages), pour un libellé et
+ * une destination uniques. La section « Suivi & retours » n'existe que pour le
+ * médecin : l'assistant(e) n'a ni page avis/statistiques ni permission dédiée.
+ */
+export const GROUPES_NAV: Partial<Record<RoleMenu, GroupeMenu[]>> = {
+  medecin: [
+    {
+      titre: "Mon activité",
+      entrees: [
+        { href: "/espace-medecin", icone: "📊", label: "Tableau de bord" },
+        { href: "/espace-medecin/agenda", icone: "📅", label: "Mon agenda" },
+        { href: "/espace-medecin/patients", icone: "👥", label: "Mes patients" },
+        { href: "/espace-medecin/messages", icone: "📨", label: "Messages" },
+        { href: "/espace-medecin/suivi-absence", icone: "📉", label: "Suivi d’absence" },
+      ],
+    },
+    {
+      titre: "Suivi & retours",
+      entrees: [
+        { href: "/espace-medecin/avis", icone: "⭐", label: "Avis et notes" },
+        { href: "/espace-medecin/statistiques", icone: "📈", label: "Statistiques" },
+      ],
+    },
+  ],
+  assistant: [
+    {
+      titre: "Mon activité",
+      entrees: [
+        { href: "/espace-assistant", icone: "🗓️", label: "Tableau de bord" },
+        { href: "/espace-assistant/rendez-vous", icone: "📅", label: "Agenda", permission: "voirAgenda" },
+        { href: "/espace-assistant/creneaux", icone: "🕐", label: "Créneaux & dispos", permission: "gererCreneaux" },
+        { href: "/espace-assistant/patients", icone: "👥", label: "Patients" },
+        { href: "/espace-assistant/messages", icone: "💬", label: "Messages", permission: "messagerie" },
+        { href: "/espace-assistant/suivi-absence", icone: "📉", label: "Suivi d’absence" },
+      ],
+    },
+  ],
+};
+
 export const MENUS: Record<RoleMenu, EntreeMenu[]> = {
-  // components/patient/PatientShell.tsx
+  // components/patient/PatientShell.tsx — inchangé
   patient: [
     { href: "/patient", icone: "📊", label: "Tableau de bord" },
     { href: "/resultats", icone: "🩺", label: "Prendre rendez-vous" },
@@ -35,34 +100,10 @@ export const MENUS: Record<RoleMenu, EntreeMenu[]> = {
     { href: "/patient/mon-compte", icone: "🔐", label: "Mon compte" },
     { href: "/patient/parametres", icone: "⚙️", label: "Paramètres" },
   ],
-  // components/medecin/MedecinShell.tsx
-  medecin: [
-    { href: "/espace-medecin", icone: "📊", label: "Tableau de bord" },
-    { href: "/espace-medecin/agenda", icone: "📅", label: "Mon agenda" },
-    { href: "/espace-medecin/patients", icone: "👥", label: "Mes patients" },
-    { href: "/espace-medecin/suivi-absence", icone: "📉", label: "Suivi d’absence" },
-    { href: "/espace-medecin/correspondance", icone: "📨", label: "Correspondance" },
-    { href: "/espace-medecin/disponibilites", icone: "🕐", label: "Mes disponibilités" },
-    { href: "/espace-medecin/avis", icone: "⭐", label: "Avis et notes" },
-    { href: "/espace-medecin/statistiques", icone: "📈", label: "Statistiques" },
-    { href: "/espace-medecin/equipe", icone: "🧑‍💼", label: "Mes assistant(e)s" },
-    { href: "/espace-medecin/abonnement", icone: "💳", label: "Mon abonnement" },
-    { href: "/espace-medecin/paiements", icone: "🧾", label: "Mes paiements" },
-    { href: "/espace-medecin/profil", icone: "👤", label: "Mon profil" },
-    { href: "/espace-medecin/mon-compte", icone: "🔐", label: "Mon compte" },
-  ],
-  // components/assistant/AssistantShell.tsx
-  assistant: [
-    { href: "/espace-assistant", icone: "🗓️", label: "Tableau de bord" },
-    { href: "/espace-assistant/rendez-vous", icone: "📅", label: "Rendez-vous" },
-    { href: "/espace-assistant/creneaux", icone: "🕐", label: "Créneaux & dispos" },
-    { href: "/espace-assistant/patients", icone: "👥", label: "Patients" },
-    { href: "/espace-assistant/suivi-absence", icone: "📉", label: "Suivi d’absence" },
-    { href: "/espace-assistant/messages", icone: "💬", label: "Messagerie" },
-    { href: "/espace-assistant/compte", icone: "👤", label: "Mes permissions" },
-    { href: "/espace-assistant/mon-compte", icone: "🔐", label: "Mon compte" },
-  ],
-  // components/etablissement/EtablissementShell.tsx
+  // Navigation mobile = GROUPES_NAV ; version plate conservée comme repli.
+  medecin: GROUPES_NAV.medecin!.flatMap((g) => g.entrees),
+  assistant: GROUPES_NAV.assistant!.flatMap((g) => g.entrees),
+  // components/etablissement/EtablissementShell.tsx — inchangé
   etablissement: [
     { href: "/espace-etablissement", icone: "📊", label: "Tableau de bord" },
     { href: "/espace-etablissement/medecins", icone: "👨‍⚕️", label: "Médecins" },
@@ -72,7 +113,7 @@ export const MENUS: Record<RoleMenu, EntreeMenu[]> = {
     { href: "/espace-etablissement/compte", icone: "⚙️", label: "Compte & paramètres" },
     { href: "/espace-etablissement/mon-compte", icone: "🔐", label: "Mon compte" },
   ],
-  // components/admin/AdminShell.tsx
+  // components/admin/AdminShell.tsx — inchangé
   admin: [
     { href: "/espace-admin", icone: "📊", label: "Tableau de bord" },
     { href: "/espace-admin/nouveau-rdv", icone: "📞", label: "Prise de RDV" },
@@ -99,10 +140,16 @@ export const RACCOURCIS_PATIENT: EntreeMenu[] = [
   { href: "/#comment-ca-marche", icone: "💡", label: "Comment ça marche" },
 ];
 
-export function menuDuRole(role: string | undefined): { role: RoleMenu; entrees: EntreeMenu[] } {
+/**
+ * Le menu du rôle, toujours sous forme de sections. Les rôles sans découpage
+ * (patient / établissement / admin) rendent un unique groupe sans titre, d'où
+ * un affichage identique à l'ancienne liste plate.
+ */
+export function menuDuRole(role: string | undefined): { role: RoleMenu; groupes: GroupeMenu[] } {
   const connu = (["patient", "medecin", "assistant", "etablissement", "admin"] as const).find(
     (r) => r === role
   );
   const retenu: RoleMenu = connu ?? "patient";
-  return { role: retenu, entrees: MENUS[retenu] };
+  const groupes = GROUPES_NAV[retenu] ?? [{ entrees: MENUS[retenu] }];
+  return { role: retenu, groupes };
 }
