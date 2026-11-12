@@ -7,6 +7,7 @@ import DetailRdv from "@/components/medecin/DetailRdv";
 import ExporterAgenda from "@/components/medecin/ExporterAgenda";
 import {
   JOURS_COURTS,
+  MOIS_LONGS,
   capitaliser,
   depuisISO,
   formatDateLongue,
@@ -59,6 +60,28 @@ function decalerDate(d: Date, jours: number): Date {
  */
 const bloc = (jours: number) => Math.ceil(jours / 45) * 45;
 
+/** « 9 – 15 novembre 2026 », ou « 30 nov. – 6 déc. 2026 » à cheval sur deux mois. */
+function formatPlageSemaine(debut: Date): string {
+  const fin = new Date(debut);
+  fin.setDate(debut.getDate() + 6);
+  const memeAnnee = debut.getFullYear() === fin.getFullYear();
+  const memeMois = memeAnnee && debut.getMonth() === fin.getMonth();
+  if (memeMois) {
+    return `${debut.getDate()} – ${fin.getDate()} ${MOIS_LONGS[fin.getMonth()]} ${fin.getFullYear()}`;
+  }
+  const g = `${debut.getDate()} ${MOIS_LONGS[debut.getMonth()].slice(0, 4)}.`;
+  const d = `${fin.getDate()} ${MOIS_LONGS[fin.getMonth()].slice(0, 4)}. ${fin.getFullYear()}`;
+  return `${g} – ${d}`;
+}
+
+/** « HH:MM » → minutes depuis minuit. */
+const minutesDe = (heure: string) => {
+  const [h, m] = heure.slice(0, 5).split(":").map(Number);
+  return h * 60 + m;
+};
+const versHeure = (min: number) =>
+  `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}`;
+
 const TEINTE_STATUT: Record<string, string> = {
   confirme: "bg-green-soft text-green",
   en_attente: "bg-amber-soft text-amber",
@@ -92,6 +115,15 @@ export default function AgendaMedecin() {
   const [vue, setVue] = useState<"jour" | "semaine">("semaine");
   const [ouvert, setOuvert] = useState<RdvAgenda | null>(null);
   const [exporter, setExporter] = useState(false);
+  /* Vue semaine : masquer le week-end (quand il est fermé) et heure courante
+     pour la ligne « maintenant », rafraîchie chaque minute. Affiché par défaut
+     — le praticien le masque d'un bouton s'il veut resserrer la grille. */
+  const [masquerWeekend, setMasquerWeekend] = useState(false);
+  const [maintenant, setMaintenant] = useState(() => new Date());
+  useEffect(() => {
+    const t = setInterval(() => setMaintenant(new Date()), 60000);
+    return () => clearInterval(t);
+  }, []);
 
   const aujourdhui = versISO(new Date());
   const ecart = Math.round(
@@ -115,10 +147,77 @@ export default function AgendaMedecin() {
   const semaine = Array.from({ length: 7 }, (_, i) => versISO(decalerDate(debutSemaine, i)));
   const nbRdv = (iso: string) =>
     rdvs.filter((r) => r.date === iso && r.statut !== "annule").length;
+  const totalSemaine = semaine.reduce((n, iso) => n + nbRdv(iso), 0);
 
   function decaler(jours: number) {
     setDateISO(versISO(decalerDate(depuisISO(dateISO), jours)));
   }
+
+  /* ===== Géométrie de la grille semaine (version web) ===== */
+  // Le week-end n'est masquable que s'il est fermé toute l'année (horaires-types) ;
+  // on ne masque jamais un jour qui porte un rendez-vous.
+  const weekendFerme =
+    !!medecin && medecin.joursFermes.includes(0) && medecin.joursFermes.includes(6);
+  const semaineGrille =
+    masquerWeekend && weekendFerme
+      ? semaine.filter((iso) => {
+          const j = depuisISO(iso).getDay();
+          return (j !== 0 && j !== 6) || nbRdv(iso) > 0;
+        })
+      : semaine;
+
+  /* Heures affichées : resserrées aux horaires ouverts du médecin, élargies au
+     besoin pour couvrir un rendez-vous hors plage, puis filtrées sur la grille
+     connue (08:00–20:00) pour que chaque heure reste une clé valide. */
+  const plagesMedecin = medecin?.plages ?? [];
+  let debutMin = 8 * 60;
+  let finMin = 20 * 60;
+  if (plagesMedecin.length) {
+    debutMin = Math.min(...plagesMedecin.map((p) => minutesDe(p.heure_debut)));
+    finMin = Math.max(...plagesMedecin.map((p) => minutesDe(p.heure_fin)));
+  }
+  for (const iso of semaine) {
+    for (const r of rdvs) {
+      if (r.date === iso && r.statut !== "annule") {
+        debutMin = Math.min(debutMin, minutesDe(r.heure));
+        finMin = Math.max(finMin, minutesDe(r.heure) + 30);
+      }
+    }
+  }
+  debutMin = Math.min(Math.max(Math.floor(debutMin / 60) * 60, 8 * 60), 19 * 60);
+  finMin = Math.min(Math.max(finMin, debutMin + 30), 20 * 60 + 30);
+  let heuresSemaine = HEURES_JOURNEE.filter(
+    (h) => minutesDe(h) >= debutMin && minutesDe(h) < finMin
+  );
+  if (!heuresSemaine.length) heuresSemaine = [...HEURES_JOURNEE];
+
+  // Un accès (jour → (heure → créneau)) pour peindre la grille.
+  const creneauxParJour = semaineGrille.map((iso) => ({
+    iso,
+    parHeure: new Map(creneauxJour(iso).map((c) => [c.heure, c])),
+  }));
+
+  // Ligne « maintenant » : position calculée sur une hauteur de rangée fixe.
+  const RANGEE_H = 34; // px par créneau de 30 min
+  const ENTETE_H = 54; // px de la rangée d'en-tête
+  const idxAujourdhui = semaineGrille.findIndex((iso) => iso === aujourdhui);
+  const nowMin = maintenant.getHours() * 60 + maintenant.getMinutes();
+  const ligneNow =
+    idxAujourdhui >= 0 && nowMin >= debutMin && nowMin <= finMin
+      ? { idx: idxAujourdhui, top: ENTETE_H + ((nowMin - debutMin) / 30) * RANGEE_H }
+      : null;
+
+  // Au passage en vue semaine (ou en changeant de semaine), on fait défiler la
+  // grille vers l'heure courante plutôt que de rester bloqué à l'aube.
+  const grilleRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (vue !== "semaine") return;
+    const el = grilleRef.current;
+    if (!el || idxAujourdhui < 0) return;
+    el.scrollTo({ top: Math.max(0, ligneNow ? ligneNow.top - 140 : 0), behavior: "smooth" });
+    // On ne défile qu'à l'ouverture / au changement de semaine, pas chaque minute.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [vue, semaine[0]]);
 
   /* La bande des jours défile horizontalement (swipe / glissement) ; on y
      ramène le jour choisi à chaque changement de date ou de semaine. */
@@ -262,19 +361,26 @@ export default function AgendaMedecin() {
   );
 
   /* ===== La semaine en grille (version web) =====
-     Les sept jours en colonnes, les créneaux de 30 min en lignes. On réutilise
-     `creneauxJour` jour par jour : même source que la vue jour, donc les congés,
-     les fermetures et les rendez-vous y apparaissent à l'identique. */
-  const creneauxParJour = semaine.map((iso) => creneauxJour(iso));
+     Colonnes = jours affichés (sept, ou cinq si le week-end fermé est masqué),
+     lignes = créneaux de 30 min resserrés aux horaires ouverts. Même source que
+     la vue jour (`creneauxJour`) : congés, fermetures et rendez-vous s'y peignent
+     à l'identique. En-têtes de jours et gouttière des heures restent collants au
+     défilement ; une ligne « maintenant » marque l'heure courante. */
+  const nbColonnes = semaineGrille.length;
+  const largeurColonne = `((100% - 58px) / ${nbColonnes})`;
   const grilleSemaine = (
-    <div className="overflow-x-auto rounded-2xl border border-line bg-white">
+    <div
+      ref={grilleRef}
+      className="relative max-h-[72vh] overflow-auto rounded-2xl border border-line bg-white"
+    >
       <div
-        className="grid min-w-[840px]"
-        style={{ gridTemplateColumns: "58px repeat(7, minmax(0, 1fr))" }}
+        className="relative grid min-w-[680px]"
+        style={{ gridTemplateColumns: `58px repeat(${nbColonnes}, minmax(0, 1fr))` }}
       >
-        {/* En-tête : coin vide + les sept jours */}
-        <div className="border-b border-line bg-white" />
-        {semaine.map((iso) => {
+        {/* Coin : collant en haut ET à gauche */}
+        <div className="sticky left-0 top-0 z-30 h-[54px] border-b border-r border-line bg-white" />
+        {/* En-têtes de jours (collants en haut) */}
+        {semaineGrille.map((iso) => {
           const jour = depuisISO(iso);
           const estAuj = iso === aujourdhui;
           const choisi = iso === dateISO;
@@ -285,7 +391,7 @@ export default function AgendaMedecin() {
               onClick={() => setDateISO(iso)}
               aria-current={choisi ? "date" : undefined}
               title={choisi ? "Jour affiché dans le reste de l'écran" : "Afficher cette journée"}
-              className={`border-b border-l border-line px-2 py-2 text-center transition-colors ${
+              className={`sticky top-0 z-20 flex h-[54px] flex-col items-center justify-center border-b border-l border-line transition-colors ${
                 choisi
                   ? "bg-teal hover:bg-teal-hover"
                   : estAuj
@@ -294,14 +400,14 @@ export default function AgendaMedecin() {
               }`}
             >
               <span
-                className={`block text-[10px] font-bold uppercase tracking-wide ${
+                className={`text-[10px] font-bold uppercase tracking-wide ${
                   choisi ? "text-white/90" : estAuj ? "text-teal" : "text-muted"
                 }`}
               >
                 {JOURS_COURTS[jour.getDay()]}
               </span>
               <span
-                className={`block text-[15px] font-extrabold leading-tight ${
+                className={`text-[15px] font-extrabold leading-tight ${
                   choisi ? "text-white" : estAuj ? "text-blue" : "text-ink"
                 }`}
               >
@@ -309,7 +415,7 @@ export default function AgendaMedecin() {
               </span>
               {estAuj && (
                 <span
-                  className={`mt-0.5 block text-[8.5px] font-bold uppercase tracking-wide ${
+                  className={`text-[8.5px] font-bold uppercase tracking-wide ${
                     choisi ? "text-white/80" : "text-teal"
                   }`}
                 >
@@ -320,26 +426,25 @@ export default function AgendaMedecin() {
           );
         })}
 
-        {/* Une ligne par créneau de 30 min ; seules les heures pleines sont étiquetées. */}
-        {HEURES_JOURNEE.map((heure, i) => {
+        {/* Lignes horaires ; seules les heures pleines sont étiquetées. */}
+        {heuresSemaine.map((heure) => {
           const pleine = heure.endsWith(":00");
           const bordure = pleine ? "border-t border-line" : "";
           return (
             <Fragment key={heure}>
               <div
-                className={`min-h-[30px] px-1.5 pr-2 pt-1 text-right text-[10px] font-bold text-muted ${bordure}`}
+                className={`sticky left-0 z-10 h-[34px] bg-white px-1.5 pr-2 pt-0.5 text-right text-[10px] font-bold text-muted ${bordure}`}
               >
                 {pleine ? heure : ""}
               </div>
-              {semaine.map((iso, j) => {
-                const creneau = creneauxParJour[j][i];
-                // La colonne du jour affiché est teintée sur toute sa hauteur,
-                // pour que la sélection du bandeau « suive » jusque dans la grille.
+              {creneauxParJour.map(({ iso, parHeure }) => {
+                const creneau = parHeure.get(heure);
+                // La colonne du jour affiché est teintée sur toute sa hauteur.
                 const choisi = iso === dateISO;
                 const fond = choisi ? " bg-teal-soft" : "";
-                const cellule = `min-h-[30px] border-l border-line p-[2px] ${bordure}${fond}`;
+                const cellule = `h-[34px] border-l border-line p-[2px] ${bordure}${fond}`;
 
-                if (creneau.statut === "reserve" && creneau.rdv) {
+                if (creneau && creneau.statut === "reserve" && creneau.rdv) {
                   const couleur =
                     creneau.statutRdv === "en_attente"
                       ? "border-amber bg-amber-soft"
@@ -352,32 +457,28 @@ export default function AgendaMedecin() {
                         type="button"
                         onClick={() => setOuvert(creneau.rdv!)}
                         title={`${creneau.heure} · ${creneau.patient} — ${creneau.motif}`}
-                        className={`flex h-full min-h-[26px] w-full flex-col justify-center overflow-hidden rounded-[5px] border-l-[3px] px-1.5 py-[3px] text-left text-blue transition-[filter] hover:brightness-95 ${couleur}`}
+                        className={`flex h-full w-full flex-col justify-center overflow-hidden rounded-[5px] border-l-[3px] px-1.5 py-[2px] text-left text-blue shadow-[0_1px_2px_rgba(0,0,0,0.07)] ring-1 ring-black/5 transition-[filter] hover:brightness-[0.97] ${couleur}`}
                       >
                         <b className="block truncate text-[11px] font-extrabold leading-tight">
                           {creneau.patient}
                           {creneau.lieu === "domicile" && " 🏠"}
                         </b>
-                        <span className="block truncate text-[9.5px] font-semibold opacity-80">
+                        <span className="block truncate text-[9px] font-semibold leading-tight opacity-75">
                           {creneau.heure}–{finCreneau(creneau.heure)}
+                          {creneau.motif ? ` · ${creneau.motif}` : ""}
                         </span>
                       </button>
                     </div>
                   );
                 }
 
-                if (creneau.statut === "ferme") {
+                if (!creneau || creneau.statut === "ferme") {
                   // Congé, fermeture ou hors horaires : hachures, non cliquable.
-                  // Dans la colonne sélectionnée, la base des hachures prend la
-                  // teinte d'accent pour ne pas rompre le fil de la colonne.
                   const hachures = choisi
                     ? "bg-[repeating-linear-gradient(45deg,var(--teal-soft),var(--teal-soft)_5px,var(--line)_5px,var(--line)_6px)]"
                     : "bg-[repeating-linear-gradient(45deg,var(--bg),var(--bg)_5px,var(--line)_5px,var(--line)_6px)]";
                   return (
-                    <div
-                      key={iso}
-                      className={`min-h-[30px] border-l border-line ${hachures} ${bordure}`}
-                    />
+                    <div key={iso} className={`h-[34px] border-l border-line ${hachures} ${bordure}`} />
                   );
                 }
 
@@ -387,7 +488,7 @@ export default function AgendaMedecin() {
                     <Link
                       href={lienCreneauJour(iso, heure)}
                       title={`Poser un rendez-vous le ${JOURS_COURTS[depuisISO(iso).getDay()]} à ${heure}`}
-                      className="group flex h-full min-h-[26px] w-full items-center justify-center rounded-[5px] transition-colors hover:bg-teal-soft"
+                      className="group flex h-full w-full items-center justify-center rounded-[5px] transition-colors hover:bg-teal-soft"
                     >
                       <span className="text-[14px] font-bold text-teal opacity-0 transition-opacity group-hover:opacity-100">
                         +
@@ -399,6 +500,23 @@ export default function AgendaMedecin() {
             </Fragment>
           );
         })}
+
+        {/* Ligne « maintenant » : trait d'accent + pastille, sur la colonne du jour. */}
+        {ligneNow && (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute z-[5]"
+            style={{
+              top: ligneNow.top,
+              left: `calc(58px + ${ligneNow.idx} * ${largeurColonne})`,
+              width: `calc(${largeurColonne})`,
+            }}
+          >
+            <div className="relative h-[2px] bg-red">
+              <span className="absolute -left-[3px] -top-[3px] h-2 w-2 rounded-full bg-red" />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -548,8 +666,18 @@ export default function AgendaMedecin() {
           <div>
             <h2 className="text-[21px] font-extrabold tracking-[-0.3px]">Mon agenda</h2>
             <small className="text-[13px] text-muted">
-              {capitaliser(formatDateLongue(dateISO))}
-              {dateISO === aujourdhui && " · aujourd’hui"}
+              {vue === "semaine" ? (
+                <>
+                  {capitaliser(formatPlageSemaine(debutSemaine))}
+                  {" · "}
+                  <b className="font-bold text-ink">{totalSemaine}</b> RDV cette semaine
+                </>
+              ) : (
+                <>
+                  {capitaliser(formatDateLongue(dateISO))}
+                  {dateISO === aujourdhui && " · aujourd’hui"}
+                </>
+              )}
             </small>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -637,9 +765,44 @@ export default function AgendaMedecin() {
               {libelle}
             </button>
           ))}
-          <span className="ml-auto text-[11.5px] text-muted">
-            Cliquez un rendez-vous pour son détail, un créneau libre pour en poser un.
-          </span>
+
+          {/* Masquer le week-end — seulement s'il est fermé et en vue semaine. */}
+          {vue === "semaine" && weekendFerme && (
+            <button
+              type="button"
+              aria-pressed={masquerWeekend}
+              onClick={() => setMasquerWeekend((v) => !v)}
+              className={`rounded-[9px] border-[1.5px] px-3 py-1.5 text-[12px] font-bold transition-colors ${
+                masquerWeekend
+                  ? "border-teal bg-teal-soft text-blue"
+                  : "border-line bg-white text-muted hover:bg-bg"
+              }`}
+            >
+              {masquerWeekend ? "Afficher le week-end" : "Masquer le week-end"}
+            </button>
+          )}
+
+          {/* Légende des couleurs (vue semaine) */}
+          {vue === "semaine" ? (
+            <div className="ml-auto flex flex-wrap items-center gap-3 text-[11px] font-semibold text-muted">
+              <span className="inline-flex items-center gap-1.5">
+                <i className="inline-block h-[11px] w-[11px] rounded-[3px] border-l-[3px] border-teal bg-teal-soft" />
+                Confirmé
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <i className="inline-block h-[11px] w-[11px] rounded-[3px] border-l-[3px] border-amber bg-amber-soft" />
+                À confirmer
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <i className="inline-block h-[11px] w-[11px] rounded-[3px] border-l-[3px] border-green bg-green-soft" />
+                À domicile 🏠
+              </span>
+            </div>
+          ) : (
+            <span className="ml-auto text-[11.5px] text-muted">
+              Cliquez un rendez-vous pour son détail, un créneau libre pour en poser un.
+            </span>
+          )}
         </div>
 
         {vue === "semaine" ? (
