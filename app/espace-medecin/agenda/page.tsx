@@ -426,10 +426,12 @@ export default function AgendaMedecin() {
           );
         })}
 
-        {/* Lignes horaires ; seules les heures pleines sont étiquetées. */}
+        {/* Lignes horaires ; seules les heures pleines sont étiquetées.
+           Trait teinté accent (plus foncé que `--line`) : sinon il se fond dans
+           la teinte de la colonne sélectionnée, où `--line` ≈ `--teal-soft`. */}
         {heuresSemaine.map((heure) => {
           const pleine = heure.endsWith(":00");
-          const bordure = pleine ? "border-t border-line" : "";
+          const bordure = pleine ? "border-t border-teal-line" : "";
           return (
             <Fragment key={heure}>
               <div
