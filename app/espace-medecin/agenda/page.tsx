@@ -86,8 +86,10 @@ export default function AgendaMedecin() {
   const [seulementRdv, setSeulementRdv] = useState(false);
   /* Vue « jour » (la liste heure par heure) ou « semaine » (la grille des sept
      jours). La bascule n'existe que sur grand écran : une grille à sept
-     colonnes ne se lit pas sur un téléphone, où l'on reste sur la liste. */
-  const [vue, setVue] = useState<"jour" | "semaine">("jour");
+     colonnes ne se lit pas sur un téléphone, où l'on reste sur la liste.
+     On ouvre sur la semaine : c'est la vue d'ensemble qu'un praticien regarde
+     en premier, la journée détaillée restant à un clic. */
+  const [vue, setVue] = useState<"jour" | "semaine">("semaine");
   const [ouvert, setOuvert] = useState<RdvAgenda | null>(null);
   const [exporter, setExporter] = useState(false);
 
@@ -541,6 +543,14 @@ export default function AgendaMedecin() {
           </div>
         </div>
 
+        {/* ---- Le jour en un coup d'œil (au-dessus de la navigation) ---- */}
+        <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {tuile(reserves.length, "Rendez-vous du jour", "text-blue")}
+          {tuile(aConfirmer, "À confirmer", "text-amber")}
+          {tuile(aDomicile, "À domicile", "text-green")}
+          {tuile(libres, "Créneaux libres", "text-teal")}
+        </div>
+
         {/* ---- Navigation ---- */}
         <div className="mb-4 rounded-2xl border border-line bg-white p-[14px]">
           {barreSemaine}
@@ -576,20 +586,12 @@ export default function AgendaMedecin() {
           </div>
         </div>
 
-        {/* ---- Le jour en un coup d'œil ---- */}
-        <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-          {tuile(reserves.length, "Rendez-vous du jour", "text-blue")}
-          {tuile(aConfirmer, "À confirmer", "text-amber")}
-          {tuile(aDomicile, "À domicile", "text-green")}
-          {tuile(libres, "Créneaux libres", "text-teal")}
-        </div>
-
         <div className="mb-3 flex flex-wrap items-center gap-2">
           {(
             [
+              ["semaine", "Vue semaine", vue === "semaine"],
               ["jour-tout", "Toute la journée", vue === "jour" && !seulementRdv],
               ["jour-rdv", "Rendez-vous seulement", vue === "jour" && seulementRdv],
-              ["semaine", "Vue semaine", vue === "semaine"],
             ] as [string, string, boolean][]
           ).map(([cle, libelle, actif]) => (
             <button
