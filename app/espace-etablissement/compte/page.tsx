@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import EtablissementShell from "@/components/etablissement/EtablissementShell";
 import Interrupteur from "@/components/patient/Interrupteur";
 import {
@@ -10,7 +9,6 @@ import {
   useEtablissementConnecte,
 } from "@/lib/etablissement";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
-import { seDeconnecter } from "@/lib/auth";
 import { formaterTelephoneGN, INDICATIF_GN } from "@/lib/telephone";
 
 type ParametresEtablissement = {
@@ -76,41 +74,45 @@ const PARAMETRES: {
   },
 ];
 
-const ENTREES_MENU = [
+/*
+ * Mobile — Page « Compte & paramètres » en sections : gestion du compte et de
+ * l'établissement seulement. La navigation (Tableau de bord, Médecins,
+ * Statistiques) vit dans le tiroir latéral et sur la barre du bas ; la
+ * Déconnexion est au tiroir (section Réglages). « Mon compte » devient
+ * « Sécurité & connexion ».
+ */
+const SECTIONS_COMPTE: { titre: string; entrees: { href: string; icone: string; titre: string; sous: string }[] }[] = [
   {
-    href: "/espace-etablissement/statistiques",
-    icone: "📊",
-    titre: "Statistiques",
-    sous: "Activité de l'établissement",
+    titre: "Mon établissement",
+    entrees: [
+      {
+        href: "/espace-etablissement/informations",
+        icone: "🏥",
+        titre: "Informations",
+        sous: "Fiche publique, photos",
+      },
+      {
+        href: "/espace-etablissement/abonnement",
+        icone: "💳",
+        titre: "Abonnement",
+        sous: "Palier de l'établissement",
+      },
+    ],
   },
   {
-    href: "/espace-etablissement/medecins",
-    icone: "👨‍⚕️",
-    titre: "Médecins",
-    sous: "Rattachements et invitations",
-  },
-  {
-    href: "/espace-etablissement/informations",
-    icone: "🏥",
-    titre: "Informations",
-    sous: "Fiche publique, photos",
-  },
-  {
-    href: "/espace-etablissement/abonnement",
-    icone: "💳",
-    titre: "Abonnement",
-    sous: "Palier de l'établissement",
-  },
-  {
-    href: "/espace-etablissement/mon-compte",
-    icone: "🔐",
-    titre: "Mon compte",
-    sous: "Mot de passe, suspension, données",
+    titre: "Sécurité",
+    entrees: [
+      {
+        href: "/espace-etablissement/mon-compte",
+        icone: "🔐",
+        titre: "Sécurité & connexion",
+        sous: "Mot de passe, suspension, données",
+      },
+    ],
   },
 ];
 
 export default function CompteEtablissement() {
-  const router = useRouter();
   const { etablissement, recharger } = useEtablissementConnecte();
   const etab = etablissement ?? ETABLISSEMENT_VIDE;
   const parametres = {
@@ -131,11 +133,6 @@ export default function CompteEtablissement() {
     recharger();
   }
 
-  async function deconnexion() {
-    await seDeconnecter();
-    router.push("/");
-  }
-
   return (
     <EtablissementShell>
       {/* ===== Version mobile (écran « m-etab-compte » de la maquette mobile) ===== */}
@@ -154,34 +151,27 @@ export default function CompteEtablissement() {
               <small>Gestionnaire : {gestionnaire.nom || "—"}</small>
             </div>
           </div>
-          <div className="menu">
-            {ENTREES_MENU.map((e) => (
-              <Link key={e.href} href={e.href} className="mrow">
-                <span className="mi" aria-hidden>
-                  {e.icone}
-                </span>
-                <span>
-                  <b>{e.titre}</b>
-                  <small>{e.sous}</small>
-                </span>
-                <span className="ch" aria-hidden>
-                  ›
-                </span>
-              </Link>
-            ))}
-            {/* Vraie déconnexion, et non un lien vers l'accueil. */}
-            <button type="button" onClick={deconnexion} className="mrow">
-              <span className="mi" aria-hidden>
-                ↩️
-              </span>
-              <span>
-                <b>Déconnexion</b>
-              </span>
-              <span className="ch" aria-hidden>
-                ›
-              </span>
-            </button>
-          </div>
+          {SECTIONS_COMPTE.map((section) => (
+            <div key={section.titre}>
+              <p className="sect-titre">{section.titre}</p>
+              <div className="menu">
+                {section.entrees.map((e) => (
+                  <Link key={e.href} href={e.href} className="mrow">
+                    <span className="mi" aria-hidden>
+                      {e.icone}
+                    </span>
+                    <span>
+                      <b>{e.titre}</b>
+                      <small>{e.sous}</small>
+                    </span>
+                    <span className="ch" aria-hidden>
+                      ›
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ))}
           <div className="card2" style={{ marginTop: 12 }}>
             <h4>Gestionnaire</h4>
             <div className="setrow">

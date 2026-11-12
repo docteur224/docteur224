@@ -8,6 +8,7 @@ import BasculeMode from "@/components/site/BasculeMode";
 import { seDeconnecter } from "@/lib/auth";
 import { useDroitsAdmin } from "@/lib/admin";
 import { useContextePro } from "@/lib/pro";
+import { useEtablissementConnecte } from "@/lib/etablissement";
 import { aPermission, PERMISSION_PAR_ROUTE } from "@/lib/permissions-admin";
 import type { ProfilConnecte } from "@/lib/patient";
 import PastilleProfil from "@/components/mobile/PastilleProfil";
@@ -64,7 +65,7 @@ export default function TiroirMobile({
     return profil.telephone ? ` · ${profil.telephone}` : "";
   })();
 
-  const avecReglagesTitre = role === "medecin" || role === "assistant";
+  const avecReglagesTitre = role === "medecin" || role === "assistant" || role === "etablissement";
 
   // Fermeture au changement d'écran : sans cela, le tiroir resterait ouvert
   // par-dessus la page d'arrivée après un clic sur un lien.
@@ -118,7 +119,7 @@ export default function TiroirMobile({
             </b>
             <small>
               {LIBELLE_ROLE[role]}
-              {complementEntete}
+              {role === "etablissement" ? <ComplementEtablissement /> : complementEntete}
             </small>
           </div>
           <button
@@ -206,6 +207,17 @@ export default function TiroirMobile({
       </div>
     </div>
   );
+}
+
+/**
+ * Complément d'en-tête pour l'établissement : son nom. Isolé dans un composant
+ * pour que `useEtablissementConnecte` (qui interroge la base) ne soit monté que
+ * lorsqu'un établissement ouvre le tiroir, et non sur chaque page mobile.
+ */
+function ComplementEtablissement() {
+  const { etablissement } = useEtablissementConnecte();
+  const nom = etablissement?.nomCourt;
+  return <>{nom ? ` · ${nom}` : ""}</>;
 }
 
 /** Garde la tabulation à l'intérieur du tiroir tant qu'il est ouvert. */

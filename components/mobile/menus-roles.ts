@@ -82,6 +82,16 @@ export const GROUPES_NAV: Partial<Record<RoleMenu, GroupeMenu[]>> = {
       ],
     },
   ],
+  etablissement: [
+    {
+      titre: "Pilotage",
+      entrees: [
+        { href: "/espace-etablissement", icone: "📊", label: "Tableau de bord" },
+        { href: "/espace-etablissement/medecins", icone: "👨‍⚕️", label: "Médecins" },
+        { href: "/espace-etablissement/statistiques", icone: "📈", label: "Statistiques" },
+      ],
+    },
+  ],
 };
 
 export const MENUS: Record<RoleMenu, EntreeMenu[]> = {
@@ -103,16 +113,7 @@ export const MENUS: Record<RoleMenu, EntreeMenu[]> = {
   // Navigation mobile = GROUPES_NAV ; version plate conservée comme repli.
   medecin: GROUPES_NAV.medecin!.flatMap((g) => g.entrees),
   assistant: GROUPES_NAV.assistant!.flatMap((g) => g.entrees),
-  // components/etablissement/EtablissementShell.tsx — inchangé
-  etablissement: [
-    { href: "/espace-etablissement", icone: "📊", label: "Tableau de bord" },
-    { href: "/espace-etablissement/medecins", icone: "👨‍⚕️", label: "Médecins" },
-    { href: "/espace-etablissement/informations", icone: "🏥", label: "Informations" },
-    { href: "/espace-etablissement/statistiques", icone: "📈", label: "Statistiques" },
-    { href: "/espace-etablissement/abonnement", icone: "💳", label: "Abonnement" },
-    { href: "/espace-etablissement/compte", icone: "⚙️", label: "Compte & paramètres" },
-    { href: "/espace-etablissement/mon-compte", icone: "🔐", label: "Mon compte" },
-  ],
+  etablissement: GROUPES_NAV.etablissement!.flatMap((g) => g.entrees),
   // components/admin/AdminShell.tsx — inchangé
   admin: [
     { href: "/espace-admin", icone: "📊", label: "Tableau de bord" },
