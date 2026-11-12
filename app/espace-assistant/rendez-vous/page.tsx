@@ -146,20 +146,15 @@ export default function RendezVousAssistant() {
           )}
         </div>
         <div className="pad" style={{ paddingTop: 8 }}>
-          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
-            <button type="button" className="btnm gh" onClick={() => decaler(-1)}>
-              ‹ Hier
+          <div className="asa-datenav">
+            <button type="button" className="side" onClick={() => decaler(-1)} aria-label="Jour précédent">
+              ‹
             </button>
-            <button
-              type="button"
-              className="btnm gh"
-              style={{ flex: 1 }}
-              onClick={() => setDateISO(versISO(new Date()))}
-            >
+            <button type="button" className="mid" onClick={() => setDateISO(versISO(new Date()))}>
               Aujourd&apos;hui
             </button>
-            <button type="button" className="btnm gh" onClick={() => decaler(1)}>
-              Demain ›
+            <button type="button" className="side" onClick={() => decaler(1)} aria-label="Jour suivant">
+              ›
             </button>
           </div>
           <div className="abannerm">
@@ -176,45 +171,26 @@ export default function RendezVousAssistant() {
           )}
           {rdvJour.map((creneau) => {
             const reel = true;
+            const etatAffiche = statutAffiche({
+              date: dateISO,
+              heure: creneau.heure,
+              statut: creneau.statutRdv ?? "",
+            });
             return (
               <div key={creneau.heure}>
-                <div className="aptm">
-                  <div className="tm">{creneau.heure}</div>
-                  <div className="meta">
-                    <b>{creneau.patient}</b>
-                    <small>
-                      {creneau.motif}
-
-                    </small>
-                    <span
-                      className={`mt-1 inline-block w-fit rounded-full px-2 py-0.5 text-[11px] font-bold ${classeStatut(
-                        statutAffiche({ date: dateISO, heure: creneau.heure, statut: creneau.statutRdv ?? "" })
-                      )}`}
-                    >
-                      {libelleStatut(
-                        statutAffiche({ date: dateISO, heure: creneau.heure, statut: creneau.statutRdv ?? "" })
-                      )}
-                    </span>
+                <div className="asa-card">
+                  <div className="asa-top">
+                    <div className="asa-time">{creneau.heure}</div>
+                    <div className="asa-who">
+                      <b>{creneau.patient}</b>
+                      {creneau.motif && <span className="motif">{creneau.motif}</span>}
+                      <span className={`asa-statut ${classeStatut(etatAffiche)}`}>
+                        {libelleStatut(etatAffiche)}
+                      </span>
+                    </div>
                   </div>
-                  <div className="acts">
-                    <button
-                      type="button"
-                      className="btnm gh"
-                      disabled={!reel}
-                      style={reel && permissions.reprogrammer ? undefined : { opacity: 0.5 }}
-                      onClick={() => ouvrirReprogrammation(creneau.heure)}
-                    >
-                      Décaler
-                    </button>
-                    <button
-                      type="button"
-                      className="btnm dg"
-                      disabled={!reel}
-                      style={reel && permissions.confirmerAnnuler ? undefined : { opacity: 0.5 }}
-                      onClick={() => annuler(creneau.heure)}
-                    >
-                      Annuler
-                    </button>
+                  <div className="asa-sep" />
+                  <div className="asa-acts">
                     <ActionsPresence
                       dateISO={dateISO}
                       creneau={creneau}
@@ -228,17 +204,33 @@ export default function RendezVousAssistant() {
                       onHonore={(c) => presence(creneau.heure, (id) => qualifierRdv(id, "honore", c))}
                       onAbsent={(c) => presence(creneau.heure, (id) => marquerAbsentRdv(id, { correction: c }))}
                     />
+                    <button
+                      type="button"
+                      className={`asa-btn ghost${reel && permissions.reprogrammer ? "" : " off"}`}
+                      disabled={!reel}
+                      onClick={() => ouvrirReprogrammation(creneau.heure)}
+                    >
+                      Décaler
+                    </button>
+                    <button
+                      type="button"
+                      className={`asa-btn bad${reel && permissions.confirmerAnnuler ? "" : " off"}`}
+                      disabled={!reel}
+                      onClick={() => annuler(creneau.heure)}
+                    >
+                      Annuler
+                    </button>
                   </div>
                 </div>
                 {enReprogrammation === creneau.heure && (
-                  <div className="addbene" style={{ marginBottom: 9 }}>
-                    <div className="flabel">Choisir un nouvel horaire (même journée) :</div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  <div className="asa-reprog">
+                    <div className="lbl">Choisir un nouvel horaire (même journée) :</div>
+                    <div className="asa-slots">
                       {creneauxLibres.map((libre) => (
                         <button
                           key={libre.heure}
                           type="button"
-                          className="btnm gh"
+                          className="asa-slot"
                           onClick={() => reprogrammer(creneau.heure, libre.heure)}
                         >
                           {libre.heure}
@@ -478,30 +470,35 @@ function ActionsPresence({
   const rdv = { date: dateISO, heure: creneau.heure, statut: creneau.statutRdv ?? "" };
   const etat = statutAffiche(rdv);
   const passe = rdvPasse(rdv.date, rdv.heure);
-  const cls =
-    variante === "mobile"
-      ? "btnm gh"
-      : "rounded-[9px] border-[1.5px] border-line bg-white px-3 py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg disabled:opacity-50";
+  /*
+   * Sur mobile, chaque action reçoit une couleur sémantique (`.asa-btn`) :
+   * Présent en primaire, Honoré en vert, Non honoré en rouge, Corriger neutre.
+   * Sur le web, on garde la pastille neutre unique de la maquette d'origine.
+   */
+  const clsWeb =
+    "rounded-[9px] border-[1.5px] border-line bg-white px-3 py-2 text-[12.5px] font-bold text-blue transition-colors hover:bg-bg disabled:opacity-50";
+  const cl = (variant: "prim" | "ok" | "bad" | "ghost") =>
+    variante === "mobile" ? `asa-btn ${variant}` : clsWeb;
 
   if (corrige && estCorrigeable(rdv)) {
     return (
       <>
         {rdv.statut !== "present" && (
-          <button type="button" className={cls} disabled={occupe} onClick={() => onPresent(true)}>
+          <button type="button" className={cl("prim")} disabled={occupe} onClick={() => onPresent(true)}>
             → Présent
           </button>
         )}
         {rdv.statut !== "honore" && passe && (
-          <button type="button" className={cls} disabled={occupe} onClick={() => onHonore(true)}>
+          <button type="button" className={cl("ok")} disabled={occupe} onClick={() => onHonore(true)}>
             → Honoré
           </button>
         )}
         {rdv.statut !== "absent" && passe && (
-          <button type="button" className={cls} disabled={occupe} onClick={() => onAbsent(true)}>
+          <button type="button" className={cl("bad")} disabled={occupe} onClick={() => onAbsent(true)}>
             → Non honoré
           </button>
         )}
-        <button type="button" className={cls} disabled={occupe} onClick={onToggleCorrige}>
+        <button type="button" className={cl("ghost")} disabled={occupe} onClick={onToggleCorrige}>
           Annuler
         </button>
       </>
@@ -511,24 +508,24 @@ function ActionsPresence({
   return (
     <>
       {estMarquablePresent(rdv) && (
-        <button type="button" className={cls} disabled={occupe} onClick={() => onPresent()}>
+        <button type="button" className={cl("prim")} disabled={occupe} onClick={() => onPresent()}>
           Présent
         </button>
       )}
       {(etat === "present" || etat === "a_qualifier") && (
-        <button type="button" className={cls} disabled={occupe} onClick={() => onHonore()}>
+        <button type="button" className={cl("ok")} disabled={occupe} onClick={() => onHonore()}>
           Honoré
         </button>
       )}
       {etat === "a_qualifier" && (
-        <button type="button" className={cls} disabled={occupe} onClick={() => onAbsent()}>
+        <button type="button" className={cl("bad")} disabled={occupe} onClick={() => onAbsent()}>
           Non honoré
         </button>
       )}
       {estCorrigeable(rdv) && (
         <button
           type="button"
-          className={cls}
+          className={cl("ghost")}
           disabled={occupe}
           aria-expanded={corrige}
           onClick={onToggleCorrige}

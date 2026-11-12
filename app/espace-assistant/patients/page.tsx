@@ -121,27 +121,29 @@ export default function PatientsAssistant() {
                 {messageVide}
               </p>
             )}
-            {patients.map((p) => (
-              <div key={p.cle} className="asstrowm">
-                <span className="av" aria-hidden style={{ background: p.gradient }}>
-                  {`${p.prenom.charAt(0)}${p.nom.charAt(0)}`.toUpperCase()}
-                </span>
-                <span className="meta">
-                  <b>
-                    {p.prenom} {p.nom}
-                  </b>
-                  <small>
-                    {p.telephone || "—"}
-                    {p.derniereVisite
-                      ? ` · vu le ${formatDateCourte(p.derniereVisite)}`
-                      : p.prochaineVisite
-                        ? ` · RDV le ${formatDateCourte(p.prochaineVisite)}`
-                        : ""}
-                  </small>
-                </span>
-                {boutonRdv("btnm gh")}
-              </div>
-            ))}
+            <div className="asa-plist">
+              {patients.map((p) => (
+                <div key={p.cle} className="asa-prow">
+                  <span className="av" aria-hidden style={{ background: p.gradient }}>
+                    {`${p.prenom.charAt(0)}${p.nom.charAt(0)}`.toUpperCase()}
+                  </span>
+                  <span className="meta">
+                    <b>
+                      {p.prenom} {p.nom}
+                    </b>
+                    <small>
+                      {p.telephone || "—"}
+                      {p.derniereVisite
+                        ? ` · vu le ${formatDateCourte(p.derniereVisite)}`
+                        : p.prochaineVisite
+                          ? ` · RDV le ${formatDateCourte(p.prochaineVisite)}`
+                          : ""}
+                    </small>
+                  </span>
+                  {boutonRdv("asa-prow-rdv")}
+                </div>
+              ))}
+            </div>
             <div style={{ paddingTop: 4 }}>{pagination}</div>
           </div>
         </div>

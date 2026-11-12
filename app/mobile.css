@@ -425,6 +425,73 @@
   .review b { font-size: 12.5px; font-weight: 700; display: block; color: var(--amber); }
   .review small { font-size: 11.5px; color: var(--ink-soft); }
 
+  /* =====================================================================
+     ESPACE ASSISTANT(E) — cartes de rendez-vous « premium » (mobile)
+     ---------------------------------------------------------------------
+     La maquette d'origine empilait les actions (Décaler, Annuler, Présent,
+     Honoré, Non honoré) dans une étroite colonne à droite de la ligne
+     `.aptm`, qui est partagée par 22 écrans et ne peut donc pas changer.
+     On introduit ici un jeu de classes dédié (`.asa-*`) : une carte lisible,
+     l'identité du patient mise en avant, puis les actions en pleine largeur
+     avec des cibles tactiles de 46px faciles à viser par l'assistant(e).
+     ===================================================================== */
+  .asa-card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 13px 14px; margin-bottom: 11px; box-shadow: 0 1px 2px rgba(16, 59, 80, 0.04); }
+  .asa-card:last-child { margin-bottom: 0; }
+
+  /* en-tête : pastille horaire + identité + statut */
+  .asa-top { display: flex; align-items: flex-start; gap: 12px; }
+  .asa-time { flex: none; display: grid; place-items: center; min-width: 58px; padding: 11px 8px; border-radius: 13px; background: var(--teal-soft); border: 1px solid var(--teal-line); font-size: 15.5px; font-weight: 800; letter-spacing: -0.4px; color: var(--blue-encre); line-height: 1; }
+  .asa-who { flex: 1; min-width: 0; padding-top: 1px; }
+  .asa-who b { font-size: 14.5px; font-weight: 800; letter-spacing: -0.2px; display: block; }
+  .asa-who .motif { font-size: 12px; color: var(--muted); font-weight: 600; margin-top: 2px; display: block; }
+  .asa-statut { display: inline-block; margin-top: 7px; font-size: 10.5px; font-weight: 800; padding: 3px 10px; border-radius: 999px; }
+  /* bouton « Gérer » aligné dans l'en-tête (prochains RDV) */
+  .asa-go { flex: none; align-self: center; min-height: 42px; padding: 9px 15px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--card); color: var(--blue-encre); font-size: 12.5px; font-weight: 800; font-family: inherit; cursor: pointer; white-space: nowrap; }
+  .asa-go:active { transform: scale(0.97); }
+
+  /* séparateur + rangée d'actions */
+  .asa-sep { height: 1px; background: var(--line); margin: 12px 0 11px; }
+  .asa-acts { display: flex; flex-wrap: wrap; gap: 8px; }
+  .asa-btn { flex: 1 1 auto; min-width: calc(50% - 4px); min-height: 46px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 12px; font-size: 13px; font-weight: 800; border-radius: 12px; border: 1.5px solid var(--line); background: var(--card); color: var(--blue-encre); cursor: pointer; font-family: inherit; white-space: nowrap; transition: transform 0.05s, background 0.12s, border-color 0.12s; }
+  .asa-btn:active { transform: scale(0.97); }
+  .asa-btn.prim { background: var(--teal); border-color: var(--teal); color: #fff; }
+  .asa-btn.prim:active { background: var(--teal-hover); }
+  .asa-btn.ok { background: var(--green-soft); border-color: var(--green-line); color: var(--green); }
+  .asa-btn.bad { background: var(--card); border-color: var(--red-line); color: var(--red); }
+  .asa-btn.bad:active { background: var(--red-soft); }
+  .asa-btn.ghost { background: var(--card); border-color: var(--line); color: var(--blue-encre); }
+  .asa-btn.ghost:active { background: var(--bg); }
+  .asa-btn[disabled], .asa-btn.off { opacity: 0.45; }
+  .asa-btn.full { flex-basis: 100%; min-width: 100%; }
+
+  /* navigation de date segmentée (écran RDV) */
+  .asa-datenav { display: flex; gap: 8px; margin-bottom: 14px; }
+  .asa-datenav button { min-height: 46px; display: inline-flex; align-items: center; justify-content: center; border-radius: 12px; border: 1.5px solid var(--line); background: var(--card); color: var(--blue-encre); font-size: 13px; font-weight: 800; font-family: inherit; cursor: pointer; transition: transform 0.05s; }
+  .asa-datenav button:active { transform: scale(0.98); }
+  .asa-datenav .side { flex: none; width: 60px; }
+  .asa-datenav .mid { flex: 1; background: var(--teal-soft); border-color: var(--teal-line); }
+
+  /* panneau de reprogrammation (choix d'un nouvel horaire) */
+  .asa-reprog { margin: -2px 0 11px; border: 1px dashed var(--teal-line); border-radius: 14px; padding: 13px; background: var(--teal-soft); }
+  .asa-reprog .lbl { font-size: 12px; font-weight: 800; color: var(--blue-encre); margin-bottom: 10px; }
+  .asa-slots { display: flex; flex-wrap: wrap; gap: 8px; }
+  .asa-slot { min-height: 44px; padding: 9px 15px; border-radius: 11px; border: 1.5px solid var(--line); background: var(--card); color: var(--blue-encre); font-size: 13.5px; font-weight: 800; font-family: inherit; cursor: pointer; transition: transform 0.05s, border-color 0.12s; }
+  .asa-slot:hover { border-color: var(--teal); }
+  .asa-slot:active { transform: scale(0.96); }
+
+  /* liste de patients (annuaire assistant) — lignes compactes et lisibles,
+     action « RDV » claire sans basculer en grosses cartes (un annuaire se
+     parcourt mieux en lignes denses qu'en cartes). */
+  .asa-plist { display: flex; flex-direction: column; }
+  .asa-prow { display: flex; align-items: center; gap: 12px; padding: 12px 2px; border-bottom: 1px solid var(--line); }
+  .asa-prow:last-child { border-bottom: none; }
+  .asa-prow .av { width: 44px; height: 44px; border-radius: 13px; display: grid; place-items: center; color: #fff; font-weight: 800; font-size: 14px; flex: none; }
+  .asa-prow .meta { flex: 1; min-width: 0; }
+  .asa-prow .meta b { font-size: 13.5px; font-weight: 800; display: block; letter-spacing: -0.2px; }
+  .asa-prow .meta small { font-size: 11.5px; color: var(--muted); display: block; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .asa-prow-rdv { flex: none; display: inline-flex; align-items: center; justify-content: center; min-height: 42px; padding: 9px 16px; border-radius: 12px; background: var(--teal-soft); border: 1px solid var(--teal-line); color: var(--blue-encre); font-size: 12.5px; font-weight: 800; white-space: nowrap; font-family: inherit; cursor: pointer; }
+  .asa-prow-rdv:active { transform: scale(0.97); }
+
   /* ===== choix du créneau (patient) ===== */
   .daysel { display: flex; gap: 9px; overflow: auto; padding: 4px 0 6px; }
   .daysel::-webkit-scrollbar { height: 0; }

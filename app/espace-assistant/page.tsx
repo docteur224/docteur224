@@ -91,73 +91,86 @@ export default function TableauDeBordAssistant() {
               <div>{erreur}</div>
             </div>
           )}
-          <div className="card2" style={{ marginTop: 12 }}>
-            <h4>Demandes à confirmer</h4>
-            {demandes.map((demande) => (
-              <div key={demande.id} className="aptm">
-                <div className="tm">{demande.heure}</div>
-                <div className="meta">
+          <div className="asa-sectwrap" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <h3 className="section-t" style={{ margin: "18px 2px 11px" }}>
+              Demandes à confirmer
+            </h3>
+            {!chargement && demandes.length > 0 && (
+              <span className="badgec" style={{ marginLeft: "auto" }}>
+                {demandes.length}
+              </span>
+            )}
+          </div>
+          {demandes.map((demande) => (
+            <div key={demande.id} className="asa-card">
+              <div className="asa-top">
+                <div className="asa-time">{demande.heure}</div>
+                <div className="asa-who">
                   <b>{demande.patient}</b>
-                  <small>{demande.detail}</small>
-                </div>
-                <div className="acts">
-                  <button
-                    type="button"
-                    className="btnm"
-                    style={permissions.confirmerAnnuler ? undefined : { opacity: 0.5 }}
-                    onClick={() => traiterDemande(demande.id)}
-                  >
-                    Confirmer
-                  </button>
-                  <button
-                    type="button"
-                    className="btnm dg"
-                    style={permissions.confirmerAnnuler ? undefined : { opacity: 0.5 }}
-                    onClick={() => traiterDemande(demande.id)}
-                  >
-                    Refuser
-                  </button>
+                  <span className="motif">{demande.detail}</span>
                 </div>
               </div>
-            ))}
-            {chargement ? (
-              <>
-                <Squelette className="mt-2 h-[52px] rounded-xl" />
-                <Squelette className="mt-2 h-[52px] rounded-xl" />
-              </>
-            ) : demandes.length === 0 ? (
-              <p className="muted" style={{ fontSize: 13 }}>
+              <div className="asa-sep" />
+              <div className="asa-acts">
+                <button
+                  type="button"
+                  className={`asa-btn prim${permissions.confirmerAnnuler ? "" : " off"}`}
+                  onClick={() => traiterDemande(demande.id)}
+                >
+                  ✓ Confirmer
+                </button>
+                <button
+                  type="button"
+                  className={`asa-btn bad${permissions.confirmerAnnuler ? "" : " off"}`}
+                  onClick={() => traiterDemande(demande.id)}
+                >
+                  Refuser
+                </button>
+              </div>
+            </div>
+          ))}
+          {chargement ? (
+            <>
+              <Squelette className="h-[108px] rounded-2xl" />
+              <Squelette className="mt-[11px] h-[108px] rounded-2xl" />
+            </>
+          ) : demandes.length === 0 ? (
+            <div className="asa-card" style={{ textAlign: "center" }}>
+              <p className="muted" style={{ fontSize: 13, padding: "6px 0" }}>
                 Toutes les demandes ont été traitées. 👍
               </p>
-            ) : null}
-          </div>
-          <div className="card2">
-            <h4>Prochains rendez-vous</h4>
-            {rdvJour.slice(0, 4).map((creneau) => (
-              <div key={creneau.heure} className="aptm">
-                <div className="tm">{creneau.heure}</div>
-                <div className="meta">
+            </div>
+          ) : null}
+
+          <h3 className="section-t" style={{ margin: "22px 2px 11px" }}>
+            Prochains rendez-vous
+          </h3>
+          {rdvJour.slice(0, 4).map((creneau) => (
+            <div key={creneau.heure} className="asa-card">
+              <div className="asa-top">
+                <div className="asa-time">{creneau.heure}</div>
+                <div className="asa-who">
                   <b>{creneau.patient}</b>
-                  <small>{creneau.motif} · confirmé</small>
+                  <span className="motif">{creneau.motif} · confirmé</span>
                 </div>
-                <div className="acts">
-                  <Link href="/espace-assistant/rendez-vous" className="btnm gh">
-                    Gérer
-                  </Link>
-                </div>
+                <Link href="/espace-assistant/rendez-vous" className="asa-go">
+                  Gérer
+                </Link>
               </div>
-            ))}
-            {chargement ? (
-              <>
-                <Squelette className="mt-2 h-[52px] rounded-xl" />
-                <Squelette className="mt-2 h-[52px] rounded-xl" />
-              </>
-            ) : rdvJour.length === 0 ? (
-              <p className="muted" style={{ fontSize: 13 }}>
+            </div>
+          ))}
+          {chargement ? (
+            <>
+              <Squelette className="h-[68px] rounded-2xl" />
+              <Squelette className="mt-[11px] h-[68px] rounded-2xl" />
+            </>
+          ) : rdvJour.length === 0 ? (
+            <div className="asa-card" style={{ textAlign: "center" }}>
+              <p className="muted" style={{ fontSize: 13, padding: "6px 0" }}>
                 Aucun rendez-vous aujourd&apos;hui.
               </p>
-            ) : null}
-          </div>
+            </div>
+          ) : null}
         </div>
       </div>
 
