@@ -23,8 +23,8 @@ import { basculerCreneau, useAgenda } from "@/lib/pro";
  * Le passé l'est également : on consulte librement une journée écoulée — c'est
  * utile pour vérifier ce qui avait été ouvert — mais on ne la réécrit pas.
  */
-/** Choix proposés pour la fenêtre de réservation (en mois). */
-const HORIZONS_MOIS = [1, 2, 3, 4, 5, 6, 9, 12];
+/** Choix proposés pour la fenêtre de réservation : 1 à 12 mois. */
+const HORIZONS_MOIS = Array.from({ length: 12 }, (_, i) => i + 1);
 
 export default function GrilleDisponibilites({
   medecinId,
