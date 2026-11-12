@@ -46,10 +46,13 @@ const ONGLETS: Record<string, Onglet[]> = {
     { href: "/mes-rendez-vous", icone: "calendrier", label: "Mes RDV", prefixes: ["/mes-rendez-vous"] },
     { href: "/patient/messages", icone: "message", label: "Messages", prefixes: ["/patient/messages"] },
     { href: "/resultats", icone: "loupe", label: "Recherche", prefixes: ["/resultats", "/medecin", "/patient"], pastille: false },
-    // Hub personnel : la page documents EST le dossier médical du patient
+    // Hub personnel du patient : la page documents EST son dossier médical
     // (ordonnances, résultats, pièces remises). Préfixe plus long que le
     // « /patient » de Recherche, donc c'est bien lui qui s'allume ici.
-    { href: "/patient/documents", icone: "document", label: "Mon dossier", prefixes: ["/patient/documents"] },
+    // Pour un pro connecté, ce 5e onglet est remplacé par « Mon espace »
+    // (voir HUB_PRO) : sans ça, il affichait « Mon dossier » et ne faisait que
+    // rebondir vers l'espace pro (garde d'accès de /patient/*).
+    { href: "/patient/documents", icone: "document", label: "Documents", prefixes: ["/patient/documents"] },
   ],
   medecin: [
     { href: "/espace-medecin", icone: "graphique", label: "Tableau", prefixes: ["/espace-medecin"] },
@@ -179,6 +182,29 @@ const ONGLETS: Record<string, Onglet[]> = {
 };
 
 /**
+ * Barre publique vue par un PRO connecté : le 5e onglet (hub) ne doit pas
+ * l'envoyer vers le dossier patient — barré par la garde d'accès — mais droit
+ * à son espace.
+ */
+const HUB_PRO: Record<string, Onglet> = {
+  medecin: { href: "/espace-medecin", icone: "utilisateur", label: "Mon espace", prefixes: ["/espace-medecin"] },
+  assistant: { href: "/espace-assistant", icone: "utilisateur", label: "Mon espace", prefixes: ["/espace-assistant"] },
+  etablissement: { href: "/espace-etablissement", icone: "utilisateur", label: "Mon espace", prefixes: ["/espace-etablissement"] },
+  admin: { href: "/espace-admin", icone: "utilisateur", label: "Mon espace", prefixes: ["/espace-admin"] },
+};
+
+/**
+ * 4e onglet de la barre publique : « Recherche » (trouver un médecin) ne sert
+ * guère à un médecin/assistant, qui préfère sa patientèle. On le remplace donc
+ * par « Patients » pour eux seuls — l'établissement, cloisonné, ne voit pas la
+ * patientèle, et le patient/visiteur garde « Recherche ».
+ */
+const ONGLET_PATIENTS: Record<string, Onglet> = {
+  medecin: { href: "/espace-medecin/patients", icone: "groupe", label: "Patients", prefixes: ["/espace-medecin/patients"] },
+  assistant: { href: "/espace-assistant/patients", icone: "groupe", label: "Patients", prefixes: ["/espace-assistant/patients"] },
+};
+
+/**
  * L'onglet dont un préfixe correspond le mieux à ce chemin — le plus long
  * l'emporte. Sert à la fois à l'onglet actif et à l'affectation des pastilles.
  */
@@ -204,7 +230,16 @@ export default function TabBarMobile({
   const pathname = usePathname();
   const { profil, chargement } = useProfilConnecte();
   const { notifications } = useNotifications();
-  const onglets = ONGLETS[role];
+  // Barre publique vue par un pro connecté : 4e onglet « Patients » (médecin /
+  // assistant) et 5e onglet « Mon espace » à la place du dossier patient.
+  // Patient / visiteur : barre publique telle quelle.
+  const onglets = (() => {
+    const roleProfil = profil?.role;
+    if (role !== "public" || !roleProfil || !HUB_PRO[roleProfil]) return ONGLETS[role];
+    const base = ONGLETS.public.slice(0, 4);
+    if (ONGLET_PATIENTS[roleProfil]) base[3] = ONGLET_PATIENTS[roleProfil];
+    return [...base, HUB_PRO[roleProfil]];
+  })();
   const actif = ongletPour(onglets, pathname);
   const affichee = !chargement && profil !== null;
 
