@@ -153,6 +153,7 @@ export function useContextePro(): ContextePro {
           parcours, langues, annees_experience, telephone_secretariat, numero_ordre,
           rccm, visite_domicile, zone_domicile,
           note_moyenne, nb_avis, etablissement_id, commune, quartier, photo_url, localisation,
+          horizon_reservation_mois,
           utilisateurs ( nom, prenom ),
           specialites ( nom ),
           villes ( nom ),
@@ -188,6 +189,7 @@ export function useContextePro(): ContextePro {
           quartier: string | null;
           photo_url: string | null;
           localisation: string | null;
+          horizon_reservation_mois: number | null;
           utilisateurs: { nom: string | null; prenom: string | null } | null;
           specialites: { nom: string } | null;
           villes: { nom: string } | null;
@@ -272,6 +274,7 @@ export function useContextePro(): ContextePro {
           horaires: { jours, detail },
           horairesSemaine: horairesParJour(ligne.horaires_types ?? []),
           joursFermes,
+          horizonReservationMois: ligne.horizon_reservation_mois ?? 2,
           plages: ligne.horaires_types ?? [],
           localisation: ligne.localisation ?? "",
         };
@@ -1509,6 +1512,8 @@ export async function enregistrerProfilMedecin(d: {
   visiteDomicile?: boolean;
   zoneDomicile?: string;
   anneesExperience?: number | null;
+  /** Fenêtre de réservation glissante, en mois (1 à 12) — migration 0089. */
+  horizonReservationMois?: number;
 }): Promise<{ erreur?: string }> {
   const supabase = creerClientNavigateur();
   const { data: auth } = await supabase.auth.getUser();
@@ -1532,6 +1537,7 @@ export async function enregistrerProfilMedecin(d: {
   if (d.visiteDomicile !== undefined) maj.visite_domicile = d.visiteDomicile;
   if (d.zoneDomicile !== undefined) maj.zone_domicile = d.zoneDomicile || null;
   if (d.anneesExperience !== undefined) maj.annees_experience = d.anneesExperience;
+  if (d.horizonReservationMois !== undefined) maj.horizon_reservation_mois = d.horizonReservationMois;
   // Un update refusé par la RLS ne lève pas d'erreur : il touche zéro
   // ligne. Sans ce `.select()` l'écran annoncerait « enregistré » sur une
   // modification jamais partie.

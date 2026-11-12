@@ -1097,7 +1097,7 @@ function ChoixCreneau({
   dispo: DispoMedecin | undefined;
   onChoisir: (date: string, heure: string) => void;
 }) {
-  const { plages, etats, chargement } = useDisponibilites(medecin.id, 30);
+  const { plages, etats, chargement } = useDisponibilites(medecin.id, { joursAvance: 30 });
   const [jourVoulu, setJourVoulu] = useState<string | null>(null);
 
   const joursOuverts = new Set(plages.map((p) => p.jour_semaine));

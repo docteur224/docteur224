@@ -94,6 +94,12 @@ export interface Medecin {
   horairesSemaine: { jour: number; nom: string; plages: { debut: string; fin: string }[] }[];
   /** Jours de fermeture hebdomadaires (0 = dimanche … 6 = samedi) */
   joursFermes: number[];
+  /**
+   * Fenêtre de réservation glissante, en mois : le patient peut prendre RDV
+   * jusqu'à N mois à l'avance (défaut 2). Ne borne que la vue patient — le
+   * médecin ouvre au-delà manuellement. Voir migration 0089.
+   */
+  horizonReservationMois: number;
 }
 
 export interface Creneau {

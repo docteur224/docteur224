@@ -21,27 +21,32 @@ const JOURS_PAR_PAGE = 6;
 export default function CreneauxMobile({
   medecinId,
   joursFermes,
+  horizonMois,
 }: {
   medecinId: string;
   joursFermes: number[];
+  /** Fenêtre de réservation du médecin, en mois (migration 0089). */
+  horizonMois: number;
 }) {
-  const { chargement, creneauxJour, etendreFenetre } = useDisponibilites(medecinId);
+  const { chargement, creneauxJour, etendreFenetre, horizonJours } = useDisponibilites(medecinId, {
+    horizonMois,
+  });
   const [decalage, setDecalage] = useState(0);
   const jours = useMemo(
-    () => prochainsJours(joursFermes, JOURS_PAR_PAGE, decalage),
-    [joursFermes, decalage]
+    () => prochainsJours(joursFermes, JOURS_PAR_PAGE, decalage, horizonJours),
+    [joursFermes, decalage, horizonJours]
   );
-  const total = useMemo(() => nbJoursAffichables(), []);
-  const mois = useMemo(() => moisDeLHorizon(), []);
+  const total = useMemo(() => nbJoursAffichables(horizonJours), [horizonJours]);
+  const mois = useMemo(() => moisDeLHorizon(horizonJours), [horizonJours]);
 
   // Chargement progressif : la fenêtre de disponibilités s'élargit seulement
   // quand la navigation dépasse ce qui est déjà chargé.
   useEffect(() => {
-    etendreFenetre(joursACharger(decalage, JOURS_PAR_PAGE));
-  }, [decalage, etendreFenetre]);
+    etendreFenetre(joursACharger(decalage, JOURS_PAR_PAGE, horizonJours));
+  }, [decalage, etendreFenetre, horizonJours]);
   const premiereSemaine = useMemo(
-    () => prochainsJours(joursFermes, JOURS_PAR_PAGE),
-    [joursFermes]
+    () => prochainsJours(joursFermes, JOURS_PAR_PAGE, 0, horizonJours),
+    [joursFermes, horizonJours]
   );
   const premierOuvert =
     premiereSemaine.find((j) => !j.ferme)?.iso ?? premiereSemaine[0]?.iso ?? "";

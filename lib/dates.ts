@@ -114,6 +114,23 @@ export interface JourDispo {
 export const HORIZON_RESERVATION_JOURS = 365;
 
 /**
+ * Date limite (incluse) de la fenêtre de réservation d'un médecin : aujourd'hui
+ * + N mois, calculée sur le CALENDRIER (les mois n'ont pas tous 30 jours). Un
+ * créneau au-delà n'est pas proposé au patient, sauf ouverture manuelle.
+ */
+export function dateLimiteReservation(horizonMois: number, maintenant = new Date()): string {
+  const d = new Date(maintenant);
+  d.setMonth(d.getMonth() + horizonMois);
+  return versISO(d);
+}
+
+/** Nombre de jours calendaires entre aujourd'hui et une date ISO (jamais négatif). */
+export function joursJusqua(dateISO: string, maintenant = new Date()): number {
+  const base = depuisISO(versISO(maintenant)).getTime();
+  return Math.max(0, Math.round((depuisISO(dateISO).getTime() - base) / 86400000));
+}
+
+/**
  * Délai de prévenance : on ne peut pas réserver un créneau qui commence dans
  * moins de 2 heures. Laisse une marge de préparation au médecin tout en
  * gardant le rendez-vous le jour même possible (à 13h, 15:00 reste ouvert).
@@ -173,12 +190,17 @@ export function jourPasse(dateISO: string, maintenant = new Date()): boolean {
  * fait défiler exactement d'une page. La liste s'arrête à
  * HORIZON_RESERVATION_JOURS, ce qui borne naturellement le défilement avant.
  */
-export function prochainsJours(joursFermes: number[], nb = 5, decalage = 0): JourDispo[] {
+export function prochainsJours(
+  joursFermes: number[],
+  nb = 5,
+  decalage = 0,
+  horizonJours = HORIZON_RESERVATION_JOURS
+): JourDispo[] {
   const resultat: JourDispo[] = [];
   const curseur = new Date();
   const aujourdhuiISO = versISO(curseur);
   const limite = new Date();
-  limite.setDate(limite.getDate() + HORIZON_RESERVATION_JOURS);
+  limite.setDate(limite.getDate() + horizonJours);
   let ignores = 0;
 
   while (resultat.length < nb && curseur <= limite) {
@@ -201,11 +223,11 @@ export function prochainsJours(joursFermes: number[], nb = 5, decalage = 0): Jou
   return resultat;
 }
 
-/** Nombre total de jours affichables (dimanches exclus) dans l'horizon de réservation. */
-export function nbJoursAffichables(): number {
+/** Nombre total de jours affichables (dimanches exclus) dans l'horizon donné. */
+export function nbJoursAffichables(horizonJours = HORIZON_RESERVATION_JOURS): number {
   // Sur N jours consécutifs il y a exactement un dimanche par semaine entière,
   // plus au maximum un dans le reliquat — inutile de boucler sur l'année.
-  const total = HORIZON_RESERVATION_JOURS + 1; // aujourd'hui inclus
+  const total = horizonJours + 1; // aujourd'hui inclus
   const jourAujourdhui = new Date().getDay();
   const semainesEntieres = Math.floor(total / 7);
   const reliquat = total % 7;
@@ -232,11 +254,11 @@ export interface MoisDispo {
  * Le mois courant pointe sur aujourd'hui (décalage 0), pas sur le 1er du mois,
  * puisque les dates passées ne sont pas réservables.
  */
-export function moisDeLHorizon(): MoisDispo[] {
+export function moisDeLHorizon(horizonJours = HORIZON_RESERVATION_JOURS): MoisDispo[] {
   const resultat: MoisDispo[] = [];
   const curseur = new Date();
   const limite = new Date();
-  limite.setDate(limite.getDate() + HORIZON_RESERVATION_JOURS);
+  limite.setDate(limite.getDate() + horizonJours);
   let affichables = 0;
   let dernierMois = -1;
 
@@ -266,7 +288,11 @@ export function moisDeLHorizon(): MoisDispo[] {
  * Le plafond à HORIZON_RESERVATION_JOURS reste sûr : aucune date au-delà de
  * l'horizon n'est affichable, donc la fenêtre couvre toujours le bandeau.
  */
-export function joursACharger(decalage: number, taillePage: number): number {
+export function joursACharger(
+  decalage: number,
+  taillePage: number,
+  horizonJours = HORIZON_RESERVATION_JOURS
+): number {
   const calendaires = Math.ceil(((decalage + taillePage) * 7) / 6);
-  return Math.min(HORIZON_RESERVATION_JOURS, calendaires + 30);
+  return Math.min(horizonJours, calendaires + 30);
 }

@@ -62,6 +62,7 @@ interface LigneMedecin {
   commune: string | null;
   quartier: string | null;
   photo_url: string | null;
+  horizon_reservation_mois: number | null;
   utilisateurs: { nom: string | null; prenom: string | null } | null;
   specialites: { nom: string } | null;
   etablissements: { nom: string } | null;
@@ -76,6 +77,7 @@ const SELECTION_MEDECIN = `
   parcours, langues, annees_experience, telephone_secretariat, localisation, numero_ordre,
   rccm, visite_domicile, zone_domicile,
   note_moyenne, nb_avis, etablissement_id, commune, quartier, photo_url,
+  horizon_reservation_mois,
   utilisateurs ( nom, prenom ),
   specialites ( nom ),
   etablissements ( nom ),
@@ -150,6 +152,7 @@ function versMedecinUI(ligne: LigneMedecin): MedecinAvecPlages {
     horaires: { jours, detail },
     horairesSemaine: horairesParJour(ligne.horaires_types ?? []),
     joursFermes,
+    horizonReservationMois: ligne.horizon_reservation_mois ?? 2,
     plages: ligne.horaires_types ?? [],
   };
 }
@@ -531,6 +534,20 @@ export async function chargerIndisponibilites(
     map.set(cle, ligne.etat as EtatCreneau);
   }
   return map;
+}
+
+/**
+ * Date de l'ouverture MANUELLE la plus lointaine encore à venir (exception
+ * `creneaux_exceptions` etat='ouvert'), ou null. Sert à étendre le bandeau de
+ * dates au-delà de la fenêtre de réservation quand le médecin a délibérément
+ * ouvert un créneau plus loin (Règle 1). Voir migration 0090.
+ */
+export async function chargerDerniereOuvertureManuelle(medecinId: string): Promise<string | null> {
+  const { data, error } = await clientPublic().rpc("derniere_ouverture_manuelle", {
+    p_medecin_id: medecinId,
+  });
+  if (error) return null; // Pas bloquant : sans cette date, la fenêtre reste au défaut.
+  return (data as string | null) ?? null;
 }
 
 /** Créneaux de 30 minutes, de 08:00 à 20:00 (spec C.4.2). */

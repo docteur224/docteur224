@@ -1,10 +1,11 @@
 "use client";
 
+import { useState } from "react";
 import MedecinShell from "@/components/medecin/MedecinShell";
 import CongesAbsences from "@/components/pro/CongesAbsences";
 import GrilleDisponibilites from "@/components/pro/GrilleDisponibilites";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
-import { useContextePro } from "@/lib/pro";
+import { enregistrerProfilMedecin, useContextePro } from "@/lib/pro";
 
 /*
  * Mes disponibilités — reproduit l'écran « med-dispos » de la maquette web :
@@ -22,6 +23,18 @@ const NOMS_LONGS = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi
 
 export default function Disponibilites() {
   const { medecin, chargement } = useContextePro();
+
+  // Fenêtre de réservation : la valeur affichée est DÉDUITE — le choix local
+  // s'il existe, sinon celle du profil. Pas de synchro par effet (qui ferait
+  // rendre deux fois). `null` tant que le praticien n'a rien changé.
+  const [choixHorizon, setChoixHorizon] = useState<number | null>(null);
+  const horizon = choixHorizon ?? medecin?.horizonReservationMois ?? 2;
+
+  async function changerHorizon(mois: number) {
+    setChoixHorizon(mois); // on reflète tout de suite le choix
+    const { erreur } = await enregistrerProfilMedecin({ horizonReservationMois: mois });
+    if (erreur) setChoixHorizon(null); // échec : on revient à la valeur de la base
+  }
 
   // Horaires-types réels, agrégés par jour (lundi → dimanche)
   const parJour = (jour: number): [string, string] | null => {
@@ -74,7 +87,12 @@ export default function Disponibilites() {
               ))}
             </div>
           </div>
-          <GrilleDisponibilites medecinId={medecin.id} peutModifier />
+          <GrilleDisponibilites
+            medecinId={medecin.id}
+            peutModifier
+            horizonMois={horizon}
+            onChangeHorizon={changerHorizon}
+          />
           <CongesAbsences medecinId={medecin.id} peutModifier variante="mobile" />
         </div>
       </div>
@@ -124,7 +142,12 @@ export default function Disponibilites() {
 
       {/* Grille de créneaux partagée (le médecin a tous les droits) */}
       <div className="mb-4">
-        <GrilleDisponibilites medecinId={medecin.id} peutModifier />
+        <GrilleDisponibilites
+          medecinId={medecin.id}
+          peutModifier
+          horizonMois={horizon}
+          onChangeHorizon={changerHorizon}
+        />
       </div>
 
       {/* Congés et absences : la liste réelle du praticien. */}

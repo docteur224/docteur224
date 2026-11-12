@@ -422,7 +422,7 @@ function DialogueDeplacer({
   onFermer: () => void;
   onFini: (texte: string, erreur: boolean) => void;
 }) {
-  const { plages, etats, chargement } = useDisponibilites(appel.medecinId, 30);
+  const { plages, etats, chargement } = useDisponibilites(appel.medecinId, { joursAvance: 30 });
   const [jour, setJour] = useState(appel.date);
   const [heure, setHeure] = useState<string | null>(null);
   const [enCours, setEnCours] = useState(false);

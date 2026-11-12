@@ -23,12 +23,24 @@ import { basculerCreneau, useAgenda } from "@/lib/pro";
  * Le passé l'est également : on consulte librement une journée écoulée — c'est
  * utile pour vérifier ce qui avait été ouvert — mais on ne la réécrit pas.
  */
+/** Choix proposés pour la fenêtre de réservation (en mois). */
+const HORIZONS_MOIS = [1, 2, 3, 4, 5, 6, 9, 12];
+
 export default function GrilleDisponibilites({
   medecinId,
   peutModifier,
+  horizonMois,
+  onChangeHorizon,
 }: {
   medecinId: string;
   peutModifier: boolean;
+  /**
+   * Fenêtre de réservation du médecin, en mois. Fournie uniquement sur l'écran
+   * du praticien (migration 0089) : avec `onChangeHorizon`, affiche le
+   * sélecteur. Omise (écran assistant), rien ne s'affiche.
+   */
+  horizonMois?: number;
+  onChangeHorizon?: (mois: number) => void;
 }) {
   const { creneauxJour, recharger } = useAgenda(medecinId);
   const [dateISO, setDateISO] = useState(() => versISO(new Date()));
@@ -81,45 +93,80 @@ export default function GrilleDisponibilites({
         créneaux déjà réservés ne peuvent pas être fermés.
       </p>
 
-      {/* Navigation de date */}
-      <div className="mb-3 flex max-w-[480px] items-center gap-[9px]">
-        <button
-          type="button"
-          onClick={() => decalerSemaine(-1)}
-          aria-label="Semaine précédente"
-          className="h-[46px] w-10 flex-none rounded-xl border-[1.5px] border-line bg-white text-xl font-extrabold text-blue hover:bg-bg"
-        >
-          ‹
-        </button>
-        <button
-          type="button"
-          onClick={ouvrirCalendrier}
-          className="relative flex-1 rounded-xl border-[1.5px] border-line bg-teal-soft px-3 py-[7px] text-center hover:border-teal"
-        >
-          <span className="block text-sm font-extrabold text-blue">
-            {capitaliser(formatDateLongue(dateISO))}
-          </span>
-          <span className="block text-[10px] font-semibold text-muted">
-            📅 Cliquez pour choisir une date
-          </span>
-          <input
-            ref={champDate}
-            type="date"
-            value={dateISO}
-            onChange={(e) => e.target.value && setDateISO(e.target.value)}
-            className="pointer-events-none absolute h-px w-px opacity-0"
-            tabIndex={-1}
-            aria-hidden
-          />
-        </button>
-        <button
-          type="button"
-          onClick={() => decalerSemaine(1)}
-          aria-label="Semaine suivante"
-          className="h-[46px] w-10 flex-none rounded-xl border-[1.5px] border-line bg-white text-xl font-extrabold text-blue hover:bg-bg"
-        >
-          ›
-        </button>
+      {/* Navigation de date + fenêtre de réservation (à droite) */}
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+        <div className="flex w-full max-w-[480px] items-center gap-[9px]">
+          <button
+            type="button"
+            onClick={() => decalerSemaine(-1)}
+            aria-label="Semaine précédente"
+            className="h-[46px] w-10 flex-none rounded-xl border-[1.5px] border-line bg-white text-xl font-extrabold text-blue hover:bg-bg"
+          >
+            ‹
+          </button>
+          <button
+            type="button"
+            onClick={ouvrirCalendrier}
+            className="relative flex-1 rounded-xl border-[1.5px] border-line bg-teal-soft px-3 py-[7px] text-center hover:border-teal"
+          >
+            <span className="block text-sm font-extrabold text-blue">
+              {capitaliser(formatDateLongue(dateISO))}
+            </span>
+            <span className="block text-[10px] font-semibold text-muted">
+              📅 Cliquez pour choisir une date
+            </span>
+            <input
+              ref={champDate}
+              type="date"
+              value={dateISO}
+              onChange={(e) => e.target.value && setDateISO(e.target.value)}
+              className="pointer-events-none absolute h-px w-px opacity-0"
+              tabIndex={-1}
+              aria-hidden
+            />
+          </button>
+          <button
+            type="button"
+            onClick={() => decalerSemaine(1)}
+            aria-label="Semaine suivante"
+            className="h-[46px] w-10 flex-none rounded-xl border-[1.5px] border-line bg-white text-xl font-extrabold text-blue hover:bg-bg"
+          >
+            ›
+          </button>
+        </div>
+
+        {/* Fenêtre de réservation — réglage côté praticien (migration 0089).
+            Affiché seulement si l'écran fournit l'horizon et un gestionnaire. */}
+        {horizonMois !== undefined && onChangeHorizon && (
+          <div className="min-w-[230px] flex-1 rounded-xl border-[1.5px] border-line bg-white px-[14px] py-[9px]">
+            <label
+              htmlFor="horizon-reservation"
+              className="block text-[12.5px] font-extrabold text-ink"
+            >
+              Fenêtre de réservation
+            </label>
+            <div className="mt-[6px] flex items-center gap-2">
+              <span className="text-[12px] font-semibold text-muted">Réservable jusqu’à</span>
+              <select
+                id="horizon-reservation"
+                value={horizonMois}
+                onChange={(e) => onChangeHorizon(Number(e.target.value))}
+                className="rounded-lg border-[1.5px] border-line bg-white px-2 py-[6px] text-[12.5px] font-bold text-blue hover:border-teal focus:border-teal focus:outline-none"
+              >
+                {HORIZONS_MOIS.map((m) => (
+                  <option key={m} value={m}>
+                    {m} mois
+                  </option>
+                ))}
+              </select>
+              <span className="text-[12px] font-semibold text-muted">à l’avance</span>
+            </div>
+            <p className="mt-[6px] text-[11px] leading-snug text-muted">
+              Les patients ne voient vos créneaux que jusqu’à cette échéance. Vous pouvez toujours
+              ouvrir un créneau au-delà manuellement.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Pastilles de la semaine (le dimanche est grisé, cf. maquette) */}

@@ -686,7 +686,11 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
         </div>
 
         {/* ===== Panneau de réservation ===== */}
-        <PanneauReservation medecinId={medecin.id} joursFermes={medecin.joursFermes} />
+        <PanneauReservation
+          medecinId={medecin.id}
+          joursFermes={medecin.joursFermes}
+          horizonMois={medecin.horizonReservationMois}
+        />
       </div>
       </div>
     </div>

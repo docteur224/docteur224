@@ -41,12 +41,20 @@ export default async function ChoixCreneau({ params }: { params: Promise<{ id: s
           sousTitre={`${nomComplet(medecin)} · ${medecin.specialite}`}
           bandeauRdv
         />
-        <CreneauxMobile medecinId={medecin.id} joursFermes={medecin.joursFermes} />
+        <CreneauxMobile
+          medecinId={medecin.id}
+          joursFermes={medecin.joursFermes}
+          horizonMois={medecin.horizonReservationMois}
+        />
       </div>
 
       {/* ===== VERSION WEB (repli : même panneau que la fiche) ===== */}
       <div className="mx-auto hidden w-full max-w-[420px] px-[30px] py-[26px] md:block">
-        <PanneauReservation medecinId={medecin.id} joursFermes={medecin.joursFermes} />
+        <PanneauReservation
+          medecinId={medecin.id}
+          joursFermes={medecin.joursFermes}
+          horizonMois={medecin.horizonReservationMois}
+        />
       </div>
     </div>
   );
