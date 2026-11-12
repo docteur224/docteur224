@@ -205,6 +205,21 @@ const ONGLET_PATIENTS: Record<string, Onglet> = {
 };
 
 /**
+ * 2e et 3e onglets : « Mes RDV » et « Messages » de la barre publique pointent
+ * vers les routes patient et rebondissent pour un pro. On les redirige vers
+ * l'agenda et la messagerie de son espace (médecin / assistant), pour que la
+ * barre publique soit entièrement cohérente côté pro.
+ */
+const RDV_PRO: Record<string, Onglet> = {
+  medecin: { href: "/espace-medecin/agenda", icone: "calendrier", label: "Agenda", prefixes: ["/espace-medecin/agenda"] },
+  assistant: { href: "/espace-assistant/rendez-vous", icone: "calendrier", label: "RDV", prefixes: ["/espace-assistant/rendez-vous"] },
+};
+const MESSAGES_PRO: Record<string, Onglet> = {
+  medecin: { href: "/espace-medecin/messages", icone: "message", label: "Messages", prefixes: ["/espace-medecin/messages"] },
+  assistant: { href: "/espace-assistant/messages", icone: "message", label: "Messages", prefixes: ["/espace-assistant/messages"] },
+};
+
+/**
  * L'onglet dont un préfixe correspond le mieux à ce chemin — le plus long
  * l'emporte. Sert à la fois à l'onglet actif et à l'affectation des pastilles.
  */
@@ -230,13 +245,16 @@ export default function TabBarMobile({
   const pathname = usePathname();
   const { profil, chargement } = useProfilConnecte();
   const { notifications } = useNotifications();
-  // Barre publique vue par un pro connecté : 4e onglet « Patients » (médecin /
-  // assistant) et 5e onglet « Mon espace » à la place du dossier patient.
-  // Patient / visiteur : barre publique telle quelle.
+  // Barre publique vue par un pro connecté : pour un médecin / assistant, les
+  // onglets 2 à 4 (RDV, Messages, Patients) mènent à son espace plutôt qu'aux
+  // routes patient, et le 5e (hub) devient « Mon espace ». L'onglet Accueil
+  // reste la page publique. Patient / visiteur : barre publique telle quelle.
   const onglets = (() => {
     const roleProfil = profil?.role;
     if (role !== "public" || !roleProfil || !HUB_PRO[roleProfil]) return ONGLETS[role];
     const base = ONGLETS.public.slice(0, 4);
+    if (RDV_PRO[roleProfil]) base[1] = RDV_PRO[roleProfil];
+    if (MESSAGES_PRO[roleProfil]) base[2] = MESSAGES_PRO[roleProfil];
     if (ONGLET_PATIENTS[roleProfil]) base[3] = ONGLET_PATIENTS[roleProfil];
     return [...base, HUB_PRO[roleProfil]];
   })();
