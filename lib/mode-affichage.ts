@@ -45,9 +45,13 @@ export function modeStocke(): Mode | null {
   }
 }
 
-/** Ce qui doit réellement s'afficher : choix explicite, sinon système. */
+/** Ce qui doit réellement s'afficher : choix explicite, sinon CLAIR.
+ *  On ne suit PLUS le mode sombre du système d'exploitation : le site démarre
+ *  toujours en clair tant que l'utilisateur n'a pas basculé lui-même (décision
+ *  produit du 12/11/2026 — un contexte système en sombre, ex. un raccourci
+ *  d'écran d'accueil, ne doit plus assombrir le site sans action). */
 export function modeEffectif(): Mode {
-  return modeStocke() ?? prefSysteme();
+  return modeStocke() ?? "light";
 }
 
 /** Pose le mode sur le document déjà affiché. */
@@ -97,13 +101,7 @@ export function sAbonnerMode(rappel: () => void): () => void {
  */
 export function instantaneMode(): Mode {
   const v = document.documentElement.getAttribute("data-theme");
-  if (v === "dark") return "dark";
-  if (v === "light") return "light";
-  // Attribut absent (script anti-flash bloqué, ou JS désactivé côté script) :
-  // on reflète le mode RÉELLEMENT peint. Le CSS, dans ce cas, suit le système
-  // via @media(prefers-color-scheme) ; le bouton doit dire la même chose, pour
-  // ne jamais contredire l'écran. Même ordre de résolution que le CSS.
-  return prefSysteme();
+  return v === "dark" ? "dark" : "light";
 }
 
 /** Au rendu serveur, pas de DOM : on affiche l'état clair (repli neutre). */

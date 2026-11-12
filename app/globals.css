@@ -138,10 +138,12 @@ body {
      en base n'est jamais modifiée : revenir au clair restitue exactement la
      charte. Changer de mode ne change pas la palette, et inversement.
 
-   Résolution (section 12) : préférence explicite (attribut data-theme posée
-   par le script anti-flash ModeLocal), sinon préférence système, sinon clair.
-   Le @media sert de repli sans JavaScript ; le script, lui, pose toujours
-   l'attribut, ce qui active aussi le filet de sécurité plus bas.
+   Résolution : préférence explicite (attribut data-theme posé par le script
+   anti-flash ModeLocal), SINON clair. On ne suit PAS le mode sombre du système
+   d'exploitation : pas de @media(prefers-color-scheme) ici — un contexte système
+   en sombre (raccourci d'écran d'accueil, navigateur in-app) ne doit jamais
+   assombrir le site sans action de l'utilisateur. Le sombre ne s'active qu'avec
+   data-theme="dark", posé par le bouton de bascule.
    ===================================================================== */
 :root[data-theme="dark"] {
   color-scheme: dark;
@@ -171,31 +173,8 @@ body {
      teinte (spécificité html:root > :root). Le redéfinir au mode sombre
      écraserait ce choix. */
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --bg: #0d1922;
-    --card: #15242f;
-    --ink: #e8eef2;
-    --ink-soft: #b9c6cf;
-    --muted: #93a3ad;
-    --muted-soft: #6b7c87;
-    --line: #273642;
-    --teal-soft: #123240;
-    --teal-line: #255265;
-    --blue-line: #2a4759;
-    --green-soft: #112a1d;
-    --green-line: #235639;
-    --amber-soft: #2b2110;
-    --amber-line: #4d3a1e;
-    --amber-ink: #e3ad60;
-    --red-soft: #2c1512;
-    --red-line: #5b2c26;
-    --orange-soft: #2c1a10;
-    --shadow: 0 14px 40px rgba(0, 0, 0, 0.55);
-    --blue-encre: var(--blue-lisible);
-  }
-}
+/* Pas de bloc @media(prefers-color-scheme: dark) : le sombre ne suit jamais le
+   système, il ne s'obtient qu'en basculant explicitement (data-theme="dark"). */
 
 /* =====================================================================
    DENSITÉ WEB — affichage réduit à 80 %
