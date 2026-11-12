@@ -97,7 +97,13 @@ export function sAbonnerMode(rappel: () => void): () => void {
  */
 export function instantaneMode(): Mode {
   const v = document.documentElement.getAttribute("data-theme");
-  return v === "dark" ? "dark" : "light";
+  if (v === "dark") return "dark";
+  if (v === "light") return "light";
+  // Attribut absent (script anti-flash bloqué, ou JS désactivé côté script) :
+  // on reflète le mode RÉELLEMENT peint. Le CSS, dans ce cas, suit le système
+  // via @media(prefers-color-scheme) ; le bouton doit dire la même chose, pour
+  // ne jamais contredire l'écran. Même ordre de résolution que le CSS.
+  return prefSysteme();
 }
 
 /** Au rendu serveur, pas de DOM : on affiche l'état clair (repli neutre). */
