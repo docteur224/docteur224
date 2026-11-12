@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import MedecinShell from "@/components/medecin/MedecinShell";
 import DetailRdv from "@/components/medecin/DetailRdv";
 import ExporterAgenda from "@/components/medecin/ExporterAgenda";
@@ -13,6 +13,7 @@ import {
   versISO,
 } from "@/lib/dates";
 import { useAgenda, useContextePro, type CreneauAgenda, type RdvAgenda } from "@/lib/pro";
+import { HEURES_JOURNEE } from "@/lib/donnees";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import Icone from "@/components/site/Icone";
 import { Squelette } from "@/components/ui/Squelette";
@@ -83,6 +84,10 @@ export default function AgendaMedecin() {
   const { medecin } = useContextePro();
   const [dateISO, setDateISO] = useState(() => versISO(new Date()));
   const [seulementRdv, setSeulementRdv] = useState(false);
+  /* Vue « jour » (la liste heure par heure) ou « semaine » (la grille des sept
+     jours). La bascule n'existe que sur grand écran : une grille à sept
+     colonnes ne se lit pas sur un téléphone, où l'on reste sur la liste. */
+  const [vue, setVue] = useState<"jour" | "semaine">("jour");
   const [ouvert, setOuvert] = useState<RdvAgenda | null>(null);
   const [exporter, setExporter] = useState(false);
 
@@ -122,9 +127,18 @@ export default function AgendaMedecin() {
     if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
   }, [dateISO]);
 
-  /** Lien de prise de rendez-vous préréglé sur un créneau libre. */
-  const lienCreneau = (heure: string) =>
-    `/espace-medecin/nouveau-rdv?date=${dateISO}&heure=${heure}`;
+  /** Lien de prise de rendez-vous préréglé sur un créneau libre d'un jour donné. */
+  const lienCreneauJour = (iso: string, heure: string) =>
+    `/espace-medecin/nouveau-rdv?date=${iso}&heure=${heure}`;
+  /** Le même, sur le jour affiché — raccourci de la vue jour. */
+  const lienCreneau = (heure: string) => lienCreneauJour(dateISO, heure);
+
+  /** Fin d'un créneau de 30 min, pour afficher une plage « 10:00–10:30 ». */
+  const finCreneau = (heure: string) => {
+    const [h, m] = heure.split(":").map(Number);
+    const t = h * 60 + m + 30;
+    return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
+  };
 
   /* ===== Barre des sept jours, partagée par les deux versions ===== */
   const barreSemaine = (
@@ -241,6 +255,126 @@ export default function AgendaMedecin() {
             </span>
           </Link>
         )}
+      </div>
+    </div>
+  );
+
+  /* ===== La semaine en grille (version web) =====
+     Les sept jours en colonnes, les créneaux de 30 min en lignes. On réutilise
+     `creneauxJour` jour par jour : même source que la vue jour, donc les congés,
+     les fermetures et les rendez-vous y apparaissent à l'identique. */
+  const creneauxParJour = semaine.map((iso) => creneauxJour(iso));
+  const grilleSemaine = (
+    <div className="overflow-x-auto rounded-2xl border border-line bg-white">
+      <div
+        className="grid min-w-[840px]"
+        style={{ gridTemplateColumns: "58px repeat(7, minmax(0, 1fr))" }}
+      >
+        {/* En-tête : coin vide + les sept jours */}
+        <div className="border-b border-line bg-white" />
+        {semaine.map((iso) => {
+          const jour = depuisISO(iso);
+          const estAuj = iso === aujourdhui;
+          const choisi = iso === dateISO;
+          return (
+            <button
+              key={iso}
+              type="button"
+              onClick={() => setDateISO(iso)}
+              aria-current={choisi ? "date" : undefined}
+              title="Voir cette journée en détail"
+              className={`border-b border-l border-line px-2 py-2 text-center transition-colors hover:bg-bg ${
+                estAuj ? "bg-teal-soft" : "bg-white"
+              }`}
+            >
+              <span
+                className={`block text-[10px] font-bold uppercase tracking-wide ${
+                  estAuj ? "text-teal" : "text-muted"
+                }`}
+              >
+                {JOURS_COURTS[jour.getDay()]}
+              </span>
+              <span
+                className={`block text-[15px] font-extrabold leading-tight ${
+                  estAuj ? "text-blue" : "text-ink"
+                }`}
+              >
+                {jour.getDate()}
+              </span>
+            </button>
+          );
+        })}
+
+        {/* Une ligne par créneau de 30 min ; seules les heures pleines sont étiquetées. */}
+        {HEURES_JOURNEE.map((heure, i) => {
+          const pleine = heure.endsWith(":00");
+          const bordure = pleine ? "border-t border-line" : "";
+          return (
+            <Fragment key={heure}>
+              <div
+                className={`min-h-[30px] px-1.5 pr-2 pt-1 text-right text-[10px] font-bold text-muted ${bordure}`}
+              >
+                {pleine ? heure : ""}
+              </div>
+              {semaine.map((iso, j) => {
+                const creneau = creneauxParJour[j][i];
+                const cellule = `min-h-[30px] border-l border-line p-[2px] ${bordure}`;
+
+                if (creneau.statut === "reserve" && creneau.rdv) {
+                  const couleur =
+                    creneau.statutRdv === "en_attente"
+                      ? "border-amber bg-amber-soft"
+                      : creneau.lieu === "domicile"
+                        ? "border-green bg-green-soft"
+                        : "border-teal bg-teal-soft";
+                  return (
+                    <div key={iso} className={cellule}>
+                      <button
+                        type="button"
+                        onClick={() => setOuvert(creneau.rdv!)}
+                        title={`${creneau.heure} · ${creneau.patient} — ${creneau.motif}`}
+                        className={`flex h-full min-h-[26px] w-full flex-col justify-center overflow-hidden rounded-[5px] border-l-[3px] px-1.5 py-[3px] text-left text-blue transition-[filter] hover:brightness-95 ${couleur}`}
+                      >
+                        <b className="block truncate text-[11px] font-extrabold leading-tight">
+                          {creneau.patient}
+                          {creneau.lieu === "domicile" && " 🏠"}
+                        </b>
+                        <span className="block truncate text-[9.5px] font-semibold opacity-80">
+                          {creneau.heure}–{finCreneau(creneau.heure)}
+                        </span>
+                      </button>
+                    </div>
+                  );
+                }
+
+                if (creneau.statut === "ferme") {
+                  // Congé, fermeture ou hors horaires : hachures, non cliquable.
+                  return (
+                    <div
+                      key={iso}
+                      className={`min-h-[30px] border-l border-line bg-[repeating-linear-gradient(45deg,var(--bg),var(--bg)_5px,var(--line)_5px,var(--line)_6px)] ${bordure}`}
+                    />
+                  );
+                }
+
+                // Créneau libre : mène à la prise de rendez-vous préréglée.
+                return (
+                  <div key={iso} className={cellule}>
+                    <Link
+                      href={lienCreneauJour(iso, heure)}
+                      title={`Poser un rendez-vous le ${JOURS_COURTS[depuisISO(iso).getDay()]} à ${heure}`}
+                      className="group flex h-full min-h-[26px] w-full items-center justify-center rounded-[5px] transition-colors hover:bg-teal-soft"
+                    >
+                      <span className="text-[14px] font-bold text-teal opacity-0 transition-opacity group-hover:opacity-100">
+                        +
+                      </span>
+                    </Link>
+                  </div>
+                );
+              })}
+            </Fragment>
+          );
+        })}
       </div>
     </div>
   );
@@ -453,17 +587,25 @@ export default function AgendaMedecin() {
         <div className="mb-3 flex flex-wrap items-center gap-2">
           {(
             [
-              [false, "Toute la journée"],
-              [true, "Rendez-vous seulement"],
-            ] as [boolean, string][]
-          ).map(([valeur, libelle]) => (
+              ["jour-tout", "Toute la journée", vue === "jour" && !seulementRdv],
+              ["jour-rdv", "Rendez-vous seulement", vue === "jour" && seulementRdv],
+              ["semaine", "Vue semaine", vue === "semaine"],
+            ] as [string, string, boolean][]
+          ).map(([cle, libelle, actif]) => (
             <button
-              key={libelle}
+              key={cle}
               type="button"
-              aria-pressed={seulementRdv === valeur}
-              onClick={() => setSeulementRdv(valeur)}
+              aria-pressed={actif}
+              onClick={() => {
+                if (cle === "semaine") {
+                  setVue("semaine");
+                } else {
+                  setVue("jour");
+                  setSeulementRdv(cle === "jour-rdv");
+                }
+              }}
               className={`rounded-[9px] border-[1.5px] px-3 py-1.5 text-[12px] font-bold transition-colors ${
-                seulementRdv === valeur
+                actif
                   ? "border-teal bg-teal-soft text-blue"
                   : "border-line bg-white text-muted hover:bg-bg"
               }`}
@@ -476,18 +618,32 @@ export default function AgendaMedecin() {
           </span>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-line bg-white">
-          {!chargement && creneaux.map(ligneWeb)}
-          {chargement ? (
-            <div className="grid gap-px">
-              {Array.from({ length: 6 }, (_, i) => (
-                <Squelette key={i} className="h-[56px] rounded-none" />
-              ))}
+        {vue === "semaine" ? (
+          chargement ? (
+            <div className="overflow-hidden rounded-2xl border border-line bg-white">
+              <div className="grid gap-px">
+                {Array.from({ length: 8 }, (_, i) => (
+                  <Squelette key={i} className="h-[52px] rounded-none" />
+                ))}
+              </div>
             </div>
-          ) : creneaux.length === 0 ? (
-            <p className="px-5 py-[14px] text-[13px] text-muted">{messageVide}</p>
-          ) : null}
-        </div>
+          ) : (
+            grilleSemaine
+          )
+        ) : (
+          <div className="overflow-hidden rounded-2xl border border-line bg-white">
+            {!chargement && creneaux.map(ligneWeb)}
+            {chargement ? (
+              <div className="grid gap-px">
+                {Array.from({ length: 6 }, (_, i) => (
+                  <Squelette key={i} className="h-[56px] rounded-none" />
+                ))}
+              </div>
+            ) : creneaux.length === 0 ? (
+              <p className="px-5 py-[14px] text-[13px] text-muted">{messageVide}</p>
+            ) : null}
+          </div>
+        )}
       </div>
 
       {ouvert && (
