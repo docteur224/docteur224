@@ -44,12 +44,51 @@ const ETAPES = [
   },
 ];
 
+/*
+ * Pictogrammes de la bande de repères. SVG en ligne (et non emoji) : rendu
+ * identique sur tous les appareils, couleur pilotée par la charte (teal).
+ */
+const svgProps = {
+  viewBox: "0 0 24 24",
+  fill: "none",
+  stroke: "currentColor",
+  strokeWidth: 1.8,
+  strokeLinecap: "round" as const,
+  strokeLinejoin: "round" as const,
+  className: "h-[22px] w-[22px]",
+  "aria-hidden": true,
+};
+
+const IconeTarif = () => (
+  <svg {...svgProps}>
+    <path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.83 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z" />
+    <circle cx="7.5" cy="7.5" r="1.2" />
+  </svg>
+);
+const IconeMessage = () => (
+  <svg {...svgProps}>
+    <rect x="3" y="5" width="18" height="14" rx="2.5" />
+    <path d="m3.6 6.5 8.4 6 8.4-6" />
+  </svg>
+);
+const IconeBouclier = () => (
+  <svg {...svgProps}>
+    <path d="M12 3 5 5.8V11c0 4.4 3 7.4 7 9 4-1.6 7-4.6 7-9V5.8L12 3Z" />
+    <path d="m8.8 12 2.2 2.2 4.2-4.3" />
+  </svg>
+);
+const IconeEtoile = () => (
+  <svg {...svgProps}>
+    <path d="M12 3.5 14.6 9l5.9.8-4.3 4.1 1 5.8-5.2-2.8L6.8 19.7l1-5.8L3.5 9.8 9.4 9 12 3.5Z" />
+  </svg>
+);
+
 /** Repères factuels — tous adossés à une fonctionnalité existante. */
 const REPERES = [
-  { k: "Gratuit", v: "Réservation sans frais", i: "💳" },
-  { k: "SMS + e-mail", v: "Confirmation immédiate", i: "✉️" },
-  { k: "Vérifiés", v: "Comptes pros contrôlés", i: "✅" },
-  { k: "Authentiques", v: "Avis après consultation", i: "⭐" },
+  { k: "Gratuit", v: "Réservation sans frais", Icone: IconeTarif },
+  { k: "SMS + e-mail", v: "Confirmation immédiate", Icone: IconeMessage },
+  { k: "Vérifiés", v: "Comptes pros contrôlés", Icone: IconeBouclier },
+  { k: "Authentiques", v: "Avis après consultation", Icone: IconeEtoile },
 ];
 
 /** Nos engagements — ce qui guide les choix de la plateforme. */
@@ -84,17 +123,17 @@ const contenu = (
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src="/apropos/hero-soignants.jpg"
-        alt="Deux professionnels de santé examinant une imagerie médicale"
-        className="absolute inset-0 h-full w-full object-cover object-[70%_center]"
+        alt="Une médecin souriante, stéthoscope autour du cou"
+        className="absolute inset-0 h-full w-full object-cover object-[center_26%]"
         width={1680}
-        height={1120}
+        height={1080}
         fetchPriority="high"
       />
-      {/* Voile dégradé bleu, repris du héros d'accueil, pour que le texte reste
-          lisible quelle que soit la photo. */}
+      {/* Voile dégradé bleu, repris du héros d'accueil : garde le texte lisible
+          tout en laissant le sourire de la praticienne transparaître à droite. */}
       <div
         aria-hidden
-        className="absolute inset-0 bg-[linear-gradient(135deg,rgba(14,59,80,0.95)_0%,rgba(21,80,107,0.86)_46%,rgba(21,80,107,0.42)_100%)]"
+        className="absolute inset-0 bg-[linear-gradient(118deg,rgba(14,59,80,0.94)_0%,rgba(15,63,84,0.80)_38%,rgba(18,70,94,0.54)_64%,rgba(20,74,100,0.38)_100%)]"
       />
       <div className="relative mx-auto max-w-[1200px] px-5 py-16 text-white md:px-[30px] md:py-[104px]">
         <span className="inline-block rounded-[30px] bg-white/15 px-[14px] py-[6px] text-[12.5px] font-bold tracking-[0.04em] backdrop-blur-sm md:text-[13px]">
@@ -127,13 +166,16 @@ const contenu = (
 
     {/* ======================= REPÈRES (carte flottante) ======================= */}
     <div className="mx-auto -mt-8 w-full max-w-[1200px] px-5 md:-mt-10 md:px-[30px]">
-      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line shadow-[0_10px_30px_-18px_rgba(14,59,80,0.45)] md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line shadow-[0_14px_36px_-20px_rgba(14,59,80,0.5)] md:grid-cols-4">
         {REPERES.map((r) => (
-          <div key={r.k} className="bg-white p-4 text-center md:p-5">
-            <div className="text-[20px] md:text-[22px]" aria-hidden>
-              {r.i}
-            </div>
-            <b className="mt-1.5 block text-[14px] font-extrabold md:text-[16px]">{r.k}</b>
+          <div
+            key={r.k}
+            className="flex flex-col items-center bg-white px-3 py-5 text-center md:px-4 md:py-6"
+          >
+            <span className="grid h-11 w-11 place-items-center rounded-[14px] bg-teal-soft text-teal">
+              <r.Icone />
+            </span>
+            <b className="mt-3 block text-[14px] font-extrabold md:text-[15.5px]">{r.k}</b>
             <span className="mt-0.5 block text-[11.5px] leading-tight text-muted md:text-[12.5px]">
               {r.v}
             </span>
@@ -183,10 +225,10 @@ const contenu = (
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/apropos/consultation.jpg"
-            alt="Un soignant prend la tension d’une patiente lors d’une consultation"
-            className="h-full max-h-[420px] w-full object-cover"
-            width={1000}
-            height={1100}
+            alt="Un soignant souriant ausculte une patiente lors d’une consultation"
+            className="h-full max-h-[440px] w-full object-cover"
+            width={1200}
+            height={1000}
             loading="lazy"
           />
         </div>
@@ -242,11 +284,11 @@ const contenu = (
           <div className="relative h-[200px] md:h-[240px]">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/apropos/reservation-mobile.jpg"
-              alt="Un médecin consulte un rendez-vous sur son téléphone"
-              className="absolute inset-0 h-full w-full object-cover"
-              width={1000}
-              height={1100}
+              src="/apropos/patient.jpg"
+              alt="Un patient souriant"
+              className="absolute inset-0 h-full w-full object-cover object-[center_28%]"
+              width={1100}
+              height={950}
               loading="lazy"
             />
             <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[12px] font-extrabold text-blue backdrop-blur">
