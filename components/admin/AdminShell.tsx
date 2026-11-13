@@ -26,31 +26,43 @@ import { etatMfaAdmin } from "@/lib/mfa";
  * l'administrateur connecté, et `permission` ferme la page elle-même : un
  * lien masqué reste tapable dans la barre d'adresse. C'est une commodité
  * d'affichage, pas la sécurité — celle-ci vit dans la RLS.
+ *
+ * Menu rangé en sections nommées, comme les autres espaces (champ `section`,
+ * rendu par BarreLaterale). L'ordre des liens est inchangé — on n'ajoute que
+ * les titres. Les sections suivent les domaines de permission : une section
+ * dont tous les liens sont filtrés disparaît d'elle-même, titre compris. Les
+ * mêmes sections valent pour le tiroir mobile (GROUPES_NAV.admin).
  */
 const LIENS = [
-  { href: "/espace-admin", icone: "📊", label: "Tableau de bord" },
-  // Ouvert à tout administrateur, comme le tableau de bord : répondre au
-  // téléphone n'est pas une section de la console, c'est le travail de
-  // l'équipe entière. Il n'a donc pas d'entrée dans PERMISSION_PAR_ROUTE.
-  { href: "/espace-admin/nouveau-rdv", icone: "📞", label: "Prise de RDV" },
-  { href: "/espace-admin/validations", icone: "✅", label: "Validations" },
-  { href: "/espace-admin/moderation", icone: "🚩", label: "Modération" },
-  { href: "/espace-admin/utilisateurs", icone: "👥", label: "Utilisateurs" },
-  { href: "/espace-admin/etablissements", icone: "🏥", label: "Établissements" },
-  { href: "/espace-admin/pilotage", icone: "🧭", label: "Pilotage & croissance" },
-  { href: "/espace-admin/annonces", icone: "📢", label: "Annonces" },
-  { href: "/espace-admin/finances", icone: "💳", label: "Finances" },
-  { href: "/espace-admin/abonnements", icone: "🏷️", label: "Abonnements" },
-  { href: "/espace-admin/messagerie", icone: "💬", label: "Messagerie" },
-  { href: "/espace-admin/parametres", icone: "⚙️", label: "Paramètres" },
-  { href: "/espace-admin/medicaments", icone: "💊", label: "Médicaments" },
+  // Général — ouvert à tout administrateur (ni Tableau de bord ni Prise de RDV
+  // ne figurent dans PERMISSION_PAR_ROUTE : répondre au téléphone est le
+  // travail de l'équipe entière, pas une section cloisonnée).
+  { href: "/espace-admin", icone: "📊", label: "Tableau de bord", section: "Général" },
+  { href: "/espace-admin/nouveau-rdv", icone: "📞", label: "Prise de RDV", section: "Général" },
+  // Supervision — le contrôle de la communauté (validations, signalements,
+  // comptes, structures).
+  { href: "/espace-admin/validations", icone: "✅", label: "Validations", section: "Supervision" },
+  { href: "/espace-admin/moderation", icone: "🚩", label: "Modération", section: "Supervision" },
+  { href: "/espace-admin/utilisateurs", icone: "👥", label: "Utilisateurs", section: "Supervision" },
+  { href: "/espace-admin/etablissements", icone: "🏥", label: "Établissements", section: "Supervision" },
+  // Croissance — pilotage et diffusion (permission `pilotage`).
+  { href: "/espace-admin/pilotage", icone: "🧭", label: "Pilotage & croissance", section: "Croissance" },
+  { href: "/espace-admin/annonces", icone: "📢", label: "Annonces", section: "Croissance" },
+  // Finances — revenus et abonnements (permission `finance`).
+  { href: "/espace-admin/finances", icone: "💳", label: "Finances", section: "Finances" },
+  { href: "/espace-admin/abonnements", icone: "🏷️", label: "Abonnements", section: "Finances" },
+  // Plateforme — envois et référentiels (messagerie + `parametres`).
+  { href: "/espace-admin/messagerie", icone: "💬", label: "Messagerie", section: "Plateforme" },
+  { href: "/espace-admin/parametres", icone: "⚙️", label: "Paramètres", section: "Plateforme" },
+  { href: "/espace-admin/medicaments", icone: "💊", label: "Médicaments", section: "Plateforme" },
   // « et imagerie » n'est pas décoratif : l'écran couvre les deux domaines,
   // et sans le dire on cherche l'imagerie dans une entrée de menu qui
   // n'existe pas.
-  { href: "/espace-admin/actes", icone: "🔬", label: "Analyses et imagerie" },
-  { href: "/espace-admin/equipe", icone: "🛡️", label: "Équipe admin" },
-  { href: "/espace-admin/audit", icone: "📜", label: "Journal d'audit" },
-  { href: "/espace-admin/mon-compte", icone: "🔐", label: "Mon compte" },
+  { href: "/espace-admin/actes", icone: "🔬", label: "Analyses et imagerie", section: "Plateforme" },
+  // Console admin — l'administration de l'administration, et le compte.
+  { href: "/espace-admin/equipe", icone: "🛡️", label: "Équipe admin", section: "Console admin" },
+  { href: "/espace-admin/audit", icone: "📜", label: "Journal d'audit", section: "Console admin" },
+  { href: "/espace-admin/mon-compte", icone: "🔐", label: "Mon compte", section: "Console admin" },
 ];
 
 export default function AdminShell({

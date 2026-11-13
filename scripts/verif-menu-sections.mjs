@@ -276,6 +276,38 @@ async function main() {
     check("établissement : 7 liens dans le nouvel ordre",
       JSON.stringify(liensEtab) === JSON.stringify(attenduEtab), JSON.stringify(liensEtab));
     await e.shot("1280-etablissement-sections");
+
+    /* ---------- Admin : /espace-admin (web) ----------
+       Connexion par le compte PRINCIPAL (page dédiée + 2FA). Nécessite le mot
+       de passe : ADMIN_MDP=… devant la commande. Sans lui, on saute — on ne
+       devine pas un identifiant de production. */
+    const adminMdp = process.env.ADMIN_MDP;
+    if (!adminMdp) {
+      console.log("⏭️  admin ignoré — passez ADMIN_MDP=… pour l'inclure (compte principal).");
+    } else {
+      const { browserContextId } = await cdp.send("Target.createBrowserContext");
+      const ad = await ongletDans(cdp, browserContextId);
+      await ad.taille(1280, 900);
+      await ad.goto(`${APP}/espace-admin/connexion`);
+      await ad.eval(`[...document.querySelectorAll('input[type="email"]')].find(${VIS})?.focus()`);
+      await ad.send("Input.insertText", { text: "admin@docteur224.com" });
+      await ad.eval(`[...document.querySelectorAll('input[type="password"]')].find(${VIS})?.focus()`);
+      await ad.send("Input.insertText", { text: adminMdp });
+      await ad.cliquer(`[...document.querySelectorAll("button")].find(b => ${VIS}(b) && /identifier|connexion|valider/i.test(b.textContent))`);
+      const okAdmin = await ad.waitFor(`location.pathname === '/espace-admin' && ${ASIDE}?.querySelector('nav [role="presentation"]')`, 30000);
+      check("admin connecté (sinon : 2FA ou mot de passe)", okAdmin);
+      if (okAdmin) {
+        const menuAdmin = await ad.eval(LIRE_MENU);
+        const sectionsAdmin = menuAdmin.filter((x) => x.type === "section").map((x) => x.texte);
+        check("admin : 6 sections dans l'ordre",
+          JSON.stringify(sectionsAdmin) === JSON.stringify(["Général", "Supervision", "Croissance", "Finances", "Plateforme", "Console admin"]),
+          JSON.stringify(sectionsAdmin));
+        const liensAdmin = menuAdmin.filter((x) => x.type === "lien").map((x) => x.texte);
+        check("admin : « Analyses et imagerie » présent dans « Plateforme »",
+          liensAdmin.includes("Analyses et imagerie"));
+        await ad.shot("1280-admin-sections");
+      }
+    }
   } finally {
     ws.close();
     chrome.kill();

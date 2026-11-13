@@ -8,12 +8,11 @@
  *                        administratif) → voir app/espace-*\/compte/page.tsx.
  *   - Barre du bas     = inchangée.
  *
- * Pour établissement / admin, le tiroir reste le miroir plat de la barre
- * latérale web. Pour patient, il reprend les mêmes sections que le web, en
- * conservant toutes les entrées (compte compris : le patient n'a pas de Page
- * Profil dédiée). Pour médecin / assistant, il est découpé en sections
- * (GROUPES_NAV) : seules les entrées de navigation y figurent, les entrées de
- * compte/pratique ayant migré vers la Page Profil.
+ * Les cinq rôles ont désormais un tiroir découpé en sections (GROUPES_NAV),
+ * miroir de la barre latérale web. Pour médecin / assistant / établissement,
+ * seules les entrées de navigation y figurent : les entrées de compte/pratique
+ * ont migré vers la Page Profil. Pour patient / admin, le tiroir conserve
+ * toutes les entrées (compte compris) : ils n'ont pas de Page Profil dédiée.
  */
 import type { PermissionsAssistante } from "@/lib/pro";
 
@@ -131,6 +130,60 @@ export const GROUPES_NAV: Partial<Record<RoleMenu, GroupeMenu[]>> = {
       ],
     },
   ],
+  // Mêmes sections que la barre latérale web (components/admin/AdminShell).
+  // Comme le patient, l'admin garde toutes ses entrées dans le tiroir (compte
+  // compris) : pas de Page Profil dédiée. La visibilité par permission est
+  // appliquée par TiroirMobile (PERMISSION_PAR_ROUTE) ; une section dont tout
+  // est filtré disparaît.
+  admin: [
+    {
+      titre: "Général",
+      entrees: [
+        { href: "/espace-admin", icone: "📊", label: "Tableau de bord" },
+        { href: "/espace-admin/nouveau-rdv", icone: "📞", label: "Prise de RDV" },
+      ],
+    },
+    {
+      titre: "Supervision",
+      entrees: [
+        { href: "/espace-admin/validations", icone: "✅", label: "Validations" },
+        { href: "/espace-admin/moderation", icone: "🚩", label: "Modération" },
+        { href: "/espace-admin/utilisateurs", icone: "👥", label: "Utilisateurs" },
+        { href: "/espace-admin/etablissements", icone: "🏥", label: "Établissements" },
+      ],
+    },
+    {
+      titre: "Croissance",
+      entrees: [
+        { href: "/espace-admin/pilotage", icone: "🧭", label: "Pilotage & croissance" },
+        { href: "/espace-admin/annonces", icone: "📢", label: "Annonces" },
+      ],
+    },
+    {
+      titre: "Finances",
+      entrees: [
+        { href: "/espace-admin/finances", icone: "💳", label: "Finances" },
+        { href: "/espace-admin/abonnements", icone: "🏷️", label: "Abonnements" },
+      ],
+    },
+    {
+      titre: "Plateforme",
+      entrees: [
+        { href: "/espace-admin/messagerie", icone: "💬", label: "Messagerie" },
+        { href: "/espace-admin/parametres", icone: "⚙️", label: "Paramètres" },
+        { href: "/espace-admin/medicaments", icone: "💊", label: "Médicaments" },
+        { href: "/espace-admin/actes", icone: "🔬", label: "Analyses et imagerie" },
+      ],
+    },
+    {
+      titre: "Console admin",
+      entrees: [
+        { href: "/espace-admin/equipe", icone: "🛡️", label: "Équipe admin" },
+        { href: "/espace-admin/audit", icone: "📜", label: "Journal d'audit" },
+        { href: "/espace-admin/mon-compte", icone: "🔐", label: "Mon compte" },
+      ],
+    },
+  ],
 };
 
 export const MENUS: Record<RoleMenu, EntreeMenu[]> = {
@@ -139,25 +192,7 @@ export const MENUS: Record<RoleMenu, EntreeMenu[]> = {
   medecin: GROUPES_NAV.medecin!.flatMap((g) => g.entrees),
   assistant: GROUPES_NAV.assistant!.flatMap((g) => g.entrees),
   etablissement: GROUPES_NAV.etablissement!.flatMap((g) => g.entrees),
-  // components/admin/AdminShell.tsx — inchangé
-  admin: [
-    { href: "/espace-admin", icone: "📊", label: "Tableau de bord" },
-    { href: "/espace-admin/nouveau-rdv", icone: "📞", label: "Prise de RDV" },
-    { href: "/espace-admin/validations", icone: "✅", label: "Validations" },
-    { href: "/espace-admin/moderation", icone: "🚩", label: "Modération" },
-    { href: "/espace-admin/utilisateurs", icone: "👥", label: "Utilisateurs" },
-    { href: "/espace-admin/etablissements", icone: "🏥", label: "Établissements" },
-    { href: "/espace-admin/pilotage", icone: "🧭", label: "Pilotage & croissance" },
-    { href: "/espace-admin/annonces", icone: "📢", label: "Annonces" },
-    { href: "/espace-admin/finances", icone: "💳", label: "Finances" },
-    { href: "/espace-admin/abonnements", icone: "🏷️", label: "Abonnements" },
-    { href: "/espace-admin/messagerie", icone: "💬", label: "Messagerie" },
-    { href: "/espace-admin/parametres", icone: "⚙️", label: "Paramètres" },
-    { href: "/espace-admin/medicaments", icone: "💊", label: "Médicaments" },
-    { href: "/espace-admin/equipe", icone: "🛡️", label: "Équipe admin" },
-    { href: "/espace-admin/audit", icone: "📜", label: "Journal d'audit" },
-    { href: "/espace-admin/mon-compte", icone: "🔐", label: "Mon compte" },
-  ],
+  admin: GROUPES_NAV.admin!.flatMap((g) => g.entrees),
 };
 
 /** Raccourcis communs, sous le menu du rôle. */
@@ -167,9 +202,9 @@ export const RACCOURCIS_PATIENT: EntreeMenu[] = [
 ];
 
 /**
- * Le menu du rôle, toujours sous forme de sections. Les rôles sans découpage
- * (établissement / admin) rendent un unique groupe sans titre, d'où un
- * affichage identique à l'ancienne liste plate.
+ * Le menu du rôle, toujours sous forme de sections. Les cinq rôles ont leur
+ * entrée dans GROUPES_NAV ; le repli (un unique groupe sans titre tiré de
+ * MENUS) ne sert plus que de filet pour un rôle qui n'y figurerait pas.
  */
 export function menuDuRole(role: string | undefined): { role: RoleMenu; groupes: GroupeMenu[] } {
   const connu = (["patient", "medecin", "assistant", "etablissement", "admin"] as const).find(
