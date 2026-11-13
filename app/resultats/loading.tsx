@@ -31,13 +31,13 @@ export default function ChargementResultats() {
       {/* ---- Web ---- */}
       <div className="hidden md:block">
         <div className="border-b border-line bg-white px-[30px] py-[22px]">
-          <div className="mx-auto max-w-[1020px]">
+          <div className="mx-auto max-w-[1140px]">
             <span className="ui-skeleton block h-[14px] w-[120px]" />
             <span className="ui-skeleton mt-2 block h-[26px] w-[360px]" />
             <span className="ui-skeleton mx-auto mt-[14px] block h-[62px] max-w-[860px] rounded-2xl" />
           </div>
         </div>
-        <div className="mx-auto grid max-w-[1020px] gap-6 px-[30px] py-[26px] lg:grid-cols-[244px_1fr]">
+        <div className="mx-auto grid max-w-[1140px] gap-6 px-[30px] py-[26px] lg:grid-cols-[244px_1fr]">
           <span className="ui-skeleton hidden h-[420px] rounded-2xl lg:block" />
           <div className="flex flex-col gap-[14px]">
             <span className="ui-skeleton block h-[20px] w-[140px]" />
