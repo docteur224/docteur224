@@ -758,3 +758,48 @@ html[data-campagne="3"] body::before {
     var(--secondaire) 80% 100%
   );
 }
+
+/* ============================================================
+   Conseils santé — rendu du corps rédigé dans l'éditeur riche.
+   Mêmes styles pour la zone d'édition (.editeur-riche-zone) et pour
+   l'affichage public, afin que l'administrateur voie ce qu'il publie.
+   ============================================================ */
+.prose-sante {
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.75;
+}
+@media (min-width: 768px) {
+  .prose-sante { font-size: 15.5px; }
+}
+.prose-sante p { margin: 0 0 0.9em; }
+.prose-sante p:last-child { margin-bottom: 0; }
+.prose-sante h2 {
+  margin: 1.4em 0 0.5em;
+  font-size: 1.3em;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  color: var(--ink);
+}
+.prose-sante h3 {
+  margin: 1.2em 0 0.4em;
+  font-size: 1.12em;
+  font-weight: 800;
+  color: var(--blue);
+}
+.prose-sante :is(h2, h3):first-child { margin-top: 0; }
+.prose-sante ul,
+.prose-sante ol { margin: 0 0 0.9em; padding-left: 1.4em; }
+.prose-sante ul { list-style: disc; }
+.prose-sante ol { list-style: decimal; }
+.prose-sante li { margin: 0.25em 0; padding-left: 0.2em; }
+.prose-sante li::marker { color: var(--teal); }
+.prose-sante strong { font-weight: 800; }
+.prose-sante u { text-underline-offset: 2px; }
+
+/* Invite affichée quand la zone d'édition est vide. */
+.editeur-riche-zone:empty::before {
+  content: attr(data-vide);
+  color: var(--muted-soft);
+  pointer-events: none;
+}

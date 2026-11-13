@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import AdminShell from "@/components/admin/AdminShell";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
+import EditeurTexteRiche from "@/components/site/EditeurTexteRiche";
 import { CATEGORIES_SUGGEREES, type ConseilSante } from "@/lib/conseils-sante";
 import {
   basculerDrapeau,
@@ -502,14 +503,8 @@ function Editeur({
         </div>
 
         <div>
-          <label className={etiquette}>Contenu détaillé — séparez les paragraphes par une ligne vide</label>
-          <textarea
-            className={`${champ} min-h-[180px] resize-y leading-relaxed`}
-            rows={8}
-            value={b.contenu}
-            onChange={(e) => maj({ contenu: e.target.value })}
-            placeholder={"Premier paragraphe.\n\nDeuxième paragraphe."}
-          />
+          <label className={etiquette}>Contenu détaillé — mise en forme, titres et listes</label>
+          <EditeurTexteRiche valeur={b.contenu} onChange={(html) => maj({ contenu: html })} />
         </div>
 
         {/* Gestes clés */}

@@ -4,7 +4,8 @@ import { notFound } from "next/navigation";
 import PageContenu, { AppelAction } from "@/components/site/PageContenu";
 import CarteConseil, { Illustration } from "@/components/site/CarteConseil";
 import PartageSocial from "@/components/site/PartageSocial";
-import { paragraphes } from "@/lib/conseils-sante";
+import { estHtml, paragraphes } from "@/lib/conseils-sante";
+import { nettoyerHtmlConseil } from "@/lib/html-sante";
 import { lireConseilParSlug, lireConseilsPublies } from "@/lib/conseils-sante-serveur";
 
 /*
@@ -54,7 +55,8 @@ export default async function DetailConseil({
   const conseil = await lireConseilParSlug(slug);
   if (!conseil) notFound();
 
-  const corps = paragraphes(conseil.contenu);
+  const riche = estHtml(conseil.contenu);
+  const corps = riche ? [] : paragraphes(conseil.contenu);
 
   // À lire aussi : d'abord la même catégorie, puis le reste, jamais la fiche
   // en cours. Trois suffisent à ouvrir une porte sans noyer la lecture.
@@ -96,18 +98,29 @@ export default async function DetailConseil({
       )}
 
       {/* Corps de l'article */}
-      <article className="mt-4">
-        {corps.map((p, i) => (
-          <p
-            key={i}
-            className={`text-[14px] leading-[1.75] text-ink md:text-[15.5px] ${i > 0 ? "mt-4" : ""} ${
-              i === 0 ? "first-letter:float-left first-letter:mr-2 first-letter:text-[46px] first-letter:font-extrabold first-letter:leading-[0.85] first-letter:text-teal" : ""
-            }`}
-          >
-            {p}
-          </p>
-        ))}
-      </article>
+      {riche ? (
+        // HTML rédigé dans l'éditeur riche, repassé par la liste blanche au
+        // rendu (le contenu est servi à des visiteurs anonymes).
+        <article
+          className="prose-sante mt-4"
+          dangerouslySetInnerHTML={{ __html: nettoyerHtmlConseil(conseil.contenu) }}
+        />
+      ) : (
+        <article className="mt-4">
+          {corps.map((p, i) => (
+            <p
+              key={i}
+              className={`text-[14px] leading-[1.75] text-ink md:text-[15.5px] ${i > 0 ? "mt-4" : ""} ${
+                i === 0
+                  ? "first-letter:float-left first-letter:mr-2 first-letter:text-[46px] first-letter:font-extrabold first-letter:leading-[0.85] first-letter:text-teal"
+                  : ""
+              }`}
+            >
+              {p}
+            </p>
+          ))}
+        </article>
+      )}
 
       {/* Les gestes clés */}
       {conseil.gestes.length > 0 && (

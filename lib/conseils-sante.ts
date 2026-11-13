@@ -60,6 +60,34 @@ export function paragraphes(contenu: string): string[] {
     .filter(Boolean);
 }
 
+/**
+ * Le champ contient-il du HTML (nouveau format, éditeur riche) ou du texte brut
+ * (fiches saisies avant l'éditeur, ou le seed) ? Sert à choisir le rendu.
+ * Volontairement minuscule et sans dépendance : utilisable côté client comme
+ * côté serveur, sans embarquer l'assainisseur dans le navigateur.
+ */
+export function estHtml(valeur: string): boolean {
+  return /<\/?[a-z][\s\S]*>/i.test(valeur);
+}
+
+/** Échappe le texte pour un affichage HTML sûr (entités de base). */
+function echapper(texte: string): string {
+  return texte
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+/**
+ * Convertit un corps en texte brut (paragraphes séparés par une ligne vide) en
+ * HTML, pour alimenter l'éditeur riche quand on ouvre une ancienne fiche.
+ */
+export function texteVersHtml(texte: string): string {
+  const blocs = paragraphes(texte);
+  if (!blocs.length) return "";
+  return blocs.map((p) => `<p>${echapper(p).replace(/\n/g, "<br>")}</p>`).join("");
+}
+
 /** Signes qui imposent une consultation immédiate, quel que soit l'âge. */
 export const URGENCES = [
   "Difficulté à respirer ou essoufflement au repos",
