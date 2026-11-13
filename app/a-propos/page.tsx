@@ -5,6 +5,7 @@ import Footer from "@/components/site/Footer";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import PiedPageMobile from "@/components/mobile/PiedPageMobile";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
+import HeroParallaxe from "@/components/site/HeroParallaxe";
 
 export const metadata: Metadata = {
   title: "À propos | Docteur 224",
@@ -118,17 +119,10 @@ const VALEURS = [
 /** Corps responsive, rendu à l'identique dans la branche mobile et web. */
 const contenu = (
   <>
-    {/* ======================= HÉROS PHOTOGRAPHIQUE ======================= */}
+    {/* ======================= HÉROS PHOTOGRAPHIQUE (PARALLAXE) ======================= */}
     <section className="relative isolate overflow-hidden">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src="/apropos/hero-soignants.jpg"
-        alt="Une médecin souriante, stéthoscope autour du cou"
-        className="absolute inset-0 h-full w-full object-cover object-[center_26%]"
-        width={1680}
-        height={1080}
-        fetchPriority="high"
-      />
+      {/* Image de fond avec parallaxe au défilement (voir HeroParallaxe). */}
+      <HeroParallaxe />
       {/* Voile dégradé bleu, repris du héros d'accueil : garde le texte lisible
           tout en laissant le sourire de la praticienne transparaître à droite. */}
       <div
@@ -316,10 +310,10 @@ const contenu = (
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/apropos/professionnel.jpg"
-              alt="Un professionnel de santé souriant en tenue médicale"
-              className="absolute inset-0 h-full w-full object-cover object-[center_20%]"
-              width={1000}
-              height={1100}
+              alt="Un médecin souriant tenant une tablette, un patient en arrière-plan"
+              className="absolute inset-0 h-full w-full object-cover object-[center_18%]"
+              width={417}
+              height={626}
               loading="lazy"
             />
             <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[12px] font-extrabold text-blue backdrop-blur">
