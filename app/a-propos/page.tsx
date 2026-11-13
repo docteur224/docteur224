@@ -285,10 +285,10 @@ const contenu = (
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src="/apropos/patient.jpg"
-              alt="Un patient souriant"
-              className="absolute inset-0 h-full w-full object-cover object-[center_28%]"
-              width={1100}
-              height={950}
+              alt="Une patiente souriante forme un cœur avec son médecin"
+              className="absolute inset-0 h-full w-full object-cover object-[center_35%]"
+              width={612}
+              height={408}
               loading="lazy"
             />
             <span className="absolute left-4 top-4 rounded-full bg-white/90 px-3 py-1 text-[12px] font-extrabold text-blue backdrop-blur">
