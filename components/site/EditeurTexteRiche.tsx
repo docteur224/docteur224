@@ -41,7 +41,9 @@ export default function EditeurTexteRiche({
     el.innerHTML = estHtml(valeur) ? valeur : texteVersHtml(valeur);
     try {
       document.execCommand("defaultParagraphSeparator", false, "p");
-      document.execCommand("styleWithCSS", false, "true");
+      // Mode CSS DÉSACTIVÉ : on veut des balises propres (<b>, <i>, <u>) plutôt
+      // que des styles en ligne, pour un stockage net et un rendu fidèle.
+      document.execCommand("styleWithCSS", false, "false");
     } catch {
       /* exécution non supportée : l'éditeur fonctionne sans ce réglage */
     }

@@ -17,6 +17,19 @@ import sanitizeHtml from "sanitize-html";
 
 const TAILLES_AUTORISEES = [/^0\.88em$/, /^1\.3em$/];
 
+// L'éditeur peut porter la mise en forme soit par des balises (<b>, <i>…),
+// soit par des styles en ligne (`font-weight: bold`…) selon le navigateur et
+// le mode. On accepte donc AUSSI ces styles, bornés à des valeurs sûres (aucune
+// url, aucun script possible), pour que le gras/italique/souligné/barré
+// survivent dans les deux cas — y compris sur les fiches déjà enregistrées.
+const STYLES_AUTORISES = {
+  "font-size": TAILLES_AUTORISEES,
+  "font-weight": [/^(bold|[5-9]00)$/],
+  "font-style": [/^italic$/],
+  "text-decoration": [/^(underline|line-through)( (underline|line-through))?$/],
+  "text-decoration-line": [/^(underline|line-through)( (underline|line-through))?$/],
+};
+
 export function nettoyerHtmlConseil(html: string): string {
   return sanitizeHtml(html, {
     allowedTags: [
@@ -34,8 +47,8 @@ export function nettoyerHtmlConseil(html: string): string {
       "span",
       "div",
     ],
-    allowedAttributes: { span: ["style"], p: ["style"] },
-    allowedStyles: { "*": { "font-size": TAILLES_AUTORISEES } },
+    allowedAttributes: { span: ["style"], p: ["style"], li: ["style"] },
+    allowedStyles: { "*": STYLES_AUTORISES },
     // L'éditeur peut produire des variantes (b/i/strike, div de ligne) : on les
     // ramène aux balises sémantiques retenues plutôt que de les perdre.
     transformTags: {
