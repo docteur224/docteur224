@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import AdminShell from "@/components/admin/AdminShell";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
@@ -105,6 +105,9 @@ export default function ConseilsSanteAdmin() {
         {edition ? (
           <Editeur
             conseil={enCours}
+            categoriesExistantes={[
+              ...new Set(liste.map((c) => c.categorie).filter((x): x is string => !!x)),
+            ]}
             onFerme={() => setEdition(null)}
             onEnregistre={async () => {
               setEdition(null);
@@ -302,10 +305,12 @@ function LigneConseil({
 
 function Editeur({
   conseil,
+  categoriesExistantes,
   onFerme,
   onEnregistre,
 }: {
   conseil: ConseilSante | null;
+  categoriesExistantes: string[];
   onFerme: () => void;
   onEnregistre: () => void | Promise<void>;
 }) {
@@ -336,6 +341,17 @@ function Editeur({
   const fichierRef = useRef<HTMLInputElement>(null);
 
   const maj = (p: Partial<BrouillonConseil>) => setB((v) => ({ ...v, ...p }));
+
+  // Liste déroulante des catégories : les suggestions + celles déjà utilisées
+  // ailleurs, dédoublonnées et triées. On en ajoute depuis cet écran, d'où
+  // l'option « Nouvelle catégorie » qui ouvre un champ libre.
+  const categoriesConnues = useMemo(() => {
+    const vues = new Set<string>([...CATEGORIES_SUGGEREES, ...categoriesExistantes]);
+    return [...vues].sort((x, y) => x.localeCompare(y, "fr"));
+  }, [categoriesExistantes]);
+  const [categorieLibre, setCategorieLibre] = useState(
+    !!conseil?.categorie && !categoriesConnues.includes(conseil.categorie)
+  );
 
   function detruireImage(publicId: string) {
     fetch(`/api/admin/conseils-sante/image?public_id=${encodeURIComponent(publicId)}`, {
@@ -422,18 +438,36 @@ function Editeur({
 
         <div>
           <label className={etiquette}>Catégorie</label>
-          <input
+          <select
             className={champ}
-            value={b.categorie}
-            onChange={(e) => maj({ categorie: e.target.value })}
-            placeholder="Prévention"
-            list="categories-conseils"
-          />
-          <datalist id="categories-conseils">
-            {CATEGORIES_SUGGEREES.map((c) => (
-              <option key={c} value={c} />
+            value={categorieLibre ? "__nouvelle__" : b.categorie}
+            onChange={(e) => {
+              if (e.target.value === "__nouvelle__") {
+                setCategorieLibre(true);
+                maj({ categorie: "" });
+              } else {
+                setCategorieLibre(false);
+                maj({ categorie: e.target.value });
+              }
+            }}
+          >
+            <option value="">— Aucune —</option>
+            {categoriesConnues.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
             ))}
-          </datalist>
+            <option value="__nouvelle__">➕ Nouvelle catégorie…</option>
+          </select>
+          {categorieLibre && (
+            <input
+              className={`${champ} mt-2`}
+              value={b.categorie}
+              onChange={(e) => maj({ categorie: e.target.value })}
+              placeholder="Nom de la nouvelle catégorie"
+              autoFocus
+            />
+          )}
         </div>
 
         <div>
