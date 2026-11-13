@@ -25,23 +25,36 @@ import BarreLaterale from "@/components/site/BarreLaterale";
  * barre d'adresse. La RLS reste la vraie barrière : elle ne rend rien à un
  * assistant sur `abonnements` ni sur `paiements_abonnement`.
  */
+/*
+ * Menu rangé en cinq groupes, du plus quotidien au plus administratif. Les
+ * intitulés de section (champ `section`) sont rendus par BarreLaterale ; ils
+ * remplacent la liste plate de 14 liens par des blocs que l'œil retrouve sans
+ * tout relire. L'ordre des liens d'un même groupe suit la fréquence d'usage.
+ * Chez l'assistant(e), le filtre `medecinSeul` retire l'équipe et toute la
+ * facturation : le groupe « Facturation » se vide alors et son titre disparaît.
+ */
 const LIENS = [
-  { href: "/espace-medecin", icone: "📊", label: "Tableau de bord" },
-  { href: "/espace-medecin/agenda", icone: "📅", label: "Mon agenda" },
-  { href: "/espace-medecin/patients", icone: "👥", label: "Mes patients" },
+  // Au quotidien — le socle de la journée.
+  { href: "/espace-medecin", icone: "📊", label: "Tableau de bord", section: "Au quotidien" },
+  { href: "/espace-medecin/agenda", icone: "📅", label: "Mon agenda", section: "Au quotidien" },
+  { href: "/espace-medecin/patients", icone: "👥", label: "Mes patients", section: "Au quotidien" },
   // Ouvert aux assistant(e)s : c'est l'accueil qui décroche le téléphone, et
   // un signal que le secrétariat ne voit pas arrive toujours trop tard.
-  { href: "/espace-medecin/suivi-absence", icone: "📉", label: "Suivi d’absence" },
-  { href: "/espace-medecin/correspondance", icone: "📨", label: "Correspondance" },
-  { href: "/espace-medecin/messages", icone: "💬", label: "Messages" },
-  { href: "/espace-medecin/disponibilites", icone: "🕐", label: "Mes disponibilités" },
-  { href: "/espace-medecin/avis", icone: "⭐", label: "Avis et notes" },
-  { href: "/espace-medecin/statistiques", icone: "📈", label: "Statistiques" },
-  { href: "/espace-medecin/equipe", icone: "🧑‍💼", label: "Mes assistant(e)s", medecinSeul: true },
-  { href: "/espace-medecin/abonnement", icone: "💳", label: "Mon abonnement", medecinSeul: true },
-  { href: "/espace-medecin/paiements", icone: "🧾", label: "Mes paiements", medecinSeul: true },
-  { href: "/espace-medecin/profil", icone: "👤", label: "Mon profil" },
-  { href: "/espace-medecin/mon-compte", icone: "🔐", label: "Mon compte" },
+  { href: "/espace-medecin/suivi-absence", icone: "📉", label: "Suivi d’absence", section: "Au quotidien" },
+  // Échanges — Messages d'abord : c'est lui qui porte la pastille de non-lus.
+  { href: "/espace-medecin/messages", icone: "💬", label: "Messages", section: "Échanges" },
+  { href: "/espace-medecin/correspondance", icone: "📨", label: "Correspondance", section: "Échanges" },
+  // Mon cabinet — le pilotage, consulté par semaine plutôt que par heure.
+  { href: "/espace-medecin/disponibilites", icone: "🕐", label: "Mes disponibilités", section: "Mon cabinet" },
+  { href: "/espace-medecin/avis", icone: "⭐", label: "Avis et notes", section: "Mon cabinet" },
+  { href: "/espace-medecin/statistiques", icone: "📈", label: "Statistiques", section: "Mon cabinet" },
+  { href: "/espace-medecin/equipe", icone: "🧑‍💼", label: "Mes assistant(e)s", section: "Mon cabinet", medecinSeul: true },
+  // Facturation — réservée au médecin ; invisible pour l'assistant(e).
+  { href: "/espace-medecin/abonnement", icone: "💳", label: "Mon abonnement", section: "Facturation", medecinSeul: true },
+  { href: "/espace-medecin/paiements", icone: "🧾", label: "Mes paiements", section: "Facturation", medecinSeul: true },
+  // Compte.
+  { href: "/espace-medecin/profil", icone: "👤", label: "Mon profil", section: "Compte" },
+  { href: "/espace-medecin/mon-compte", icone: "🔐", label: "Mon compte", section: "Compte" },
 ];
 
 export default function MedecinShell({

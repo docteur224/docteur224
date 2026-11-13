@@ -35,6 +35,14 @@ export interface LienEspace {
   href: string;
   icone: string;
   label: string;
+  /**
+   * Intitulé du groupe auquel le lien appartient (ex. « Au quotidien »).
+   * Les liens d'une même section sont contigus dans le tableau ; un en-tête
+   * discret s'affiche avant le premier lien de chaque section. Optionnel :
+   * un espace qui ne renseigne aucune section garde le menu à plat (rendu
+   * historique, inchangé pour patient / établissement / admin).
+   */
+  section?: string;
 }
 
 export default function BarreLaterale({
@@ -107,6 +115,54 @@ export default function BarreLaterale({
   const classeLibelle = plie
     ? "lg:block lg:w-full lg:text-[10.5px] lg:font-semibold lg:leading-[1.15] lg:line-clamp-2"
     : undefined;
+  /* En-tête de section : libellé gris, discret, en capitales. Sur le rail
+     replié (≥ lg) le texte n'a pas sa place dans 84 px — il cède à un simple
+     filet. En tablette (grille à deux colonnes), il occupe toute la largeur. */
+  const classeEntete =
+    "col-span-2 select-none px-3 pb-1 pt-[18px] first:pt-1 lg:pt-5 lg:first:pt-1";
+
+  /* Les liens arrivent déjà triés et filtrés (ex. medecinSeul). On émet un
+     en-tête avant le premier lien de chaque nouvelle section ; sans section,
+     aucun en-tête — le menu reste à plat comme avant. Si toute une section a
+     été filtrée, elle ne porte plus aucun lien et son titre disparaît seul. */
+  const noeudsMenu: ReactNode[] = [];
+  let sectionCourante: string | undefined;
+  for (const lien of liens) {
+    if (lien.section && lien.section !== sectionCourante) {
+      sectionCourante = lien.section;
+      noeudsMenu.push(
+        <div key={`sec-${sectionCourante}`} role="presentation" className={classeEntete}>
+          <span
+            className={`text-[10px] font-bold uppercase tracking-[0.07em] text-muted opacity-70 ${
+              plie ? "lg:hidden" : ""
+            }`}
+          >
+            {sectionCourante}
+          </span>
+          {plie && (
+            <span aria-hidden className="mx-auto hidden h-px w-7 rounded bg-line lg:block" />
+          )}
+        </div>,
+      );
+    }
+    const actif = estActif(lien.href);
+    noeudsMenu.push(
+      <Link
+        key={lien.href}
+        href={lien.href}
+        aria-current={actif ? "page" : undefined}
+        title={plie ? lien.label : undefined}
+        className={`${classeLigne} ${ligneRail} ${
+          actif ? "bg-teal-soft font-bold text-blue" : "font-semibold text-muted hover:bg-bg"
+        }`}
+      >
+        <span className={classeIcone} aria-hidden>
+          {lien.icone}
+        </span>
+        <span className={classeLibelle}>{lien.label}</span>
+      </Link>,
+    );
+  }
 
   return (
     <aside
@@ -195,25 +251,7 @@ export default function BarreLaterale({
           ouvert ? "mt-3 grid grid-cols-2 gap-[3px] border-t border-line pt-3" : "hidden"
         } lg:mt-0 lg:flex lg:flex-col lg:border-t-0 lg:pt-0 ${plie ? "lg:gap-1.5" : "lg:gap-[3px]"}`}
       >
-        {liens.map((lien) => {
-          const actif = estActif(lien.href);
-          return (
-            <Link
-              key={lien.href}
-              href={lien.href}
-              aria-current={actif ? "page" : undefined}
-              title={plie ? lien.label : undefined}
-              className={`${classeLigne} ${ligneRail} ${
-                actif ? "bg-teal-soft font-bold text-blue" : "font-semibold text-muted hover:bg-bg"
-              }`}
-            >
-              <span className={classeIcone} aria-hidden>
-                {lien.icone}
-              </span>
-              <span className={classeLibelle}>{lien.label}</span>
-            </Link>
-          );
-        })}
+        {noeudsMenu}
         {/* Vraie déconnexion, et non un lien vers l'accueil qui laissait la
             session ouverte. */}
         <button

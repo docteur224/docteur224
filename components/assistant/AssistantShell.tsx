@@ -16,16 +16,22 @@ import BarreLaterale from "@/components/site/BarreLaterale";
  * L'assistante fictive « connectée » est Hawa Diallo (Dr A. Barry), comme
  * dans les maquettes, en attendant l'authentification.
  */
+// Même logique de groupes que l'espace médecin, en plus court : trois blocs
+// rangés du quotidien au compte. Les intitulés de section sont rendus par
+// BarreLaterale.
 const LIENS = [
-  { href: "/espace-assistant", icone: "🗓️", label: "Tableau de bord" },
-  { href: "/espace-assistant/rendez-vous", icone: "📅", label: "Rendez-vous" },
-  { href: "/espace-assistant/creneaux", icone: "🕐", label: "Créneaux & dispos" },
-  { href: "/espace-assistant/patients", icone: "👥", label: "Patients" },
+  // Au quotidien — tout ce que l'accueil touche à longueur de journée.
+  { href: "/espace-assistant", icone: "🗓️", label: "Tableau de bord", section: "Au quotidien" },
+  { href: "/espace-assistant/rendez-vous", icone: "📅", label: "Rendez-vous", section: "Au quotidien" },
+  { href: "/espace-assistant/creneaux", icone: "🕐", label: "Créneaux & dispos", section: "Au quotidien" },
+  { href: "/espace-assistant/patients", icone: "👥", label: "Patients", section: "Au quotidien" },
   // Le même écran que côté médecin, avec les seuils en lecture seule.
-  { href: "/espace-assistant/suivi-absence", icone: "📉", label: "Suivi d’absence" },
-  { href: "/espace-assistant/messages", icone: "💬", label: "Messagerie" },
-  { href: "/espace-assistant/compte", icone: "👤", label: "Mes permissions" },
-  { href: "/espace-assistant/mon-compte", icone: "🔐", label: "Mon compte" },
+  { href: "/espace-assistant/suivi-absence", icone: "📉", label: "Suivi d’absence", section: "Au quotidien" },
+  // Échanges.
+  { href: "/espace-assistant/messages", icone: "💬", label: "Messagerie", section: "Échanges" },
+  // Compte.
+  { href: "/espace-assistant/compte", icone: "👤", label: "Mes permissions", section: "Compte" },
+  { href: "/espace-assistant/mon-compte", icone: "🔐", label: "Mon compte", section: "Compte" },
 ];
 
 export default function AssistantShell({ children }: { children: React.ReactNode }) {
