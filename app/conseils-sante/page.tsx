@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import PageContenu, { AppelAction, Rubrique } from "@/components/site/PageContenu";
-import CarteConseil, { Illustration } from "@/components/site/CarteConseil";
+import ListeConseils from "@/components/site/ListeConseils";
 import PartageSocial from "@/components/site/PartageSocial";
 import { URGENCES } from "@/lib/conseils-sante";
 import { lireConseilsPublies } from "@/lib/conseils-sante-serveur";
@@ -31,8 +31,6 @@ export const dynamic = "force-dynamic";
 
 export default async function ConseilsSante() {
   const conseils = await lireConseilsPublies();
-  const vedette = conseils.find((c) => c.vedette) ?? conseils[0] ?? null;
-  const reste = conseils.filter((c) => c.id !== vedette?.id);
 
   return (
     <PageContenu
@@ -51,52 +49,8 @@ export default async function ConseilsSante() {
         </p>
       </div>
 
-      {/* ===================== Mise en avant ===================== */}
-      {vedette && (
-        <Link
-          href={`/conseils-sante/${vedette.slug}`}
-          className="group mb-6 grid overflow-hidden rounded-[22px] border border-line bg-white transition-all hover:border-teal-line hover:shadow-[0_26px_60px_-30px_rgba(21,80,107,0.5)] md:mb-8 md:grid-cols-2"
-        >
-          <div className="md:order-2">
-            <Illustration conseil={vedette} hauteur="aspect-[16/10] md:aspect-auto md:h-full md:min-h-[300px]" />
-          </div>
-          <div className="flex flex-col justify-center p-[20px] md:order-1 md:p-9">
-            <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-teal px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.06em] text-white">
-              ★ À la une{vedette.categorie ? ` · ${vedette.categorie}` : ""}
-            </span>
-            <h2 className="mt-3 text-[22px] font-extrabold leading-tight tracking-[-0.3px] text-ink md:text-[28px]">
-              {vedette.titre}
-            </h2>
-            <p className="mt-3 text-[13.5px] leading-relaxed text-muted md:text-[15px]">
-              {vedette.resume}
-            </p>
-            <span className="mt-5 inline-flex w-fit items-center gap-2 rounded-[11px] bg-teal px-[18px] py-[11px] text-[13.5px] font-bold text-white transition-colors group-hover:bg-teal-hover">
-              En savoir plus
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-                <path
-                  d="M5 12h14M13 6l6 6-6 6"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-            </span>
-          </div>
-        </Link>
-      )}
-
-      {/* ===================== Grille des fiches ===================== */}
-      {reste.length > 0 && (
-        <>
-          <Rubrique>Tous les conseils</Rubrique>
-          <div className="grid gap-3.5 sm:grid-cols-2 md:grid-cols-3 md:gap-5">
-            {reste.map((c) => (
-              <CarteConseil key={c.id} conseil={c} />
-            ))}
-          </div>
-        </>
-      )}
+      {/* ===== Recherche, filtres par catégorie, mise en avant et grille ===== */}
+      <ListeConseils conseils={conseils} />
 
       {/* ===================== Partage ===================== */}
       <div className="mt-6 md:mt-8">
