@@ -185,7 +185,7 @@ export default async function Resultats({
      les disponibilités sont chargées médecin par médecin juste en dessous, et
      découper ici ramène ces requêtes au nombre de cartes réellement
      affichées au lieu de toute la liste filtrée. */
-  const PAR_PAGE = 12;
+  const PAR_PAGE = 25;
   const pages = Math.max(1, Math.ceil(liste.length / PAR_PAGE));
   const pageDemandee = Number(typeof sp.page === "string" ? sp.page : 1);
   const page = Math.min(Math.max(Number.isFinite(pageDemandee) ? pageDemandee : 1, 1), pages);
