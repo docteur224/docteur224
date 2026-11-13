@@ -15,15 +15,24 @@ import BarreLaterale from "@/components/site/BarreLaterale";
  * .snav de la maquette web. Menu conforme à la spec C.6 : Tableau de bord ·
  * Médecins · Informations · Statistiques · Abonnement · Compte & paramètres ·
  * Déconnexion.
+ *
+ * Menu rangé en sections nommées, comme les espaces médecin / assistant /
+ * patient (champ `section`, rendu par BarreLaterale). L'ordre du groupe
+ * « Pilotage » reprend celui du tiroir mobile (GROUPES_NAV.etablissement).
+ * Web uniquement : le tiroir mobile a déjà ses sections, les entrées de compte
+ * y vivant sur la Page Profil.
  */
 const LIENS = [
-  { href: "/espace-etablissement", icone: "📊", label: "Tableau de bord" },
-  { href: "/espace-etablissement/medecins", icone: "👨‍⚕️", label: "Médecins" },
-  { href: "/espace-etablissement/informations", icone: "🏥", label: "Informations" },
-  { href: "/espace-etablissement/statistiques", icone: "📈", label: "Statistiques" },
-  { href: "/espace-etablissement/abonnement", icone: "💳", label: "Abonnement" },
-  { href: "/espace-etablissement/compte", icone: "⚙️", label: "Compte & paramètres" },
-  { href: "/espace-etablissement/mon-compte", icone: "🔐", label: "Mon compte" },
+  // Pilotage — la charge de l'établissement, ce qu'on regarde au jour le jour.
+  { href: "/espace-etablissement", icone: "📊", label: "Tableau de bord", section: "Pilotage" },
+  { href: "/espace-etablissement/medecins", icone: "👨‍⚕️", label: "Médecins", section: "Pilotage" },
+  { href: "/espace-etablissement/statistiques", icone: "📈", label: "Statistiques", section: "Pilotage" },
+  // Gestion — la fiche de l'établissement et son abonnement.
+  { href: "/espace-etablissement/informations", icone: "🏥", label: "Informations", section: "Gestion" },
+  { href: "/espace-etablissement/abonnement", icone: "💳", label: "Abonnement", section: "Gestion" },
+  // Compte.
+  { href: "/espace-etablissement/compte", icone: "⚙️", label: "Compte & paramètres", section: "Compte" },
+  { href: "/espace-etablissement/mon-compte", icone: "🔐", label: "Mon compte", section: "Compte" },
 ];
 
 export default function EtablissementShell({ children }: { children: React.ReactNode }) {

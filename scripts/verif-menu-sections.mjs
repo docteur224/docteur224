@@ -257,6 +257,25 @@ async function main() {
       JSON.stringify(titresTiroir) === JSON.stringify(["Au quotidien", "Mon suivi", "Échanges", "Compte"]),
       JSON.stringify(titresTiroir));
     await pm.shot("390-patient-tiroir");
+
+    /* ---------- Établissement : /espace-etablissement (web) ---------- */
+    const etab = await connecter(cdp, "etab.clinique-ambroise@test.docteur224.com");
+    check("établissement connecté", etab.ok);
+    const e = await ongletDans(cdp, etab.ctx);
+    await e.taille(1280, 900);
+    await e.goto(`${APP}/espace-etablissement`);
+    await e.waitFor(`${ASIDE}?.querySelector('nav [role="presentation"]')`, 25000);
+    const menuEtab = await e.eval(LIRE_MENU);
+    const sectionsEtab = menuEtab.filter((x) => x.type === "section").map((x) => x.texte);
+    check("établissement : 3 sections dans l'ordre",
+      JSON.stringify(sectionsEtab) === JSON.stringify(["Pilotage", "Gestion", "Compte"]),
+      JSON.stringify(sectionsEtab));
+    const liensEtab = menuEtab.filter((x) => x.type === "lien").map((x) => x.texte);
+    const attenduEtab = ["Tableau de bord", "Médecins", "Statistiques", "Informations",
+      "Abonnement", "Compte & paramètres", "Mon compte"];
+    check("établissement : 7 liens dans le nouvel ordre",
+      JSON.stringify(liensEtab) === JSON.stringify(attenduEtab), JSON.stringify(liensEtab));
+    await e.shot("1280-etablissement-sections");
   } finally {
     ws.close();
     chrome.kill();
