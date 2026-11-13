@@ -13,22 +13,31 @@ import BarreLaterale from "@/components/site/BarreLaterale";
  * de la maquette web (menu latéral avec avatar, liens et déconnexion).
  * Le menu suit la spec C.3 : Tableau de bord · Mes rendez-vous · Mes proches ·
  * Mon profil · Paramètres · Déconnexion.
+ *
+ * Menu rangé en sections nommées, comme les espaces médecin / assistant (champ
+ * `section`, rendu par BarreLaterale). Les liens d'une même section sont
+ * contigus : du plus quotidien (prise de rendez-vous) au compte. Le libellé de
+ * section ne s'affiche qu'une fois, avant son premier lien.
  */
 const LIENS = [
-  { href: "/patient", icone: "📊", label: "Tableau de bord" },
+  // Au quotidien — le socle de l'usage : consulter et prendre rendez-vous.
+  { href: "/patient", icone: "📊", label: "Tableau de bord", section: "Au quotidien" },
   // Même cible que « + Nouveau rendez-vous » du tableau de bord : on prend
   // rendez-vous en cherchant le médecin.
-  { href: "/resultats", icone: "🩺", label: "Prendre rendez-vous" },
-  { href: "/mes-rendez-vous", icone: "📅", label: "Mes rendez-vous" },
-  { href: "/patient/documents", icone: "📄", label: "Mes documents" },
-  { href: "/patient/messages", icone: "💬", label: "Messages" },
-  { href: "/patient/favoris", icone: "♥", label: "Mes favoris" },
-  { href: "/patient/proches", icone: "👨‍👩‍👧", label: "Mes proches" },
-  { href: "/patient/avis", icone: "⭐", label: "Mes avis" },
-  { href: "/patient/notifications", icone: "🔔", label: "Notifications" },
-  { href: "/patient/profil", icone: "👤", label: "Mon profil" },
-  { href: "/patient/mon-compte", icone: "🔐", label: "Mon compte" },
-  { href: "/patient/parametres", icone: "⚙️", label: "Paramètres" },
+  { href: "/resultats", icone: "🩺", label: "Prendre rendez-vous", section: "Au quotidien" },
+  { href: "/mes-rendez-vous", icone: "📅", label: "Mes rendez-vous", section: "Au quotidien" },
+  // Mon suivi — ce que le patient garde et gère dans la durée.
+  { href: "/patient/documents", icone: "📄", label: "Mes documents", section: "Mon suivi" },
+  { href: "/patient/proches", icone: "👨‍👩‍👧", label: "Mes proches", section: "Mon suivi" },
+  { href: "/patient/favoris", icone: "♥", label: "Mes favoris", section: "Mon suivi" },
+  { href: "/patient/avis", icone: "⭐", label: "Mes avis", section: "Mon suivi" },
+  // Échanges — Messages porte la pastille de non-lus.
+  { href: "/patient/messages", icone: "💬", label: "Messages", section: "Échanges" },
+  { href: "/patient/notifications", icone: "🔔", label: "Notifications", section: "Échanges" },
+  // Compte.
+  { href: "/patient/profil", icone: "👤", label: "Mon profil", section: "Compte" },
+  { href: "/patient/mon-compte", icone: "🔐", label: "Mon compte", section: "Compte" },
+  { href: "/patient/parametres", icone: "⚙️", label: "Paramètres", section: "Compte" },
 ];
 
 export default function PatientShell({ children }: { children: React.ReactNode }) {

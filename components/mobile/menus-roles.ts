@@ -8,8 +8,10 @@
  *                        administratif) → voir app/espace-*\/compte/page.tsx.
  *   - Barre du bas     = inchangée.
  *
- * Pour patient / établissement / admin, le tiroir reste le miroir plat de la
- * barre latérale web. Pour médecin / assistant, il est découpé en sections
+ * Pour établissement / admin, le tiroir reste le miroir plat de la barre
+ * latérale web. Pour patient, il reprend les mêmes sections que le web, en
+ * conservant toutes les entrées (compte compris : le patient n'a pas de Page
+ * Profil dédiée). Pour médecin / assistant, il est découpé en sections
  * (GROUPES_NAV) : seules les entrées de navigation y figurent, les entrées de
  * compte/pratique ayant migré vers la Page Profil.
  */
@@ -50,6 +52,43 @@ export const LIBELLE_ROLE: Record<RoleMenu, string> = {
  * médecin : l'assistant(e) n'a ni page avis/statistiques ni permission dédiée.
  */
 export const GROUPES_NAV: Partial<Record<RoleMenu, GroupeMenu[]>> = {
+  // Mêmes sections que la barre latérale web (components/patient/PatientShell).
+  // Le patient garde toutes ses entrées, compte inclus : pas de Page Profil
+  // dédiée comme chez le médecin.
+  patient: [
+    {
+      titre: "Au quotidien",
+      entrees: [
+        { href: "/patient", icone: "📊", label: "Tableau de bord" },
+        { href: "/resultats", icone: "🩺", label: "Prendre rendez-vous" },
+        { href: "/mes-rendez-vous", icone: "📅", label: "Mes rendez-vous" },
+      ],
+    },
+    {
+      titre: "Mon suivi",
+      entrees: [
+        { href: "/patient/documents", icone: "📄", label: "Mes documents" },
+        { href: "/patient/proches", icone: "👨‍👩‍👧", label: "Mes proches" },
+        { href: "/patient/favoris", icone: "♥", label: "Mes favoris" },
+        { href: "/patient/avis", icone: "⭐", label: "Mes avis" },
+      ],
+    },
+    {
+      titre: "Échanges",
+      entrees: [
+        { href: "/patient/messages", icone: "💬", label: "Messages" },
+        { href: "/patient/notifications", icone: "🔔", label: "Notifications" },
+      ],
+    },
+    {
+      titre: "Compte",
+      entrees: [
+        { href: "/patient/profil", icone: "👤", label: "Mon profil" },
+        { href: "/patient/mon-compte", icone: "🔐", label: "Mon compte" },
+        { href: "/patient/parametres", icone: "⚙️", label: "Paramètres" },
+      ],
+    },
+  ],
   medecin: [
     {
       titre: "Mon activité",
@@ -95,22 +134,8 @@ export const GROUPES_NAV: Partial<Record<RoleMenu, GroupeMenu[]>> = {
 };
 
 export const MENUS: Record<RoleMenu, EntreeMenu[]> = {
-  // components/patient/PatientShell.tsx — inchangé
-  patient: [
-    { href: "/patient", icone: "📊", label: "Tableau de bord" },
-    { href: "/resultats", icone: "🩺", label: "Prendre rendez-vous" },
-    { href: "/mes-rendez-vous", icone: "📅", label: "Mes rendez-vous" },
-    { href: "/patient/documents", icone: "📄", label: "Mes documents" },
-    { href: "/patient/messages", icone: "💬", label: "Messages" },
-    { href: "/patient/favoris", icone: "♥", label: "Mes favoris" },
-    { href: "/patient/proches", icone: "👨‍👩‍👧", label: "Mes proches" },
-    { href: "/patient/avis", icone: "⭐", label: "Mes avis" },
-    { href: "/patient/notifications", icone: "🔔", label: "Notifications" },
-    { href: "/patient/profil", icone: "👤", label: "Mon profil" },
-    { href: "/patient/mon-compte", icone: "🔐", label: "Mon compte" },
-    { href: "/patient/parametres", icone: "⚙️", label: "Paramètres" },
-  ],
   // Navigation mobile = GROUPES_NAV ; version plate conservée comme repli.
+  patient: GROUPES_NAV.patient!.flatMap((g) => g.entrees),
   medecin: GROUPES_NAV.medecin!.flatMap((g) => g.entrees),
   assistant: GROUPES_NAV.assistant!.flatMap((g) => g.entrees),
   etablissement: GROUPES_NAV.etablissement!.flatMap((g) => g.entrees),
@@ -143,8 +168,8 @@ export const RACCOURCIS_PATIENT: EntreeMenu[] = [
 
 /**
  * Le menu du rôle, toujours sous forme de sections. Les rôles sans découpage
- * (patient / établissement / admin) rendent un unique groupe sans titre, d'où
- * un affichage identique à l'ancienne liste plate.
+ * (établissement / admin) rendent un unique groupe sans titre, d'où un
+ * affichage identique à l'ancienne liste plate.
  */
 export function menuDuRole(role: string | undefined): { role: RoleMenu; groupes: GroupeMenu[] } {
   const connu = (["patient", "medecin", "assistant", "etablissement", "admin"] as const).find(

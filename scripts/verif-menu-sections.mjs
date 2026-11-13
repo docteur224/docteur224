@@ -225,6 +225,38 @@ async function main() {
     check("assistant/espace-medecin : « Mon cabinet » reste (dispos/avis/stats)",
       sectionsAM.includes("Mon cabinet") && liensAM.includes("Mes disponibilités"));
     await am.shot("1280-assistant-sur-espace-medecin");
+
+    /* ---------- Patient : /patient (web) ---------- */
+    const patient = await connecter(cdp, "patient1@test.docteur224.com");
+    check("patient connecté", patient.ok);
+    const p = await ongletDans(cdp, patient.ctx);
+    await p.taille(1280, 900);
+    await p.goto(`${APP}/patient`);
+    await p.waitFor(`${ASIDE}?.querySelector('nav [role="presentation"]')`, 25000);
+    const menuPat = await p.eval(LIRE_MENU);
+    const sectionsPat = menuPat.filter((x) => x.type === "section").map((x) => x.texte);
+    check("patient : 4 sections dans l'ordre",
+      JSON.stringify(sectionsPat) === JSON.stringify(["Au quotidien", "Mon suivi", "Échanges", "Compte"]),
+      JSON.stringify(sectionsPat));
+    const liensPat = menuPat.filter((x) => x.type === "lien").map((x) => x.texte);
+    const attenduPat = ["Tableau de bord", "Prendre rendez-vous", "Mes rendez-vous",
+      "Mes documents", "Mes proches", "Mes favoris", "Mes avis",
+      "Messages", "Notifications", "Mon profil", "Mon compte", "Paramètres"];
+    check("patient : 12 liens dans le nouvel ordre",
+      JSON.stringify(liensPat) === JSON.stringify(attenduPat), JSON.stringify(liensPat));
+    await p.shot("1280-patient-sections");
+
+    /* ---------- Patient : tiroir mobile (sections miroir) ---------- */
+    const pm = await ongletDans(cdp, patient.ctx);
+    await pm.send("Emulation.setDeviceMetricsOverride", { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+    await pm.send("Emulation.setTouchEmulationEnabled", { enabled: true, maxTouchPoints: 5 });
+    await pm.goto(`${APP}/patient`);
+    await pm.waitFor(`document.querySelector('.tiroir .tiroir-titre')`, 20000);
+    const titresTiroir = await pm.eval(`[...document.querySelectorAll('.tiroir .tiroir-groupe .tiroir-titre')].map((t) => t.textContent.trim())`);
+    check("patient (tiroir mobile) : mêmes 4 sections",
+      JSON.stringify(titresTiroir) === JSON.stringify(["Au quotidien", "Mon suivi", "Échanges", "Compte"]),
+      JSON.stringify(titresTiroir));
+    await pm.shot("390-patient-tiroir");
   } finally {
     ws.close();
     chrome.kill();
