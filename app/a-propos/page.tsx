@@ -225,10 +225,10 @@ const contenu = (
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/apropos/consultation.jpg"
-            alt="Un soignant souriant ausculte une patiente lors d’une consultation"
+            alt="Un médecin en consultation avec une patiente"
             className="h-full max-h-[440px] w-full object-cover"
-            width={1200}
-            height={1000}
+            width={626}
+            height={352}
             loading="lazy"
           />
         </div>
