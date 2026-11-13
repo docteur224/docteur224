@@ -52,7 +52,7 @@ const svgProps = {
   viewBox: "0 0 24 24",
   fill: "none",
   stroke: "currentColor",
-  strokeWidth: 1.8,
+  strokeWidth: 2,
   strokeLinecap: "round" as const,
   strokeLinejoin: "round" as const,
   className: "h-[22px] w-[22px]",
@@ -172,7 +172,7 @@ const contenu = (
             key={r.k}
             className="flex flex-col items-center bg-white px-3 py-5 text-center md:px-4 md:py-6"
           >
-            <span className="grid h-11 w-11 place-items-center rounded-[14px] bg-teal-soft text-teal">
+            <span className="grid h-11 w-11 place-items-center rounded-[14px] bg-[linear-gradient(135deg,var(--teal),var(--blue))] text-white shadow-[0_4px_10px_-3px_rgba(21,80,107,0.5)]">
               <r.Icone />
             </span>
             <b className="mt-3 block text-[14px] font-extrabold md:text-[15.5px]">{r.k}</b>
