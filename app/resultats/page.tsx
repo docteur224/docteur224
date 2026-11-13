@@ -389,7 +389,7 @@ export default async function Resultats({
           donc à sa propre largeur, sinon il partait au milieu d'une bande
           vide, très loin du titre. */}
       <div className="border-b border-line bg-white px-[30px] py-[22px]">
-        <div className={`mx-auto ${vueCarte ? "max-w-[1600px]" : "max-w-[1140px]"}`}>
+        <div className={`mx-auto ${vueCarte ? "max-w-[1600px]" : "max-w-[1200px]"}`}>
           <div className="text-xs font-semibold text-muted">
             <Link href="/">Accueil</Link> › Recherche
           </div>
@@ -435,7 +435,7 @@ export default async function Resultats({
 
       <div
         className={`mx-auto grid gap-6 px-[30px] py-[26px] lg:grid-cols-[244px_1fr] ${
-          vueCarte ? "max-w-[1600px]" : "max-w-[1140px]"
+          vueCarte ? "max-w-[1600px]" : "max-w-[1200px]"
         }`}
       >
         {/* Colonne de filtres — état porté par l'URL (voir FiltresResultats) */}

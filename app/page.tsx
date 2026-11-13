@@ -213,7 +213,7 @@ export default async function Accueil() {
 
       {/* ===== SPÉCIALITÉS ===== */}
       <section className="py-[46px]">
-        <div className="mx-auto max-w-[1140px] px-[30px]">
+        <div className="mx-auto max-w-[1200px] px-[30px]">
           <h2 className="text-center text-2xl font-extrabold tracking-[-0.4px]">
             Trouvez le bon spécialiste
           </h2>
@@ -226,7 +226,7 @@ export default async function Accueil() {
 
       {/* ===== COMMENT ÇA MARCHE ===== */}
       <section id="comment-ca-marche" className="border-y border-line bg-white py-[46px]">
-        <div className="mx-auto max-w-[1140px] px-[30px]">
+        <div className="mx-auto max-w-[1200px] px-[30px]">
           <h2 className="text-center text-2xl font-extrabold tracking-[-0.4px]">
             Comment ça marche
           </h2>
@@ -271,7 +271,7 @@ export default async function Accueil() {
 
       {/* ===== MÉDECINS EN VEDETTE ===== */}
       <section className="py-[46px]">
-        <div className="mx-auto max-w-[1140px] px-[30px]">
+        <div className="mx-auto max-w-[1200px] px-[30px]">
           <h2 className="text-center text-2xl font-extrabold tracking-[-0.4px]">
             Médecins en vedette à Conakry
           </h2>
@@ -320,7 +320,7 @@ export default async function Accueil() {
 
       {/* ===== ÉTABLISSEMENTS EN VEDETTE ===== */}
       <section className="border-t border-line bg-white py-[46px]">
-        <div className="mx-auto max-w-[1140px] px-[30px]">
+        <div className="mx-auto max-w-[1200px] px-[30px]">
           <h2 className="text-center text-2xl font-extrabold tracking-[-0.4px]">
             Établissements en vedette
           </h2>

@@ -5,7 +5,7 @@ import Logo from "@/components/site/Logo";
 export default function Footer() {
   return (
     <footer className="mt-[10px] hidden bg-blue-deep px-[30px] py-10 text-white md:block">
-      <div className="mx-auto flex max-w-[1140px] flex-wrap gap-[50px]">
+      <div className="mx-auto flex max-w-[1200px] flex-wrap gap-[50px]">
         <div className="max-w-[260px]">
           {/* Le logo fourni est en bleu nuit : inversé en blanc sur le fond foncé. */}
           <Logo hauteur={40} surFonce />
@@ -60,7 +60,7 @@ export default function Footer() {
           </Link>
         </div>
       </div>
-      <div className="mx-auto mt-7 flex max-w-[1140px] flex-wrap items-center gap-x-2 gap-y-1 border-t border-white/15 pt-[18px] text-xs opacity-70">
+      <div className="mx-auto mt-7 flex max-w-[1200px] flex-wrap items-center gap-x-2 gap-y-1 border-t border-white/15 pt-[18px] text-xs opacity-70">
         <span>© 2026 Docteur 224 · Conakry, Guinée · Tous droits réservés.</span>
         <span aria-hidden>·</span>
         <Link href="/conditions-utilisation" className="underline underline-offset-2">

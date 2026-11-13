@@ -514,7 +514,7 @@ export default async function FicheMedecin({ params }: { params: Promise<{ id: s
         </div>
       </div>
 
-      <div className="mx-auto grid max-w-[1140px] items-start gap-6 px-[30px] py-[26px] lg:grid-cols-[1fr_372px]">
+      <div className="mx-auto grid max-w-[1200px] items-start gap-6 px-[30px] py-[26px] lg:grid-cols-[1fr_372px]">
         {/* ===== Colonne principale ===== */}
         <div className="overflow-hidden rounded-[18px] border border-line bg-white">
           {/* En-tête d'identité */}
