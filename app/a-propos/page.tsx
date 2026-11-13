@@ -38,6 +38,7 @@ export default function APropos() {
     <PageContenu
       titre="À propos"
       emoji="🤝"
+      large
       chapeau="Docteur 224 rapproche les patients guinéens des professionnels de santé : trouver le bon praticien, voir ses disponibilités réelles et réserver en ligne, sans appel ni file d’attente."
     >
       <Rubrique>Notre raison d’être</Rubrique>

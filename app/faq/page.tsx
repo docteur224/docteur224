@@ -107,6 +107,7 @@ export default function Faq() {
     <PageContenu
       titre="Questions fréquentes"
       emoji="💬"
+      large
       chapeau="Réserver, modifier, annuler, prendre rendez-vous pour un proche, inscrire son cabinet : voici l’essentiel, en cinq rubriques."
     >
       {GROUPES.map((groupe) => (

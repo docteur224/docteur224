@@ -98,6 +98,7 @@ export default function ConseilsSante() {
     <PageContenu
       titre="Conseils santé"
       emoji="🌿"
+      large
       chapeau="Les gestes de prévention qui comptent au quotidien, et surtout : les signes qui doivent amener à consulter sans attendre."
     >
       <div className="mb-4 flex items-start gap-3 rounded-2xl border border-[#f0dcbe] bg-amber-soft p-[16px] md:p-5">

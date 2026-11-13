@@ -16,14 +16,23 @@ export default function PageContenu({
   titre,
   chapeau,
   emoji,
+  large = false,
   children,
 }: {
   titre: string;
   chapeau?: string;
   /** Pictogramme du bandeau — identifie la rubrique d'un coup d'œil. */
   emoji?: string;
+  /**
+   * Largeur étendue (1200 px, calée sur le reste du site public) pour les
+   * pages à grilles — À propos, Conseils santé, FAQ. Les pages de texte dense
+   * (CGU, Protection des données) gardent la colonne étroite à 760 px, où les
+   * lignes trop longues nuiraient à la lecture.
+   */
+  large?: boolean;
   children: React.ReactNode;
 }) {
+  const largeurWeb = large ? "max-w-[1200px]" : "max-w-[760px]";
   return (
     <div className="flex min-h-screen flex-col bg-bg">
       <TopNav />
@@ -50,7 +59,7 @@ export default function PageContenu({
       {/* ====================== WEB ======================= */}
       <main className="hidden flex-1 md:block">
         <div className="bg-[linear-gradient(160deg,var(--blue)_0%,var(--blue-deep)_100%)] px-[30px] py-[46px] text-white">
-          <div className="mx-auto max-w-[760px]">
+          <div className={`mx-auto ${largeurWeb}`}>
             {emoji && (
               <span className="mb-3 block text-[34px]" aria-hidden>
                 {emoji}
@@ -62,7 +71,7 @@ export default function PageContenu({
             )}
           </div>
         </div>
-        <div className="mx-auto w-full max-w-[760px] px-[30px] py-[38px]">{children}</div>
+        <div className={`mx-auto w-full ${largeurWeb} px-[30px] py-[38px]`}>{children}</div>
       </main>
 
       <Footer />
