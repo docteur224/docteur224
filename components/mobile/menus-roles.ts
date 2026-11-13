@@ -171,6 +171,7 @@ export const GROUPES_NAV: Partial<Record<RoleMenu, GroupeMenu[]>> = {
       entrees: [
         { href: "/espace-admin/messagerie", icone: "💬", label: "Messagerie" },
         { href: "/espace-admin/parametres", icone: "⚙️", label: "Paramètres" },
+        { href: "/espace-admin/conseils-sante", icone: "🌿", label: "Conseils santé" },
         { href: "/espace-admin/medicaments", icone: "💊", label: "Médicaments" },
         { href: "/espace-admin/actes", icone: "🔬", label: "Analyses et imagerie" },
       ],

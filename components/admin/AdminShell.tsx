@@ -54,6 +54,7 @@ const LIENS = [
   // Plateforme — envois et référentiels (messagerie + `parametres`).
   { href: "/espace-admin/messagerie", icone: "💬", label: "Messagerie", section: "Plateforme" },
   { href: "/espace-admin/parametres", icone: "⚙️", label: "Paramètres", section: "Plateforme" },
+  { href: "/espace-admin/conseils-sante", icone: "🌿", label: "Conseils santé", section: "Plateforme" },
   { href: "/espace-admin/medicaments", icone: "💊", label: "Médicaments", section: "Plateforme" },
   // « et imagerie » n'est pas décoratif : l'écran couvre les deux domaines,
   // et sans le dire on cherche l'imagerie dans une entrée de menu qui

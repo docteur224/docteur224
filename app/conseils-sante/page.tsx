@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import PageContenu, { AppelAction, Rubrique } from "@/components/site/PageContenu";
+import CarteConseil, { Illustration } from "@/components/site/CarteConseil";
+import PartageSocial from "@/components/site/PartageSocial";
+import { URGENCES } from "@/lib/conseils-sante";
+import { lireConseilsPublies } from "@/lib/conseils-sante-serveur";
 
 export const metadata: Metadata = {
   title: "Conseils santé | Docteur 224",
@@ -9,91 +13,27 @@ export const metadata: Metadata = {
 };
 
 /*
- * Conseils santé — contenu de prévention volontairement général, aligné sur
- * les recommandations de santé publique. Aucune posologie, aucun traitement :
- * chaque fiche se termine par « quand consulter », qui renvoie vers un
- * professionnel. L'avertissement en tête de page n'est pas décoratif.
+ * Conseils santé — prévention d'ordre général, alignée sur les recommandations
+ * de santé publique. Aucune posologie, aucun traitement : chaque fiche se
+ * termine par « quand consulter ». L'avertissement en tête n'est pas décoratif.
+ *
+ * Le contenu vient de la base (table `conseils_sante`, migration 0091), rédigé
+ * depuis l'administration (Paramètres → Conseils santé). Si la migration n'est
+ * pas encore passée, `lireConseilsPublies` retombe sur les fiches d'origine.
+ *
+ * Ce n'est pas un blog : chaque carte renvoie vers « En savoir plus », la page
+ * détaillée de la fiche, et non vers un article daté.
  */
-const FICHES = [
-  {
-    emoji: "🦟",
-    titre: "Se protéger du paludisme",
-    gestes: [
-      "Dormir chaque nuit sous une moustiquaire imprégnée, y compris en saison sèche.",
-      "Éliminer les eaux stagnantes autour de la maison : elles servent de gîtes aux moustiques.",
-      "Couvrir bras et jambes le soir, moment où les moustiques piquent le plus.",
-    ],
-    consulter:
-      "Toute fièvre doit être testée avant d’être traitée. Ne prenez pas d’antipaludique « au cas où » : un test rapide se fait en quelques minutes.",
-  },
-  {
-    emoji: "💧",
-    titre: "Eau, hygiène et diarrhées",
-    gestes: [
-      "Boire de l’eau traitée ou bouillie, et la conserver dans un récipient fermé.",
-      "Se laver les mains au savon avant de manger et après être allé aux toilettes.",
-      "En cas de diarrhée, continuer à boire abondamment : la déshydratation est le vrai danger.",
-    ],
-    consulter:
-      "Consultez sans attendre si la diarrhée dure plus de trois jours, contient du sang, ou touche un nourrisson ou une personne âgée.",
-  },
-  {
-    emoji: "🤰",
-    titre: "Suivre une grossesse",
-    gestes: [
-      "Commencer les consultations prénatales dès les premiers mois, sans attendre un problème.",
-      "Poursuivre le suivi jusqu’à l’accouchement, même quand tout va bien.",
-      "Préparer le lieu d’accouchement à l’avance avec la sage-femme ou le médecin.",
-    ],
-    consulter:
-      "En urgence : saignements, maux de tête intenses, gonflement brutal du visage ou des mains, fièvre, ou diminution des mouvements du bébé.",
-  },
-  {
-    emoji: "❤️",
-    titre: "Tension et diabète",
-    gestes: [
-      "Faire contrôler sa tension au moins une fois par an à partir de 40 ans.",
-      "Réduire le sel, l’alcool et le tabac ; marcher trente minutes par jour.",
-      "Un traitement prescrit se poursuit même quand on se sent bien : c’est le principe.",
-    ],
-    consulter:
-      "L’hypertension et le diabète évoluent longtemps sans symptôme. Soif intense, fatigue inhabituelle, vision troublée ou essoufflement justifient une consultation.",
-  },
-  {
-    emoji: "👶",
-    titre: "Vaccination des enfants",
-    gestes: [
-      "Respecter le calendrier vaccinal, y compris les rappels.",
-      "Conserver le carnet de vaccination et l’apporter à chaque consultation.",
-      "Une fièvre légère après un vaccin est fréquente et passagère.",
-    ],
-    consulter:
-      "Un retard se rattrape : présentez-vous au centre de santé plutôt que de renoncer aux doses suivantes.",
-  },
-  {
-    emoji: "🦷",
-    titre: "Bouche et dents",
-    gestes: [
-      "Se brosser les dents deux fois par jour, matin et soir.",
-      "Limiter les boissons sucrées, premières responsables des caries.",
-      "Faire examiner ses dents une fois par an, même sans douleur.",
-    ],
-    consulter:
-      "Une douleur qui réveille la nuit, une gencive gonflée ou une dent mobile ne se traitent pas seules.",
-  },
-];
 
-/** Signes qui imposent une consultation immédiate, quel que soit l'âge. */
-const URGENCES = [
-  "Difficulté à respirer ou essoufflement au repos",
-  "Douleur dans la poitrine",
-  "Fièvre élevée qui ne baisse pas, surtout chez un nourrisson",
-  "Perte de connaissance, convulsions, confusion",
-  "Saignement abondant ou qui ne s’arrête pas",
-  "Faiblesse soudaine d’un côté du corps, difficulté à parler",
-];
+// Contenu éditorial géré en base : on relit à chaque visite plutôt que de figer
+// la page au build, pour qu'une fiche publiée apparaisse sans redéploiement.
+export const dynamic = "force-dynamic";
 
-export default function ConseilsSante() {
+export default async function ConseilsSante() {
+  const conseils = await lireConseilsPublies();
+  const vedette = conseils.find((c) => c.vedette) ?? conseils[0] ?? null;
+  const reste = conseils.filter((c) => c.id !== vedette?.id);
+
   return (
     <PageContenu
       titre="Conseils santé"
@@ -101,7 +41,7 @@ export default function ConseilsSante() {
       large
       chapeau="Les gestes de prévention qui comptent au quotidien, et surtout : les signes qui doivent amener à consulter sans attendre."
     >
-      <div className="mb-4 flex items-start gap-3 rounded-2xl border border-[#f0dcbe] bg-amber-soft p-[16px] md:p-5">
+      <div className="mb-5 flex items-start gap-3 rounded-2xl border border-[#f0dcbe] bg-amber-soft p-[16px] md:p-5">
         <span className="text-[18px] leading-none" aria-hidden>
           ⚠️
         </span>
@@ -111,41 +51,59 @@ export default function ConseilsSante() {
         </p>
       </div>
 
-      <Rubrique>Fiches pratiques</Rubrique>
-      <div className="grid gap-2.5 md:grid-cols-2 md:gap-4">
-        {FICHES.map((f) => (
-          <article
-            key={f.titre}
-            className="flex flex-col rounded-2xl border border-line bg-white p-[18px] md:p-5"
-          >
-            <span
-              aria-hidden
-              className="grid h-[38px] w-[38px] place-items-center rounded-xl bg-teal-soft text-[19px]"
-            >
-              {f.emoji}
+      {/* ===================== Mise en avant ===================== */}
+      {vedette && (
+        <Link
+          href={`/conseils-sante/${vedette.slug}`}
+          className="group mb-6 grid overflow-hidden rounded-[22px] border border-line bg-white transition-all hover:border-teal-line hover:shadow-[0_26px_60px_-30px_rgba(21,80,107,0.5)] md:mb-8 md:grid-cols-2"
+        >
+          <div className="md:order-2">
+            <Illustration conseil={vedette} hauteur="aspect-[16/10] md:aspect-auto md:h-full md:min-h-[300px]" />
+          </div>
+          <div className="flex flex-col justify-center p-[20px] md:order-1 md:p-9">
+            <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-teal px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.06em] text-white">
+              ★ À la une{vedette.categorie ? ` · ${vedette.categorie}` : ""}
             </span>
-            <h2 className="mt-3 text-[15px] font-extrabold md:text-[16px]">{f.titre}</h2>
-            <ul className="mt-2.5 flex flex-col gap-1.5">
-              {f.gestes.map((g) => (
-                <li
-                  key={g}
-                  className="flex gap-2 text-[12.5px] leading-relaxed text-muted md:text-[13.5px]"
-                >
-                  <span aria-hidden className="text-teal">
-                    ✓
-                  </span>
-                  {g}
-                </li>
-              ))}
-            </ul>
-            <p className="mt-3.5 rounded-xl bg-bg px-3 py-2.5 text-[12px] leading-relaxed text-[#3a4a55] md:text-[12.5px]">
-              <b className="text-blue">Quand consulter · </b>
-              {f.consulter}
+            <h2 className="mt-3 text-[22px] font-extrabold leading-tight tracking-[-0.3px] text-ink md:text-[28px]">
+              {vedette.titre}
+            </h2>
+            <p className="mt-3 text-[13.5px] leading-relaxed text-muted md:text-[15px]">
+              {vedette.resume}
             </p>
-          </article>
-        ))}
+            <span className="mt-5 inline-flex w-fit items-center gap-2 rounded-[11px] bg-teal px-[18px] py-[11px] text-[13.5px] font-bold text-white transition-colors group-hover:bg-teal-hover">
+              En savoir plus
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
+                <path
+                  d="M5 12h14M13 6l6 6-6 6"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+          </div>
+        </Link>
+      )}
+
+      {/* ===================== Grille des fiches ===================== */}
+      {reste.length > 0 && (
+        <>
+          <Rubrique>Tous les conseils</Rubrique>
+          <div className="grid gap-3.5 sm:grid-cols-2 md:grid-cols-3 md:gap-5">
+            {reste.map((c) => (
+              <CarteConseil key={c.id} conseil={c} />
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* ===================== Partage ===================== */}
+      <div className="mt-6 md:mt-8">
+        <PartageSocial titre="Conseils santé — Docteur 224" />
       </div>
 
+      {/* ===================== Urgences ===================== */}
       <Rubrique>Consulter sans attendre</Rubrique>
       <div className="rounded-2xl border border-[#f0cdc7] bg-red-soft p-[18px] md:p-6">
         <b className="text-[14px] font-extrabold text-red md:text-[16px]">
