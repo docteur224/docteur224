@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import PageContenu, { AppelAction, Rubrique } from "@/components/site/PageContenu";
+import PageContenu, { AppelAction } from "@/components/site/PageContenu";
+import FaqInteractive, { type GroupeFaq } from "@/components/site/FaqInteractive";
 
 export const metadata: Metadata = {
   title: "Questions fréquentes | Docteur 224",
@@ -11,10 +12,13 @@ export const metadata: Metadata = {
 /*
  * FAQ — chaque réponse décrit le comportement réel de l'application
  * (réservation, annulation, proches, avis, comptes professionnels).
- * Les questions sont groupées et repliées : la page se parcourt du regard
- * avant de se lire.
+ *
+ * Le contenu vit ici, côté serveur : il alimente à la fois le balisage FAQPage
+ * (schema.org) pour que les moteurs de recherche affichent ces réponses, et le
+ * composant client <FaqInteractive> qui ajoute la recherche, les filtres et le
+ * surlignage — tout ce par quoi un visiteur trouve la bonne réponse vite.
  */
-const GROUPES = [
+const GROUPES: GroupeFaq[] = [
   {
     rubrique: "Prendre rendez-vous",
     questions: [
@@ -71,6 +75,19 @@ const GROUPES = [
     ],
   },
   {
+    rubrique: "Messages et contact",
+    questions: [
+      {
+        q: "Puis-je écrire à un médecin sans avoir de rendez-vous ?",
+        r: "Oui. Depuis la messagerie, vous pouvez contacter n’importe quel médecin validé de l’annuaire pour une question, sans qu’un rendez-vous soit nécessaire. Pour une urgence vitale, appelez les secours.",
+      },
+      {
+        q: "Qui répond à mes questions médicales ou pratiques ?",
+        r: "Le praticien et son secrétariat. Leur numéro figure sur la fiche du médecin ; notre équipe, elle, gère le fonctionnement du site et la vérification des comptes.",
+      },
+    ],
+  },
+  {
     rubrique: "Professionnels de santé",
     questions: [
       {
@@ -91,6 +108,10 @@ const GROUPES = [
     rubrique: "Compte et données",
     questions: [
       {
+        q: "J’ai oublié mon mot de passe : comment le réinitialiser ?",
+        r: "Depuis l’écran de connexion, utilisez « Mot de passe oublié ». Un e-mail contenant un lien de réinitialisation vous est envoyé ; ce lien est valable un temps limité et à usage unique.",
+      },
+      {
         q: "Mes données de santé sont-elles protégées ?",
         r: "Docteur 224 ne stocke pas de dossier médical : seuls les rendez-vous et les informations de contact nécessaires à leur prise sont conservés. Chaque compte n’accède qu’à ses propres données.",
       },
@@ -102,38 +123,34 @@ const GROUPES = [
   },
 ];
 
+/** Balisage schema.org FAQPage — permet aux moteurs d'afficher ces réponses. */
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: GROUPES.flatMap((groupe) =>
+    groupe.questions.map((item) => ({
+      "@type": "Question",
+      name: item.q,
+      acceptedAnswer: { "@type": "Answer", text: item.r },
+    })),
+  ),
+};
+
 export default function Faq() {
   return (
     <PageContenu
       titre="Questions fréquentes"
       emoji="💬"
       large
-      chapeau="Réserver, modifier, annuler, prendre rendez-vous pour un proche, inscrire son cabinet : voici l’essentiel, en cinq rubriques."
+      chapeau="Cherchez par mot-clé ou parcourez les rubriques : réserver, modifier, annuler, prendre rendez-vous pour un proche, inscrire son cabinet — l’essentiel est là."
     >
-      {GROUPES.map((groupe) => (
-        <div key={groupe.rubrique}>
-          <Rubrique>{groupe.rubrique}</Rubrique>
-          {groupe.questions.map((item) => (
-            <details
-              key={item.q}
-              className="group mb-2 overflow-hidden rounded-2xl border border-line bg-white md:mb-2.5"
-            >
-              <summary className="flex cursor-pointer list-none items-center gap-3 p-[16px] text-[13.5px] font-extrabold md:p-5 md:text-[15px]">
-                <span className="flex-1">{item.q}</span>
-                <span
-                  aria-hidden
-                  className="grid h-[26px] w-[26px] flex-none place-items-center rounded-full bg-teal-soft text-[15px] font-extrabold text-blue transition-transform group-open:rotate-45"
-                >
-                  +
-                </span>
-              </summary>
-              <p className="border-t border-line px-[16px] py-[14px] text-[13px] leading-relaxed text-muted md:px-5 md:py-[18px] md:text-[14px]">
-                {item.r}
-              </p>
-            </details>
-          ))}
-        </div>
-      ))}
+      {/* Données structurées pour le référencement (rich results Google). */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+
+      <FaqInteractive groupes={GROUPES} />
 
       <AppelAction
         titre="Votre question n’est pas là ?"
