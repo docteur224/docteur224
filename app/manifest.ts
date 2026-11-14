@@ -53,7 +53,7 @@ export default function manifest(): MetadataRoute.Manifest {
     screenshots: [
       {
         src: "/screenshots/narrow.png",
-        sizes: "1080x1640",
+        sizes: "1080x1297",
         type: "image/png",
         form_factor: "narrow",
         label: "Docteur 224 sur mobile",
