@@ -71,6 +71,32 @@ export default function PWAProvider() {
     };
   }, [engage, pathname]);
 
+  // Efface l'écran de lancement de marque une fois l'app prête (mode installé
+  // uniquement). Un minimum d'affichage évite tout clignotement ; un garde-fou
+  // le retire même si l'évènement « load » tarde.
+  useEffect(() => {
+    if (!affichage.standalone) return;
+    const el = document.getElementById("pwa-splash");
+    if (!el) return;
+    let fait = false;
+    const cacher = () => {
+      if (fait) return;
+      fait = true;
+      el.classList.add("parti");
+    };
+    if (document.readyState === "complete") {
+      const id = window.setTimeout(cacher, 450);
+      return () => window.clearTimeout(id);
+    }
+    const surLoad = () => window.setTimeout(cacher, 400);
+    window.addEventListener("load", surLoad, { once: true });
+    const secours = window.setTimeout(cacher, 1600);
+    return () => {
+      window.removeEventListener("load", surLoad);
+      window.clearTimeout(secours);
+    };
+  }, [affichage.standalone]);
+
   const actualiser = useCallback(() => {
     // Passe la main au nouveau SW ; l'évènement « controlling » rechargera.
     swRef.current?.messageSkipWaiting();
