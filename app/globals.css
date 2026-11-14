@@ -826,39 +826,3 @@ html[data-campagne="3"] body::before {
 /* Marqueur des surfaces PWA ancrées en bas (centrées via inset-inline + mx).
    Classe neutre : le positionnement est posé en ligne par les composants. */
 .pwa-fixed-bottom { pointer-events: auto; }
-
-/* =====================================================================
-   COUCHE PWA — écran de lancement de marque (mode installé)
-   ---------------------------------------------------------------------
-   Sur Android, le splash d'une PWA n'affiche que l'icône carrée du manifest
-   (le stéthoscope). Pour montrer le LOGO COMPLET au lancement, on superpose
-   un écran de marque — fond blanc (comme le background_color de l'OS, d'où une
-   continuité sans coupure) et logotype centré — qui s'efface dès que l'app est
-   prête. Cantonné à `display-mode: standalone` : le site web n'en voit JAMAIS
-   rien. L'image (launch-logo.png, précachée) s'affiche donc même hors-ligne.
-   ===================================================================== */
-#pwa-splash { display: none; }
-@media (display-mode: standalone) {
-  #pwa-splash {
-    display: grid;
-    position: fixed;
-    inset: 0;
-    z-index: 2000;
-    place-items: center;
-    background-color: #ffffff;
-    background-image: url("/icons/launch-logo.png");
-    background-repeat: no-repeat;
-    background-position: center;
-    background-size: min(62vw, 340px) auto;
-    opacity: 1;
-    transition: opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1), visibility 0.5s;
-  }
-  #pwa-splash.parti {
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  #pwa-splash { transition: none; }
-}

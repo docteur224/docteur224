@@ -74,10 +74,6 @@ export default function RootLayout({
   return (
     <html lang="fr" className={`${jakarta.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
-        {/* Écran de lancement de marque, visible UNIQUEMENT en mode installé
-            (CSS @media display-mode: standalone). Décoratif, effacé par
-            PWAProvider dès que l'app est prête. Invisible sur le site web. */}
-        <div id="pwa-splash" aria-hidden="true" />
         {/* Pose le mode clair/sombre avant la première peinture (anti-flash),
             pour tout le site. Indépendant de la charte. */}
         <ModeLocal />

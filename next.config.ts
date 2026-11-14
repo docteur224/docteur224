@@ -88,7 +88,7 @@ const withSerwist = withSerwistInit({
   // retient que la petite icône, pour que la page hors-ligne affiche le logo
   // même sans réseau. Le reste de l'app shell (JS/CSS) vient du manifeste
   // Serwist injecté au build.
-  globPublicPatterns: ["icons/icon-192.png", "icons/launch-logo.png"],
+  globPublicPatterns: ["icons/icon-192.png"],
 });
 
 export default withSerwist(nextConfig);
