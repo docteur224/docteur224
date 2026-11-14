@@ -11,6 +11,9 @@ import RechercheResultats, {
 } from "@/components/site/RechercheResultats";
 import AvatarMedecin from "@/components/site/AvatarMedecin";
 import CarteResultatMobile from "@/components/site/CarteResultatMobile";
+import ResultatsMobileInfini, {
+  type CarteMedecinData,
+} from "@/components/site/ResultatsMobileInfini";
 import BandeauResultats from "@/components/mobile/BandeauResultats";
 import CarteMedecins from "@/components/mobile/CarteMedecins";
 import CarteResultatsWeb from "@/components/site/CarteResultatsWeb";
@@ -191,6 +194,13 @@ export default async function Resultats({
   const page = Math.min(Math.max(Number.isFinite(pageDemandee) ? pageDemandee : 1, 1), pages);
   const listePage = liste.slice((page - 1) * PAR_PAGE, page * PAR_PAGE);
 
+  /* Mobile : pas de pagination par liens mais un défilement infini. Le serveur
+     ne rend (avec dispos) que cette première fournée ; la suite arrive au
+     défilement via ResultatsMobileInfini. La pagination par liens reste côté
+     web — un lien vers la page 3 d'une recherche doit rester partageable. */
+  const PAS_MOBILE = 8;
+  const premiereFourneeMobile = liste.slice(0, PAS_MOBILE);
+
   // Les paramètres courants, sans `page` : les liens de pagination doivent
   // conserver les filtres, les perdre serait le défaut le plus visible.
   const parametresCourants = new URLSearchParams();
@@ -258,10 +268,15 @@ export default async function Resultats({
   // heures, y compris celles qui viennent d'être prises.
   // Inutile en vue carte : les vignettes n'affichent pas d'heure, et c'est
   // une requête par praticien qu'on s'épargne.
+  // Union dédupliquée de la page web (listePage) et de la première fournée
+  // mobile : un seul passage de requêtes couvre les deux rendus, sans doublon.
+  const pourDispo = vueCarte
+    ? []
+    : [...new Map([...listePage, ...premiereFourneeMobile].map((m) => [m.id, m])).values()];
   const jours = prochainsJours([], 14);
   const disponibilites = new Map<string, { dateISO: string; heures: string[] } | null>(
     await Promise.all(
-      (vueCarte ? [] : listePage).map(async (m) => {
+      pourDispo.map(async (m) => {
         let etats: Map<string, EtatCreneau>;
         try {
           etats = await chargerIndisponibilites(m.id, jours[0]?.iso, jours.at(-1)?.iso);
@@ -336,7 +351,10 @@ export default async function Resultats({
               </Link>
             </div>
           )}
-          {listePage.map((m) => {
+          {/* Première fournée, rendue par le serveur avec ses dispos : pas de
+              clignotement au premier affichage, et le contenu reste présent
+              pour les moteurs (la liste web complète l'est de toute façon). */}
+          {premiereFourneeMobile.map((m) => {
             const etab = getEtablissement(m.etablissementId);
             return (
               <CarteResultatMobile
@@ -357,15 +375,29 @@ export default async function Resultats({
               />
             );
           })}
-          <PaginationLiens
-            page={page}
-            pages={pages}
-            total={liste.length}
-            premier={liste.length === 0 ? 0 : (page - 1) * PAR_PAGE + 1}
-            dernier={Math.min(liste.length, page * PAR_PAGE)}
-            parametres={parametresCourants}
-            libelle="médecins"
-          />
+          {/* La suite se dévoile au défilement (dispos chargées à la demande). */}
+          {liste.length > PAS_MOBILE && (
+            <ResultatsMobileInfini
+              pas={PAS_MOBILE}
+              reste={liste.slice(PAS_MOBILE).map((m): CarteMedecinData => {
+                const etab = getEtablissement(m.etablissementId);
+                return {
+                  id: m.id,
+                  photoUrl: m.photoUrl,
+                  initiales: m.initiales,
+                  gradient: m.gradient,
+                  nomComplet: nomComplet(m),
+                  specialite: m.specialite,
+                  etablissementNom: etab?.nom ?? "",
+                  ville: m.ville,
+                  note: m.note,
+                  nbAvis: m.nbAvis,
+                  dispoLabel: m.disponibilite.label,
+                  dispoAujourdhui: m.disponibilite.type === "aujourdhui",
+                };
+              })}
+            />
+          )}
         </div>
           </>
         )}

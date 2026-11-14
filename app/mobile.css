@@ -736,6 +736,12 @@
   .res-bandeau .res-carte { margin-left: auto; display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 9px 14px; border-radius: 999px; background: var(--card); border: 1.5px solid var(--line); font-size: 13px; font-weight: 800; color: var(--blue-encre); }
   .res-bandeau .res-carte:active { background: var(--teal-soft); }
 
+  /* Sentinelle de défilement infini (sous la liste de résultats mobile) :
+     c'est elle que l'IntersectionObserver guette pour charger la fournée
+     suivante. Le petit disque tourne pendant la demande des dispos. */
+  .infini-charge { display: grid; place-items: center; min-height: 56px; padding: 14px 0 6px; }
+  .infini-spin { width: 22px; height: 22px; border-radius: 50%; border: 2.5px solid var(--line); border-top-color: var(--teal); animation: infini-rot 0.7s linear infinite; }
+
   /* La carte prend tout ce qui reste sous la barre haute. `fixed` plutôt
      qu'une hauteur calculée : la barre d'adresse mobile change la hauteur
      visible en cours de défilement, et une carte redimensionnée à chaque
@@ -791,6 +797,11 @@
   100% { transform: translateX(-50%) scale(2.6); opacity: 0; }
 }
 
+@keyframes infini-rot {
+  to { transform: rotate(360deg); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pulse { animation: none; }
+  .infini-spin { animation: none; }
 }
