@@ -11,6 +11,7 @@ const LIENS = [
   { href: "/resultats", label: "Trouver un médecin" },
   { href: "/a-propos", label: "À propos" },
   { href: "/conseils-sante", label: "Conseils santé" },
+  { href: "/blog", label: "Blog" },
   { href: "/faq", label: "FAQ" },
   { href: "/inscription/professionnel", label: "Pour les médecins" },
   { href: "/connexion", label: "Se connecter" },

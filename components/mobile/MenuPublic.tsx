@@ -21,6 +21,7 @@ const LIENS = [
   { href: "/a-propos", icone: "ℹ️", label: "À propos" },
   { href: "/faq", icone: "❓", label: "FAQ" },
   { href: "/conseils-sante", icone: "🌿", label: "Conseils santé" },
+  { href: "/blog", icone: "📰", label: "Blog" },
 ];
 
 export default function MenuPublic() {

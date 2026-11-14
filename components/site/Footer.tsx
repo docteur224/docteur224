@@ -25,6 +25,9 @@ export default function Footer() {
           <Link href="/conseils-sante" className="mb-2 block text-[13px] opacity-80">
             Conseils santé
           </Link>
+          <Link href="/blog" className="mb-2 block text-[13px] opacity-80">
+            Blog
+          </Link>
           <Link href="/connexion" className="mb-2 block text-[13px] opacity-80">
             Mes rendez-vous
           </Link>

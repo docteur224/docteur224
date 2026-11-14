@@ -30,6 +30,18 @@ const ENTETES_SECURITE = [
 ];
 
 const nextConfig: NextConfig = {
+  // Les couvertures d'articles du blog et les illustrations éditoriales sont
+  // servies par Cloudinary : on autorise ce seul hôte pour next/image, borné
+  // au compte (le dossier des envois commence par /<cloud_name>/).
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+        pathname: "/**",
+      },
+    ],
+  },
   async headers() {
     return [
       {
@@ -46,13 +58,6 @@ const nextConfig: NextConfig = {
           ],
         })
       ),
-    ];
-  },
-  async redirects() {
-    return [
-      // La rubrique s'appelait « Blog » avant de devenir « Conseils santé » :
-      // un lien déjà partagé ne doit pas tomber sur un 404.
-      { source: "/blog", destination: "/conseils-sante", permanent: true },
     ];
   },
 };

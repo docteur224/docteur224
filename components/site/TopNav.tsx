@@ -47,6 +47,12 @@ export default function TopNav({
             Conseils santé
           </Link>
           <Link
+            href="/blog"
+            className="ui-link hidden py-3 text-[13.5px] font-semibold text-muted hover:text-blue lg:inline"
+          >
+            Blog
+          </Link>
+          <Link
             href="/faq"
             className="ui-link hidden py-3 text-[13.5px] font-semibold text-muted hover:text-blue lg:inline"
           >
