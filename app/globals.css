@@ -803,3 +803,26 @@ html[data-campagne="3"] body::before {
   color: var(--muted-soft);
   pointer-events: none;
 }
+
+/* =====================================================================
+   COUCHE PWA — zones sûres iOS en mode installé (standalone)
+   ---------------------------------------------------------------------
+   `viewport-fit: cover` (voir layout) laisse le contenu s'étendre jusqu'aux
+   bords. En mode installé seulement, on réserve la hauteur de la barre d'état
+   (encoche / Dynamic Island) pour que le haut du site ne passe pas dessous.
+   Ce bloc ne s'applique JAMAIS dans un navigateur classique : l'expérience
+   existante reste strictement identique. `env(safe-area-inset-top)` vaut 0 sur
+   les appareils sans encoche.
+
+   Les surfaces PWA (bannière, toast, guide, page hors-ligne) gèrent, elles,
+   leur propre marge basse via `env(safe-area-inset-bottom)`.
+   ===================================================================== */
+@media (display-mode: standalone) {
+  body {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+/* Marqueur des surfaces PWA ancrées en bas (centrées via inset-inline + mx).
+   Classe neutre : le positionnement est posé en ligne par les composants. */
+.pwa-fixed-bottom { pointer-events: auto; }

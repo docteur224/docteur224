@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import withSerwistInit from "@serwist/next";
 
 /*
  * En-têtes de sécurité posés sur toutes les réponses.
@@ -62,4 +63,32 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+/*
+ * Couche PWA (Serwist). Elle n'ajoute qu'un service worker et son précache
+ * par-dessus la configuration existante : aucune route, aucun en-tête, aucun
+ * comportement du site n'est modifié.
+ *
+ * `@serwist/next` s'injecte via webpack — c'est pourquoi le script `build`
+ * passe `--webpack` (le bundler historique du site, voie conservatrice). En
+ * développement, le SW est désactivé : pas de cache qui masque les
+ * changements, et pas d'avertissement Turbopack.
+ */
+const withSerwist = withSerwistInit({
+  swSrc: "app/sw.ts",
+  swDest: "public/sw.js",
+  disable: process.env.NODE_ENV === "development",
+  // On enregistre le SW nous-mêmes (PWAProvider) pour piloter finement le
+  // toast de mise à jour et le retour en ligne.
+  register: false,
+  reloadOnOnline: false,
+  scope: "/",
+  swUrl: "/sw.js",
+  // Ne PAS précharger tout /public : les splash iOS et le logo haute
+  // définition sont lourds et inutiles au démarrage sur réseau faible. On ne
+  // retient que la petite icône, pour que la page hors-ligne affiche le logo
+  // même sans réseau. Le reste de l'app shell (JS/CSS) vient du manifeste
+  // Serwist injecté au build.
+  globPublicPatterns: ["icons/icon-192.png"],
+});
+
+export default withSerwist(nextConfig);

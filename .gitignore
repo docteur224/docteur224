@@ -41,3 +41,8 @@ yarn-error.log*
 next-env.d.ts
 scripts/.tmp-messagerie/
 apercus-email/
+
+# PWA : service worker généré par Serwist au build (régénéré à chaque build)
+/public/sw.js
+/public/sw.js.map
+/public/swe-worker-*.js
