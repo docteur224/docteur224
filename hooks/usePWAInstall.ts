@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { memoriserInstallee } from "@/lib/pwa/storage";
+import { oublierRefus } from "@/lib/pwa/storage";
 
 /*
  * Capture l'évènement `beforeinstallprompt` (Android/Chromium) pour pouvoir
@@ -42,7 +42,9 @@ export function usePWAInstall(): EtatInstall {
       invite.current = null;
       setInstallable(false);
       setInstallee(true);
-      memoriserInstallee();
+      // On nettoie la mémoire du refus : si l'app est un jour désinstallée,
+      // rien de périmé ne bloquera une nouvelle proposition d'installation.
+      oublierRefus();
     };
 
     window.addEventListener("beforeinstallprompt", surInvite);

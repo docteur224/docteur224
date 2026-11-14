@@ -17,7 +17,7 @@ import { usePWADisplayMode } from "@/hooks/usePWADisplayMode";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
 import { usePwaLangue } from "@/hooks/usePwaLangue";
 import { directionDe, textes } from "@/lib/pwa/i18n";
-import { dejaInstallee, memoriserRefus, refusRecemment } from "@/lib/pwa/storage";
+import { memoriserRefus, refusRecemment } from "@/lib/pwa/storage";
 import PWAInstallBanner from "./PWAInstallBanner";
 import IOSInstallGuide from "./IOSInstallGuide";
 import PWAUpdateToast from "./PWAUpdateToast";
@@ -122,7 +122,6 @@ export default function PWAProvider() {
     affichage.prete &&
     !affichage.standalone &&
     !install.installee &&
-    !dejaInstallee() &&
     !refuse &&
     !refusRecemment() &&
     !(pathname ? CHEMIN_SENSIBLE.test(pathname) : false) &&

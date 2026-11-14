@@ -5,7 +5,12 @@
  */
 
 const CLE_REFUS = "d224-pwa-refus"; // horodatage du dernier « Plus tard »
-const CLE_INSTALLEE = "d224-pwa-installee"; // installée une fois → ne plus proposer
+
+/* Important : on NE mémorise PAS « déjà installée » de façon permanente. La
+   désinstallation d'une PWA n'efface pas le localStorage du site : un tel
+   drapeau empêcherait de reproposer l'installation après une désinstallation.
+   Le fait de tourner en mode installé est déjà détecté en direct par
+   `display-mode: standalone` (voir usePWADisplayMode), ce qui suffit. */
 
 /** Durée du silence après un refus : 2 jours. */
 const TTL_REFUS_MS = 2 * 24 * 60 * 60 * 1000;
@@ -40,12 +45,11 @@ export function refusRecemment(): boolean {
   return Date.now() - quand < TTL_REFUS_MS;
 }
 
-/** Marque l'application comme installée (définitif). */
-export function memoriserInstallee(): void {
-  ecrire(CLE_INSTALLEE, "1");
-}
-
-/** Vrai si l'application a déjà été installée au moins une fois. */
-export function dejaInstallee(): boolean {
-  return lire(CLE_INSTALLEE) === "1";
+/** Efface la mémoire du refus (ex. après installation ou pour un test). */
+export function oublierRefus(): void {
+  try {
+    window.localStorage.removeItem(CLE_REFUS);
+  } catch {
+    // Silencieux.
+  }
 }
