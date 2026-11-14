@@ -11,7 +11,7 @@ import type { MetadataRoute } from "next";
  */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Docteur 224",
+    name: "Docteur224",
     short_name: "Docteur224",
     description: "Trouvez un médecin et prenez rendez-vous en ligne, partout en Guinée.",
     lang: "fr",

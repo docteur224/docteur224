@@ -47,7 +47,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Docteur 224",
+    title: "Docteur224",
     startupImage: STARTUP_IMAGES,
   },
 };
