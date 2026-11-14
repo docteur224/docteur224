@@ -537,6 +537,34 @@ export async function chargerIndisponibilites(
 }
 
 /**
+ * Premier créneau réservable de chaque médecin d'une liste, en UN seul appel
+ * (RPC `prochaines_dispos_medecins`, 0046/0052) : RDV pris, créneaux fermés et
+ * congés déjà déduits côté SQL. Sert à trier les résultats par « disponibilité
+ * la plus proche » sans une requête par praticien.
+ *
+ * Un médecin sans aucun créneau sur l'horizon n'apparaît pas dans le résultat :
+ * il est absent de la Map, donc classé en fin de liste par l'appelant. En cas
+ * d'erreur, on renvoie une Map vide plutôt que de casser la page — le tri
+ * retombe alors sur la note.
+ */
+export async function chargerProchainesDispos(
+  ids: string[],
+  jours = 14
+): Promise<Map<string, { jour: string; heure: string }>> {
+  const map = new Map<string, { jour: string; heure: string }>();
+  if (ids.length === 0) return map;
+  const { data, error } = await clientPublic().rpc("prochaines_dispos_medecins", {
+    p_medecin_ids: ids,
+    p_jours: jours,
+  });
+  if (error) return map;
+  for (const l of (data ?? []) as { medecin_id: string; jour: string; heure: string }[]) {
+    map.set(l.medecin_id, { jour: l.jour, heure: String(l.heure).slice(0, 5) });
+  }
+  return map;
+}
+
+/**
  * Date de l'ouverture MANUELLE la plus lointaine encore à venir (exception
  * `creneaux_exceptions` etat='ouvert'), ou null. Sert à étendre le bandeau de
  * dates au-delà de la fenêtre de réservation quand le médecin a délibérément

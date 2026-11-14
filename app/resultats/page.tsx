@@ -34,6 +34,7 @@ import {
   chargerLangues,
   chargerMedecins,
   chargerNomsRecherche,
+  chargerProchainesDispos,
   chargerReferencesGeo,
   chargerSpecialites,
   chargerTypesEtablissement,
@@ -165,12 +166,39 @@ export default async function Resultats({
 
   // Le type d'établissement vit dans la table etablissements : ce filtre-ci
   // s'applique après la jointure, une fois les deux listes chargées.
-  const liste = typesEtab.length
+  let liste = typesEtab.length
     ? medecins.filter((m) => {
         const type = getEtablissement(m.etablissementId)?.type;
         return type ? typesEtab.includes(type) : false;
       })
     : medecins;
+
+  /*
+   * Tri par DÉFAUT : la disponibilité la plus proche, puis la meilleure note,
+   * puis le nombre d'avis en départage. `chargerMedecins` a déjà trié par
+   * note ; on ré-ordonne ici quand le tri est « au plus tôt » (valeur `dispo`)
+   * ou qu'aucun tri n'est demandé — car il faut une requête de dispos sur
+   * TOUTE la liste filtrée (un seul aller-retour, RPC `prochaines_dispos_
+   * medecins`), qu'on ne veut imposer ni aux autres appelants de
+   * `chargerMedecins`, ni à la vue carte (l'ordre n'y change rien).
+   *
+   * Un médecin sans créneau sur l'horizon est absent de la Map : la clé
+   * sentinelle le renvoie en fin de liste, derrière tous ceux qui ont une date.
+   */
+  if (!vueCarte && (tri === "" || tri === "dispo")) {
+    const dispos = await chargerProchainesDispos(liste.map((m) => m.id), 14);
+    const SANS_DISPO = "9999-99-99T99:99";
+    const cleDispo = (m: (typeof liste)[number]) => {
+      const d = dispos.get(m.id);
+      return d ? `${d.jour}T${d.heure}` : SANS_DISPO;
+    };
+    liste = [...liste].sort((a, b) => {
+      const ca = cleDispo(a);
+      const cb = cleDispo(b);
+      if (ca !== cb) return ca < cb ? -1 : 1;
+      return b.note - a.note || b.nbAvis - a.nbAvis;
+    });
+  }
 
   /*
    * Le titre annonçait « Médecins à Conakry » dès qu'aucune ville n'était

@@ -113,6 +113,10 @@ export function construireGroupes(
         { valeur: "4.5", label: "4,5★ et plus" },
       ],
     });
+    // « Au plus tôt » est le tri par DÉFAUT (sans `tri` dans l'URL) : la
+    // disponibilité la plus proche d'abord, puis la meilleure note, puis le
+    // nombre d'avis en départage — le tri est appliqué page de résultats, car
+    // il demande une requête de dispos sur toute la liste (voir page.tsx).
     // « Mieux notés » trie sur la moyenne ET met les médecins ayant réellement
     // des avis devant : sans ça un profil à 0 avis, donc à 0, remonterait au
     // même rang qu'un profil noté 5 par un seul patient.
@@ -121,6 +125,7 @@ export function construireGroupes(
       param: "tri",
       multiple: false,
       options: [
+        { valeur: "dispo", label: "Au plus tôt" },
         { valeur: "note", label: "Mieux notés" },
         { valeur: "avis", label: "Plus d’avis" },
       ],
