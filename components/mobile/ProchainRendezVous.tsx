@@ -60,11 +60,18 @@ export default function ProchainRendezVous() {
 
   useEffect(() => {
     let actif = true;
-    (async () => {
+    const supabase = creerClientNavigateur();
+
+    // Chaque chemin se termine par un setRdv : sans cela, une déconnexion
+    // laisserait la carte précédente à l'écran faute d'être effacée.
+    async function rafraichir() {
       try {
-        const supabase = creerClientNavigateur();
         const { data: auth } = await supabase.auth.getUser();
-        if (!auth.user) return; // Visiteur anonyme : rien à montrer.
+        if (!actif) return;
+        if (!auth.user) {
+          setRdv(null); // Visiteur anonyme, ou qui vient de se déconnecter.
+          return;
+        }
 
         const { data } = await supabase
           .from("rendez_vous")
@@ -79,7 +86,11 @@ export default function ProchainRendezVous() {
           .limit(1)
           .maybeSingle();
 
-        if (!actif || !data) return;
+        if (!actif) return;
+        if (!data) {
+          setRdv(null);
+          return;
+        }
         const l = data as unknown as LigneProchainRdv;
         const med = l.medecins;
         const nom = [med?.civilite, med?.utilisateurs?.prenom, med?.utilisateurs?.nom]
@@ -93,11 +104,22 @@ export default function ProchainRendezVous() {
           specialite: med?.specialites?.nom ?? "",
         });
       } catch {
-        // Session illisible ou requête refusée : on ne montre simplement rien.
+        // Session illisible ou requête refusée : on n'affiche rien.
+        if (actif) setRdv(null);
       }
-    })();
+    }
+
+    rafraichir();
+    // La connexion comme la déconnexion se font sans recharger la page : sans
+    // cet abonnement, la carte resterait figée sur l'état du montage — c'est
+    // ce que fait déjà useProfilConnecte pour l'en-tête.
+    const { data: abo } = supabase.auth.onAuthStateChange(() => {
+      rafraichir();
+    });
+
     return () => {
       actif = false;
+      abo.subscription.unsubscribe();
     };
   }, []);
 
