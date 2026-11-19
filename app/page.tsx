@@ -7,6 +7,7 @@ import GrilleSpecialites from "@/components/site/GrilleSpecialites";
 import MedecinsEnVedette from "@/components/site/MedecinsEnVedette";
 import EtablissementsEnVedette from "@/components/site/EtablissementsEnVedette";
 import CommentCaMarche from "@/components/site/CommentCaMarche";
+import ProchainRendezVous from "@/components/mobile/ProchainRendezVous";
 import RechercheAccueil, {
   RechercheAccueilMobile,
 } from "@/components/site/RechercheAccueil";
@@ -236,6 +237,11 @@ export default async function Accueil() {
           />
         </div>
         <div className="pad">
+          {/* Carte personnelle : ne s'affiche que pour un patient connecté
+              ayant un RDV à venir (île cliente, le reste de la page reste
+              statique). Invisible sinon. */}
+          <ProchainRendezVous />
+
           <GrilleSpecialites
             specialites={specialitesVedette}
             catalogue={catalogueSpecialites}
