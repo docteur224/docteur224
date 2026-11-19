@@ -296,26 +296,18 @@ export default function GrilleSpecialites({
         ))}
       </div>
 
-      {aDesSpecialites && (
-        <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+      {/* Web : un seul accès, l'écran plein. Pas de dépliage sur place — la
+          grille montre déjà la vitrine, le reste vit dans « Voir toutes ». */}
+      {ouvrable && (
+        <div className="mt-6 flex justify-center">
           <button
             type="button"
-            onClick={() => setTout(!tout)}
-            aria-expanded={tout}
-            className="ui-btn rounded-full border-[1.5px] border-line bg-white px-[18px] py-[9px] text-[13px] font-bold text-blue hover:border-teal hover:bg-teal-soft"
+            ref={declencheurRef}
+            onClick={ouvrir}
+            className="ui-btn inline-flex items-center gap-2 rounded-full border-[1.5px] border-teal-line bg-white px-[20px] py-[10px] text-[13px] font-bold text-teal hover:border-teal hover:bg-teal-soft"
           >
-            {tout ? "Réduire" : "Voir tout"}
+            Voir toutes les spécialités <span aria-hidden>→</span>
           </button>
-          {tout && ouvrable && (
-            <button
-              type="button"
-              ref={declencheurRef}
-              onClick={ouvrir}
-              className="ui-btn inline-flex items-center gap-2 rounded-full border-[1.5px] border-teal-line bg-white px-[18px] py-[9px] text-[13px] font-bold text-teal hover:border-teal hover:bg-teal-soft"
-            >
-              Voir toutes les spécialités <span aria-hidden>→</span>
-            </button>
-          )}
         </div>
       )}
 
