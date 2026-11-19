@@ -2196,3 +2196,136 @@ body.etv-overlay-ouvert { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .etv-points span { transition: none; }
 }
+
+/* =====================================================================
+   SECTION « COMMENT ÇA MARCHE » (accueil) — parcours en 3 étapes.
+   Classes `ccm-`, tout en tokens (le mode sombre suit).
+   ===================================================================== */
+.ccm-head { text-align: center; }
+.ccm-head h2 {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 800;
+  letter-spacing: -0.4px;
+}
+.ccm-head p { margin: 7px 0 0; color: var(--muted); }
+.ccm-rail { list-style: none; margin: 0; padding: 0; }
+
+/* Pastille numérotée : tuile en dégradé, icône blanche, numéro en pastille. */
+.ccm-puce {
+  position: relative;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(145deg, var(--teal), var(--blue));
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(16, 59, 80, 0.18);
+}
+.ccm-icone { display: grid; place-items: center; }
+.ccm-icone svg { display: block; }
+.ccm-num {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--teal);
+  font-weight: 800;
+  box-shadow: 0 3px 8px rgba(16, 59, 80, 0.16);
+}
+.ccm-titre { margin: 0; color: var(--ink); font-weight: 800; letter-spacing: -0.2px; }
+.ccm-etiquette {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--teal);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.ccm-desc { color: var(--muted); }
+
+/* ---------- WEB : parcours horizontal relié ---------- */
+.ccm-web .ccm-head h2 { font-size: 26px; }
+.ccm-web .ccm-head p { font-size: 14px; }
+.ccm-web .ccm-rail {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin-top: 36px;
+}
+/* Le fil pointillé passe derrière les pastilles, de la 1re à la 3e (centres à
+   1/6, 1/2, 5/6 de la largeur). Les tuiles opaques le masquent au passage. */
+.ccm-web .ccm-rail::before {
+  content: "";
+  position: absolute;
+  top: 34px;
+  left: 16.666%;
+  right: 16.666%;
+  height: 0;
+  border-top: 2px dashed var(--teal-line);
+}
+.ccm-web .ccm-etape {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0 18px;
+}
+.ccm-web .ccm-puce { width: 68px; height: 68px; border-radius: 22px; }
+.ccm-web .ccm-icone svg { width: 30px; height: 30px; }
+.ccm-web .ccm-num {
+  top: -8px;
+  right: -8px;
+  width: 26px;
+  height: 26px;
+  font-size: 12.5px;
+}
+.ccm-web .ccm-txt { margin-top: 18px; }
+.ccm-web .ccm-titre { font-size: 17px; }
+.ccm-web .ccm-etiquette { font-size: 11px; }
+.ccm-web .ccm-desc { margin: 7px 0 0; font-size: 13px; line-height: 1.55; max-width: 280px; }
+
+/* ---------- MOBILE : frise verticale ---------- */
+.ccm-mobile { margin-top: 22px; }
+.ccm-mobile .ccm-head { text-align: left; }
+.ccm-mobile .ccm-head h2 { font-size: 19px; }
+.ccm-mobile .ccm-head p { margin-top: 4px; font-size: 12.5px; }
+.ccm-mobile .ccm-rail { margin-top: 16px; }
+.ccm-mobile .ccm-etape {
+  position: relative;
+  display: grid;
+  grid-template-columns: 54px 1fr;
+  column-gap: 14px;
+  align-items: start;
+  padding-bottom: 20px;
+}
+/* Fil vertical reliant chaque pastille à la suivante : segment par étape, il
+   épouse la hauteur du texte quelle qu'elle soit. */
+.ccm-mobile .ccm-etape:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 26px;
+  top: 54px;
+  bottom: -2px;
+  width: 0;
+  border-left: 2px dashed var(--teal-line);
+}
+.ccm-mobile .ccm-puce { width: 54px; height: 54px; border-radius: 17px; }
+.ccm-mobile .ccm-icone svg { width: 25px; height: 25px; }
+.ccm-mobile .ccm-num {
+  top: -6px;
+  right: -6px;
+  width: 22px;
+  height: 22px;
+  font-size: 11px;
+}
+.ccm-mobile .ccm-txt { padding-top: 4px; }
+.ccm-mobile .ccm-titre { font-size: 15px; }
+.ccm-mobile .ccm-desc { margin: 4px 0 0; font-size: 12px; line-height: 1.45; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ccm-puce { box-shadow: 0 6px 14px rgba(16, 59, 80, 0.16); }
+}

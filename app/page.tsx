@@ -6,6 +6,7 @@ import TabBarMobile from "@/components/mobile/TabBarMobile";
 import GrilleSpecialites from "@/components/site/GrilleSpecialites";
 import MedecinsEnVedette from "@/components/site/MedecinsEnVedette";
 import EtablissementsEnVedette from "@/components/site/EtablissementsEnVedette";
+import CommentCaMarche from "@/components/site/CommentCaMarche";
 import RechercheAccueil, {
   RechercheAccueilMobile,
 } from "@/components/site/RechercheAccueil";
@@ -241,30 +242,7 @@ export default async function Accueil() {
             variante="mobile"
           />
 
-          <div className="section-t">Comment ça marche</div>
-          <div className="steps">
-            <div className="step">
-              <div className="n">1</div>
-              <div>
-                <b>Cherchez</b>
-                <small>Par spécialité, ville ou nom du médecin.</small>
-              </div>
-            </div>
-            <div className="step">
-              <div className="n">2</div>
-              <div>
-                <b>Choisissez un créneau</b>
-                <small>Voyez les disponibilités en temps réel.</small>
-              </div>
-            </div>
-            <div className="step">
-              <div className="n">3</div>
-              <div>
-                <b>Confirmez</b>
-                <small>Recevez un SMS et un e-mail de confirmation.</small>
-              </div>
-            </div>
-          </div>
+          <CommentCaMarche variante="mobile" />
 
           <MedecinsEnVedette
             vedettes={vedettes}
@@ -357,45 +335,7 @@ export default async function Accueil() {
       {/* ===== COMMENT ÇA MARCHE ===== */}
       <section id="comment-ca-marche" className="border-y border-line bg-white py-[46px]">
         <div className="mx-auto max-w-[1200px] px-[30px]">
-          <h2 className="text-center text-2xl font-extrabold tracking-[-0.4px]">
-            Comment ça marche
-          </h2>
-          <p className="mt-[7px] text-center text-sm text-muted">
-            Trois étapes simples, même avec une connexion lente.
-          </p>
-          <div className="mt-[30px] grid gap-[18px] md:grid-cols-3" data-reveal-stagger>
-            {[
-              {
-                n: "1",
-                titre: "Cherchez",
-                texte: "Par spécialité, ville, établissement ou nom du médecin.",
-              },
-              {
-                n: "2",
-                titre: "Choisissez un créneau",
-                texte:
-                  "Consultez les disponibilités réelles et réservez l'horaire qui vous convient.",
-              },
-              {
-                n: "3",
-                titre: "Confirmez",
-                texte:
-                  "Recevez une confirmation par SMS et e-mail, avec un rappel avant le rendez-vous.",
-              },
-            ].map((etape) => (
-              <div
-                key={etape.n}
-                data-reveal
-                className="rounded-2xl border border-line bg-white px-[22px] py-[26px] text-center"
-              >
-                <div className="mx-auto mb-[14px] grid h-[46px] w-[46px] place-items-center rounded-[14px] bg-teal-soft text-lg font-extrabold text-blue">
-                  {etape.n}
-                </div>
-                <b className="mb-1.5 block text-base font-extrabold">{etape.titre}</b>
-                <small className="text-[13px] leading-normal text-muted">{etape.texte}</small>
-              </div>
-            ))}
-          </div>
+          <CommentCaMarche variante="web" />
         </div>
       </section>
 
