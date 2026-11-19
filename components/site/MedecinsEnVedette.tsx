@@ -10,8 +10,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
  *   1. La vitrine — quelques praticiens, avec leurs VRAIS prochains créneaux
  *      réservables (calculés côté serveur par prochainsCreneaux, mêmes règles
  *      qu'à la réservation). Carrousel au doigt sur mobile, grille sur web.
- *   2. « Voir tous » ouvre un écran plein : recherche libre + filtres par
- *      spécialité sur l'annuaire des praticiens validés.
+ *   2. « Voir tous » ouvre un écran plein : recherche libre, filtres par
+ *      spécialité et pagination sur l'annuaire des praticiens validés.
  *
  * Toutes les classes sont préfixées `mv-` : `.slot`, `.chip` et consorts
  * existent déjà dans mobile.css, et cette section ne doit rien leur prendre.
@@ -20,6 +20,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
  * libellés de date sont calculés sur le serveur (pas de date côté navigateur,
  * donc pas d'écart d'hydratation).
  */
+
+/** Praticiens par page dans l'écran plein. */
+const PAR_PAGE = 12;
 
 export interface CreneauVedette {
   dateISO: string;
@@ -56,6 +59,26 @@ export interface MedecinAnnuaire {
 const normaliser = (s: string) =>
   s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
+/**
+ * Numéros à afficher dans la pagination : début, fin et voisinage de la page
+ * courante, le reste replié en « … ». Au-delà de sept pages, aligner tous les
+ * numéros déborderait de l'écran bien avant d'être utile.
+ */
+function numerosPages(page: number, pages: number): (number | "…")[] {
+  if (pages <= 7) return Array.from({ length: pages }, (_, i) => i + 1);
+  const retenus = [...new Set([1, pages, page, page - 1, page + 1])]
+    .filter((n) => n >= 1 && n <= pages)
+    .sort((a, b) => a - b);
+  const sortie: (number | "…")[] = [];
+  let precedent = 0;
+  for (const n of retenus) {
+    if (precedent && n - precedent > 1) sortie.push("…");
+    sortie.push(n);
+    precedent = n;
+  }
+  return sortie;
+}
+
 function Avatar({
   medecin,
   className,
@@ -89,9 +112,11 @@ export default function MedecinsEnVedette({
   const [ouvert, setOuvert] = useState(false);
   const [requete, setRequete] = useState("");
   const [filtre, setFiltre] = useState("Tous");
+  const [page, setPage] = useState(1);
   const [actif, setActif] = useState(0);
   const pisteRef = useRef<HTMLDivElement>(null);
   const champRef = useRef<HTMLInputElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
   const declencheurRef = useRef<HTMLButtonElement>(null);
 
   const ouvrable = annuaire.length > 0;
@@ -105,9 +130,23 @@ export default function MedecinsEnVedette({
     });
   }, [annuaire, requete, filtre]);
 
+  const pages = Math.max(1, Math.ceil(resultats.length / PAR_PAGE));
+  // Page bornée plutôt que corrigée après coup : affiner la recherche réduit
+  // le nombre de pages, et l'on se retrouverait sinon devant une page vide.
+  const pageSure = Math.min(page, pages);
+  const visibles = resultats.slice((pageSure - 1) * PAR_PAGE, pageSure * PAR_PAGE);
+
+  function allerPage(n: number) {
+    setPage(Math.max(1, Math.min(pages, n)));
+    // Sans cela, on change de page en restant au bas de la liste : on croit
+    // que rien ne s'est passé.
+    overlayRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   function ouvrir() {
     setRequete("");
     setFiltre("Tous");
+    setPage(1);
     setOuvert(true);
   }
   function fermer() {
@@ -145,6 +184,7 @@ export default function MedecinsEnVedette({
     ouvrable && ouvert ? (
       <div
         className="mv-overlay"
+        ref={overlayRef}
         role="dialog"
         aria-modal="true"
         aria-label="Tous les médecins"
@@ -161,12 +201,22 @@ export default function MedecinsEnVedette({
             </button>
             <div className="mv-overlay-head">
               <h2>Tous les médecins</h2>
-              <p>Recherchez un médecin ou filtrez par spécialité</p>
+              <p>{annuaire.length} praticiens vérifiés sur Docteur 224</p>
             </div>
+            {/* Demandé en haut : c'est la porte de sortie vers les critères
+                que cet écran volontairement simple n'a pas. */}
+            <Link href="/resultats" className="mv-avancee">
+              <span aria-hidden>⚙</span>
+              <span className="mv-avancee-long">
+                Recherche avancée (ville, note, assurance…)
+              </span>
+              <span className="mv-avancee-court">Recherche avancée</span>
+              <span aria-hidden>→</span>
+            </Link>
           </header>
 
           <main className="mv-overlay-content">
-            <div className="mv-recherche">
+            <div className="mv-barre">
               <label className="mv-recherchebox">
                 <span aria-hidden>🔎</span>
                 <input
@@ -175,41 +225,53 @@ export default function MedecinsEnVedette({
                   placeholder="Nom, spécialité ou établissement..."
                   autoComplete="off"
                   value={requete}
-                  onChange={(e) => setRequete(e.target.value)}
+                  onChange={(e) => {
+                    setRequete(e.target.value);
+                    // Remis à 1 ici plutôt que dans un effet : affiner la
+                    // recherche en étant page 3 ne doit pas laisser sur une
+                    // page qui n'existe plus.
+                    setPage(1);
+                  }}
                 />
               </label>
+
+              {specialites.length > 0 && (
+                <div className="mv-filtres-wrap">
+                  <div className="mv-filtres" aria-label="Filtrer par spécialité">
+                    {["Tous", ...specialites].map((s) => (
+                      <button
+                        key={s}
+                        type="button"
+                        className={`mv-filtre${s === filtre ? " actif" : ""}`}
+                        aria-pressed={s === filtre}
+                        onClick={() => {
+                          setFiltre(s);
+                          setPage(1);
+                        }}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
-            {specialites.length > 0 && (
-              <div className="mv-filtres-wrap">
-                <div className="mv-filtres" aria-label="Filtrer par spécialité">
-                  {["Tous", ...specialites].map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      className={`mv-filtre${s === filtre ? " actif" : ""}`}
-                      aria-pressed={s === filtre}
-                      onClick={() => setFiltre(s)}
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             <div className="mv-meta">
-              <span>
+              <span className="mv-meta-compte">
                 {resultats.length} {resultats.length > 1 ? "médecins" : "médecin"}
+                {filtre !== "Tous" && <span className="mv-meta-filtre"> · {filtre}</span>}
               </span>
-              <span className="mv-meta-aide">
-                Touchez une carte pour voir le profil
-              </span>
+              {pages > 1 && (
+                <span className="mv-meta-page">
+                  Page {pageSure} sur {pages}
+                </span>
+              )}
             </div>
 
             {resultats.length === 0 ? (
               <div className="mv-liste-vide">
-                <div style={{ fontSize: 34, marginBottom: 9 }} aria-hidden>
+                <div className="mv-vide-icone" aria-hidden>
                   🔎
                 </div>
                 <strong>Aucun médecin trouvé</strong>
@@ -218,36 +280,80 @@ export default function MedecinsEnVedette({
                 </span>
               </div>
             ) : (
-              <div className="mv-liste">
-                {resultats.map((m) => (
-                  <article key={m.id} className="mv-liste-card">
-                    <Link href={`/medecin/${m.id}`} className="mv-liste-profil">
-                      <Avatar medecin={m} className="mv-liste-avatar" />
-                      <span className="mv-liste-infos">
-                        <span className="mv-liste-nom-ligne">
-                          <span className="mv-liste-nom">{m.nom}</span>
-                          <span className="mv-liste-note">★ {m.note}</span>
+              <>
+                <div className="mv-liste">
+                  {visibles.map((m) => (
+                    <article key={m.id} className="mv-liste-card">
+                      <Link href={`/medecin/${m.id}`} className="mv-liste-profil">
+                        <Avatar medecin={m} className="mv-liste-avatar" />
+                        <span className="mv-liste-infos">
+                          <span className="mv-liste-nom-ligne">
+                            <span className="mv-liste-nom">{m.nom}</span>
+                            <span className="mv-liste-note">★ {m.note}</span>
+                          </span>
+                          <span className="mv-liste-specialite">{m.specialite}</span>
+                          <span className="mv-liste-lieu">📍 {m.lieu}</span>
                         </span>
-                        <span className="mv-liste-specialite">{m.specialite}</span>
-                        <span className="mv-liste-lieu">📍 {m.lieu}</span>
-                      </span>
-                    </Link>
-                    <div className="mv-liste-pied">
-                      <span className="mv-prochain">{m.prochain}</span>
-                      <Link href={`/medecin/${m.id}/creneaux`} className="mv-dispo-btn">
-                        Disponibilités <span aria-hidden>→</span>
                       </Link>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
+                      <div className="mv-liste-pied">
+                        <span className="mv-prochain">{m.prochain}</span>
+                        <Link
+                          href={`/medecin/${m.id}/creneaux`}
+                          className="mv-dispo-btn"
+                        >
+                          Disponibilités <span aria-hidden>→</span>
+                        </Link>
+                      </div>
+                    </article>
+                  ))}
+                </div>
 
-            {/* Échappatoire vers la vraie recherche : ville, note, genre,
-                assurances… que cet écran volontairement simple n'a pas. */}
-            <Link href="/resultats" className="mv-recherche-avancee">
-              Recherche avancée (ville, note, assurance…) <span aria-hidden>→</span>
-            </Link>
+                {pages > 1 && (
+                  <nav className="mv-pagination" aria-label="Pages de résultats">
+                    <button
+                      type="button"
+                      className="mv-page-fleche"
+                      disabled={pageSure === 1}
+                      onClick={() => allerPage(pageSure - 1)}
+                    >
+                      <span aria-hidden>‹</span>
+                      <span className="mv-fleche-mot">Précédent</span>
+                    </button>
+
+                    <div className="mv-page-nums">
+                      {numerosPages(pageSure, pages).map((n, i) =>
+                        n === "…" ? (
+                          <span key={`e${i}`} className="mv-page-ellipse" aria-hidden>
+                            …
+                          </span>
+                        ) : (
+                          <button
+                            key={n}
+                            type="button"
+                            className={`mv-page-num${n === pageSure ? " actif" : ""}`}
+                            aria-label={`Page ${n}`}
+                            aria-current={n === pageSure ? "page" : undefined}
+                            onClick={() => allerPage(n)}
+                          >
+                            {n}
+                          </button>
+                        )
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      className="mv-page-fleche"
+                      disabled={pageSure === pages}
+                      onClick={() => allerPage(pageSure + 1)}
+                    >
+                      <span className="mv-fleche-mot">Suivant</span>
+                      <span aria-hidden>›</span>
+                    </button>
+                  </nav>
+                )}
+              </>
+            )}
           </main>
         </div>
       </div>
