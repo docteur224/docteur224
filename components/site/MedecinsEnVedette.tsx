@@ -234,7 +234,7 @@ export default function MedecinsEnVedette({
                     </Link>
                     <div className="mv-liste-pied">
                       <span className="mv-prochain">{m.prochain}</span>
-                      <Link href={`/medecin/${m.id}`} className="mv-dispo-btn">
+                      <Link href={`/medecin/${m.id}/creneaux`} className="mv-dispo-btn">
                         Disponibilités <span aria-hidden>→</span>
                       </Link>
                     </div>
@@ -315,7 +315,9 @@ export default function MedecinsEnVedette({
                   ))}
                 </div>
                 <div className="mv-plus-wrap">
-                  <Link href={`/medecin/${m.id}`} className="mv-plus">
+                  {/* L'écran « Choisir un créneau », pas la fiche : on vient
+                      de montrer des heures, on enchaîne sur l'agenda. */}
+                  <Link href={`/medecin/${m.id}/creneaux`} className="mv-plus">
                     Voir plus de créneaux <span aria-hidden>→</span>
                   </Link>
                 </div>
