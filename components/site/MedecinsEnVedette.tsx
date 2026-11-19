@@ -187,6 +187,13 @@ export default function MedecinsEnVedette({
 
   const ouvrable = annuaire.length > 0;
 
+  // Où mènent « Voir plus de créneaux » et « Disponibilités » : sur web, la
+  // fiche profil porte déjà le panneau de réservation, inutile d'ouvrir
+  // l'écran « Choisir un créneau » ; sur mobile, la fiche ne l'a pas, on garde
+  // l'écran dédié.
+  const lienCreneaux = (id: string) =>
+    variante === "web" ? `/medecin/${id}` : `/medecin/${id}/creneaux`;
+
   const villes = useMemo(
     () =>
       [...new Set(annuaire.map((m) => m.ville).filter(Boolean))].sort((a, b) =>
@@ -531,10 +538,7 @@ export default function MedecinsEnVedette({
                           </Link>
                           <div className="mv-liste-pied">
                             <span className="mv-prochain">{m.prochain}</span>
-                            <Link
-                              href={`/medecin/${m.id}/creneaux`}
-                              className="mv-dispo-btn"
-                            >
+                            <Link href={lienCreneaux(m.id)} className="mv-dispo-btn">
                               Disponibilités <span aria-hidden>→</span>
                             </Link>
                           </div>
@@ -657,9 +661,7 @@ export default function MedecinsEnVedette({
                   ))}
                 </div>
                 <div className="mv-plus-wrap">
-                  {/* L'écran « Choisir un créneau », pas la fiche : on vient
-                      de montrer des heures, on enchaîne sur l'agenda. */}
-                  <Link href={`/medecin/${m.id}/creneaux`} className="mv-plus">
+                  <Link href={lienCreneaux(m.id)} className="mv-plus">
                     Voir plus de créneaux <span aria-hidden>→</span>
                   </Link>
                 </div>
