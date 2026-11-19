@@ -826,3 +826,166 @@ html[data-campagne="3"] body::before {
 /* Marqueur des surfaces PWA ancrées en bas (centrées via inset-inline + mx).
    Classe neutre : le positionnement est posé en ligne par les composants. */
 .pwa-fixed-bottom { pointer-events: auto; }
+
+/* =====================================================================
+   ÉCRAN PLEIN « TOUTES LES SPÉCIALITÉS » (recherche + navigation A–Z)
+   ---------------------------------------------------------------------
+   Partagé par les deux variantes de components/site/GrilleSpecialites :
+   rendu hors des media-queries mobile.css pour s'appliquer aussi sur web.
+   Entièrement en tokens (var(--card), var(--bg)…) : suit le mode sombre.
+   ===================================================================== */
+.spec-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  overflow: auto;
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-overflow-scrolling: touch;
+}
+body.spec-overlay-ouvert { overflow: hidden; }
+.spec-overlay-shell {
+  width: min(980px, 100%);
+  min-height: 100%;
+  margin: 0 auto;
+  background: var(--bg);
+}
+.spec-overlay-top {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 70px;
+  padding: 10px 18px;
+  padding-top: calc(10px + env(safe-area-inset-top));
+  background: color-mix(in srgb, var(--card) 94%, transparent);
+  border-bottom: 1px solid var(--line);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.spec-overlay-back {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: var(--card);
+  color: var(--teal);
+  font-size: 22px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.spec-overlay-head { min-width: 0; flex: 1; }
+.spec-overlay-head h2 { margin: 0; font-size: 21px; line-height: 1.15; font-weight: 800; color: var(--ink); }
+.spec-overlay-head p { margin: 3px 0 0; color: var(--muted); font-size: 12px; }
+.spec-overlay-content { padding: 18px 18px 40px; }
+.spec-overlay-search {
+  position: sticky;
+  top: 71px;
+  z-index: 3;
+  padding: 8px 0 12px;
+  background: linear-gradient(var(--bg) 78%, transparent);
+}
+.spec-overlay-searchbox {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 54px;
+  padding: 0 15px;
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  background: var(--card);
+  box-shadow: 0 8px 22px rgba(16, 59, 80, 0.06);
+}
+.spec-overlay-searchbox input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+}
+.spec-overlay-searchbox input::placeholder { color: var(--muted-soft); }
+.spec-overlay-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin: 6px 2px 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.spec-alpha { display: flex; gap: 7px; overflow-x: auto; padding: 2px 1px 12px; scrollbar-width: none; }
+.spec-alpha::-webkit-scrollbar { display: none; }
+.spec-alpha-btn {
+  min-width: 36px;
+  height: 36px;
+  flex: none;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--card);
+  color: var(--teal);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+.spec-alpha-btn.actif { background: var(--teal); border-color: var(--teal); color: #fff; }
+.spec-groupe { margin: 10px 0 24px; }
+.spec-groupe-titre {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 10px;
+  color: var(--teal);
+  font-size: 14px;
+  font-weight: 800;
+}
+.spec-groupe-titre::after { content: ""; height: 1px; flex: 1; background: var(--line); }
+.spec-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
+.spec-grid-card {
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--card);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 4px 13px rgba(16, 59, 80, 0.04);
+}
+.spec-grid-card:hover,
+.spec-grid-card:focus-visible { border-color: var(--teal); outline: none; background: var(--teal-soft); }
+.spec-grid-card .em {
+  width: 35px;
+  height: 35px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 11px;
+  background: var(--teal-soft);
+  font-size: 18px;
+}
+.spec-grid-card span:last-child { min-width: 0; overflow-wrap: anywhere; font-size: 13px; font-weight: 700; line-height: 1.25; }
+.spec-vide { padding: 36px 16px; text-align: center; color: var(--muted); }
+.spec-vide strong { display: block; color: var(--ink); font-size: 15px; }
+@media (max-width: 650px) {
+  .spec-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .spec-overlay-content { padding: 15px 14px 34px; }
+  .spec-overlay-top { padding-left: 14px; padding-right: 14px; }
+}
+@media (max-width: 350px) {
+  .spec-grid { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .spec-voir-tout .fl { transition: none; }
+}

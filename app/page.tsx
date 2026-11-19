@@ -48,6 +48,13 @@ export default async function Accueil() {
     specialites,
     compterParSpecialite(tousMedecins)
   );
+  // L'écran plein « Toutes les spécialités » liste le référentiel réel (ce que
+  // l'admin a ouvert), trié A–Z côté base : chaque entrée mène à une vraie
+  // page de résultats, contrairement au catalogue d'aide à la saisie.
+  const catalogueSpecialites = specialites.map((s) => ({
+    nom: s.nom,
+    emoji: s.emoji,
+  }));
   const medecinsEnVedette = tousMedecins.slice(0, 3);
   const etablissementsEnVedette = tousEtablissements.slice(0, 3);
   const getEtablissement = (id: string) => tousEtablissements.find((e) => e.id === id);
@@ -74,8 +81,11 @@ export default async function Accueil() {
           />
         </div>
         <div className="pad">
-          <div className="section-t">Spécialités courantes</div>
-          <GrilleSpecialites specialites={specialitesVedette} variante="mobile" />
+          <GrilleSpecialites
+            specialites={specialitesVedette}
+            catalogue={catalogueSpecialites}
+            variante="mobile"
+          />
 
           <div className="section-t">Comment ça marche</div>
           <div className="steps">
@@ -220,7 +230,11 @@ export default async function Accueil() {
           <p className="mt-[7px] text-center text-sm text-muted">
             Accédez directement aux spécialités les plus demandées.
           </p>
-          <GrilleSpecialites specialites={specialitesVedette} variante="web" />
+          <GrilleSpecialites
+            specialites={specialitesVedette}
+            catalogue={catalogueSpecialites}
+            variante="web"
+          />
         </div>
       </section>
 

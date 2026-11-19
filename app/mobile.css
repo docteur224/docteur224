@@ -249,6 +249,27 @@
   .speccard .em { font-size: 21px; display: block; margin-bottom: 5px; }
   .speccard b { font-size: 11.5px; font-weight: 700; }
 
+  /* ===== Spécialités courantes : en-tête « Voir tout » + dépliage ===== */
+  .spec-entete { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 20px 2px 11px; }
+  .spec-entete .section-t { margin: 0; }
+  .spec-voir-tout { appearance: none; -webkit-appearance: none; border: 0; background: transparent; color: var(--teal); min-height: 38px; padding: 7px 8px; border-radius: 10px; font-family: inherit; font-size: 12px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .spec-voir-tout:active { background: var(--teal-soft); }
+  .spec-voir-tout .fl { font-size: 15px; line-height: 1; transition: transform 0.18s ease; }
+  .spec-voir-tout[aria-expanded="true"] .fl { transform: rotate(90deg); }
+
+  /* Carrousel qui bascule en grille compacte une fois déplié. */
+  .chips.spec-grille { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; overflow: visible; margin: 0; padding: 2px 0 4px; }
+  .chips.spec-grille .speccard { min-width: 0; width: 100%; }
+  .chips.spec-grille .speccard b { overflow-wrap: anywhere; }
+
+  /* Bouton d'accès à l'écran plein « Toutes les spécialités ». */
+  .spec-tout-lien { width: 100%; min-height: 48px; margin-top: 12px; border: 1px solid var(--teal-line); border-radius: 14px; background: var(--card); color: var(--teal); font-family: inherit; font-size: 13px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .spec-tout-lien:active { background: var(--teal-soft); }
+
+  @media (max-width: 360px) {
+    .chips.spec-grille { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
   /* ===== étapes ===== */
   .steps { display: flex; flex-direction: column; gap: 10px; }
   .step { display: flex; gap: 12px; align-items: flex-start; background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 13px; }
