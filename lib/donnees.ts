@@ -677,6 +677,36 @@ export function premiersCreneauxOuverts(
 }
 
 /**
+ * Les `nb` prochains créneaux réservables, jours confondus.
+ *
+ * `prochaineDisponibilite` s'arrête au premier jour qui a de la place ; les
+ * cartes « Médecins en vedette » de l'accueil annoncent, elles, « les
+ * prochains créneaux à partir de maintenant » et doivent donc pouvoir
+ * enjamber la journée (« Aujourd'hui 17:00 » puis « Demain 09:30 »).
+ *
+ * Même règle du jeu que partout ailleurs : tout passe par
+ * `premiersCreneauxOuverts`, donc RDV pris, créneaux fermés et congés sont
+ * déduits de la même façon qu'à la réservation. Pas de seconde vérité.
+ */
+export function prochainsCreneaux(
+  horairesTypes: { jour_semaine: number; heure_debut: string; heure_fin: string }[],
+  etats: Map<string, EtatCreneau>,
+  jours: { iso: string; ferme: boolean }[],
+  nb = 3
+): { dateISO: string; heure: string }[] {
+  const creneaux: { dateISO: string; heure: string }[] = [];
+  for (const jour of jours) {
+    if (creneaux.length >= nb) break;
+    if (jour.ferme) continue;
+    const manquants = nb - creneaux.length;
+    for (const heure of premiersCreneauxOuverts(horairesTypes, etats, jour.iso, manquants)) {
+      creneaux.push({ dateISO: jour.iso, heure });
+    }
+  }
+  return creneaux;
+}
+
+/**
  * Prochaine disponibilité réelle d'un médecin, pour les cartes de résultats :
  * parcourt les jours ouverts dans l'ordre et retourne le premier qui a des
  * créneaux encore libres. Un jour ouvert mais entièrement réservé est ignoré —

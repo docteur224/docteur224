@@ -4,21 +4,30 @@ import Footer from "@/components/site/Footer";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
 import PiedPageMobile from "@/components/mobile/PiedPageMobile";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
-import AvatarMedecin from "@/components/site/AvatarMedecin";
 import GrilleSpecialites from "@/components/site/GrilleSpecialites";
+import MedecinsEnVedette from "@/components/site/MedecinsEnVedette";
 import RechercheAccueil, {
   RechercheAccueilMobile,
 } from "@/components/site/RechercheAccueil";
 import { formatNote } from "@/lib/format";
+import { formatDateRelative, prochainsJours } from "@/lib/dates";
 import {
   chargerEtablissements,
+  chargerIndisponibilites,
   chargerMedecins,
   chargerNomsRecherche,
+  chargerProchainesDispos,
   chargerSpecialites,
   chargerVilles,
   nomComplet,
+  prochainsCreneaux,
+  type EtatCreneau,
 } from "@/lib/donnees";
-import { compterParSpecialite, specialitesEnAvant } from "@/lib/catalogue-specialites";
+import {
+  compterParSpecialite,
+  specialitesEnAvant,
+  trierParDemande,
+} from "@/lib/catalogue-specialites";
 
 /** Les vedettes et référentiels sont relus au plus toutes les 60 s. */
 export const revalidate = 60;
@@ -58,6 +67,88 @@ export default async function Accueil() {
   const medecinsEnVedette = tousMedecins.slice(0, 3);
   const etablissementsEnVedette = tousEtablissements.slice(0, 3);
   const getEtablissement = (id: string) => tousEtablissements.find((e) => e.id === id);
+
+  // ===== Médecins en vedette : leurs VRAIS prochains créneaux =====
+  // Une requête d'indisponibilités par praticien mis en avant (trois), en
+  // parallèle, exactement comme /resultats. On ne le fait QUE pour la vitrine :
+  // l'annuaire complet se contente d'un seul appel groupé, plus bas.
+  const joursDispo = prochainsJours([], 14);
+  const creneauxVedette = new Map(
+    await Promise.all(
+      medecinsEnVedette.map(async (m) => {
+        let etats: Map<string, EtatCreneau>;
+        try {
+          etats = await chargerIndisponibilites(
+            m.id,
+            joursDispo[0]?.iso,
+            joursDispo.at(-1)?.iso
+          );
+        } catch {
+          // Indisponibilités illisibles : on retombe sur les horaires-types
+          // seuls plutôt que de faire tomber toute la page d'accueil.
+          etats = new Map();
+        }
+        const joursMedecin = joursDispo.map((j) => ({
+          iso: j.iso,
+          ferme: m.joursFermes.includes(new Date(`${j.iso}T00:00:00`).getDay()),
+        }));
+        return [m.id, prochainsCreneaux(m.plages, etats, joursMedecin, 3)] as const;
+      })
+    )
+  );
+
+  const lieuDe = (m: (typeof tousMedecins)[number]) =>
+    [getEtablissement(m.etablissementId)?.nom, m.ville].filter(Boolean).join(" · ");
+
+  const vedettes = medecinsEnVedette.map((m) => ({
+    id: m.id,
+    nom: nomComplet(m),
+    initiales: m.initiales,
+    photoUrl: m.photoUrl,
+    gradient: m.gradient,
+    specialite: m.specialite,
+    lieu: lieuDe(m),
+    note: formatNote(m.note),
+    creneaux: (creneauxVedette.get(m.id) ?? []).map((c) => ({
+      dateISO: c.dateISO,
+      heure: c.heure,
+      // Formaté ici, côté serveur : aucune date n'est calculée au navigateur.
+      jour: formatDateRelative(c.dateISO),
+    })),
+  }));
+
+  // ===== Annuaire de l'écran plein « Tous les médecins » =====
+  // Un seul appel groupé pour l'heure exacte du prochain créneau. Cette
+  // fonction n'est ouverte au public que depuis la migration 0093 : tant
+  // qu'elle n'est pas appliquée, la Map revient vide et l'on retombe sur le
+  // libellé de disponibilité déduit des horaires-types. Jamais d'erreur.
+  const dispoAnnuaire = await chargerProchainesDispos(
+    tousMedecins.map((m) => m.id),
+    14
+  );
+  const annuaireMedecins = tousMedecins.map((m) => {
+    const prochain = dispoAnnuaire.get(m.id);
+    return {
+      id: m.id,
+      nom: nomComplet(m),
+      initiales: m.initiales,
+      photoUrl: m.photoUrl,
+      gradient: m.gradient,
+      specialite: m.specialite,
+      lieu: lieuDe(m),
+      note: formatNote(m.note),
+      prochain: prochain
+        ? `${formatDateRelative(prochain.jour)} · ${prochain.heure}`
+        : m.disponibilite.label,
+    };
+  });
+  // Puces de filtre : seulement les spécialités réellement représentées, du
+  // motif le plus consulté au plus rare — un filtre qui ne renvoie rien n'a
+  // rien à faire dans la barre.
+  const specialitesAnnuaire = trierParDemande(
+    [...new Set(tousMedecins.map((m) => m.specialite).filter(Boolean))],
+    (nom) => nom
+  );
   return (
     <div className="flex min-h-screen flex-col bg-bg">
       <TopNav lienActif="trouver" />
@@ -112,35 +203,12 @@ export default async function Accueil() {
             </div>
           </div>
 
-          <div className="section-t">Médecins en vedette</div>
-          {medecinsEnVedette.map((m) => {
-            const etab = getEtablissement(m.etablissementId);
-            return (
-              <Link key={m.id} href={`/medecin/${m.id}`} className="doc" data-reveal>
-                {m.photoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={m.photoUrl} alt="" className="av" style={{ objectFit: "cover" }} />
-                ) : (
-                  <span className="av" aria-hidden style={{ background: m.gradient }}>
-                    {m.initiales}
-                  </span>
-                )}
-                <span className="info">
-                  <b>{nomComplet(m)}</b>
-                  <span className="spec">{m.specialite}</span>
-                  <span className="meta">
-                    📍 {etab?.nom} · {m.ville}
-                  </span>
-                  <span className="row2">
-                    <span className={`pill ${m.disponibilite.type === "aujourdhui" ? "ok" : "soon"}`}>
-                      {m.disponibilite.label}
-                    </span>
-                    {/* Pas de tarif : la réservation est gratuite. */}
-                  </span>
-                </span>
-              </Link>
-            );
-          })}
+          <MedecinsEnVedette
+            vedettes={vedettes}
+            annuaire={annuaireMedecins}
+            specialites={specialitesAnnuaire}
+            variante="mobile"
+          />
 
           <div className="section-t">Établissements en vedette</div>
           {etablissementsEnVedette.map((e) => (
@@ -286,49 +354,12 @@ export default async function Accueil() {
       {/* ===== MÉDECINS EN VEDETTE ===== */}
       <section className="py-[46px]">
         <div className="mx-auto max-w-[1200px] px-[30px]">
-          <h2 className="text-center text-2xl font-extrabold tracking-[-0.4px]">
-            Médecins en vedette à Conakry
-          </h2>
-          <p className="mt-[7px] text-center text-sm text-muted">
-            Des professionnels vérifiés, près de chez vous.
-          </p>
-          <div className="mt-[30px] grid gap-[18px] md:grid-cols-3" data-reveal-stagger>
-            {medecinsEnVedette.map((m) => {
-              const etab = getEtablissement(m.etablissementId);
-              return (
-                <Link
-                  key={m.id}
-                  href={`/medecin/${m.id}`}
-                  data-reveal
-                  className="ui-card rounded-2xl border border-line bg-white p-5 text-center"
-                >
-                  <div className="mx-auto mb-3 w-16">
-                    <AvatarMedecin
-                      photoUrl={m.photoUrl}
-                      initiales={m.initiales}
-                      gradient={m.gradient}
-                      taille={64}
-                      className="ui-card-media"
-                    />
-                  </div>
-                  <b className="block text-base font-extrabold">{nomComplet(m)}</b>
-                  <div className="mb-2 mt-0.5 text-[13px] font-bold text-teal">{m.specialite}</div>
-                  <div className="text-xs leading-relaxed text-muted">
-                    📍 {etab?.nom}
-                    <br />
-                    {m.ville}
-                  </div>
-                  <div className="mt-[14px] flex items-center justify-between border-t border-line pt-[14px]">
-                    <span className="text-[12.5px] font-bold text-amber">★ {formatNote(m.note)}</span>
-                    {/* Pas de tarif : la réservation est gratuite. */}
-                    <span className="text-[12.5px] font-bold text-teal">
-                      {m.disponibilite.label}
-                    </span>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
+          <MedecinsEnVedette
+            vedettes={vedettes}
+            annuaire={annuaireMedecins}
+            specialites={specialitesAnnuaire}
+            variante="web"
+          />
         </div>
       </section>
 
