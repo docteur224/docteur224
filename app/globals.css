@@ -1046,11 +1046,27 @@ body.spec-overlay-ouvert { overflow: hidden; }
   overflow-x: auto;
   scroll-snap-type: x mandatory;
   scrollbar-width: none;
-  margin: 0 -14px;
-  padding: 2px 14px 8px;
+  padding: 2px 0 8px;
   -webkit-overflow-scrolling: touch;
 }
 .mv-track::-webkit-scrollbar { display: none; }
+
+/*
+ * Mobile : le carrousel déborde jusqu'au bord de l'écran (on fait défiler du
+ * pouce depuis la marge), mais la PREMIÈRE carte reste alignée sur le titre
+ * de section. D'où le débord négatif qui annule exactement les 18px de `.pad`,
+ * rendus en padding.
+ *
+ * `scroll-padding` n'est pas un détail : sans lui, `scroll-snap-type:
+ * mandatory` cale la carte sur le bord du conteneur et avale le padding de
+ * gauche — la carte finit collée au bord, désalignée des autres sections.
+ */
+.mv-mobile .mv-track {
+  margin: 0 -18px;
+  padding-left: 18px;
+  padding-right: 18px;
+  scroll-padding-inline: 18px;
+}
 
 .mv-card {
   flex: 0 0 89%;
@@ -1192,7 +1208,10 @@ body.spec-overlay-ouvert { overflow: hidden; }
 @media (min-width: 700px) {
   .mv-head h2 { font-size: 24px; }
   .mv-head p { display: block; }
-  .mv-track {
+  /* La variante mobile est reprise nommément : sa règle de débord est plus
+     spécifique et survivrait sinon au passage en grille. */
+  .mv-track,
+  .mv-mobile .mv-track {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     overflow: visible;
@@ -1203,7 +1222,8 @@ body.spec-overlay-ouvert { overflow: hidden; }
   .mv-points { display: none; }
 }
 @media (min-width: 1050px) {
-  .mv-track { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .mv-track,
+  .mv-mobile .mv-track { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
 /* ---------- Écran plein « Tous les médecins » ---------- */
