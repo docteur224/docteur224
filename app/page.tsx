@@ -137,11 +137,25 @@ export default async function Accueil() {
       specialite: m.specialite,
       lieu: lieuDe(m),
       note: formatNote(m.note),
+      // Champs du panneau de filtres (web) : volontairement légers — une
+      // chaîne, un nombre, une date. Les critères coûteux (assurances,
+      // langues, type d'établissement) restent sur /resultats plutôt que
+      // d'alourdir le HTML de l'accueil pour tous les visiteurs.
+      ville: m.ville,
+      genre: m.genre,
+      noteNum: m.note,
+      prochainISO: prochain?.jour ?? null,
       prochain: prochain
         ? `${formatDateRelative(prochain.jour)} · ${prochain.heure}`
         : m.disponibilite.label,
     };
   });
+  // Bornes du filtre « Disponibilité », calculées ici : la date du jour ne
+  // doit pas dépendre de l'horloge du navigateur.
+  const bornesDispo = {
+    aujourdhui: joursDispo[0]?.iso ?? "",
+    semaine: joursDispo[6]?.iso ?? joursDispo.at(-1)?.iso ?? "",
+  };
   // Puces de filtre : seulement les spécialités réellement représentées, du
   // motif le plus consulté au plus rare — un filtre qui ne renvoie rien n'a
   // rien à faire dans la barre.
@@ -207,6 +221,8 @@ export default async function Accueil() {
             vedettes={vedettes}
             annuaire={annuaireMedecins}
             specialites={specialitesAnnuaire}
+
+            bornesDispo={bornesDispo}
             variante="mobile"
           />
 
@@ -358,6 +374,8 @@ export default async function Accueil() {
             vedettes={vedettes}
             annuaire={annuaireMedecins}
             specialites={specialitesAnnuaire}
+
+            bornesDispo={bornesDispo}
             variante="web"
           />
         </div>
