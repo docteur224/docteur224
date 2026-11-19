@@ -64,15 +64,32 @@ export default async function Accueil() {
     nom: s.nom,
     emoji: s.emoji,
   }));
-  const medecinsEnVedette = tousMedecins.slice(0, 3);
   const etablissementsEnVedette = tousEtablissements.slice(0, 3);
   const getEtablissement = (id: string) => tousEtablissements.find((e) => e.id === id);
 
-  // ===== Médecins en vedette : leurs VRAIS prochains créneaux =====
-  // Une requête d'indisponibilités par praticien mis en avant (trois), en
-  // parallèle, exactement comme /resultats. On ne le fait QUE pour la vitrine :
-  // l'annuaire complet se contente d'un seul appel groupé, plus bas.
   const joursDispo = prochainsJours([], 14);
+
+  // Premier créneau réservable de CHAQUE praticien, en un seul appel groupé
+  // (RPC ouverte au public par la migration 0093). Sert deux fois : à choisir
+  // la vitrine, et à renseigner l'heure du prochain RDV dans l'écran plein.
+  const dispoAnnuaire = await chargerProchainesDispos(
+    tousMedecins.map((m) => m.id),
+    14
+  );
+
+  // ===== Médecins en vedette : d'abord ceux qui ont des créneaux =====
+  // La liste arrive déjà triée par note décroissante. On la retrie de façon
+  // STABLE pour faire remonter ceux qui ont réellement un créneau à proposer :
+  // une carte « Médecins en vedette » qui annonce « Aucun créneau en ligne »
+  // dessert la section. L'ordre par note est préservé au sein de chaque groupe.
+  const medecinsEnVedette = [...tousMedecins]
+    .sort((a, b) => Number(dispoAnnuaire.has(b.id)) - Number(dispoAnnuaire.has(a.id)))
+    .slice(0, 3);
+
+  // ===== Leurs VRAIS prochains créneaux (trois, pas un) =====
+  // Une requête d'indisponibilités par praticien mis en avant, en parallèle,
+  // exactement comme /resultats : l'appel groupé ci-dessus ne donne que le
+  // premier créneau, la carte en montre trois.
   const creneauxVedette = new Map(
     await Promise.all(
       medecinsEnVedette.map(async (m) => {
@@ -118,14 +135,8 @@ export default async function Accueil() {
   }));
 
   // ===== Annuaire de l'écran plein « Tous les médecins » =====
-  // Un seul appel groupé pour l'heure exacte du prochain créneau. Cette
-  // fonction n'est ouverte au public que depuis la migration 0093 : tant
-  // qu'elle n'est pas appliquée, la Map revient vide et l'on retombe sur le
-  // libellé de disponibilité déduit des horaires-types. Jamais d'erreur.
-  const dispoAnnuaire = await chargerProchainesDispos(
-    tousMedecins.map((m) => m.id),
-    14
-  );
+  // Réutilise `dispoAnnuaire` (calculé plus haut) : l'heure du prochain
+  // créneau sans un second passage en base.
   const annuaireMedecins = tousMedecins.map((m) => {
     const prochain = dispoAnnuaire.get(m.id);
     return {
