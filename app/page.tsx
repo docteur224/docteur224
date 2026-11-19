@@ -1,4 +1,3 @@
-import Link from "next/link";
 import TopNav from "@/components/site/TopNav";
 import Footer from "@/components/site/Footer";
 import EnTeteMobile from "@/components/mobile/EnTeteMobile";
@@ -6,6 +5,7 @@ import PiedPageMobile from "@/components/mobile/PiedPageMobile";
 import TabBarMobile from "@/components/mobile/TabBarMobile";
 import GrilleSpecialites from "@/components/site/GrilleSpecialites";
 import MedecinsEnVedette from "@/components/site/MedecinsEnVedette";
+import EtablissementsEnVedette from "@/components/site/EtablissementsEnVedette";
 import RechercheAccueil, {
   RechercheAccueilMobile,
 } from "@/components/site/RechercheAccueil";
@@ -64,8 +64,25 @@ export default async function Accueil() {
     nom: s.nom,
     emoji: s.emoji,
   }));
-  const etablissementsEnVedette = tousEtablissements.slice(0, 3);
   const getEtablissement = (id: string) => tousEtablissements.find((e) => e.id === id);
+
+  // ===== Établissements (vedette + annuaire) =====
+  // Les plus pourvus d'abord : « 4 médecins » attire plus que « 1 médecin »,
+  // et c'est aussi là que le patient a le plus de chances de trouver un RDV.
+  const etabTries = [...tousEtablissements].sort(
+    (a, b) => b.nbMedecins - a.nbMedecins || a.nom.localeCompare(b.nom, "fr")
+  );
+  const versEtabVedette = (e: (typeof tousEtablissements)[number]) => ({
+    id: e.id,
+    nom: e.nom,
+    type: e.type,
+    lieu: [e.quartier, e.ville].filter(Boolean).join(" · "),
+    note: formatNote(e.note),
+    nbMedecins: e.nbMedecins,
+    gradient: e.gradient,
+  });
+  const etablissementsVedette = etabTries.slice(0, 6).map(versEtabVedette);
+  const annuaireEtablissements = etabTries.map(versEtabVedette);
 
   const joursDispo = prochainsJours([], 14);
 
@@ -237,28 +254,11 @@ export default async function Accueil() {
             variante="mobile"
           />
 
-          <div className="section-t">Établissements en vedette</div>
-          {etablissementsEnVedette.map((e) => (
-            <Link key={e.id} href={`/resultats?q=${encodeURIComponent(e.nom)}`} className="doc" data-reveal>
-              <span className="av" aria-hidden style={{ background: e.gradient }}>
-                🏥
-              </span>
-              <span className="info">
-                <b>{e.nom}</b>
-                <span className="spec">{e.type}</span>
-                <span className="meta">
-                  📍 {e.quartier} · {e.ville}
-                </span>
-                <span className="row2">
-                  <span className="pill ok">
-                    {e.nbMedecins}
-                    {e.id === "e-chu" ? "+" : ""} médecins
-                  </span>
-                  <span className="price">★ {formatNote(e.note)}</span>
-                </span>
-              </span>
-            </Link>
-          ))}
+          <EtablissementsEnVedette
+            vedettes={etablissementsVedette}
+            annuaire={annuaireEtablissements}
+            variante="mobile"
+          />
         </div>
         <PiedPageMobile />
         <TabBarMobile role="public" />
@@ -395,44 +395,11 @@ export default async function Accueil() {
       {/* ===== ÉTABLISSEMENTS EN VEDETTE ===== */}
       <section className="border-t border-line bg-white py-[46px]">
         <div className="mx-auto max-w-[1200px] px-[30px]">
-          <h2 className="text-center text-2xl font-extrabold tracking-[-0.4px]">
-            Établissements en vedette
-          </h2>
-          <p className="mt-[7px] text-center text-sm text-muted">
-            Cliniques, hôpitaux et centres de santé partenaires.
-          </p>
-          <div className="mt-[30px] grid gap-[18px] md:grid-cols-3" data-reveal-stagger>
-            {etablissementsEnVedette.map((e) => (
-              <Link
-                key={e.id}
-                href={`/resultats?q=${encodeURIComponent(e.nom)}`}
-                data-reveal
-                className="ui-card rounded-2xl border border-line bg-white p-5 text-center"
-              >
-                <span
-                  aria-hidden
-                  className="ui-card-media mx-auto mb-3 grid h-16 w-16 place-items-center rounded-2xl text-[22px] text-white"
-                  style={{ background: e.gradient }}
-                >
-                  🏥
-                </span>
-                <b className="block text-base font-extrabold">{e.nom}</b>
-                <div className="mb-2 mt-0.5 text-[13px] font-bold text-teal">{e.type}</div>
-                <div className="text-xs leading-relaxed text-muted">
-                  📍 {e.quartier}
-                  <br />
-                  {e.ville}
-                </div>
-                <div className="mt-[14px] flex items-center justify-between border-t border-line pt-[14px]">
-                  <span className="text-[12.5px] font-bold text-amber">★ {formatNote(e.note)}</span>
-                  <span className="text-[13px] font-extrabold">
-                    {e.nbMedecins}
-                    {e.id === "e-chu" ? "+" : ""} médecins
-                  </span>
-                </div>
-              </Link>
-            ))}
-          </div>
+          <EtablissementsEnVedette
+            vedettes={etablissementsVedette}
+            annuaire={annuaireEtablissements}
+            variante="web"
+          />
         </div>
       </section>
       </div>
