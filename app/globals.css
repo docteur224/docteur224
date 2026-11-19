@@ -1149,6 +1149,21 @@ body.spec-overlay-ouvert { overflow: hidden; }
   font-weight: 800;
 }
 .mv-aucun { padding: 10px 0 8px; }
+/* Statut de disponibilité propre à chaque médecin (remplace le libellé
+   statique). Vert si c'est pour aujourd'hui, ambre si c'est pour plus tard. */
+.mv-statut {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 13px 0;
+  font-size: 11px;
+  font-weight: 800;
+}
+.mv-statut .pt { width: 7px; height: 7px; flex: none; border-radius: 999px; }
+.mv-statut[data-aujourdhui="oui"] { color: var(--green); }
+.mv-statut[data-aujourdhui="oui"] .pt { background: var(--green); box-shadow: 0 0 0 3px var(--green-soft); }
+.mv-statut[data-aujourdhui="non"] { color: var(--amber); }
+.mv-statut[data-aujourdhui="non"] .pt { background: var(--amber); box-shadow: 0 0 0 3px var(--amber-soft); }
 .mv-creneaux {
   display: flex;
   align-items: stretch;

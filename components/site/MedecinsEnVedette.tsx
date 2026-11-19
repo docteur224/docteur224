@@ -45,6 +45,8 @@ export interface MedecinVedette {
   lieu: string;
   note: string;
   creneaux: CreneauVedette[];
+  /** Statut dérivé du 1er créneau (« Disponible aujourd'hui »…), ou null. */
+  dispo: { texte: string; aujourdhui: boolean } | null;
 }
 
 export interface MedecinAnnuaire {
@@ -645,9 +647,15 @@ export default function MedecinsEnVedette({
 
             {m.creneaux.length > 0 ? (
               <>
-                <div className="mv-creneaux-label">
-                  Prochains créneaux à partir de maintenant
-                </div>
+                {m.dispo && (
+                  <div
+                    className="mv-statut"
+                    data-aujourdhui={m.dispo.aujourdhui ? "oui" : "non"}
+                  >
+                    <span className="pt" aria-hidden />
+                    {m.dispo.texte}
+                  </div>
+                )}
                 <div className="mv-creneaux">
                   {m.creneaux.map((c) => (
                     <Link

@@ -134,22 +134,43 @@ export default async function Accueil() {
   const lieuDe = (m: (typeof tousMedecins)[number]) =>
     [getEtablissement(m.etablissementId)?.nom, m.ville].filter(Boolean).join(" · ");
 
-  const vedettes = medecinsEnVedette.map((m) => ({
-    id: m.id,
-    nom: nomComplet(m),
-    initiales: m.initiales,
-    photoUrl: m.photoUrl,
-    gradient: m.gradient,
-    specialite: m.specialite,
-    lieu: lieuDe(m),
-    note: formatNote(m.note),
-    creneaux: (creneauxVedette.get(m.id) ?? []).map((c) => ({
+  // Statut de disponibilité propre à chaque médecin, déduit de son VRAI
+  // premier créneau : il remplace le libellé statique « Prochains créneaux à
+  // partir de maintenant », identique partout et faux dès que le créneau est
+  // à plusieurs jours. Calculé ici, avec la date du serveur.
+  const statutDispo = (creneaux: { dateISO: string }[]) => {
+    const premier = creneaux[0];
+    if (!premier) return null;
+    const aujourdhui = premier.dateISO === joursDispo[0]?.iso;
+    const demain = premier.dateISO === joursDispo[1]?.iso;
+    const texte = aujourdhui
+      ? "Disponible aujourd’hui"
+      : demain
+        ? "Disponible dès demain"
+        : `Disponible dès ${formatDateRelative(premier.dateISO).toLowerCase()}`;
+    return { texte, aujourdhui };
+  };
+
+  const vedettes = medecinsEnVedette.map((m) => {
+    const creneaux = (creneauxVedette.get(m.id) ?? []).map((c) => ({
       dateISO: c.dateISO,
       heure: c.heure,
       // Formaté ici, côté serveur : aucune date n'est calculée au navigateur.
       jour: formatDateRelative(c.dateISO),
-    })),
-  }));
+    }));
+    return {
+      id: m.id,
+      nom: nomComplet(m),
+      initiales: m.initiales,
+      photoUrl: m.photoUrl,
+      gradient: m.gradient,
+      specialite: m.specialite,
+      lieu: lieuDe(m),
+      note: formatNote(m.note),
+      creneaux,
+      dispo: statutDispo(creneaux),
+    };
+  });
 
   // ===== Annuaire de l'écran plein « Tous les médecins » =====
   // Réutilise `dispoAnnuaire` (calculé plus haut) : l'heure du prochain
