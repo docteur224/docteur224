@@ -49,15 +49,10 @@ export default function GrilleSpecialites({
   const champRef = useRef<HTMLInputElement>(null);
   const declencheurRef = useRef<HTMLButtonElement>(null);
 
-  const reste = specialites.length - maximum;
   const visibles = tout ? specialites : specialites.slice(0, maximum);
-  // Sans reste à montrer, le bouton ne ferait que promettre du vide.
-  const deployable = reste > 0;
+  const aDesSpecialites = specialites.length > 0;
   // Sans référentiel distinct, pas d'écran « toutes les spécialités ».
   const ouvrable = catalogue.length > 0;
-  // L'entrée vers l'écran plein n'apparaît qu'une fois la vitrine dépliée
-  // (« déplie puis page ») ; ou d'emblée s'il n'y avait rien à déplier.
-  const montrerTout = ouvrable && (tout || !deployable);
 
   // Lettres réellement présentes dans le référentiel, pour la bande A–Z.
   const lettres = useMemo(() => {
@@ -232,7 +227,7 @@ export default function GrilleSpecialites({
       <>
         <div className="spec-entete">
           <div className="section-t">Spécialités courantes</div>
-          {deployable && (
+          {aDesSpecialites && (
             <button
               type="button"
               className="spec-voir-tout"
@@ -262,7 +257,9 @@ export default function GrilleSpecialites({
           ))}
         </div>
 
-        {montrerTout && (
+        {/* L'accès à l'écran plein ne s'ouvre qu'une fois la vitrine dépliée,
+            juste sous la grille (« Voir tout » puis « Voir toutes »). */}
+        {tout && ouvrable && (
           <button
             type="button"
             ref={declencheurRef}
@@ -299,19 +296,17 @@ export default function GrilleSpecialites({
         ))}
       </div>
 
-      {(deployable || montrerTout) && (
+      {aDesSpecialites && (
         <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
-          {deployable && (
-            <button
-              type="button"
-              onClick={() => setTout(!tout)}
-              aria-expanded={tout}
-              className="ui-btn rounded-full border-[1.5px] border-line bg-white px-[18px] py-[9px] text-[13px] font-bold text-blue hover:border-teal hover:bg-teal-soft"
-            >
-              {tout ? "Voir moins" : `Voir plus (${reste})`}
-            </button>
-          )}
-          {montrerTout && (
+          <button
+            type="button"
+            onClick={() => setTout(!tout)}
+            aria-expanded={tout}
+            className="ui-btn rounded-full border-[1.5px] border-line bg-white px-[18px] py-[9px] text-[13px] font-bold text-blue hover:border-teal hover:bg-teal-soft"
+          >
+            {tout ? "Réduire" : "Voir tout"}
+          </button>
+          {tout && ouvrable && (
             <button
               type="button"
               ref={declencheurRef}
