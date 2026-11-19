@@ -31,6 +31,11 @@ const ENTETES_SECURITE = [
 ];
 
 const nextConfig: NextConfig = {
+  // Montée de sécurité 16.4.2 → 16.4.6 (avis de sécurité publié). Ce drapeau
+  // marque que la mise à jour a été conduite par l'outil `next upgrade`.
+  experimental: {
+    agentUpgrade: "security",
+  },
   // Les couvertures d'articles du blog et les illustrations éditoriales sont
   // servies par Cloudinary : on autorise ce seul hôte pour next/image, borné
   // au compte (le dossier des envois commence par /<cloud_name>/).
